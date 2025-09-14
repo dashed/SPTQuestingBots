@@ -17,7 +17,7 @@ namespace SPTQuestingBots.Patches.Spawning.Advanced
         {
             string methodName = "ExceptAI";
 
-            Type targetType = Helpers.TarkovTypeHelpers.FindTargetType(methodName);
+            Type targetType = Helpers.TarkovTypeHelpers.FindTargetTypeByMethod(methodName);
             LoggingController.LogInfo("Found type for ExceptAIPatch: " + targetType.FullName);
 
             return targetType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Static);

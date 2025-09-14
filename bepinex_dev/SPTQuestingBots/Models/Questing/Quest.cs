@@ -64,10 +64,7 @@ namespace SPTQuestingBots.Models.Questing
         private WeaponClass[] ForbiddenWeapons { get; set; } = new WeaponClass[0];
 
         [JsonProperty("botRoleFilter")]
-        public string BotRoleFilter { get; set; } = null;
-
-        [JsonIgnore]
-        private string[] botRoleFilterValues { get; set; } = new string[0];
+        public WildSpawnType[] BotRoleFilter { get; set; } = new WildSpawnType[0];
 
         [JsonIgnore]
         public RawQuestClass Template { get; private set; } = null;
@@ -271,25 +268,12 @@ namespace SPTQuestingBots.Models.Questing
                 return false;
             }
 
-            if (string.IsNullOrEmpty(BotRoleFilter))
+            if ((BotRoleFilter.Length > 0) && !BotRoleFilter.Contains(bot.Profile.Info.Settings.Role))
             {
-                return true;
+                return false;
             }
 
-            if (botRoleFilterValues.Length == 0)
-            {
-                botRoleFilterValues = BotRoleFilter.Split(',')
-                    .Select(x => x.Trim())
-                    .Where(x => !string.IsNullOrWhiteSpace(x))
-                    .ToArray();
-            }
-
-            if (botRoleFilterValues.Contains(bot.Profile.Info.Settings.Role.ToString()))
-            {
-                return true;
-            }
-
-            return false;
+            return true;
         }
     }
 }

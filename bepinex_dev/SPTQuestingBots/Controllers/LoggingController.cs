@@ -67,9 +67,9 @@ namespace SPTQuestingBots.Controllers
             Logger.LogDebug(message);
         }
 
-        public static void LogInfo(string message)
+        public static void LogInfo(string message, bool alwaysShow = false)
         {
-            if (!ConfigController.Config.Debug.Enabled)
+            if (!alwaysShow && !ConfigController.Config.Debug.Enabled)
             {
                 return;
             }

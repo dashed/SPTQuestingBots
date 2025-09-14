@@ -9,7 +9,7 @@ namespace SPTQuestingBots.Helpers
 {
     public static class TarkovTypeHelpers
     {
-        public static Type FindTargetType(string methodName)
+        public static Type FindTargetTypeByMethod(string methodName)
         {
             Predicate<MethodInfo> methodInfoPredicate = (m) => { return m.Name.Contains(methodName); };
 
@@ -17,13 +17,13 @@ namespace SPTQuestingBots.Helpers
             {
                 return findTargetType_Internal(methodInfoPredicate);
             }
-            catch (TypeLoadException)
+            catch (TypeLoadException e)
             {
-                throw new TypeLoadException($"Cannot find any type containing method {methodName}");
+                throw new TypeLoadException($"Cannot find any type containing method {methodName}", e);
             }
         }
 
-        public static Type FindTargetType(string methodName, Type[] parameterTypes)
+        public static Type FindTargetTypeByMethod(string methodName, Type[] parameterTypes)
         {
             Predicate<MethodInfo> methodInfoPredicate = (m) => { return m.Name.Contains(methodName) && m.HasAllParameterTypesInOrder(parameterTypes); };
 
@@ -31,9 +31,23 @@ namespace SPTQuestingBots.Helpers
             {
                 return findTargetType_Internal(methodInfoPredicate);
             }
-            catch (TypeLoadException)
+            catch (TypeLoadException e)
             {
-                throw new TypeLoadException($"Cannot find any type containing method {methodName} and types {string.Join(", ", parameterTypes.Select(t => t.Name))}");
+                throw new TypeLoadException($"Cannot find any type containing method {methodName} and types {string.Join(", ", parameterTypes.Select(t => t.Name))}", e);
+            }
+        }
+
+        public static Type FindTargetTypeByField(string fieldName)
+        {
+            Predicate<FieldInfo> fieldInfoPredicate = (m) => { return m.Name.Contains(fieldName); };
+
+            try
+            {
+                return findTargetType_Internal(fieldInfoPredicate);
+            }
+            catch (TypeLoadException e)
+            {
+                throw new TypeLoadException($"Cannot find any type containing field {fieldName}", e);
             }
         }
 
@@ -84,10 +98,10 @@ namespace SPTQuestingBots.Helpers
             return true;
         }
 
-        private static Type findTargetType_Internal(Predicate<MethodInfo> methodInfoPredicate)
+        private static Type findTargetType_Internal<T>(Predicate<T> containsObjectPredicate)
         {
             List<Type> targetTypeOptions = SPT.Reflection.Utils.PatchConstants.EftTypes
-                .Where(t => t.GetMethods().Any(m => methodInfoPredicate(m)))
+                .Where(t => t.getTypeObjects<T>().Any(m => containsObjectPredicate(m)))
                 .ToList();
 
             if (targetTypeOptions.Count != 1)
@@ -96,6 +110,28 @@ namespace SPTQuestingBots.Helpers
             }
 
             return targetTypeOptions[0];
+        }
+
+        private static TObjType[] getTypeObjects<TObjType>(this Type type)
+        {
+            Type objType = typeof(TObjType);
+
+            if (objType == typeof(MethodInfo))
+            {
+                return type.GetMethods() as TObjType[];
+            }
+
+            if (objType == typeof(PropertyInfo))
+            {
+                return type.GetProperties() as TObjType[];
+            }
+
+            if (objType == typeof(FieldInfo))
+            {
+                return type.GetFields() as TObjType[];
+            }
+
+            throw new InvalidOperationException($"Type {objType.Name} is not supported");
         }
     }
 }

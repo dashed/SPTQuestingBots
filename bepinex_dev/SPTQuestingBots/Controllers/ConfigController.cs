@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using SPT.Common.Http;
 using Newtonsoft.Json;
 using SPTQuestingBots.Configuration;
-using SPTQuestingBots.Models;
 
 namespace SPTQuestingBots.Controllers
 {
@@ -21,8 +20,12 @@ namespace SPTQuestingBots.Controllers
         public static string ModPathRelative { get; } = "/BepInEx/plugins/DanW-SPTQuestingBots";
         public static string LoggingPath { get; private set; } = null;
 
+        private static JsonSerializerSettings serializerSettings = null;
+
         public static Configuration.ModConfig GetConfig()
         {
+            findSerializerSettings();
+
             string errorMessage = "!!!!! Cannot retrieve config.json data from the server. The mod will not work properly! !!!!!";
             string json = GetJson("/QuestingBots/GetConfig", errorMessage);
 
@@ -33,6 +36,20 @@ namespace SPTQuestingBots.Controllers
             Config = _config;
 
             return Config;
+        }
+
+        private static void findSerializerSettings()
+        {
+            if (serializerSettings != null)
+            {
+                return;
+            }
+
+            string fieldName = "SerializerSettings";
+            Type targetType = Helpers.TarkovTypeHelpers.FindTargetTypeByField(fieldName);
+            LoggingController.LogInfo("Found type for " + fieldName + ": " + targetType.FullName, true);
+
+            serializerSettings = targetType.GetField(fieldName, BindingFlags.Public | BindingFlags.Static).GetValue(null) as JsonSerializerSettings;
         }
 
         public static void AdjustPScavChance(float timeRemainingFactor, bool preventPScav)
@@ -225,7 +242,7 @@ namespace SPTQuestingBots.Controllers
                     }
                 }
 
-                obj = JsonConvert.DeserializeObject<T>(json, GClass1629.SerializerSettings);
+                obj = JsonConvert.DeserializeObject<T>(json, serializerSettings);
 
                 return true;
             }

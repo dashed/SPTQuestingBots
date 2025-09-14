@@ -20,7 +20,7 @@ namespace SPTQuestingBots.Patches
         {
             string methodName = "CreateFromLegacyParams";
 
-            Type targetType = Helpers.TarkovTypeHelpers.FindTargetType(methodName);
+            Type targetType = Helpers.TarkovTypeHelpers.FindTargetTypeByMethod(methodName);
             LoggingController.LogInfo("Found type for ServerRequestPatch: " + targetType.FullName);
 
             return targetType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Static);
