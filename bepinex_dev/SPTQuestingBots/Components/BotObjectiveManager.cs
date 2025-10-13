@@ -246,6 +246,18 @@ namespace SPTQuestingBots.Components
             float duration = (float)assignment.QuestObjectiveStepAssignment.WaitTimeAfterCompleting + 5;
             UpdateLootingBehavior(assignment.QuestObjectiveAssignment.LootAfterCompletingSetting, duration);
 
+            foreach (BotOwner follower in BotLogic.HiveMind.BotHiveMindMonitor.GetFollowers(botOwner))
+            {
+                BotObjectiveManager followerObjectiveManager = follower.GetObjectiveManager();
+                if (followerObjectiveManager == null)
+                {
+                    LoggingController.LogError("Could not get BotObjectiveManager component for follower " + follower.GetText() + " of " + botOwner.GetText());
+                    continue;
+                }
+
+                followerObjectiveManager.UpdateLootingBehavior(assignment.QuestObjectiveAssignment.LootAfterCompletingSetting, duration);
+            }
+
             StuckCount = 0;
         }
 

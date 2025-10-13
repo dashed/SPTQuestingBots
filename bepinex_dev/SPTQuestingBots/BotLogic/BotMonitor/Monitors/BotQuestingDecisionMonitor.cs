@@ -131,11 +131,6 @@ namespace SPTQuestingBots.BotLogic.BotMonitor
                 return BotQuestingDecision.HelpBoss;
             }
 
-            if (!isFollowerTooFarFromBossForQuesting())
-            {
-                return BotQuestingDecision.None;
-            }
-
             if (BotHiveMindMonitor.GetValueForGroup(BotHiveMindSensorType.InCombat, BotOwner))
             {
                 return BotQuestingDecision.WaitForGroup;
@@ -146,13 +141,24 @@ namespace SPTQuestingBots.BotLogic.BotMonitor
                 return BotQuestingDecision.WaitForGroup;
             }
 
+            if (BotMonitor.GetMonitor<BotLootingMonitor>().IsForcedToSearchForLoot && BotMonitor.GetMonitor<BotLootingMonitor>().BossWillAllowLootingByDistance)
+            {
+                setLootingHiveMindState(true);
+                return BotQuestingDecision.CheckForLoot;
+            }
+
             if (BotMonitor.GetMonitor<BotLootingMonitor>().BossWillAllowLooting)
             {
                 setLootingHiveMindState(true);
                 return BotQuestingDecision.CheckForLoot;
-
             }
+
             setLootingHiveMindState(false);
+
+            if (!isFollowerTooFarFromBossForQuesting())
+            {
+                return BotQuestingDecision.None;
+            }
 
             return BotQuestingDecision.FollowBoss;
         }
@@ -217,13 +223,19 @@ namespace SPTQuestingBots.BotLogic.BotMonitor
                 return BotQuestingDecision.GetLost;
             }
 
+            if (BotMonitor.GetMonitor<BotLootingMonitor>().IsForcedToSearchForLoot)
+            {
+                setLootingHiveMindState(true);
+                return BotQuestingDecision.CheckForLoot;
+            }
+
             // Check if the bot wants to loot
             if (allowedToTakeABreak() && BotMonitor.GetMonitor<BotLootingMonitor>().ShouldCheckForLoot())
             {
                 setLootingHiveMindState(true);
-
                 return BotQuestingDecision.CheckForLoot;
             }
+
             setLootingHiveMindState(false);
 
             // Check if the bot has wandered too far from its followers.

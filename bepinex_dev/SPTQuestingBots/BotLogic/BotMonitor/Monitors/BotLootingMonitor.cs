@@ -20,6 +20,7 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
 
         private AbstractLootFunction lootFunction;
         private Stopwatch lootSearchTimer = new Stopwatch();
+        private Stopwatch forcedLootSearchTimer = new Stopwatch();
         private bool wasLooting = false;
         private bool hasFoundLoot = false;
 
@@ -27,6 +28,7 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
         public bool BossWillAllowLootingByTime => TimeSinceBossLastLooted.TotalSeconds > ConfigController.Config.Questing.BotQuestingRequirements.BreakForLooting.MinTimeBetweenFollowerLootingChecks;
         public bool BossWillAllowLootingByDistance => BotHiveMindMonitor.GetDistanceToBoss(BotOwner) <= ConfigController.Config.Questing.BotQuestingRequirements.BreakForLooting.MaxDistanceFromBoss;
         public bool BossWillAllowLooting => (BossWillAllowLootingByTime && ShouldCheckForLoot()) || (BossWillAllowLootingByDistance && IsLooting);
+        public bool IsForcedToSearchForLoot => forcedLootSearchTimer.IsRunning && (forcedLootSearchTimer.ElapsedMilliseconds < 1000 * ConfigController.Config.Questing.BotQuestingRequirements.BreakForLooting.MaxLootScanTime);
 
         public BotLootingMonitor(BotOwner _botOwner) : base(_botOwner) { }
 
@@ -42,7 +44,13 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
         }
 
         public bool TryPreventBotFromLooting(float duration) => lootFunction.TryPreventBotFromLooting(duration);
-        public bool TryForceBotToScanLoot() => lootFunction.TryForceBotToScanLoot();
+
+        public bool TryForceBotToScanLoot()
+        {
+            forcedLootSearchTimer.Restart();
+
+            return lootFunction.TryForceBotToScanLoot();
+        }
 
         public bool ShouldCheckForLoot() => ShouldCheckForLoot(NextLootCheckDelay);
         public bool ShouldCheckForLoot(float minTimeBetweenLooting)
