@@ -30,8 +30,8 @@ namespace SPTQuestingBots.Controllers
         public static int ZeroWaveTotalBotCount { get; set; } = 0;
         public static int ZeroWaveTotalRogueCount { get; set; } = 0;
 
-        private static List<BotOwner> registeredPMCs = new List<BotOwner>();
-        private static List<BotOwner> registeredBosses = new List<BotOwner>();
+        private static HashSet<BotOwner> registeredPMCs = new HashSet<BotOwner>();
+        private static HashSet<BotOwner> registeredBosses = new HashSet<BotOwner>();
         private static List<BotsGroup> hostileGroups = new List<BotsGroup>();
         private static List<string> sleepingBotIds = new List<string>();
 
@@ -43,8 +43,8 @@ namespace SPTQuestingBots.Controllers
             WildSpawnType.shooterBTR,
         };
 
-        public static IReadOnlyList<BotOwner> PMCs => registeredPMCs.AsReadOnly();
-        public static IReadOnlyList<BotOwner> Bosses => registeredBosses.AsReadOnly();
+        public static IReadOnlyCollection<BotOwner> PMCs => registeredPMCs;
+        public static IReadOnlyCollection<BotOwner> Bosses => registeredBosses;
 
         public static bool IsARegisteredPMC(this BotOwner bot) => registeredPMCs.Contains(bot);
 

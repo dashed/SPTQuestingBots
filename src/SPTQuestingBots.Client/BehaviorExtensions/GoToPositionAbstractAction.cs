@@ -286,6 +286,25 @@ namespace SPTQuestingBots.BehaviorExtensions
                 return;
             }
 
+            // Try vaulting first (less disruptive than jumping)
+            if (
+                (StuckTime >= ConfigController.Config.Questing.StuckBotDetection.StuckBotRemedies.MinTimeBeforeVaulting)
+                && (TimeSinceLastVault > ConfigController.Config.Questing.StuckBotDetection.StuckBotRemedies.VaultDebounceTime)
+            )
+            {
+                if (!canUseStuckRemedies())
+                {
+                    return;
+                }
+
+                LoggingController.LogWarning(BotOwner.GetText() + " is stuck. Trying to vault...");
+
+                BotOwner.Mover.Stop();
+                BotOwner.Mover.SetPose(1f);
+                BotOwner.GetPlayer.MovementContext.TryVaulting();
+                timeSinceLastVaultTimer.Restart();
+            }
+
             // Try jumping
             if (
                 (StuckTime >= ConfigController.Config.Questing.StuckBotDetection.StuckBotRemedies.MinTimeBeforeJumping)
@@ -303,26 +322,6 @@ namespace SPTQuestingBots.BehaviorExtensions
                 BotOwner.Mover.SetPose(1f);
                 tryJump(false);
                 timeSinceLastJumpTimer.Restart();
-            }
-
-            // Try vaulting
-            if (
-                (StuckTime >= ConfigController.Config.Questing.StuckBotDetection.StuckBotRemedies.MinTimeBeforeVaulting)
-                && (TimeSinceLastVault > ConfigController.Config.Questing.StuckBotDetection.StuckBotRemedies.VaultDebounceTime)
-            )
-            {
-                if (!canUseStuckRemedies())
-                {
-                    return;
-                }
-
-                LoggingController.LogWarning(BotOwner.GetText() + " is stuck. Trying to vault...");
-
-                //DelaySprint(5);
-                BotOwner.Mover.Stop();
-                BotOwner.Mover.SetPose(1f);
-                BotOwner.GetPlayer.MovementContext.TryVaulting();
-                timeSinceLastVaultTimer.Restart();
             }
         }
 

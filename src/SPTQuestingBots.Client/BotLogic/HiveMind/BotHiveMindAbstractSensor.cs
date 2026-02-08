@@ -44,7 +44,7 @@ namespace SPTQuestingBots.BotLogic.HiveMind
 
         public virtual void Update(Action<BotOwner> additionalAction = null)
         {
-            foreach (BotOwner bot in botState.Keys.ToArray())
+            foreach (BotOwner bot in botState.Keys)
             {
                 // Need to check if the reference is for a null object, meaning the bot was despawned and disposed
                 if (bot == null)
@@ -124,7 +124,7 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                 return false;
             }
 
-            foreach (BotOwner follower in BotHiveMindMonitor.botFollowers[bot].ToArray())
+            foreach (BotOwner follower in BotHiveMindMonitor.botFollowers[bot])
             {
                 if (!dict.TryGetValue(follower, out bool value))
                 {

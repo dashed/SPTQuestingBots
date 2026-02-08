@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Performance
+- Eliminated `.Keys.ToArray()` allocations in HiveMind hot loops (`BotHiveMindAbstractSensor`, `BotHiveMindMonitor`) — 7+ array allocations removed per 50ms tick
+- Replaced `Dictionary + OrderBy().First()` with simple min-tracking loop in `GetLocationOfNearestGroupMember()`
+- Replaced LINQ chain in `GetAllGroupMembers()` with explicit for-loop
+- Replaced `List<BotOwner>.Contains()` (O(n)) with `HashSet<BotOwner>` (O(1)) in `BotRegistrationManager`
+- Replaced nested `.Where().Where().Where().Count()` LINQ in `BotJobAssignmentFactory.NumberOfActiveBots()` with counting for-loop
+- Replaced `.Where()` x5 chain in `BotJobAssignmentFactory.GetAllPossibleQuests()` with reusable static buffer + for-loop
+- Restructured `updateBossFollowers()` to use deferred removal pattern instead of `.ToArray()` for safe dictionary mutation
+
+### Changed
+- Stuck detection now attempts vault before jump (vault at 1.5s, jump at 3s) — vault is less disruptive
+- Reduced stuck detection thresholds: vault 8s→1.5s, jump 6s→3s, debounce 4s→2s
+
+### Added
+- Detailed Phobos vs QuestingBots technical comparison (`docs/phobos-comparison.md`)
+- Phobos lessons implementation plan with 3-phase roadmap (`docs/phobos-lessons-implementation-plan.md`)
+
 ## [1.0.0] - 2026-02-08
 
 Initial C# port of SPTQuestingBots, based on the original TypeScript mod v0.10.3 by DanW.

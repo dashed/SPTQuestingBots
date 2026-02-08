@@ -21,6 +21,7 @@ namespace SPTQuestingBots.Controllers
         private static CoroutineExtensions.EnumeratorWithTimeLimit enumeratorWithTimeLimit =
             new CoroutineExtensions.EnumeratorWithTimeLimit(ConfigController.Config.MaxCalcTimePerFrame);
         private static List<Quest> allQuests = new List<Quest>();
+        private static readonly List<Quest> _possibleQuestsBuffer = new List<Quest>();
         private static Dictionary<string, List<BotJobAssignment>> botJobAssignments = new Dictionary<string, List<BotJobAssignment>>();
 
         public static int QuestCount => allQuests.Count;
@@ -218,14 +219,22 @@ namespace SPTQuestingBots.Controllers
             int num = 0;
             foreach (string id in botJobAssignments.Keys)
             {
-                num += botJobAssignments[id]
-                    .Where(a => a.StartTime.HasValue)
-                    .Where(a =>
-                        (a.Status == JobAssignmentStatus.Active)
-                        || ((a.Status == JobAssignmentStatus.Pending) && (a.TimeSinceStarted().Value < pendingTimeLimit))
+                var assignments = botJobAssignments[id];
+                for (int i = 0; i < assignments.Count; i++)
+                {
+                    var a = assignments[i];
+                    if (
+                        a.StartTime.HasValue
+                        && (
+                            (a.Status == JobAssignmentStatus.Active)
+                            || ((a.Status == JobAssignmentStatus.Pending) && (a.TimeSinceStarted().Value < pendingTimeLimit))
+                        )
+                        && a.QuestAssignment == quest
                     )
-                    .Where(a => a.QuestAssignment == quest)
-                    .Count();
+                    {
+                        num++;
+                    }
+                }
             }
 
             //LoggingController.LogInfo("Bots doing " + quest.ToString() + ": " + num);
@@ -646,17 +655,27 @@ namespace SPTQuestingBots.Controllers
             return assignment;
         }
 
-        public static IEnumerable<Quest> GetAllPossibleQuests(this BotOwner bot)
+        public static IReadOnlyList<Quest> GetAllPossibleQuests(this BotOwner bot)
         {
             int botGroupSize = BotLogic.HiveMind.BotHiveMindMonitor.GetFollowers(bot).Count + 1;
+            _possibleQuestsBuffer.Clear();
 
-            return allQuests
-                .Where(q => q.Desirability != 0)
-                .Where(q => q.NumberOfValidObjectives > 0)
-                .Where(q => q.MaxBotsInGroup >= botGroupSize)
-                .Where(q => q.CanMoreBotsDoQuest())
-                .Where(q => q.CanAssignToBot(bot))
-                .ToArray();
+            for (int i = 0; i < allQuests.Count; i++)
+            {
+                var q = allQuests[i];
+                if (
+                    q.Desirability != 0
+                    && q.NumberOfValidObjectives > 0
+                    && q.MaxBotsInGroup >= botGroupSize
+                    && q.CanMoreBotsDoQuest()
+                    && q.CanAssignToBot(bot)
+                )
+                {
+                    _possibleQuestsBuffer.Add(q);
+                }
+            }
+
+            return _possibleQuestsBuffer;
         }
 
         public static Quest GetRandomQuest(this BotOwner bot, IEnumerable<Quest> invalidQuests)

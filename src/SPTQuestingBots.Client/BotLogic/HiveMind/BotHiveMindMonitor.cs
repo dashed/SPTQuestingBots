@@ -173,10 +173,23 @@ namespace SPTQuestingBots.BotLogic.HiveMind
         public static ReadOnlyCollection<BotOwner> GetAllGroupMembers(BotOwner bot)
         {
             BotOwner boss = GetBoss(bot) ?? bot;
+            ReadOnlyCollection<BotOwner> followers = GetFollowers(boss);
 
-            BotOwner[] allGroupMembers = GetFollowers(boss).AddItem(boss).Where(b => b.Id != bot.Id).ToArray();
+            var result = new List<BotOwner>(followers.Count + 1);
+            for (int i = 0; i < followers.Count; i++)
+            {
+                if (followers[i].Id != bot.Id)
+                {
+                    result.Add(followers[i]);
+                }
+            }
 
-            return new ReadOnlyCollection<BotOwner>(allGroupMembers);
+            if (boss.Id != bot.Id)
+            {
+                result.Add(boss);
+            }
+
+            return new ReadOnlyCollection<BotOwner>(result);
         }
 
         public static string GetActiveBrainLayerOfBoss(BotOwner bot)
@@ -226,13 +239,17 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                 return bot.Position;
             }
 
-            Dictionary<BotOwner, float> distanceToMember = new Dictionary<BotOwner, float>();
+            BotOwner nearestMember = null;
+            float nearestDistance = float.MaxValue;
             foreach (BotOwner member in members)
             {
-                distanceToMember.Add(member, Vector3.Distance(bot.Position, member.Position));
+                float dist = Vector3.Distance(bot.Position, member.Position);
+                if (dist < nearestDistance)
+                {
+                    nearestDistance = dist;
+                    nearestMember = member;
+                }
             }
-
-            BotOwner nearestMember = distanceToMember.OrderBy(x => x.Value).First().Key;
 
             return nearestMember.Position;
         }
@@ -248,7 +265,7 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             Controllers.LoggingController.LogInfo("Separating " + bot.GetText() + " from its group...");
 
             // Clear stored information about the bot's boss (if applicable)
-            foreach (BotOwner follower in botBosses.Keys.ToArray())
+            foreach (BotOwner follower in botBosses.Keys)
             {
                 if (botBosses[follower] == bot)
                 {
@@ -262,7 +279,7 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             }
 
             // Clear stored information about the bot's followers (if applicable)
-            foreach (BotOwner boss in botFollowers.Keys.ToArray())
+            foreach (BotOwner boss in botFollowers.Keys)
             {
                 if (boss == bot)
                 {
@@ -346,7 +363,7 @@ namespace SPTQuestingBots.BotLogic.HiveMind
 
         private void updateBosses()
         {
-            foreach (BotOwner bot in botBosses.Keys.ToArray())
+            foreach (BotOwner bot in botBosses.Keys)
             {
                 // Need to check if the reference is for a null object, meaning the bot was despawned and disposed
                 if ((bot == null) || bot.IsDead)
@@ -413,9 +430,13 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             }
         }
 
+        private static readonly List<BotOwner> _deadBossBuffer = new List<BotOwner>();
+
         private void updateBossFollowers()
         {
-            foreach (BotOwner boss in botFollowers.Keys.ToArray())
+            _deadBossBuffer.Clear();
+
+            foreach (BotOwner boss in botFollowers.Keys)
             {
                 // Need to check if the reference is for a null object, meaning the bot was despawned and disposed
                 if ((boss == null) || boss.IsDead)
@@ -427,14 +448,17 @@ namespace SPTQuestingBots.BotLogic.HiveMind
 
                     Controllers.LoggingController.LogDebug("Boss " + boss.GetText() + " is now dead.");
 
-                    botFollowers.Remove(boss);
+                    _deadBossBuffer.Add(boss);
                     deadBots.Add(boss);
 
                     continue;
                 }
 
-                foreach (BotOwner follower in botFollowers[boss].ToArray())
+                List<BotOwner> followers = botFollowers[boss];
+                for (int i = followers.Count - 1; i >= 0; i--)
                 {
+                    BotOwner follower = followers[i];
+
                     if (follower == null)
                     {
                         Controllers.LoggingController.LogWarning("Removing null follower for " + boss.GetText());
@@ -444,11 +468,7 @@ namespace SPTQuestingBots.BotLogic.HiveMind
 
                     if (deadBots.Contains(follower))
                     {
-                        if (botFollowers[boss].Contains(follower))
-                        {
-                            botFollowers[boss].Remove(follower);
-                        }
-
+                        followers.RemoveAt(i);
                         continue;
                     }
 
@@ -461,6 +481,11 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                         deadBots.Add(follower);
                     }
                 }
+            }
+
+            for (int i = 0; i < _deadBossBuffer.Count; i++)
+            {
+                botFollowers.Remove(_deadBossBuffer[i]);
             }
         }
     }
