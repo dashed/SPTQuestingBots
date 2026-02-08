@@ -36,7 +36,8 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - Dynamic objective cycling: bots select next destination via live field state instead of nearest-to-bot
 - POI-aware: bots choose contextual actions (ambush, snipe, hold position) based on nearby containers, exfils, and quest triggers
 - Serves as fallback when no higher-priority quests are available
-- F12 menu toggles for enable/disable and debug overlay
+- 2D debug minimap: real-time visualization of grid cells, field vectors, bot/player positions, and zone sources
+- F12 menu toggles for enable/disable, debug overlay, and debug minimap
 
 ---
 

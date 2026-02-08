@@ -66,6 +66,10 @@
       Include="../../src/SPTQuestingBots.Client/ZoneMovement/Integration/MapBoundsDetector.cs"
       Link="LinkedSources/ZoneMovement/MapBoundsDetector.cs"
     />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/ZoneMovement/Diag/MinimapProjection.cs"
+      Link="LinkedSources/ZoneMovement/MinimapProjection.cs"
+    />
   </ItemGroup>
 
   <!--

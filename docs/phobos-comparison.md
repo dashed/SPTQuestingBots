@@ -53,7 +53,7 @@
 | **Solution** | `Phobos.sln` (1 main project + Gym benchmark) | `SPTQuestingBots.sln` (2 main + 2 test projects) |
 | **Target** | netstandard2.1 | Client: net472, Server: net9.0, Tests: net9.0 |
 | **Build** | Standard .csproj | Makefile (`make build`, `make test`, `make ci`) |
-| **Testing** | Gym project (BenchmarkDotNet) | NUnit 3.x + NSubstitute (172 client + 58 server = 230 tests) |
+| **Testing** | Gym project (BenchmarkDotNet) | NUnit 3.x + NSubstitute (187 client + 58 server = 245 tests) |
 | **CI** | None observed | GitHub Actions (`ci.yml`) |
 | **Code style** | File-scoped namespaces, primary constructors | Block-scoped namespaces, traditional constructors, CSharpier formatting |
 
@@ -279,7 +279,7 @@ Both mods now use physics-inspired spatial systems for directing bot movement:
 | **POI awareness** | Zone-level only | 6 categories: Container, LooseLoot, Quest, Exfil, SpawnPoint, Synthetic |
 | **Action selection** | GotoObjective / Guard | 5 action types with category-weighted probabilities (`ZoneActionSelector`) |
 | **Dynamic updates** | Runtime via zone config hot-reload | `WorldGridManager.Update()` caches live player/bot positions periodically |
-| **Debug** | Gizmo toggles for advection grid, movement vectors | `ZoneDebugOverlay` OnGUI panel with grid stats, POI counts, player cell info |
+| **Debug** | Gizmo toggles for advection grid, movement vectors | `ZoneDebugOverlay` text panel + 2D minimap (400px: cells, advection/convergence arrows, bot/player/zone dots, legend) |
 | **Per-map config** | Required (`Maps/Geometry.json` + `Zones/{map}.json`) | None required — auto-detected from spawn points |
 
 **Phobos** (`Phobos/Phobos/Systems/LocationSystem.cs`):
@@ -458,7 +458,8 @@ Both mods now use a **two-tier stuck detection system**. QuestingBots ported its
 | Entry | Default | Description |
 |-------|---------|-------------|
 | `ZoneMovementEnabled` | `true` | Runtime toggle, overrides JSON config |
-| `ZoneMovementDebugOverlay` | `false` | Show debug overlay (IsAdvanced) |
+| `ZoneMovementDebugOverlay` | `false` | Show debug text overlay (IsAdvanced) |
+| `ZoneMovementDebugMinimap` | `false` | Show 2D minimap with cells, arrows, dots (IsAdvanced) |
 
 **Quest data** (12 per-map JSON files + metadata):
 - `eftQuestSettings.json`: Quest requirements and settings
@@ -726,7 +727,7 @@ Phobos declares no incompatibilities.
 | Aspect | Phobos | QuestingBots |
 |--------|--------|--------------|
 | **Unit tests** | None (Gym project is benchmarks) | NUnit + NSubstitute |
-| **Test count** | 0 | 230 (172 client + 58 server) |
+| **Test count** | 0 | 245 (187 client + 58 server) |
 | **Client test coverage** | — | Stuck detection (4 files), zone movement Phases 1-3 (9 files), Phase 4A per-bot state (2 files), Phase 4B contract tests (1 file), config deserialization |
 | **CI** | None | GitHub Actions (format-check → lint → build → test) |
 | **Benchmarks** | BenchmarkDotNet in Gym/ | None |

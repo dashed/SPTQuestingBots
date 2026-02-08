@@ -107,6 +107,7 @@ namespace SPTQuestingBots
 
         public static ConfigEntry<bool> ZoneMovementEnabled;
         public static ConfigEntry<bool> ZoneMovementDebugOverlay;
+        public static ConfigEntry<bool> ZoneMovementDebugMinimap;
 
         public static ConfigEntry<bool> CreateQuestLocations;
         public static ConfigEntry<bool> ShowCurrentLocation;
@@ -439,6 +440,16 @@ namespace SPTQuestingBots
                 false,
                 new ConfigDescription(
                     "Show zone movement debug overlay with grid stats, player cell info, and field data",
+                    null,
+                    new ConfigurationManagerAttributes { IsAdvanced = true }
+                )
+            );
+            ZoneMovementDebugMinimap = Config.Bind(
+                "Zone Movement",
+                "Show Debug Minimap",
+                false,
+                new ConfigDescription(
+                    "Show a 2D minimap overlay visualizing grid cells, field vectors, bot positions, and zone sources",
                     null,
                     new ConfigurationManagerAttributes { IsAdvanced = true }
                 )

@@ -338,7 +338,7 @@ See **Section 8** for detailed Phase 4 implementation plans:
 
 ## 6. Test Strategy
 
-### 6.1 Unit Tests — 172 client tests total (Phases 1–4B)
+### 6.1 Unit Tests — 187 client tests total (Phases 1–4C)
 
 All use the existing `Vector3` test shim (with `sqrMagnitude`, `magnitude`, `operator-`).
 
@@ -357,8 +357,9 @@ All use the existing `Vector3` test shim (with `sqrMagnitude`, `magnitude`, `ope
 | `ZoneMathUtilsTests` | 20 | GetDominantCategory (10 cases), ComputeCentroid (5 cases), ComputeMomentum (5 cases) |
 | `BotFieldStateTests` | 4 | ComputeMomentum delegation, GetNoiseAngle: different seeds, determinism, output range |
 | `ZoneObjectiveCyclerTests` | 5 | Naming convention contract between ZoneQuestBuilder and ZoneObjectiveCycler, format consistency |
+| `MinimapProjectionTests` | 15 | WorldToMinimap coordinate mapping (origin, center, edges, Z-inversion, negative coords, degenerate), GetCellColor per PoiCategory + non-navigable + empty |
 
-### 6.2 Phase 4C Planned Tests
+### 6.2 Future Planned Tests
 
 | Test Class | Tests | Coverage |
 |------------|-------|----------|
@@ -645,7 +646,7 @@ The core logic (field composition, momentum, destination selection) is already t
 
 ---
 
-### 8.3 Phase 4C: Enhanced 2D Debug Minimap (#25)
+### 8.3 Phase 4C: Enhanced 2D Debug Minimap (#25) ✅ COMPLETE
 
 **Goal**: Add a 2D minimap overlay that visualizes grid cells, field vectors, bot positions, and zone sources — providing real-time feedback on the zone movement system's behavior.
 
@@ -758,10 +759,13 @@ Debug visualization is purely visual — no unit tests. Verified by:
 
 | File | Action | Lines |
 |------|--------|-------|
-| `ZoneMovement/Diag/DebugDrawing.cs` | NEW | ~65 |
-| `ZoneMovement/Integration/ZoneDebugOverlay.cs` | MOD | +200 |
-| `ZoneMovement/Integration/WorldGridManager.cs` | MOD | +15 |
-| `Configuration/QuestingBotsPluginConfig.cs` | MOD | +5 |
+| `ZoneMovement/Diag/DebugDrawing.cs` | NEW | ~130 |
+| `ZoneMovement/Diag/MinimapProjection.cs` | NEW | ~85 |
+| `ZoneMovement/Integration/ZoneDebugOverlay.cs` | MOD | +300 |
+| `ZoneMovement/Integration/WorldGridManager.cs` | MOD | +20 |
+| `QuestingBotsPluginConfig.cs` | MOD | +10 |
+| `tests/.../MinimapProjectionTests.cs` | NEW | ~185 |
+| `tests/.../SPTQuestingBots.Client.Tests.csproj` | MOD | +4 |
 
 ---
 

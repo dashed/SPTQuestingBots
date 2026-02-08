@@ -48,6 +48,24 @@ public class WorldGridManager : MonoBehaviour
     /// <summary>Per-bot field state for unique momentum and noise vectors.</summary>
     private readonly Dictionary<string, BotFieldState> botFieldStates = new Dictionary<string, BotFieldState>();
 
+    /// <summary>Zone source positions discovered during initialization (for debug visualization).</summary>
+    private readonly List<(Vector3 position, float strength)> discoveredZoneSources = new List<(Vector3, float)>();
+
+    /// <summary>Advection field instance (for debug visualization).</summary>
+    public AdvectionField Advection => advectionField;
+
+    /// <summary>Convergence field instance (for debug visualization).</summary>
+    public ConvergenceField Convergence => convergenceField;
+
+    /// <summary>Cached human player positions from last update.</summary>
+    public IReadOnlyList<Vector3> CachedPlayerPositions => cachedPlayerPositions;
+
+    /// <summary>Cached bot positions from last update.</summary>
+    public IReadOnlyList<Vector3> CachedBotPositions => cachedBotPositions;
+
+    /// <summary>Zone source positions discovered during initialization.</summary>
+    public IReadOnlyList<(Vector3 position, float strength)> ZoneSources => discoveredZoneSources;
+
     /// <summary>
     /// Initializes the grid, POIs, zone sources, and field components.
     /// </summary>
@@ -95,6 +113,7 @@ public class WorldGridManager : MonoBehaviour
             foreach (var (position, strength) in zones)
             {
                 advectionField.AddZone(position, strength);
+                discoveredZoneSources.Add((position, strength));
             }
 
             // 7. Synthetic fill: add NavMesh-validated synthetic POIs to empty cells

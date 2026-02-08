@@ -19,10 +19,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `ZoneObjectiveCycler`: selects zone objectives via advection + convergence + per-bot momentum + noise, matching Phobos's `GotoObjectiveStrategy.AssignNewObjective()` pattern
   - Integrated into `BotJobAssignmentFactory.GetNewBotJobAssignment()` with transparent fallback to default selection
   - 5 new contract tests: `ZoneObjectiveCyclerTests` (naming convention validation)
+- **Zone movement Phase 4C: enhanced 2D debug minimap** — real-time visualization of zone movement system state
+  - `DebugDrawing`: static OnGUI drawing primitives (filled rects, lines, arrows, dots) using RotateAroundPivot pattern
+  - `MinimapProjection`: pure-logic coordinate mapping (world XZ → screen pixels) and POI category → color mapping
+  - `ZoneDebugOverlay.RenderMinimap()`: 400px 2D minimap with cell coloring, advection/convergence arrows, bot/player/zone dots, and legend
+  - `WorldGridManager`: exposed Advection, Convergence, CachedPlayerPositions, CachedBotPositions, ZoneSources for debug visualization
+  - F12 menu "Debug Minimap" toggle (`ZoneMovementDebugMinimap`)
+  - 15 new unit tests: `MinimapProjectionTests` (coordinate mapping + color mapping)
 
 ### Changed
 - Zone quests now use field-based objective cycling for dynamic, non-repetitive bot movement patterns
-- 172 client tests total (was 158), 58 server tests, 230 total
+- 187 client tests total (was 158), 58 server tests, 245 total
 
 ## [1.5.0] - 2026-02-08
 
