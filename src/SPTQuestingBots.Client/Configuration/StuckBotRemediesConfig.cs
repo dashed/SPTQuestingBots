@@ -24,6 +24,24 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("vault_debounce_time")]
         public float VaultDebounceTime { get; set; } = 2;
 
+        [JsonProperty("soft_stuck_fail_delay")]
+        public float SoftStuckFailDelay { get; set; } = 6;
+
+        [JsonProperty("hard_stuck_path_retry_delay")]
+        public float HardStuckPathRetryDelay { get; set; } = 5;
+
+        [JsonProperty("hard_stuck_teleport_delay")]
+        public float HardStuckTeleportDelay { get; set; } = 10;
+
+        [JsonProperty("hard_stuck_fail_delay")]
+        public float HardStuckFailDelay { get; set; } = 15;
+
+        [JsonProperty("teleport_enabled")]
+        public bool TeleportEnabled { get; set; } = true;
+
+        [JsonProperty("teleport_max_player_distance")]
+        public float TeleportMaxPlayerDistance { get; set; } = 10;
+
         public StuckBotRemediesConfig() { }
     }
 }

@@ -268,7 +268,7 @@
 		}
 	},
 	"bot_spawns": {
-		"enabled": true,
+		"enabled": false,
 		"blacklisted_pmc_bot_brains": [ "bossKilla", "bossTagilla", "exUsec", "followerGluharAssault", "followerGluharProtect", "crazyAssaultEvent", "bossKnight" ],
 		"spawn_retry_time": 10,
 		"delay_game_start_until_bot_gen_finishes": true,

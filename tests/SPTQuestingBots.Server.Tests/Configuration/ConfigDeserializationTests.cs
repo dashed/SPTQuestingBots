@@ -208,6 +208,42 @@ public class ConfigDeserializationTests
     }
 
     [Test]
+    public void Deserialize_BotSpawnsDefault_EnabledIsFalse()
+    {
+        var json = """{ "bot_spawns": {} }""";
+        var config = JsonConvert.DeserializeObject<QuestingBotsConfig>(json)!;
+        Assert.That(config.BotSpawns.Enabled, Is.False);
+    }
+
+    [Test]
+    public void Deserialize_BotSpawnsExplicitlyEnabled_EnabledIsTrue()
+    {
+        var json = """{ "bot_spawns": { "enabled": true } }""";
+        var config = JsonConvert.DeserializeObject<QuestingBotsConfig>(json)!;
+        Assert.That(config.BotSpawns.Enabled, Is.True);
+    }
+
+    [Test]
+    public void Deserialize_QuestingEnabledWithoutBotSpawns_QuestingIndependent()
+    {
+        var json = """
+            {
+                "enabled": true,
+                "questing": { "enabled": true },
+                "bot_spawns": { "enabled": false }
+            }
+            """;
+
+        var config = JsonConvert.DeserializeObject<QuestingBotsConfig>(json)!;
+        Assert.Multiple(() =>
+        {
+            Assert.That(config.Enabled, Is.True);
+            Assert.That(config.Questing.Enabled, Is.True);
+            Assert.That(config.BotSpawns.Enabled, Is.False);
+        });
+    }
+
+    [Test]
     public void Deserialize_QuestingSection_ParsesEftQuestLevelRange()
     {
         var json = """
@@ -257,6 +293,7 @@ public class ConfigDeserializationTests
         {
             Assert.That(config!.Enabled, Is.True);
             Assert.That(config.Questing.Enabled, Is.True);
+            Assert.That(config.BotSpawns.Enabled, Is.False, "Bot spawning should be disabled by default");
             Assert.That(config.BotSpawns.BlacklistedPmcBotBrains, Is.Not.Empty);
             Assert.That(config.BotSpawns.Pmcs.FractionOfMaxPlayersVsRaidET, Is.Not.Empty);
             Assert.That(config.BotSpawns.Pmcs.BotsPerGroupDistribution, Is.Not.Empty);

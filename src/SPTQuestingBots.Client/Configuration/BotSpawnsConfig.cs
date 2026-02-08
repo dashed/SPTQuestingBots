@@ -10,7 +10,7 @@ namespace SPTQuestingBots.Configuration
     public class BotSpawnsConfig
     {
         [JsonProperty("enabled")]
-        public bool Enabled { get; set; } = true;
+        public bool Enabled { get; set; } = false;
 
         [JsonProperty("blacklisted_pmc_bot_brains")]
         public string[] BlacklistedPMCBotBrains { get; set; } = new string[0];

@@ -14,7 +14,19 @@
   </ItemGroup>
 
   <!--
+    Link client source files that have no game dependencies (or whose deps are shimmed).
+    This avoids referencing the full client project which requires Unity/EFT assemblies.
+  -->
+  <ItemGroup>
+    <Compile Include="../../src/SPTQuestingBots.Client/Helpers/PositionHistory.cs" Link="LinkedSources/PositionHistory.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/Helpers/RollingAverage.cs" Link="LinkedSources/RollingAverage.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/Models/SoftStuckDetector.cs" Link="LinkedSources/SoftStuckDetector.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/Models/HardStuckDetector.cs" Link="LinkedSources/HardStuckDetector.cs" />
+  </ItemGroup>
+
+  <!--
     Note: Tests target net9.0 and test pure logic only (models, helpers, config).
     Game-dependent code (Unity, EFT) cannot be tested without game assemblies.
+    TestShims/Vector3.cs provides a minimal UnityEngine.Vector3 for PositionHistory tests.
   -->
 </Project>

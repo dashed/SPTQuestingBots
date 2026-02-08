@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -12,6 +12,7 @@ using SPTQuestingBots.BotLogic;
 using SPTQuestingBots.Components;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
+using SPTQuestingBots.Models;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -25,16 +26,11 @@ namespace SPTQuestingBots.BehaviorExtensions
 
         private static FieldInfo botZoneField = null;
 
-        private Stopwatch botIsStuckTimer = new Stopwatch();
-        private Stopwatch timeSinceLastJumpTimer = Stopwatch.StartNew();
-        private Stopwatch timeSinceLastVaultTimer = Stopwatch.StartNew();
+        private SoftStuckDetector _softStuck;
+        private HardStuckDetector _hardStuck;
         private Stopwatch timeSinceLastBrainLayerMessageTimer = Stopwatch.StartNew();
-        private Vector3? lastBotPosition = null;
         private bool loggedBrainLayerError = false;
 
-        protected double StuckTime => botIsStuckTimer.ElapsedMilliseconds / 1000.0;
-        protected double TimeSinceLastJump => timeSinceLastJumpTimer.ElapsedMilliseconds / 1000.0;
-        protected double TimeSinceLastVault => timeSinceLastVaultTimer.ElapsedMilliseconds / 1000.0;
         protected double TimeSinceLastBrainLayerMessage => timeSinceLastBrainLayerMessageTimer.ElapsedMilliseconds / 1000.0;
 
         public GoToPositionAbstractAction(BotOwner _BotOwner, int delayInterval)
@@ -44,6 +40,14 @@ namespace SPTQuestingBots.BehaviorExtensions
             {
                 botZoneField = AccessTools.Field(typeof(BotsGroup), "<BotZone>k__BackingField");
             }
+
+            var remedies = ConfigController.Config.Questing.StuckBotDetection.StuckBotRemedies;
+            _softStuck = new SoftStuckDetector(remedies.MinTimeBeforeVaulting, remedies.MinTimeBeforeJumping, remedies.SoftStuckFailDelay);
+            _hardStuck = new HardStuckDetector(
+                pathRetryDelay: remedies.HardStuckPathRetryDelay,
+                teleportDelay: remedies.HardStuckTeleportDelay,
+                failDelay: remedies.HardStuckFailDelay
+            );
         }
 
         public GoToPositionAbstractAction(BotOwner _BotOwner)
@@ -53,17 +57,14 @@ namespace SPTQuestingBots.BehaviorExtensions
         {
             base.Start();
 
-            resumeStuckTimer();
+            restartStuckTimer();
 
-            timeSinceLastJumpTimer.Restart();
             BotOwner.PatrollingData.Pause();
         }
 
         public override void Stop()
         {
             base.Stop();
-
-            pauseStuckTimer();
 
             BotOwner.PatrollingData.Unpause();
 
@@ -158,30 +159,40 @@ namespace SPTQuestingBots.BehaviorExtensions
 
         protected void restartStuckTimer()
         {
-            botIsStuckTimer.Restart();
-        }
-
-        protected void pauseStuckTimer()
-        {
-            botIsStuckTimer.Stop();
-        }
-
-        protected void resumeStuckTimer()
-        {
-            botIsStuckTimer.Start();
+            _softStuck.Reset();
+            _hardStuck.Reset();
         }
 
         protected bool checkIfBotIsStuck()
         {
-            return checkIfBotIsStuck(ConfigController.Config.Questing.StuckBotDetection.Time, true);
+            return checkIfBotIsStuck(true);
         }
 
-        protected bool checkIfBotIsStuck(float stuckTime, bool drawPath)
+        protected bool checkIfBotIsStuck(bool drawPath)
         {
-            updateBotStuckDetection();
+            if (!ConfigController.Config.Questing.StuckBotDetection.StuckBotRemedies.Enabled)
+            {
+                return false;
+            }
 
-            // If the bot hasn't moved enough within a certain time while this layer is active, assume the bot is stuck
-            if (StuckTime > stuckTime)
+            float currentTime = Time.time;
+            Vector3 currentPos = BotOwner.Position;
+            float moveSpeed = BotOwner.GetPlayer.MovementContext.CharacterMovementSpeed;
+
+            // Update soft stuck detector
+            if (_softStuck.Update(currentPos, moveSpeed, currentTime))
+            {
+                handleSoftStuckTransition();
+            }
+
+            // Update hard stuck detector
+            if (_hardStuck.Update(currentPos, moveSpeed, currentTime))
+            {
+                handleHardStuckTransition();
+            }
+
+            // Bot is hopelessly stuck when hard detector reaches Failed
+            if (_hardStuck.Status == HardStuckStatus.Failed)
             {
                 if (drawPath && ConfigController.Config.Debug.ShowFailedPaths)
                 {
@@ -190,9 +201,6 @@ namespace SPTQuestingBots.BehaviorExtensions
 
                 return true;
             }
-
-            // If the bot might be stuck but stuckTime hasn't been reached, see if the we can stop the bot from being stuck
-            tryToGetUnstuck();
 
             return false;
         }
@@ -205,8 +213,6 @@ namespace SPTQuestingBots.BehaviorExtensions
                 LoggingController.LogWarning("Cannot draw null path for " + BotOwner.GetText());
                 return;
             }
-
-            //LoggingController.LogInfo("Drawing " + botPath.CalculatePathLength() + "m path with " + botPath.Length + " corners for " + BotOwner.GetText());
 
             // The visual representation of the bot's path needs to be offset vertically so it's raised above the ground
             List<Vector3> adjustedPathCorners = new List<Vector3>();
@@ -257,85 +263,105 @@ namespace SPTQuestingBots.BehaviorExtensions
                 return;
             }
 
-            //Controllers.LoggingController.LogWarning("Changing BotZone for group containing " + BotOwner.GetText() + " from " + BotOwner.BotsGroup.BotZone.ShortName + " to " + closestBotZone.ShortName + "...");
-
             botZoneField.SetValue(BotOwner.BotsGroup, closestBotZone);
             BotOwner.PatrollingData.PointChooser.ShallChangeWay(true);
         }
 
-        private void updateBotStuckDetection()
+        private void handleSoftStuckTransition()
         {
-            if (!lastBotPosition.HasValue)
-            {
-                lastBotPosition = BotOwner.Position;
-            }
-
-            // Check if the bot has moved enough
-            float distanceFromLastUpdate = Vector3.Distance(lastBotPosition.Value, BotOwner.Position);
-            if (distanceFromLastUpdate > ConfigController.Config.Questing.StuckBotDetection.Distance)
-            {
-                lastBotPosition = BotOwner.Position;
-                restartStuckTimer();
-            }
-        }
-
-        private void tryToGetUnstuck()
-        {
-            if (!ConfigController.Config.Questing.StuckBotDetection.StuckBotRemedies.Enabled)
+            if (!BotOwner.GetPlayer.MovementContext.IsGrounded)
             {
                 return;
             }
 
-            // Try vaulting first (less disruptive than jumping)
-            if (
-                (StuckTime >= ConfigController.Config.Questing.StuckBotDetection.StuckBotRemedies.MinTimeBeforeVaulting)
-                && (TimeSinceLastVault > ConfigController.Config.Questing.StuckBotDetection.StuckBotRemedies.VaultDebounceTime)
-            )
+            switch (_softStuck.Status)
             {
-                if (!canUseStuckRemedies())
-                {
-                    return;
-                }
-
-                LoggingController.LogWarning(BotOwner.GetText() + " is stuck. Trying to vault...");
-
-                BotOwner.Mover.Stop();
-                BotOwner.Mover.SetPose(1f);
-                BotOwner.GetPlayer.MovementContext.TryVaulting();
-                timeSinceLastVaultTimer.Restart();
-            }
-
-            // Try jumping
-            if (
-                (StuckTime >= ConfigController.Config.Questing.StuckBotDetection.StuckBotRemedies.MinTimeBeforeJumping)
-                && (TimeSinceLastJump > ConfigController.Config.Questing.StuckBotDetection.StuckBotRemedies.JumpDebounceTime)
-            )
-            {
-                if (!canUseStuckRemedies())
-                {
-                    return;
-                }
-
-                LoggingController.LogWarning(BotOwner.GetText() + " is stuck. Trying to jump...");
-
-                BotOwner.Mover.Stop();
-                BotOwner.Mover.SetPose(1f);
-                tryJump(false);
-                timeSinceLastJumpTimer.Restart();
+                case SoftStuckStatus.Vaulting:
+                    LoggingController.LogWarning(BotOwner.GetText() + " is stuck. Trying to vault...");
+                    BotOwner.Mover.Stop();
+                    BotOwner.Mover.SetPose(1f);
+                    BotOwner.GetPlayer.MovementContext.TryVaulting();
+                    break;
+                case SoftStuckStatus.Jumping:
+                    LoggingController.LogWarning(BotOwner.GetText() + " is stuck. Trying to jump...");
+                    BotOwner.Mover.Stop();
+                    BotOwner.Mover.SetPose(1f);
+                    tryJump(false);
+                    break;
             }
         }
 
-        private bool canUseStuckRemedies()
+        private void handleHardStuckTransition()
         {
-            //LoggingController.LogWarning(BotOwner.GetText() + " was stuck for " + StuckTime + "s.");
-
-            if (!BotOwner.GetPlayer.MovementContext.IsGrounded)
+            switch (_hardStuck.Status)
             {
-                LoggingController.LogWarning(BotOwner.GetText() + " is stuck, but countermeasures are unavailable until its grounded.");
-                return false;
+                case HardStuckStatus.Retrying:
+                    LoggingController.LogWarning(BotOwner.GetText() + " is hard stuck. Retrying path...");
+                    ObjectiveManager.BotPath.ForcePathRecalculation();
+                    break;
+                case HardStuckStatus.Teleport:
+                    LoggingController.LogWarning(BotOwner.GetText() + " is hard stuck. Attempting teleport...");
+                    attemptSafeTeleport();
+                    break;
+            }
+        }
+
+        private void attemptSafeTeleport()
+        {
+            var remedies = ConfigController.Config.Questing.StuckBotDetection.StuckBotRemedies;
+            if (!remedies.TeleportEnabled)
+            {
+                return;
             }
 
-            return true;
+            // Need a path corner to teleport to
+            Vector3[] corners = ObjectiveManager.BotPath.Corners;
+            if (corners == null || corners.Length == 0)
+            {
+                return;
+            }
+
+            Vector3 teleportPos = corners[0];
+            teleportPos.y += 0.25f;
+
+            float maxDistSqr = remedies.TeleportMaxPlayerDistance * remedies.TeleportMaxPlayerDistance;
+
+            // Safety checks against all human players
+            var allPlayers = Singleton<GameWorld>.Instance?.AllAlivePlayersList;
+            if (allPlayers != null)
+            {
+                for (int i = 0; i < allPlayers.Count; i++)
+                {
+                    var player = allPlayers[i];
+                    if (player == null || player.IsAI)
+                    {
+                        continue;
+                    }
+
+                    if (player.HealthController?.IsAlive != true)
+                    {
+                        continue;
+                    }
+
+                    // Proximity check
+                    if ((player.Position - BotOwner.Position).sqrMagnitude <= maxDistSqr)
+                    {
+                        LoggingController.LogWarning(BotOwner.GetText() + " teleport blocked: human player too close.");
+                        return;
+                    }
+
+                    // Line-of-sight check from human head to bot position
+                    Vector3 humanHeadPos = player.PlayerBones.Head.Original.position;
+                    if (!Physics.Linecast(humanHeadPos, BotOwner.Position, LayerMaskClass.HighPolyWithTerrainMask))
+                    {
+                        LoggingController.LogWarning(BotOwner.GetText() + " teleport blocked: visible to human player.");
+                        return;
+                    }
+                }
+            }
+
+            LoggingController.LogWarning("Teleporting " + BotOwner.GetText() + " to " + teleportPos);
+            BotOwner.GetPlayer.Teleport(teleportPos);
         }
     }
 }

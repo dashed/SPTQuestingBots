@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-02-08
+
+### Changed
+- Bot spawning is now **disabled by default** (`bot_spawns.enabled` defaults to `false`)
+  - The mod's core value is bot movement/questing — bots spawned by the base game or other mods automatically get questing behavior
+  - Custom bot spawning (PMCs, PScavs) is still available as an opt-in feature by setting `bot_spawns.enabled: true` in config.json
+- Guarded game start delay behind `bot_spawns.enabled` to prevent referencing spawning state when spawning is disabled
+
+### Added
+- 3 new config deserialization tests for spawning-optional behavior (58 server tests total)
+
+## [1.1.0] - 2026-02-08
+
 ### Performance
 - Eliminated `.Keys.ToArray()` allocations in HiveMind hot loops (`BotHiveMindAbstractSensor`, `BotHiveMindMonitor`) — 7+ array allocations removed per 50ms tick
 - Replaced `Dictionary + OrderBy().First()` with simple min-tracking loop in `GetLocationOfNearestGroupMember()`
@@ -15,12 +28,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replaced nested `.Where().Where().Where().Count()` LINQ in `BotJobAssignmentFactory.NumberOfActiveBots()` with counting for-loop
 - Replaced `.Where()` x5 chain in `BotJobAssignmentFactory.GetAllPossibleQuests()` with reusable static buffer + for-loop
 - Restructured `updateBossFollowers()` to use deferred removal pattern instead of `.ToArray()` for safe dictionary mutation
+- Added per-frame `PathfindingThrottle` (max 5 `NavMesh.CalculatePath` calls/frame) to prevent frame spikes with many bots
+- Added `NavJobExecutor` for queue-based batched pathfinding with ramped batch size
 
 ### Changed
+- Replaced single-tier stuck detection with two-tier system (soft + hard) ported from Phobos
+  - **Soft stuck** (`SoftStuckDetector`): EWMA speed tracking, ignores Y-axis; vault at 1.5s, jump at 3s, fail at 6s
+  - **Hard stuck** (`HardStuckDetector`): ring buffer position history + rolling average speed; path retry at 5s, teleport at 10s, fail at 15s
+- Safe teleportation for hard-stuck bots: proximity check (< 10m) + line-of-sight check against human players
 - Stuck detection now attempts vault before jump (vault at 1.5s, jump at 3s) — vault is less disruptive
 - Reduced stuck detection thresholds: vault 8s→1.5s, jump 6s→3s, debounce 4s→2s
 
 ### Added
+- `PositionHistory` ring buffer for tracking bot positions over N samples (ported from Phobos)
+- `RollingAverage` circular buffer for speed averaging with periodic drift correction (ported from Phobos)
+- `SoftStuckDetector` — frame-to-frame stuck detection with asymmetric EWMA speed tracking
+- `HardStuckDetector` — long-term stuck detection using position history and rolling average speed
+- `PathfindingThrottle` — per-frame limiter for `NavMesh.CalculatePath` calls
+- `NavJob` + `NavJobExecutor` — queue-based async pathfinding infrastructure
+- Comprehensive unit tests for `PositionHistory`, `RollingAverage`, `SoftStuckDetector`, `HardStuckDetector` (50 client tests)
 - Detailed Phobos vs QuestingBots technical comparison (`docs/phobos-comparison.md`)
 - Phobos lessons implementation plan with 3-phase roadmap (`docs/phobos-lessons-implementation-plan.md`)
 

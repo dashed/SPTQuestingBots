@@ -163,6 +163,11 @@ namespace SPTQuestingBots.Models.Pathing
 
         private void updateCorners(Vector3 target, bool ignoreDuplicates = false)
         {
+            if (!PathfindingThrottle.CanCalculatePath())
+            {
+                return;
+            }
+
             StartPosition = bot.Position;
 
             Status = CreatePathSegment(bot.Position, target, out Vector3[] corners);
