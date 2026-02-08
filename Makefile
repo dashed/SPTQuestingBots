@@ -72,9 +72,9 @@ ALL_DLLS := $(SPT_SERVER_DLLS) $(BEPINEX_CORE_DLLS) $(EFT_MANAGED_DLLS) \
 	$(SPT_PLUGIN_DLLS) $(SPT_PATCHER_DLLS) $(THIRDPARTY_DLLS)
 
 .DEFAULT_GOAL := help
-.PHONY: help all ci restore build build-server build-client build-tests \
-	test test-server test-client clean format format-check lint lint-fix \
-	copy-libs check-libs
+.PHONY: help all ci ci-full restore build build-server build-client \
+	build-tests test test-server test-client clean format format-check \
+	lint lint-fix copy-libs check-libs
 
 # ─── Meta ─────────────────────────────────────────────────────────────
 
@@ -86,7 +86,9 @@ help: ## Show available targets
 
 all: format-check lint test ## Run format-check, lint, and test
 
-ci: restore format-check lint build-tests test ## Full CI pipeline
+ci: restore format-check build-client-tests test-client ## CI pipeline (no game DLLs needed)
+
+ci-full: restore format-check lint build-tests test ## Full CI pipeline (requires libs/)
 
 # ─── Libs ─────────────────────────────────────────────────────────────
 
@@ -148,8 +150,11 @@ build-server: check-libs ## Build the server plugin DLL
 build-client: check-libs ## Build the client plugin DLL
 	$(DOTNET) build $(CLIENT_PROJECT) -c $(CONFIGURATION) --nologo
 
-build-tests: ## Build the test projects
+build-tests: ## Build all test projects (requires libs/)
 	$(DOTNET) build $(SERVER_TEST) -c $(CONFIGURATION) --nologo
+	$(DOTNET) build $(CLIENT_TEST) -c $(CONFIGURATION) --nologo
+
+build-client-tests: ## Build client test project only
 	$(DOTNET) build $(CLIENT_TEST) -c $(CONFIGURATION) --nologo
 
 # ─── Test ─────────────────────────────────────────────────────────────
