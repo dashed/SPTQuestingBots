@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using EFT.Game.Spawning;
 using SPTQuestingBots.Controllers;
+using SPTQuestingBots.ZoneMovement.Core;
 using UnityEngine;
 
 namespace SPTQuestingBots.ZoneMovement.Integration;
@@ -81,20 +82,7 @@ public static class ZoneDiscovery
 
     /// <summary>
     /// Computes the centroid (average position) of a list of positions.
+    /// Delegates to <see cref="Core.ZoneMathUtils.ComputeCentroid"/>.
     /// </summary>
-    internal static Vector3 ComputeCentroid(List<Vector3> positions)
-    {
-        float x = 0,
-            y = 0,
-            z = 0;
-        for (int i = 0; i < positions.Count; i++)
-        {
-            x += positions[i].x;
-            y += positions[i].y;
-            z += positions[i].z;
-        }
-
-        float inv = 1f / positions.Count;
-        return new Vector3(x * inv, y * inv, z * inv);
-    }
+    internal static Vector3 ComputeCentroid(List<Vector3> positions) => ZoneMathUtils.ComputeCentroid(positions);
 }

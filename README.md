@@ -28,6 +28,14 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 ### Scav Spawn Restrictions
 - Spawn-rate limiting, max-alive-scav caps, and distance-based exclusion zones to prevent Scav swarms
 
+### Zone-Based Movement System
+- Grid + vector-field architecture gives idle bots purposeful movement toward interesting map areas
+- Auto-detects map bounds from spawn points; no per-map configuration needed
+- Bots are pulled toward human players (convergence field) and pushed toward geographic zones (advection field)
+- POI-aware: bots choose contextual actions (ambush, snipe, hold position) based on nearby containers, exfils, and quest triggers
+- Serves as fallback when no higher-priority quests are available
+- F12 menu toggles for enable/disable and debug overlay
+
 ---
 
 ## Architecture
@@ -212,6 +220,11 @@ SPTQuestingBots/
 │       ├── Controllers/             # Bot management (jobs, objectives, config, logging)
 │       ├── Helpers/                 # NavMesh, pathing, items, quests, debug utilities
 │       ├── Models/                  # Data models (questing, pathing, debug gizmos)
+│       ├── ZoneMovement/            # Grid + vector-field movement system
+│       │   ├── Core/                #   WorldGrid, GridCell, PointOfInterest
+│       │   ├── Fields/              #   AdvectionField, ConvergenceField, FieldComposer
+│       │   ├── Selection/           #   CellScorer, DestinationSelector
+│       │   └── Integration/         #   WorldGridManager, ZoneQuestBuilder, ZoneDebugOverlay
 │       └── Patches/                 # 25+ Harmony patches
 │           ├── Spawning/            #   Spawn system patches
 │           ├── Lighthouse/          #   Lighthouse-specific patches
@@ -242,6 +255,7 @@ The mod is configured through `config/config.json` and the BepInEx F12 in-game m
 | `questing` | Objective system: brain layer priorities, quest selection, pathing, stuck detection, door unlocking, sprint limits, extraction |
 | `questing.bot_quests` | Quest-type settings: EFT quests, spawn rush, boss hunter, airdrop chaser, spawn wandering |
 | `bot_spawns` | PMC/PScav spawning: group sizes, difficulty, distances, hostility, bot caps, boss limits |
+| `questing.zone_movement` | Zone-based movement: grid size, field weights, POI scoring, convergence interval, debug overlay |
 | `adjust_pscav_chance` | Dynamic player-Scav conversion rates when spawning system is disabled |
 
 ### Custom Quests

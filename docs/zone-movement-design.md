@@ -192,8 +192,9 @@ src/SPTQuestingBots.Client/ZoneMovement/
 │   ├── MapBoundsDetector.cs    (pure logic, unit tested)
 │   ├── PoiScanner.cs           (scene adapter)
 │   ├── ZoneDiscovery.cs        (scene adapter)
-│   ├── WorldGridManager.cs     (MonoBehaviour orchestrator)
-│   └── ZoneQuestBuilder.cs     (quest factory)
+│   ├── WorldGridManager.cs     (MonoBehaviour orchestrator + dynamic Update)
+│   ├── ZoneQuestBuilder.cs     (quest factory)
+│   └── ZoneDebugOverlay.cs     (OnGUI debug overlay)
 └── Selection/
     └── ZoneActionSelector.cs   (pure logic, unit tested)
 ```
@@ -265,18 +266,16 @@ This approach required **zero changes** to `BotObjectiveManager`, `BotJobAssignm
 
 ---
 
-## 5. Phase 3: Remaining Work
-
-Phases 2 and 3 from the original plan were merged. The quest pipeline integration (originally Phase 3) was completed as part of Phase 2 using `ZoneQuestBuilder` instead of the separate `ZoneObjectiveProvider` approach.
+## 5. Phase 3: Dynamic Fields + Debug (COMPLETED in v1.5.0)
 
 ### 5.1 Completed Integration (v1.4.0)
 
-- **`LocationData.cs`**: `WorldGridManager` instantiated in `Awake()` (guarded by `ZoneMovement.Enabled`)
+- **`LocationData.cs`**: `WorldGridManager` + `ZoneDebugOverlay` instantiated in `Awake()` (guarded by JSON config + F12 toggle)
 - **`BotQuestBuilder.cs`**: `ZoneQuestBuilder.CreateZoneQuests()` called in `LoadAllQuests()`, registered via `BotJobAssignmentFactory.AddQuest()`
 - **`QuestingConfig.cs`**: Added `ZoneMovement` property with `ZoneMovementConfig` model
 - **No changes needed** to `BotObjectiveManager`, `BotJobAssignmentFactory`, or `BotObjectiveLayer`
 
-### 5.2 Config Model (Implemented)
+### 5.2 Config Model
 
 `ZoneMovementConfig` — 12 properties under `questing.zone_movement`:
 
@@ -295,12 +294,44 @@ Phases 2 and 3 from the original plan were merged. The quest pipeline integratio
 | `quest_desirability` | `5` | Quest priority (low = fallback) |
 | `quest_name` | `"Zone Movement"` | Quest name in assignment system |
 
-### 5.3 Future Work
+### 5.3 F12 Menu Config (v1.5.0)
 
-- F12 menu entries for zone movement toggle and debug visualization
-- In-game debug overlay (grid cells, field vectors, POI markers)
-- Dynamic convergence field updates in `WorldGridManager.Update()` (currently fields are static after init)
-- Runtime destination re-selection using `GetCompositeDirection()` + `SelectDestination()` for more dynamic movement
+Two BepInEx ConfigEntry fields in `QuestingBotsPluginConfig.cs` under "Zone Movement" section:
+
+| Entry | Type | Default | Description |
+|-------|------|---------|-------------|
+| `ZoneMovementEnabled` | `bool` | `true` | Runtime toggle, overrides JSON config |
+| `ZoneMovementDebugOverlay` | `bool` | `false` | Show debug overlay (IsAdvanced) |
+
+### 5.4 Dynamic Convergence (v1.5.0)
+
+`WorldGridManager.Update()` periodically refreshes cached player/bot positions:
+- Timer-based: checks `convergenceUpdateInterval` (default 30s)
+- Gets positions from `Singleton<GameWorld>.Instance.AllAlivePlayersList`
+- Separates human players (`!IsAI`) from bots (`IsAI`)
+- Cached lists used by `GetCompositeDirection()` and `GetRecommendedDestination()`
+
+### 5.5 Recommended Destination API (v1.5.0)
+
+`WorldGridManager.GetRecommendedDestination(Vector3 botPosition, float momentumX, float momentumZ)`:
+- Returns the best next cell center using live field state
+- Uses cached player/bot positions from Update()
+- Calls GetCompositeDirection → SelectDestination pipeline
+- Provides API for future bot objective lifecycle integration
+
+### 5.6 Debug Overlay (v1.5.0)
+
+`ZoneDebugOverlay` (MonoBehaviour) — OnGUI text panel showing:
+- Grid dimensions, cell count, navigable cells, cell size
+- POI breakdown by category
+- Player's current cell, dominant category, POI density
+- Gated behind `QuestingBotsPluginConfig.ZoneMovementDebugOverlay`
+
+### 5.7 Future Work
+
+- Enhanced debug visualization (3D grid cell outlines, field vector arrows, POI markers using GL drawing)
+- Integration of `GetRecommendedDestination` into bot objective lifecycle for truly dynamic destination cycling
+- Per-bot field computation (unique momentum vectors per bot)
 
 ---
 
@@ -325,9 +356,9 @@ All use the existing `Vector3` test shim (with `sqrMagnitude`, `magnitude`, `ope
 
 ### 6.2 Integration verification — compile-verified
 
-Scene integration classes (`PoiScanner`, `ZoneDiscovery`, `WorldGridManager`, `ZoneQuestBuilder`) are thin adapters. Correctness verified by:
+Scene integration classes (`PoiScanner`, `ZoneDiscovery`, `WorldGridManager`, `ZoneQuestBuilder`, `ZoneDebugOverlay`) are thin adapters. Correctness verified by:
 1. Pure logic tests (Phases 1-2 cover all computation)
-2. In-game visual debugging (future: draw grid, POIs, field vectors)
+2. In-game debug overlay (`ZoneDebugOverlay` — F12 toggle, shows grid/POI stats)
 3. Manual testing on 2-3 maps
 
 ---
@@ -358,18 +389,26 @@ Scene integration classes (`PoiScanner`, `ZoneDiscovery`, `WorldGridManager`, `Z
 | 13 | `WorldGridManager` — MonoBehaviour orchestrator | Done |
 | 14 | `ZoneActionSelector` — POI-based action selection | Done |
 | 15 | `ZoneQuestBuilder` — quest factory for grid cells | Done |
-| 16 | `ZoneMovementConfig` — config model (14 properties) | Done |
+| 16 | `ZoneMovementConfig` — config model (12 properties) | Done |
 | 17 | Wire into `LocationData.Awake()` + `BotQuestBuilder.LoadAllQuests()` | Done |
 | 18 | Unit tests for `ZoneActionSelector` + `MapBoundsDetector` (22 tests) | Done |
+
+### Phase 3: Dynamic Fields + Debug (COMPLETED in v1.5.0)
+
+| # | Task | Status |
+|---|------|--------|
+| 19 | F12 menu config entries (ZoneMovementEnabled, ZoneMovementDebugOverlay) | Done |
+| 20 | `ZoneDebugOverlay` — OnGUI debug overlay with grid/POI stats | Done |
+| 21 | Dynamic convergence field updates in `WorldGridManager.Update()` | Done |
+| 22 | `GetRecommendedDestination` API for dynamic bot destinations | Done |
 
 ### Future Work
 
 | # | Task | Est. Size |
 |---|------|-----------|
-| 19 | Add F12 menu config entries for zone movement toggle | S |
-| 20 | Add debug visualization (grid overlay, field vectors) | M |
-| 21 | Dynamic convergence field updates in `WorldGridManager.Update()` | S |
-| 22 | Runtime destination re-selection for more dynamic bot movement | M |
+| 23 | Enhanced 3D debug visualization (GL grid outlines, field vector arrows) | M |
+| 24 | Integrate `GetRecommendedDestination` into bot objective lifecycle | M |
+| 25 | Per-bot field computation with individual momentum vectors | S |
 
 ---
 

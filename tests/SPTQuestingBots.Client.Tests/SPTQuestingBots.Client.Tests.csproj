@@ -55,6 +55,10 @@
       Link="LinkedSources/ZoneMovement/ZoneActionSelector.cs"
     />
     <Compile
+      Include="../../src/SPTQuestingBots.Client/ZoneMovement/Core/ZoneMathUtils.cs"
+      Link="LinkedSources/ZoneMovement/ZoneMathUtils.cs"
+    />
+    <Compile
       Include="../../src/SPTQuestingBots.Client/ZoneMovement/Integration/MapBoundsDetector.cs"
       Link="LinkedSources/ZoneMovement/MapBoundsDetector.cs"
     />

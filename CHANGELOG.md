@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-02-08
+
+### Added
+- **Zone movement Phase 3: dynamic fields, debug overlay, F12 config**
+  - `WorldGridManager.Update()`: periodic convergence field refresh with live player/bot positions
+  - `WorldGridManager.GetRecommendedDestination()`: API for computing dynamic bot destinations using live field state
+  - `ZoneDebugOverlay`: OnGUI overlay showing grid stats, POI counts, and player cell info (gated behind F12 toggle)
+  - F12 menu "Zone Movement" section with Enable toggle and Debug Overlay toggle
+- F12 config entry `ZoneMovementEnabled` overrides JSON config for runtime toggling
+- F12 config entry `ZoneMovementDebugOverlay` for in-game debug info
+
+### Changed
+- Zone movement initialization now respects both JSON config (`zone_movement.enabled`) and F12 menu toggle
+- WorldGridManager caches player/bot positions for use by convergence field and destination API
+
 ## [1.4.1] - 2026-02-08
 
 ### Removed
@@ -33,7 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `WorldGridManager` (MonoBehaviour): orchestrator that creates grid, populates POIs/zones, builds field components on `Awake()`
   - `ZoneQuestBuilder`: creates fallback `Quest` with one objective per navigable grid cell, registered via `BotJobAssignmentFactory.AddQuest()`
   - `ZoneActionSelector`: maps POI categories to varied bot actions (Ambush, Snipe, HoldAtPosition, PlantItem, MoveToPosition) with weighted random selection inspired by Phobos
-- `ZoneMovementConfig`: 14-property configuration model under `questing.zone_movement` with sensible defaults
+- `ZoneMovementConfig`: 12-property configuration model under `questing.zone_movement` with sensible defaults
 - Zone movement wired into `LocationData.Awake()` (before `BotQuestBuilder`) and `BotQuestBuilder.LoadAllQuests()` (after spawn point wander)
 - 22 new unit tests for `ZoneActionSelector` (13 tests) and `MapBoundsDetector` (9 tests) — 143 client tests total
 

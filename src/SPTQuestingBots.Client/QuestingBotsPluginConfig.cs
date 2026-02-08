@@ -105,6 +105,9 @@ namespace SPTQuestingBots
         public static ConfigEntry<int> QuestOverlayMaxDistance;
         public static ConfigEntry<string> BotFilter;
 
+        public static ConfigEntry<bool> ZoneMovementEnabled;
+        public static ConfigEntry<bool> ZoneMovementDebugOverlay;
+
         public static ConfigEntry<bool> CreateQuestLocations;
         public static ConfigEntry<bool> ShowCurrentLocation;
         public static ConfigEntry<string> QuestLocationName;
@@ -419,6 +422,23 @@ namespace SPTQuestingBots
                 "",
                 new ConfigDescription(
                     "Show debug info only for bots listed e.g 2,4",
+                    null,
+                    new ConfigurationManagerAttributes { IsAdvanced = true }
+                )
+            );
+
+            ZoneMovementEnabled = Config.Bind(
+                "Zone Movement",
+                "Enable Zone Movement",
+                true,
+                "Enable zone-based movement for bots without quests. Bots will move toward interesting areas using physics-inspired vector fields."
+            );
+            ZoneMovementDebugOverlay = Config.Bind(
+                "Zone Movement",
+                "Show Debug Overlay",
+                false,
+                new ConfigDescription(
+                    "Show zone movement debug overlay with grid stats, player cell info, and field data",
                     null,
                     new ConfigurationManagerAttributes { IsAdvanced = true }
                 )

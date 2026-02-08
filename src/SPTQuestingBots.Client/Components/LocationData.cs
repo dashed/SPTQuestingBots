@@ -58,9 +58,13 @@ namespace SPTQuestingBots.Components
 
             Singleton<GameWorld>.Instance.gameObject.GetOrAddComponent<BotLogic.HiveMind.BotHiveMindMonitor>();
 
-            if (ConfigController.Config.Questing.ZoneMovement?.Enabled == true)
+            if (
+                ConfigController.Config.Questing.ZoneMovement?.Enabled == true
+                && QuestingBotsPluginConfig.ZoneMovementEnabled?.Value != false
+            )
             {
                 Singleton<GameWorld>.Instance.gameObject.GetOrAddComponent<ZoneMovement.Integration.WorldGridManager>();
+                Singleton<GameWorld>.Instance.gameObject.GetOrAddComponent<ZoneMovement.Integration.ZoneDebugOverlay>();
             }
 
             if (ConfigController.Config.Questing.Enabled)

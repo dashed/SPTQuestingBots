@@ -37,6 +37,13 @@ public class WorldGridManager : MonoBehaviour
     private CellScorer cellScorer;
     private DestinationSelector destinationSelector;
     private float convergenceUpdateInterval;
+    private float lastConvergenceUpdate;
+
+    /// <summary>Cached human player positions, refreshed each convergence update.</summary>
+    private readonly List<Vector3> cachedPlayerPositions = new List<Vector3>();
+
+    /// <summary>Cached bot positions, refreshed each convergence update.</summary>
+    private readonly List<Vector3> cachedBotPositions = new List<Vector3>();
 
     /// <summary>
     /// Initializes the grid, POIs, zone sources, and field components.
@@ -127,6 +134,39 @@ public class WorldGridManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Periodically refreshes cached player and bot positions for the convergence field.
+    /// </summary>
+    protected void Update()
+    {
+        if (!IsInitialized)
+            return;
+
+        if (Time.time - lastConvergenceUpdate < convergenceUpdateInterval)
+            return;
+
+        lastConvergenceUpdate = Time.time;
+
+        var allPlayers = Singleton<GameWorld>.Instance?.AllAlivePlayersList;
+        if (allPlayers == null)
+            return;
+
+        cachedPlayerPositions.Clear();
+        cachedBotPositions.Clear();
+
+        for (int i = 0; i < allPlayers.Count; i++)
+        {
+            var player = allPlayers[i];
+            if (player == null || !player.HealthController.IsAlive)
+                continue;
+
+            if (player.IsAI)
+                cachedBotPositions.Add(player.Position);
+            else
+                cachedPlayerPositions.Add(player.Position);
+        }
+    }
+
+    /// <summary>
     /// Returns the grid cell containing the given world position.
     /// </summary>
     /// <param name="position">World-space position.</param>
@@ -136,6 +176,29 @@ public class WorldGridManager : MonoBehaviour
         if (!IsInitialized)
             return null;
         return Grid.GetCell(position);
+    }
+
+    /// <summary>
+    /// Computes the best next destination for a bot using live field state.
+    /// Uses cached player/bot positions from the most recent <see cref="Update"/> tick.
+    /// </summary>
+    /// <param name="botPosition">The bot's current world position.</param>
+    /// <param name="momentumX">X component of the bot's current travel direction.</param>
+    /// <param name="momentumZ">Z component of the bot's current travel direction.</param>
+    /// <returns>The recommended destination position, or <c>null</c> if not initialized.</returns>
+    public Vector3? GetRecommendedDestination(Vector3 botPosition, float momentumX, float momentumZ)
+    {
+        if (!IsInitialized)
+            return null;
+
+        var currentCell = Grid.GetCell(botPosition);
+        if (currentCell == null)
+            return null;
+
+        GetCompositeDirection(botPosition, momentumX, momentumZ, cachedBotPositions, cachedPlayerPositions, out float dirX, out float dirZ);
+
+        var targetCell = destinationSelector.SelectDestination(Grid, currentCell, dirX, dirZ, botPosition);
+        return targetCell?.Center;
     }
 
     /// <summary>
