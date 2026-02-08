@@ -106,11 +106,7 @@ public class ConvergenceFieldTests
     public void OutputIsNormalized()
     {
         var field = new ConvergenceField();
-        var players = new List<Vector3>
-        {
-            new Vector3(100, 0, 50),
-            new Vector3(-30, 0, 200),
-        };
+        var players = new List<Vector3> { new Vector3(100, 0, 50), new Vector3(-30, 0, 200) };
 
         field.ComputeConvergence(new Vector3(0, 0, 0), players, out float x, out float z);
 

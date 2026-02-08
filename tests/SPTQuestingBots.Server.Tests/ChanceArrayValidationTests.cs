@@ -23,7 +23,6 @@ public class ChanceArrayValidationTests
         _commonUtils = new CommonUtils(logger, null!, null!, configLoader);
 
         _plugin = new QuestingBotsServerPlugin(
-            Substitute.For<ISptLogger<QuestingBotsServerPlugin>>(),
             configLoader,
             _commonUtils,
             null!, // BotLocationService not needed for array validation

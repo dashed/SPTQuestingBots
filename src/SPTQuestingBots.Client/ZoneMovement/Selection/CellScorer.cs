@@ -54,13 +54,7 @@ public sealed class CellScorer
     /// <returns>
     /// A score in [0, 1] where higher values indicate better destinations.
     /// </returns>
-    public float Score(
-        GridCell candidate,
-        float compositeDirX,
-        float compositeDirZ,
-        Vector3 fromPosition,
-        float maxPoiDensity
-    )
+    public float Score(GridCell candidate, float compositeDirX, float compositeDirZ, Vector3 fromPosition, float maxPoiDensity)
     {
         // Direction from current position to candidate cell center (XZ plane)
         float toDirX = candidate.Center.x - fromPosition.x;

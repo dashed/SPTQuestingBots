@@ -25,19 +25,18 @@ public class FieldComposerTests
     public void ConvergenceOnly_OutputMatchesConvergence()
     {
         // Only convergence has weight, others zero
-        var composer = new FieldComposer(
-            convergenceWeight: 1.0f,
-            advectionWeight: 0f,
-            momentumWeight: 0f,
-            noiseWeight: 0f
-        );
+        var composer = new FieldComposer(convergenceWeight: 1.0f, advectionWeight: 0f, momentumWeight: 0f, noiseWeight: 0f);
 
         composer.GetCompositeDirection(
-            0, 0,     // advection
-            1, 0,     // convergence: east
-            0, 0,     // momentum
-            0,        // noise
-            out float x, out float z
+            0,
+            0, // advection
+            1,
+            0, // convergence: east
+            0,
+            0, // momentum
+            0, // noise
+            out float x,
+            out float z
         );
 
         Assert.That(x, Is.GreaterThan(0.9f));
@@ -47,19 +46,18 @@ public class FieldComposerTests
     [Test]
     public void AdvectionOnly_OutputMatchesAdvection()
     {
-        var composer = new FieldComposer(
-            convergenceWeight: 0f,
-            advectionWeight: 1.0f,
-            momentumWeight: 0f,
-            noiseWeight: 0f
-        );
+        var composer = new FieldComposer(convergenceWeight: 0f, advectionWeight: 1.0f, momentumWeight: 0f, noiseWeight: 0f);
 
         composer.GetCompositeDirection(
-            0, 1,     // advection: north
-            0, 0,     // convergence
-            0, 0,     // momentum
-            0,        // noise
-            out float x, out float z
+            0,
+            1, // advection: north
+            0,
+            0, // convergence
+            0,
+            0, // momentum
+            0, // noise
+            out float x,
+            out float z
         );
 
         Assert.That(z, Is.GreaterThan(0.9f));
@@ -69,20 +67,19 @@ public class FieldComposerTests
     [Test]
     public void MomentumSmooths_Direction()
     {
-        var composer = new FieldComposer(
-            convergenceWeight: 1.0f,
-            advectionWeight: 0f,
-            momentumWeight: 1.0f,
-            noiseWeight: 0f
-        );
+        var composer = new FieldComposer(convergenceWeight: 1.0f, advectionWeight: 0f, momentumWeight: 1.0f, noiseWeight: 0f);
 
         // Convergence points east, momentum points north → composite is northeast
         composer.GetCompositeDirection(
-            0, 0,     // advection
-            1, 0,     // convergence: east
-            0, 1,     // momentum: north
-            0,        // noise
-            out float x, out float z
+            0,
+            0, // advection
+            1,
+            0, // convergence: east
+            0,
+            1, // momentum: north
+            0, // noise
+            out float x,
+            out float z
         );
 
         // Both should be positive (northeast quadrant)
@@ -100,17 +97,21 @@ public class FieldComposerTests
             convergenceWeight: 1.0f,
             advectionWeight: 0f,
             momentumWeight: 0f,
-            noiseWeight: 1.0f  // Full noise weight
+            noiseWeight: 1.0f // Full noise weight
         );
 
         // Convergence points east, add 90-degree noise rotation
         float halfPi = (float)(Math.PI / 2);
         composer.GetCompositeDirection(
-            0, 0,          // advection
-            1, 0,          // convergence: east
-            0, 0,          // momentum
-            halfPi,        // noise: rotate 90° (with weight 1.0)
-            out float x, out float z
+            0,
+            0, // advection
+            1,
+            0, // convergence: east
+            0,
+            0, // momentum
+            halfPi, // noise: rotate 90° (with weight 1.0)
+            out float x,
+            out float z
         );
 
         // 90° rotation of (1,0) should give approximately (0,1) — north
@@ -125,16 +126,20 @@ public class FieldComposerTests
             convergenceWeight: 1.0f,
             advectionWeight: 0f,
             momentumWeight: 0f,
-            noiseWeight: 0f  // No noise
+            noiseWeight: 0f // No noise
         );
 
         // Even with noise angle, weight is 0 so no rotation
         composer.GetCompositeDirection(
-            0, 0,
-            1, 0,
-            0, 0,
-            (float)Math.PI,  // Large noise angle — but weight is 0
-            out float x, out float z
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            (float)Math.PI, // Large noise angle — but weight is 0
+            out float x,
+            out float z
         );
 
         Assert.That(x, Is.GreaterThan(0.9f));
@@ -146,11 +151,15 @@ public class FieldComposerTests
         var composer = new FieldComposer();
 
         composer.GetCompositeDirection(
-            0.3f, 0.7f,   // advection
-            0.8f, -0.2f,  // convergence
-            0.1f, 0.5f,   // momentum
-            0.5f,          // noise
-            out float x, out float z
+            0.3f,
+            0.7f, // advection
+            0.8f,
+            -0.2f, // convergence
+            0.1f,
+            0.5f, // momentum
+            0.5f, // noise
+            out float x,
+            out float z
         );
 
         float mag = (float)Math.Sqrt(x * x + z * z);

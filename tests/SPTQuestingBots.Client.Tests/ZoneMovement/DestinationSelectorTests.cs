@@ -20,9 +20,7 @@ public class DestinationSelectorTests
             for (int row = 0; row < grid.Rows; row++)
             {
                 var cell = grid.GetCell(col, row);
-                cell.AddPoi(
-                    new PointOfInterest(cell.Center, PoiCategory.Synthetic)
-                );
+                cell.AddPoi(new PointOfInterest(cell.Center, PoiCategory.Synthetic));
             }
         }
 
@@ -40,9 +38,7 @@ public class DestinationSelectorTests
         Assert.That(currentCell, Is.Not.Null);
 
         // Composite direction: east (+X)
-        var result = selector.SelectDestination(
-            grid, currentCell, 1f, 0f, currentCell.Center
-        );
+        var result = selector.SelectDestination(grid, currentCell, 1f, 0f, currentCell.Center);
 
         // Should pick the cell to the east (col+1)
         Assert.That(result.Col, Is.GreaterThan(currentCell.Col));
@@ -58,9 +54,7 @@ public class DestinationSelectorTests
         var currentCell = grid.GetCell(1, 1);
 
         // Composite direction: north (+Z)
-        var result = selector.SelectDestination(
-            grid, currentCell, 0f, 1f, currentCell.Center
-        );
+        var result = selector.SelectDestination(grid, currentCell, 0f, 1f, currentCell.Center);
 
         // Should pick the cell to the north (row+1)
         Assert.That(result.Row, Is.GreaterThan(currentCell.Row));
@@ -78,9 +72,7 @@ public class DestinationSelectorTests
         // Make current cell navigable but not its neighbors
         currentCell.AddPoi(new PointOfInterest(currentCell.Center, PoiCategory.Synthetic));
 
-        var result = selector.SelectDestination(
-            grid, currentCell, 1f, 0f, currentCell.Center
-        );
+        var result = selector.SelectDestination(grid, currentCell, 1f, 0f, currentCell.Center);
 
         // Should fall back to current cell
         Assert.That(result, Is.SameAs(currentCell));
@@ -97,9 +89,7 @@ public class DestinationSelectorTests
         Assert.That(corner.Neighbors, Has.Count.EqualTo(2));
 
         // Should still select a valid neighbor
-        var result = selector.SelectDestination(
-            grid, corner, 1f, 0f, corner.Center
-        );
+        var result = selector.SelectDestination(grid, corner, 1f, 0f, corner.Center);
 
         Assert.That(result, Is.Not.Null);
         Assert.That(result, Is.Not.SameAs(corner)); // Should pick a neighbor
@@ -126,9 +116,7 @@ public class DestinationSelectorTests
         if (eastCell != null)
         {
             for (int i = 0; i < 5; i++)
-                eastCell.AddPoi(
-                    new PointOfInterest(eastCell.Center, PoiCategory.Container)
-                );
+                eastCell.AddPoi(new PointOfInterest(eastCell.Center, PoiCategory.Container));
         }
 
         // Add minimal POI to other neighbors to make them navigable
@@ -140,9 +128,7 @@ public class DestinationSelectorTests
         southCell?.AddPoi(new PointOfInterest(southCell.Center, PoiCategory.Synthetic));
 
         // Composite direction points north, but east cell has way more POIs
-        var result = selector.SelectDestination(
-            grid, currentCell, 0f, 1f, currentCell.Center
-        );
+        var result = selector.SelectDestination(grid, currentCell, 0f, 1f, currentCell.Center);
 
         // With 90% poi weight, east cell should win despite perpendicular direction
         Assert.That(result, Is.SameAs(eastCell));
@@ -158,9 +144,7 @@ public class DestinationSelectorTests
         var currentCell = grid.GetCell(1, 1);
 
         // Zero composite direction
-        var result = selector.SelectDestination(
-            grid, currentCell, 0f, 0f, currentCell.Center
-        );
+        var result = selector.SelectDestination(grid, currentCell, 0f, 0f, currentCell.Center);
 
         // Should still return a valid cell (all equally scored)
         Assert.That(result, Is.Not.Null);

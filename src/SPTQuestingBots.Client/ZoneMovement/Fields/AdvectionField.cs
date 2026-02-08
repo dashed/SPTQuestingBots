@@ -56,12 +56,7 @@ public sealed class AdvectionField
     /// </param>
     /// <param name="outX">X component of the normalized advection direction.</param>
     /// <param name="outZ">Z component of the normalized advection direction.</param>
-    public void GetAdvection(
-        Vector3 position,
-        IReadOnlyList<Vector3> botPositions,
-        out float outX,
-        out float outZ
-    )
+    public void GetAdvection(Vector3 position, IReadOnlyList<Vector3> botPositions, out float outX, out float outZ)
     {
         float ax = 0f;
         float az = 0f;

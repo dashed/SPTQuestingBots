@@ -83,12 +83,8 @@ public sealed class FieldComposer
     )
     {
         // Weighted sum of field components
-        float rx = advectionX * AdvectionWeight
-            + convergenceX * ConvergenceWeight
-            + momentumX * MomentumWeight;
-        float rz = advectionZ * AdvectionWeight
-            + convergenceZ * ConvergenceWeight
-            + momentumZ * MomentumWeight;
+        float rx = advectionX * AdvectionWeight + convergenceX * ConvergenceWeight + momentumX * MomentumWeight;
+        float rz = advectionZ * AdvectionWeight + convergenceZ * ConvergenceWeight + momentumZ * MomentumWeight;
 
         // Apply noise as rotation to the composite direction
         if (NoiseWeight > 0.001f && (Math.Abs(rx) > 0.001f || Math.Abs(rz) > 0.001f))

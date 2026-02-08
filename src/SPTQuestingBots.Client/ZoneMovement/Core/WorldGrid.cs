@@ -58,10 +58,7 @@ public sealed class WorldGrid
     public WorldGrid(Vector3 minBounds, Vector3 maxBounds, int targetCellCount = 150)
     {
         if (targetCellCount < 1)
-            throw new ArgumentOutOfRangeException(
-                nameof(targetCellCount),
-                "Must be at least 1"
-            );
+            throw new ArgumentOutOfRangeException(nameof(targetCellCount), "Must be at least 1");
 
         MinBounds = minBounds;
         MaxBounds = maxBounds;

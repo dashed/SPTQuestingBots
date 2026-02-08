@@ -36,15 +36,13 @@ public class WorldGridTests
     [Test]
     public void Constructor_InvalidBounds_Throws()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new WorldGrid(new Vector3(100, 0, 100), new Vector3(0, 0, 0)));
+        Assert.Throws<ArgumentException>(() => new WorldGrid(new Vector3(100, 0, 100), new Vector3(0, 0, 0)));
     }
 
     [Test]
     public void Constructor_ZeroTargetCells_Throws()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            new WorldGrid(new Vector3(0, 0, 0), new Vector3(100, 0, 100), 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new WorldGrid(new Vector3(0, 0, 0), new Vector3(100, 0, 100), 0));
     }
 
     [Test]

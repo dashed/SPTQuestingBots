@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-02-08
+
+### Removed
+- Deleted legacy TypeScript source files (`src/mod.ts`, `src/BotLocationUtil.ts`, `src/CommonUtils.ts`, `src/PMCConversionUtil.ts`)
+- Deleted `types/` directory (742 TypeScript declaration files from SPT 3.x)
+- Deleted `dist/` directory (old release build output)
+- Deleted `bepinex_dev/` directory (old SPT 3.x C# client source)
+- Deleted Node.js artifacts (`package.json`, `package-lock.json`, `tsconfig.json`, `packageBuild.ts`)
+- Deleted ESLint config (`.eslintignore`, `.eslintrc.json`)
+- Deleted VS Code workspace file (`mod.code-workspace`)
+- Removed obsolete `.gitignore` entries for `node_modules/` and `bepinex_dev/Libraries/`
+
+### Fixed
+- Suppressed ConfigServer obsolete warnings (`CS0618`) with `#pragma` — SPT 4.2 migration not yet possible (config types not in DI container)
+- Eliminated all 33 compiler warnings: `CS0618` (21), `CS1998` (7), `CS9113` (2), `CS8604` (4), `CS8632` (4)
+
+## [1.4.0] - 2026-02-08
+
+### Added
+- **Zone movement Phase 2: scene integration + action model** — bridges Phase 1 pure logic to the game world
+  - `MapBoundsDetector`: auto-detects map bounds from spawn point positions with configurable padding
+  - `PoiScanner`: scans Unity scene for containers, quest triggers, and exfil points as POIs (NavMesh-validated)
+  - `ZoneDiscovery`: discovers bot zones by grouping spawn points by `BotZoneName`, computes centroids as advection sources
+  - `WorldGridManager` (MonoBehaviour): orchestrator that creates grid, populates POIs/zones, builds field components on `Awake()`
+  - `ZoneQuestBuilder`: creates fallback `Quest` with one objective per navigable grid cell, registered via `BotJobAssignmentFactory.AddQuest()`
+  - `ZoneActionSelector`: maps POI categories to varied bot actions (Ambush, Snipe, HoldAtPosition, PlantItem, MoveToPosition) with weighted random selection inspired by Phobos
+- `ZoneMovementConfig`: 14-property configuration model under `questing.zone_movement` with sensible defaults
+- Zone movement wired into `LocationData.Awake()` (before `BotQuestBuilder`) and `BotQuestBuilder.LoadAllQuests()` (after spawn point wander)
+- 22 new unit tests for `ZoneActionSelector` (13 tests) and `MapBoundsDetector` (9 tests) — 143 client tests total
+
+### Changed
+- Zone movement quests use low desirability (5) as fallback when no higher-priority quests are available
+- Bot actions at zone destinations vary by dominant POI category: containers → 60% Ambush, exfils → 60% Snipe, spawn points → 90% MoveToPosition
+
 ## [1.3.0] - 2026-02-08
 
 ### Added

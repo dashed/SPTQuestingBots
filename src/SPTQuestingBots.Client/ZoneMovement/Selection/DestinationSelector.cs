@@ -50,13 +50,7 @@ public sealed class DestinationSelector
     /// The best neighboring cell, or <paramref name="currentCell"/> if no navigable
     /// neighbor exists.
     /// </returns>
-    public GridCell SelectDestination(
-        WorldGrid grid,
-        GridCell currentCell,
-        float compositeDirX,
-        float compositeDirZ,
-        Vector3 botPosition
-    )
+    public GridCell SelectDestination(WorldGrid grid, GridCell currentCell, float compositeDirX, float compositeDirZ, Vector3 botPosition)
     {
         IReadOnlyList<GridCell> neighbors = currentCell.Neighbors;
         if (neighbors.Count == 0)
@@ -73,13 +67,7 @@ public sealed class DestinationSelector
             if (!candidate.IsNavigable)
                 continue;
 
-            float score = scorer.Score(
-                candidate,
-                compositeDirX,
-                compositeDirZ,
-                botPosition,
-                maxDensity
-            );
+            float score = scorer.Score(candidate, compositeDirX, compositeDirZ, botPosition, maxDensity);
 
             if (score > bestScore)
             {

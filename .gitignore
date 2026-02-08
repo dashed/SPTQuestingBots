@@ -70,8 +70,3 @@ artifacts/
 publish/
 out/
 
-## Node.js (legacy TypeScript source)
-node_modules/
-
-## Legacy BepInEx dev (SPT 3.x project structure)
-bepinex_dev/Libraries/

@@ -1,3 +1,5 @@
+#pragma warning disable CS0618 // ConfigServer is obsolete (SPT 4.2 migration pending)
+
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Models.Eft.Common;
 using SPTarkov.Server.Core.Models.Enums;
@@ -164,7 +166,7 @@ public class BotLocationService
         foreach (var settings in location.Base.BotLocationModifier.AdditionalHostilitySettings)
         {
             // Only adjust PMC hostility settings, leave bosses etc. alone
-            if (!PmcRoles.Contains(settings.BotRole))
+            if (settings.BotRole is null || !PmcRoles.Contains(settings.BotRole))
             {
                 continue;
             }
@@ -199,7 +201,7 @@ public class BotLocationService
         {
             foreach (var chancedEnemy in settings.ChancedEnemies)
             {
-                if (hostilityConfig.PmcEnemyRoles.Contains(chancedEnemy.Role))
+                if (chancedEnemy.Role is not null && hostilityConfig.PmcEnemyRoles.Contains(chancedEnemy.Role))
                 {
                     chancedEnemy.EnemyChance = 100;
                     continue;
@@ -265,7 +267,7 @@ public class BotLocationService
         {
             foreach (var chancedEnemy in settings.ChancedEnemies)
             {
-                if (hostilityConfig.PmcEnemyRoles.Contains(chancedEnemy.Role))
+                if (chancedEnemy.Role is not null && hostilityConfig.PmcEnemyRoles.Contains(chancedEnemy.Role))
                 {
                     chancedEnemy.EnemyChance = 100;
                 }
@@ -320,7 +322,7 @@ public class BotLocationService
 
         foreach (var bossSpawn in location.Base.BossLocationSpawn)
         {
-            if (PmcRoles.Contains(bossSpawn.BossName))
+            if (bossSpawn.BossName is not null && PmcRoles.Contains(bossSpawn.BossName))
             {
                 removedWaves++;
                 continue;

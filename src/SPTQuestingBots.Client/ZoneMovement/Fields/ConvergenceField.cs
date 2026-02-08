@@ -49,13 +49,7 @@ public sealed class ConvergenceField
     /// </param>
     /// <param name="outX">X component of the normalized convergence direction.</param>
     /// <param name="outZ">Z component of the normalized convergence direction.</param>
-    public void GetConvergence(
-        Vector3 position,
-        IReadOnlyList<Vector3> playerPositions,
-        float currentTime,
-        out float outX,
-        out float outZ
-    )
+    public void GetConvergence(Vector3 position, IReadOnlyList<Vector3> playerPositions, float currentTime, out float outX, out float outZ)
     {
         if (currentTime - lastUpdateTime < updateInterval)
         {
@@ -78,12 +72,7 @@ public sealed class ConvergenceField
     /// <param name="playerPositions">Current positions of human players.</param>
     /// <param name="outX">X component of the normalized convergence direction.</param>
     /// <param name="outZ">Z component of the normalized convergence direction.</param>
-    public void ComputeConvergence(
-        Vector3 position,
-        IReadOnlyList<Vector3> playerPositions,
-        out float outX,
-        out float outZ
-    )
+    public void ComputeConvergence(Vector3 position, IReadOnlyList<Vector3> playerPositions, out float outX, out float outZ)
     {
         float ax = 0f;
         float az = 0f;

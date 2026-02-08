@@ -1,8 +1,9 @@
+#pragma warning disable CS0618 // ConfigServer is obsolete (SPT 4.2 migration pending)
+
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
 using SPTarkov.Server.Core.Models.Spt.Config;
 using SPTarkov.Server.Core.Models.Spt.Mod;
-using SPTarkov.Server.Core.Models.Utils;
 using SPTarkov.Server.Core.Servers;
 using SPTQuestingBots.Server.Configuration;
 using SPTQuestingBots.Server.Services;
@@ -38,7 +39,6 @@ namespace SPTQuestingBots.Server;
 /// </summary>
 [Injectable(InjectionType.Singleton, typePriority: 100)]
 public class QuestingBotsServerPlugin(
-    ISptLogger<QuestingBotsServerPlugin> logger,
     QuestingBotsConfigLoader configLoader,
     CommonUtils commonUtils,
     BotLocationService botLocationService,

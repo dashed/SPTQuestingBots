@@ -1,3 +1,5 @@
+#pragma warning disable CS0618 // ConfigServer is obsolete (SPT 4.2 migration pending)
+
 using Newtonsoft.Json;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
@@ -79,13 +81,13 @@ public class QuestingBotsStaticRouter(
             // parameters, debug flags, etc.).
             new RouteAction<EmptyRequestData>(
                 "/QuestingBots/GetConfig",
-                async (url, info, sessionId, output) =>
+                (url, info, sessionId, output) =>
                 {
                     // Use Newtonsoft serialization because QuestingBotsConfig
                     // uses [JsonProperty] attributes (Newtonsoft) for snake_case
                     // mapping. SPT's jsonUtil uses System.Text.Json which would
                     // produce PascalCase keys, breaking the client plugin.
-                    return JsonConvert.SerializeObject(configLoader.Config);
+                    return new ValueTask<string>(JsonConvert.SerializeObject(configLoader.Config));
                 }
             ),
             // ── GET /QuestingBots/GetAllQuestTemplates ────────────────────
@@ -93,10 +95,10 @@ public class QuestingBotsStaticRouter(
             // client uses this to build the quest pool that bots can pursue.
             new RouteAction<EmptyRequestData>(
                 "/QuestingBots/GetAllQuestTemplates",
-                async (url, info, sessionId, output) =>
+                (url, info, sessionId, output) =>
                 {
                     var templates = questHelper.GetQuestsFromDb();
-                    return jsonUtil.Serialize(new { templates }) ?? "{}";
+                    return new ValueTask<string>(jsonUtil.Serialize(new { templates }) ?? "{}");
                 }
             ),
             // ── GET /QuestingBots/GetEFTQuestSettings ─────────────────────
@@ -104,10 +106,10 @@ public class QuestingBotsStaticRouter(
             // overrides (e.g. custom waypoints, step modifications).
             new RouteAction<EmptyRequestData>(
                 "/QuestingBots/GetEFTQuestSettings",
-                async (url, info, sessionId, output) =>
+                (url, info, sessionId, output) =>
                 {
                     var settings = configLoader.LoadJsonFile<object>("config/eftQuestSettings.json");
-                    return jsonUtil.Serialize(new { settings }) ?? "{}";
+                    return new ValueTask<string>(jsonUtil.Serialize(new { settings }) ?? "{}");
                 }
             ),
             // ── GET /QuestingBots/GetZoneAndItemQuestPositions ────────────
@@ -115,10 +117,10 @@ public class QuestingBotsStaticRouter(
             // positions used when generating bot quest objectives.
             new RouteAction<EmptyRequestData>(
                 "/QuestingBots/GetZoneAndItemQuestPositions",
-                async (url, info, sessionId, output) =>
+                (url, info, sessionId, output) =>
                 {
                     var zoneAndItemPositions = configLoader.LoadJsonFile<object>("config/zoneAndItemQuestPositions.json");
-                    return jsonUtil.Serialize(new { zoneAndItemPositions }) ?? "{}";
+                    return new ValueTask<string>(jsonUtil.Serialize(new { zoneAndItemPositions }) ?? "{}");
                 }
             ),
             // ── GET /QuestingBots/GetScavRaidSettings ─────────────────────
@@ -127,10 +129,10 @@ public class QuestingBotsStaticRouter(
             // which affects quest eligibility and bot behaviour.
             new RouteAction<EmptyRequestData>(
                 "/QuestingBots/GetScavRaidSettings",
-                async (url, info, sessionId, output) =>
+                (url, info, sessionId, output) =>
                 {
                     var locationConfig = configServer.GetConfig<LocationConfig>();
-                    return jsonUtil.Serialize(new { maps = locationConfig.ScavRaidTimeSettings.Maps }) ?? "{}";
+                    return new ValueTask<string>(jsonUtil.Serialize(new { maps = locationConfig.ScavRaidTimeSettings.Maps }) ?? "{}");
                 }
             ),
             // ── GET /QuestingBots/GetUSECChance ──────────────────────────
@@ -139,10 +141,10 @@ public class QuestingBotsStaticRouter(
             // match the server's faction distribution.
             new RouteAction<EmptyRequestData>(
                 "/QuestingBots/GetUSECChance",
-                async (url, info, sessionId, output) =>
+                (url, info, sessionId, output) =>
                 {
                     var pmcConfig = configServer.GetConfig<PmcConfig>();
-                    return jsonUtil.Serialize(new { usecChance = pmcConfig.IsUsec }) ?? "{}";
+                    return new ValueTask<string>(jsonUtil.Serialize(new { usecChance = pmcConfig.IsUsec }) ?? "{}");
                 }
             ),
         ]

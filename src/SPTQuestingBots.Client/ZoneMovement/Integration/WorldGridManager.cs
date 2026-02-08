@@ -1,0 +1,194 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Comfort.Common;
+using EFT;
+using EFT.Game.Spawning;
+using SPTQuestingBots.Components;
+using SPTQuestingBots.Controllers;
+using SPTQuestingBots.ZoneMovement.Core;
+using SPTQuestingBots.ZoneMovement.Fields;
+using SPTQuestingBots.ZoneMovement.Selection;
+using UnityEngine;
+using UnityEngine.AI;
+
+namespace SPTQuestingBots.ZoneMovement.Integration;
+
+/// <summary>
+/// MonoBehaviour orchestrator for the zone-based movement system. Creates the world grid
+/// on <see cref="Awake"/>, populates it with POIs and zone sources, and periodically
+/// refreshes the convergence field toward human players.
+/// <para>
+/// This component should be attached to the <c>GameWorld</c> object during
+/// <see cref="LocationData.Awake()"/>, before <see cref="BotQuestBuilder"/> is created.
+/// </para>
+/// </summary>
+public class WorldGridManager : MonoBehaviour
+{
+    /// <summary>Whether the grid has been fully initialized and is ready to use.</summary>
+    public bool IsInitialized { get; private set; }
+
+    /// <summary>The world grid partitioning the map into cells.</summary>
+    public WorldGrid Grid { get; private set; }
+
+    private AdvectionField advectionField;
+    private ConvergenceField convergenceField;
+    private FieldComposer fieldComposer;
+    private CellScorer cellScorer;
+    private DestinationSelector destinationSelector;
+    private float convergenceUpdateInterval;
+
+    /// <summary>
+    /// Initializes the grid, POIs, zone sources, and field components.
+    /// </summary>
+    protected void Awake()
+    {
+        try
+        {
+            var config = ConfigController.Config.Questing.ZoneMovement;
+
+            // 1. Get spawn points for bounds detection and zone discovery
+            SpawnPointParams[] spawnPoints = Singleton<GameWorld>.Instance.GetComponent<LocationData>().GetAllValidSpawnPointParams();
+
+            if (spawnPoints == null || spawnPoints.Length == 0)
+            {
+                LoggingController.LogError("[ZoneMovement] No spawn points found. Grid not created.");
+                return;
+            }
+
+            // 2. Detect map bounds from spawn points
+            Vector3[] positions = spawnPoints.Select(sp => sp.Position.ToUnityVector3()).ToArray();
+            var (min, max) = MapBoundsDetector.DetectBounds(positions, config.BoundsPadding);
+
+            // 3. Create world grid with auto-sized cells
+            Grid = new WorldGrid(min, max, config.TargetCellCount);
+            LoggingController.LogInfo(
+                $"[ZoneMovement] Grid created: {Grid.Cols}x{Grid.Rows} ({Grid.Cols * Grid.Rows} cells), cell size: {Grid.CellSize:F1}m"
+            );
+
+            // 4. Scan scene for POIs and add them to the grid
+            List<PointOfInterest> pois = PoiScanner.ScanScene();
+            foreach (var poi in pois)
+            {
+                Grid.AddPoi(poi);
+            }
+
+            // 5. Add spawn points as POIs
+            foreach (var sp in spawnPoints)
+            {
+                Grid.AddPoi(new PointOfInterest(sp.Position.ToUnityVector3(), PoiCategory.SpawnPoint));
+            }
+
+            // 6. Discover zones and populate advection field
+            advectionField = new AdvectionField(config.CrowdRepulsionStrength);
+            var zones = ZoneDiscovery.DiscoverZones(spawnPoints);
+            foreach (var (position, strength) in zones)
+            {
+                advectionField.AddZone(position, strength);
+            }
+
+            // 7. Synthetic fill: add NavMesh-validated synthetic POIs to empty cells
+            int syntheticCount = 0;
+            for (int col = 0; col < Grid.Cols; col++)
+            {
+                for (int row = 0; row < Grid.Rows; row++)
+                {
+                    var cell = Grid.GetCell(col, row);
+                    if (cell.IsNavigable)
+                        continue;
+
+                    if (NavMesh.SamplePosition(cell.Center, out NavMeshHit hit, Grid.CellSize, NavMesh.AllAreas))
+                    {
+                        Grid.AddPoi(new PointOfInterest(hit.position, PoiCategory.Synthetic));
+                        syntheticCount++;
+                    }
+                }
+            }
+            LoggingController.LogInfo($"[ZoneMovement] Added {syntheticCount} synthetic POIs to empty cells");
+
+            // 8. Create remaining field components
+            convergenceField = new ConvergenceField(config.ConvergenceUpdateIntervalSec);
+            convergenceUpdateInterval = config.ConvergenceUpdateIntervalSec;
+
+            fieldComposer = new FieldComposer(config.ConvergenceWeight, config.AdvectionWeight, config.MomentumWeight, config.NoiseWeight);
+
+            cellScorer = new CellScorer(config.PoiScoreWeight);
+            destinationSelector = new DestinationSelector(cellScorer);
+
+            IsInitialized = true;
+            LoggingController.LogInfo(
+                $"[ZoneMovement] Initialization complete. POIs: {pois.Count + spawnPoints.Length + syntheticCount}, Zones: {zones.Count}"
+            );
+        }
+        catch (Exception ex)
+        {
+            LoggingController.LogError($"[ZoneMovement] Initialization failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Returns the grid cell containing the given world position.
+    /// </summary>
+    /// <param name="position">World-space position.</param>
+    /// <returns>The grid cell, or null if the grid is not initialized.</returns>
+    public GridCell GetCellForBot(Vector3 position)
+    {
+        if (!IsInitialized)
+            return null;
+        return Grid.GetCell(position);
+    }
+
+    /// <summary>
+    /// Computes the composite movement direction at a position, combining advection,
+    /// convergence, momentum, and noise.
+    /// </summary>
+    /// <param name="position">The bot's current position.</param>
+    /// <param name="momentumX">X component of the bot's current travel direction.</param>
+    /// <param name="momentumZ">Z component of the bot's current travel direction.</param>
+    /// <param name="botPositions">Positions of other bots (for crowd repulsion).</param>
+    /// <param name="playerPositions">Positions of human players (for convergence).</param>
+    /// <param name="outX">X component of the composite direction.</param>
+    /// <param name="outZ">Z component of the composite direction.</param>
+    public void GetCompositeDirection(
+        Vector3 position,
+        float momentumX,
+        float momentumZ,
+        List<Vector3> botPositions,
+        List<Vector3> playerPositions,
+        out float outX,
+        out float outZ
+    )
+    {
+        outX = 0f;
+        outZ = 0f;
+
+        if (!IsInitialized)
+            return;
+
+        // Get advection (zone attraction + crowd repulsion)
+        advectionField.GetAdvection(position, botPositions, out float advX, out float advZ);
+
+        // Get convergence (player attraction)
+        convergenceField.GetConvergence(position, playerPositions, Time.time, out float convX, out float convZ);
+
+        // Compose with noise
+        float noiseAngle = UnityEngine.Random.Range(-Mathf.PI, Mathf.PI);
+        fieldComposer.GetCompositeDirection(advX, advZ, convX, convZ, momentumX, momentumZ, noiseAngle, out outX, out outZ);
+    }
+
+    /// <summary>
+    /// Selects the best neighboring cell for a bot to move to.
+    /// </summary>
+    /// <param name="currentCell">The cell the bot is currently in.</param>
+    /// <param name="compositeDirX">X component of the composite direction.</param>
+    /// <param name="compositeDirZ">Z component of the composite direction.</param>
+    /// <param name="botPosition">The bot's current world position.</param>
+    /// <returns>The best destination cell, or currentCell if no better option.</returns>
+    public GridCell SelectDestination(GridCell currentCell, float compositeDirX, float compositeDirZ, Vector3 botPosition)
+    {
+        if (!IsInitialized)
+            return currentCell;
+
+        return destinationSelector.SelectDestination(Grid, currentCell, compositeDirX, compositeDirZ, botPosition);
+    }
+}
