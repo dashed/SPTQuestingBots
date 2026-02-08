@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <AssemblyName>SPTQuestingBots.Server</AssemblyName>
+    <RootNamespace>SPTQuestingBots.Server</RootNamespace>
+    <OutputPath>..\..\build\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InternalsVisibleTo>SPTQuestingBots.Server.Tests</InternalsVisibleTo>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SemanticVersioning" Version="3.0.0" />
+  </ItemGroup>
+
+  <!--
+    SPT server-csharp assemblies.
+    Copy the required DLLs into the libs/ folder from your SPT 4.x installation
+    or the server-csharp build output:
+      - SPTarkov.Server.Core.dll
+      - SPTarkov.DI.dll
+      - SPTarkov.Common.dll
+      - Newtonsoft.Json.dll
+  -->
+  <ItemGroup>
+    <Reference Include="SPTarkov.Server.Core" HintPath="..\..\libs\SPTarkov.Server.Core.dll" Private="false" />
+    <Reference Include="SPTarkov.DI" HintPath="..\..\libs\SPTarkov.DI.dll" Private="false" />
+    <Reference Include="SPTarkov.Common" HintPath="..\..\libs\SPTarkov.Common.dll" Private="false" />
+    <Reference Include="Newtonsoft.Json" HintPath="..\..\libs\Newtonsoft.Json.dll" Private="false" />
+  </ItemGroup>
+</Project>

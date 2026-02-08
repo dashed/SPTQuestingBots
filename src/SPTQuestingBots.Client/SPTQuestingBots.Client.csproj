@@ -1,0 +1,90 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>SPTQuestingBots</AssemblyName>
+    <RootNamespace>SPTQuestingBots</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>disable</Nullable>
+    <OutputPath>..\..\build\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <!--
+    BepInEx, EFT, and SPT game assemblies.
+    Copy the required DLLs into the libs/ folder from your SPT 4.x installation:
+      BepInEx/core:
+        - BepInEx.dll
+        - 0Harmony.dll
+      EscapeFromTarkov_Data/Managed:
+        - Assembly-CSharp.dll
+        - UnityEngine.dll
+        - UnityEngine.CoreModule.dll
+        - UnityEngine.IMGUIModule.dll
+        - UnityEngine.PhysicsModule.dll
+        - UnityEngine.TextRenderingModule.dll
+        - UnityEngine.AIModule.dll
+        - UnityEngine.UI.dll
+        - Comfort.dll
+        - Comfort.Unity.dll
+        - CommonExtensions.dll
+        - DissonanceVoip.dll
+        - ItemComponent.Types.dll
+        - Newtonsoft.Json.dll
+        - Sirenix.Serialization.dll
+        - Unity.Postprocessing.Runtime.dll
+        - Unity.TextMeshPro.dll
+      BepInEx/plugins/spt:
+        - spt-common.dll
+        - spt-core.dll
+        - spt-custom.dll
+        - spt-reflection.dll
+        - spt-singleplayer.dll
+      BepInEx/patchers:
+        - spt-prepatch.dll
+      Third-party mods:
+        - DrakiaXYZ-BigBrain.dll (from BigBrain mod)
+  -->
+
+  <!-- BepInEx core -->
+  <ItemGroup>
+    <Reference Include="BepInEx" HintPath="..\..\libs\BepInEx.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="..\..\libs\0Harmony.dll" Private="false" />
+  </ItemGroup>
+
+  <!-- EFT managed assemblies -->
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp" HintPath="..\..\libs\Assembly-CSharp.dll" Private="false" />
+    <Reference Include="UnityEngine" HintPath="..\..\libs\UnityEngine.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="..\..\libs\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="UnityEngine.IMGUIModule" HintPath="..\..\libs\UnityEngine.IMGUIModule.dll" Private="false" />
+    <Reference Include="UnityEngine.PhysicsModule" HintPath="..\..\libs\UnityEngine.PhysicsModule.dll" Private="false" />
+    <Reference Include="UnityEngine.TextRenderingModule" HintPath="..\..\libs\UnityEngine.TextRenderingModule.dll" Private="false" />
+    <Reference Include="UnityEngine.AIModule" HintPath="..\..\libs\UnityEngine.AIModule.dll" Private="false" />
+    <Reference Include="UnityEngine.UI" HintPath="..\..\libs\UnityEngine.UI.dll" Private="false" />
+    <Reference Include="Comfort" HintPath="..\..\libs\Comfort.dll" Private="false" />
+    <Reference Include="Comfort.Unity" HintPath="..\..\libs\Comfort.Unity.dll" Private="false" />
+    <Reference Include="CommonExtensions" HintPath="..\..\libs\CommonExtensions.dll" Private="false" />
+    <Reference Include="DissonanceVoip" HintPath="..\..\libs\DissonanceVoip.dll" Private="false" />
+    <Reference Include="ItemComponent.Types" HintPath="..\..\libs\ItemComponent.Types.dll" Private="false" />
+    <Reference Include="Newtonsoft.Json" HintPath="..\..\libs\Newtonsoft.Json.dll" Private="false" />
+    <Reference Include="Sirenix.Serialization" HintPath="..\..\libs\Sirenix.Serialization.dll" Private="false" />
+    <Reference Include="Unity.Postprocessing.Runtime" HintPath="..\..\libs\Unity.Postprocessing.Runtime.dll" Private="false" />
+    <Reference Include="Unity.TextMeshPro" HintPath="..\..\libs\Unity.TextMeshPro.dll" Private="false" />
+  </ItemGroup>
+
+  <!-- SPT 4.x plugin assemblies -->
+  <ItemGroup>
+    <Reference Include="spt-common" HintPath="..\..\libs\spt-common.dll" Private="false" />
+    <Reference Include="spt-core" HintPath="..\..\libs\spt-core.dll" Private="false" />
+    <Reference Include="spt-custom" HintPath="..\..\libs\spt-custom.dll" Private="false" />
+    <Reference Include="spt-reflection" HintPath="..\..\libs\spt-reflection.dll" Private="false" />
+    <Reference Include="spt-singleplayer" HintPath="..\..\libs\spt-singleplayer.dll" Private="false" />
+    <Reference Include="spt-prepatch" HintPath="..\..\libs\spt-prepatch.dll" Private="false" />
+  </ItemGroup>
+
+  <!-- Third-party mod dependencies -->
+  <ItemGroup>
+    <Reference Include="DrakiaXYZ-BigBrain" HintPath="..\..\libs\DrakiaXYZ-BigBrain.dll" Private="false" />
+  </ItemGroup>
+</Project>
