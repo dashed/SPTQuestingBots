@@ -66,6 +66,9 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("bot_quests")]
         public BotQuestsConfig BotQuests { get; set; } = new BotQuestsConfig();
 
+        [JsonProperty("zone_movement")]
+        public ZoneMovementConfig ZoneMovement { get; set; } = new ZoneMovementConfig();
+
         public QuestingConfig() { }
     }
 }

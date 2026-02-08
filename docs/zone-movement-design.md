@@ -20,7 +20,7 @@ Replace QuestingBots' per-map JSON quest files with a **map-agnostic, physics-in
 | POI sources | Scene scan (containers, doors, exfils) | Same approach, plus spawn points |
 | Movement model | advection + convergence + momentum + noise | Same physics model |
 | Squad system | Custom `SquadRegistry` | Existing HiveMind boss/follower system |
-| Actions | MoveToPosition, Ambush, Snipe, PlantItem | MoveToPosition + HoldAtPosition (simpler) |
+| Actions | MoveToPosition, Ambush, Snipe, PlantItem | Same actions, selected by POI category |
 | Config files | Per-map JSON | Single `zone_movement` config section |
 
 ---
@@ -180,185 +180,154 @@ Picks the best neighbor cell for a bot to move to.
 
 ---
 
-## 4. Phase 2: Scene Integration Layer
+## 4. Phase 2: Scene Integration Layer (COMPLETED)
 
-These classes bridge pure logic to the game world. They depend on Unity/EFT types and cannot be unit tested, but the logic they contain is thin.
+These classes bridge pure logic to the game world. They depend on Unity/EFT types and cannot be unit tested (except `MapBoundsDetector` and `ZoneActionSelector` which are pure logic), but the logic they contain is thin.
 
 ### 4.1 Directory Structure
 
 ```
-src/SPTQuestingBots.Client/ZoneMovement/Integration/
-├── MapBoundsDetector.cs
-├── PoiScanner.cs
-├── ZoneDiscovery.cs
-├── WorldGridManager.cs
-└── ZoneObjectiveProvider.cs
+src/SPTQuestingBots.Client/ZoneMovement/
+├── Integration/
+│   ├── MapBoundsDetector.cs    (pure logic, unit tested)
+│   ├── PoiScanner.cs           (scene adapter)
+│   ├── ZoneDiscovery.cs        (scene adapter)
+│   ├── WorldGridManager.cs     (MonoBehaviour orchestrator)
+│   └── ZoneQuestBuilder.cs     (quest factory)
+└── Selection/
+    └── ZoneActionSelector.cs   (pure logic, unit tested)
 ```
 
 ### 4.2 Classes
 
-#### `MapBoundsDetector`
-Auto-detect map bounds — **no per-map config needed**.
+#### `MapBoundsDetector` (pure logic)
+Auto-detect map bounds — **no per-map config needed**. Operates on raw `Vector3[]` with no Unity scene dependencies.
 
-```csharp
-public static (Vector3 min, Vector3 max) DetectBounds(SpawnPointParams[] spawnPoints, float padding = 50f)
-{
-    // Find min/max X and Z across all spawn points
-    // Add padding to ensure bots don't get stuck at edges
-    // Y is ignored (2D grid on XZ plane)
-}
-```
+- **Method**: `static (Vector3 min, Vector3 max) DetectBounds(Vector3[] positions, float padding = 50f)`
+- Y set to ±10000 (XZ plane only), padding expands each edge
+- Unit tested with 9 tests
 
-**Fallback**: If no spawn points (shouldn't happen), use `LocationScene` bounds or hardcoded large area.
+#### `PoiScanner` (scene adapter)
+Scans Unity scene for points of interest using `Object.FindObjectsOfType`.
 
-#### `PoiScanner`
-Scan Unity scene for points of interest.
+- Scans `LootableContainer` → `PoiCategory.Container`
+- Scans `TriggerWithId` → `PoiCategory.Quest`
+- Scans `ExfiltrationPoint` → `PoiCategory.Exfil`
+- NavMesh validation (2m search distance) filters unreachable positions
 
-```csharp
-public static List<PointOfInterest> ScanScene()
-{
-    // FindObjectsOfType<LootableContainer>() → PoiCategory.Container
-    // FindObjectsOfType<TriggerWithId>() → PoiCategory.Quest
-    // FindObjectsOfType<ExfiltrationPoint>() → PoiCategory.Exfil
-    // FindObjectsOfType<SpawnPointMarker>() → PoiCategory.SpawnPoint
-    // Validate each position with NavMesh.SamplePosition()
-}
-```
+#### `ZoneDiscovery` (scene adapter)
+Discovers bot zones by grouping `SpawnPointParams` by `BotZoneName`.
 
-#### `ZoneDiscovery`
-Find BSG BotZone objects as advection sources.
+- Computes centroid for each zone group
+- Normalizes strength: largest zone = 1.0
 
-```csharp
-public static List<(Vector3 position, float strength)> DiscoverZones()
-{
-    // FindObjectsOfType<BotZone>() → extract patrol points
-    // Each patrol point becomes an advection source
-    // Strength proportional to number of patrol waypoints in zone
-}
-```
+#### `ZoneActionSelector` (pure logic)
+Maps POI categories to bot actions with weighted random selection.
+
+| Category | Action Distribution |
+|----------|-------------------|
+| Container | 60% Ambush, 20% Snipe, 10% HoldAtPosition, 10% PlantItem |
+| LooseLoot | 50% HoldAtPosition, 30% Ambush, 20% MoveToPosition |
+| Quest | 70% MoveToPosition, 20% HoldAtPosition, 10% Ambush |
+| Exfil | 60% Snipe, 30% Ambush, 10% HoldAtPosition |
+| SpawnPoint | 90% MoveToPosition, 10% HoldAtPosition |
+| Synthetic | 100% MoveToPosition |
+
+- Returns int action indices to avoid EFT enum dependency
+- `GetHoldDuration(int)` returns per-action hold time ranges
+- Unit tested with 13 tests (distribution validation, edge cases)
 
 #### `WorldGridManager` (MonoBehaviour)
 Orchestrator that creates the grid on raid start and manages field updates.
 
-- **Awake**: Detect bounds → Create `WorldGrid` → Scan POIs → Discover zones → Build `AdvectionField`
-- **Update**: Every 30s, update `ConvergenceField` with current human player positions
-- **API**: `GridCell GetCellForBot(Vector3 position)`, `Vector2 GetCompositeDirection(Vector3 position, Vector3 momentum, IReadOnlyList<Vector3> botPositions, IReadOnlyList<Vector3> playerPositions)`
-- **Synthetic fill**: For grid cells with zero POIs, sample NavMesh at cell center to create synthetic POIs
+- **Awake**: Detect bounds → Create `WorldGrid` → `PoiScanner.ScanScene()` → spawn point POIs → `ZoneDiscovery` → `AdvectionField` → synthetic fill → `FieldComposer`/`CellScorer`/`DestinationSelector`
+- **API**: `Grid`, `IsInitialized`, `GetCellForBot(Vector3)`, `GetCompositeDirection(...)`, `SelectDestination(...)`
+- **Synthetic fill**: Empty grid cells get NavMesh-sampled synthetic POIs
 
-#### `ZoneObjectiveProvider`
-Adapter between the zone system and `BotObjectiveManager`.
+#### `ZoneQuestBuilder` (quest factory)
+Creates zone movement quests that plug into the existing quest pipeline.
 
-```csharp
-public class ZoneObjectiveProvider
-{
-    // Returns a BotJobAssignment-compatible position for a bot
-    public Vector3? GetNextDestination(BotOwner bot, WorldGridManager gridManager)
-    {
-        var currentCell = gridManager.GetCellForBot(bot.Position);
-        var momentum = (bot.Position - bot.PreviousPosition).normalized;  // XZ only
-        var composite = gridManager.GetCompositeDirection(bot.Position, momentum, ...);
-        var targetCell = destinationSelector.SelectDestination(grid, currentCell, composite, bot.Position);
-        return targetCell?.Center;  // NavMesh-validated position
-    }
-}
-```
+- Creates one `Quest` with a `QuestObjective` per navigable `GridCell`
+- Each objective gets a `QuestObjectiveStep` with action selected by `ZoneActionSelector` based on the cell's dominant POI category
+- Registered via `BotJobAssignmentFactory.AddQuest()` with low desirability (5) as fallback
+- `IsRepeatable = true`, `MaxBots = 99`
+
+### 4.3 Integration Approach
+
+**Design decision**: Instead of the originally planned `ZoneObjectiveProvider` adapter, zone movement uses the existing quest pipeline:
+
+1. `WorldGridManager` initializes in `LocationData.Awake()` (before `BotQuestBuilder`)
+2. `ZoneQuestBuilder.CreateZoneQuests()` creates a `Quest` in `BotQuestBuilder.LoadAllQuests()` (after spawn point wander, before spawn rush)
+3. Quest registered via `BotJobAssignmentFactory.AddQuest()` — bots pick it up through normal assignment flow
+4. `BotObjectiveLayer.trySetNextAction()` already handles Ambush/Snipe/PlantItem with two-phase dispatch (GoToObjective → action-specific behavior)
+
+This approach required **zero changes** to `BotObjectiveManager`, `BotJobAssignmentFactory`, or `BotObjectiveLayer`.
 
 ---
 
-## 5. Phase 3: Integration with Existing QuestingBots
+## 5. Phase 3: Remaining Work
 
-### 5.1 Changes to Existing Files
+Phases 2 and 3 from the original plan were merged. The quest pipeline integration (originally Phase 3) was completed as part of Phase 2 using `ZoneQuestBuilder` instead of the separate `ZoneObjectiveProvider` approach.
 
-#### `LocationData.cs` (Awake)
-Add after existing initialization:
-```csharp
-// Initialize zone movement system (works regardless of questing or spawning config)
-Singleton<GameWorld>.Instance.gameObject.GetOrAddComponent<WorldGridManager>();
-```
+### 5.1 Completed Integration (v1.4.0)
 
-#### `BotObjectiveManager.cs`
-Modify `GetNewBotJobAssignment()` fallback path in `BotJobAssignmentFactory.cs`:
-```csharp
-// After existing quest assignment logic fails to find a quest...
-// Fallback: zone-based movement
-var gridManager = Singleton<GameWorld>.Instance.GetComponent<WorldGridManager>();
-if (gridManager != null)
-{
-    var destination = zoneObjectiveProvider.GetNextDestination(bot, gridManager);
-    if (destination.HasValue)
-    {
-        return CreateZoneMovementAssignment(bot, destination.Value);
-    }
-}
-```
+- **`LocationData.cs`**: `WorldGridManager` instantiated in `Awake()` (guarded by `ZoneMovement.Enabled`)
+- **`BotQuestBuilder.cs`**: `ZoneQuestBuilder.CreateZoneQuests()` called in `LoadAllQuests()`, registered via `BotJobAssignmentFactory.AddQuest()`
+- **`QuestingConfig.cs`**: Added `ZoneMovement` property with `ZoneMovementConfig` model
+- **No changes needed** to `BotObjectiveManager`, `BotJobAssignmentFactory`, or `BotObjectiveLayer`
 
-#### `config/config.json`
-Add new section:
-```json
-{
-    "zone_movement": {
-        "enabled": true,
-        "target_cell_count": 150,
-        "convergence_update_interval_sec": 30,
-        "convergence_weight": 1.0,
-        "advection_weight": 0.5,
-        "momentum_weight": 0.5,
-        "noise_weight": 0.3,
-        "hold_duration_min_sec": 10,
-        "hold_duration_max_sec": 60,
-        "poi_score_weight": 0.3,
-        "crowd_repulsion_strength": 2.0,
-        "bounds_padding": 50
-    }
-}
-```
+### 5.2 Config Model (Implemented)
 
-#### `QuestingBotsPluginConfig.cs`
-Add F12 menu entries for zone movement toggle and debug visualization.
+`ZoneMovementConfig` — 14 properties under `questing.zone_movement`:
 
-### 5.2 New Config Model
+| Property | Default | Description |
+|----------|---------|-------------|
+| `enabled` | `true` | Master toggle for zone movement |
+| `target_cell_count` | `150` | Target number of grid cells per map |
+| `convergence_update_interval_sec` | `30` | How often to refresh player convergence field |
+| `convergence_weight` | `1.0` | Weight of player attraction in composite direction |
+| `advection_weight` | `0.5` | Weight of zone attraction in composite direction |
+| `momentum_weight` | `0.5` | Weight of current travel direction (smoothing) |
+| `noise_weight` | `0.3` | Weight of random noise (prevent determinism) |
+| `poi_score_weight` | `0.3` | Weight of POI density in cell scoring |
+| `crowd_repulsion_strength` | `2.0` | Strength of bot-to-bot repulsion |
+| `bounds_padding` | `50` | Padding (meters) around detected map bounds |
+| `quest_desirability` | `5` | Quest priority (low = fallback) |
+| `quest_name` | `"Zone Movement"` | Quest name in assignment system |
 
-```csharp
-public class ZoneMovementConfig
-{
-    [JsonProperty("enabled")] public bool Enabled { get; set; } = true;
-    [JsonProperty("target_cell_count")] public int TargetCellCount { get; set; } = 150;
-    [JsonProperty("convergence_update_interval_sec")] public float ConvergenceUpdateIntervalSec { get; set; } = 30f;
-    [JsonProperty("convergence_weight")] public float ConvergenceWeight { get; set; } = 1.0f;
-    [JsonProperty("advection_weight")] public float AdvectionWeight { get; set; } = 0.5f;
-    [JsonProperty("momentum_weight")] public float MomentumWeight { get; set; } = 0.5f;
-    [JsonProperty("noise_weight")] public float NoiseWeight { get; set; } = 0.3f;
-    [JsonProperty("hold_duration_min_sec")] public float HoldDurationMinSec { get; set; } = 10f;
-    [JsonProperty("hold_duration_max_sec")] public float HoldDurationMaxSec { get; set; } = 60f;
-    [JsonProperty("poi_score_weight")] public float PoiScoreWeight { get; set; } = 0.3f;
-    [JsonProperty("crowd_repulsion_strength")] public float CrowdRepulsionStrength { get; set; } = 2.0f;
-    [JsonProperty("bounds_padding")] public float BoundsPadding { get; set; } = 50f;
-}
-```
+### 5.3 Future Work
+
+- F12 menu entries for zone movement toggle and debug visualization
+- In-game debug overlay (grid cells, field vectors, POI markers)
+- Dynamic convergence field updates in `WorldGridManager.Update()` (currently fields are static after init)
+- Runtime destination re-selection using `GetCompositeDirection()` + `SelectDestination()` for more dynamic movement
 
 ---
 
 ## 6. Test Strategy
 
-### 6.1 Unit Tests (Phase 1) — ~30-40 tests
+### 6.1 Unit Tests — 143 client tests total
 
 All use the existing `Vector3` test shim (with `sqrMagnitude`, `magnitude`, `operator-`).
 
-| Test Class | Coverage |
-|------------|----------|
-| `WorldGridTests` | Grid creation, cell count, cell lookup by position, out-of-bounds handling, neighbor enumeration, POI insertion |
-| `GridCellTests` | POI management, density calculation, navigability |
-| `AdvectionFieldTests` | Single zone attraction, multiple zones, crowd repulsion inverse-square, zero-distance handling, normalization |
-| `ConvergenceFieldTests` | Single player attraction, multiple players, sqrt falloff, update interval gating, stale cache |
-| `FieldComposerTests` | Weight application, all-zero input, single dominant field, noise rotation, normalization |
-| `DestinationSelectorTests` | Best-angle neighbor, no navigable neighbors, edge cells, POI density bonus |
-| `CellScorerTests` | Perfect alignment score, opposite direction penalty, POI density bonus, configurable weight |
+| Test Class | Tests | Coverage |
+|------------|-------|----------|
+| `WorldGridTests` | 15 | Grid creation, cell count, cell lookup by position, out-of-bounds handling, neighbor enumeration, POI insertion |
+| `GridCellTests` | 6 | POI management, density calculation, navigability |
+| `PointOfInterestTests` | 4 | Constructor, category-based weights |
+| `AdvectionFieldTests` | 12 | Single zone attraction, multiple zones, crowd repulsion inverse-square, zero-distance handling, normalization |
+| `ConvergenceFieldTests` | 9 | Single player attraction, multiple players, sqrt falloff, update interval gating, stale cache |
+| `FieldComposerTests` | 8 | Weight application, all-zero input, single dominant field, noise rotation, normalization |
+| `DestinationSelectorTests` | 7 | Best-angle neighbor, no navigable neighbors, edge cells, POI density bonus |
+| `CellScorerTests` | 10 | Perfect alignment score, opposite direction penalty, POI density bonus, configurable weight |
+| `ZoneActionSelectorTests` | 13 | Distribution validation per category, hold durations, weight table integrity, edge cases |
+| `MapBoundsDetectorTests` | 9 | Single/multiple positions, padding, Y bounds, negative coordinates, error cases |
 
-### 6.2 Integration Tests (Phase 2-3) — compile-verified only
+### 6.2 Integration verification — compile-verified
 
-Scene integration classes are thin adapters. Correctness verified by:
-1. Pure logic tests (Phase 1 covers all computation)
-2. In-game visual debugging (draw grid, POIs, field vectors)
+Scene integration classes (`PoiScanner`, `ZoneDiscovery`, `WorldGridManager`, `ZoneQuestBuilder`) are thin adapters. Correctness verified by:
+1. Pure logic tests (Phases 1-2 cover all computation)
+2. In-game visual debugging (future: draw grid, POIs, field vectors)
 3. Manual testing on 2-3 maps
 
 ---
@@ -379,25 +348,28 @@ Scene integration classes are thin adapters. Correctness verified by:
 | 8 | Create `DestinationSelector` picking best neighbor | 3, 6, 7 | S |
 | 9 | Write comprehensive unit tests for all Phase 1 classes | 1–8 | L |
 
-### Phase 2: Scene Integration (~5 classes)
+### Phase 2: Scene Integration + Quest Pipeline (COMPLETED in v1.4.0)
 
-| # | Task | Depends On | Est. Size |
-|---|------|-----------|-----------|
-| 10 | Create `MapBoundsDetector` | 3 | S |
-| 11 | Create `PoiScanner` | 1 | S |
-| 12 | Create `ZoneDiscovery` | 4 | S |
-| 13 | Create `WorldGridManager` (MonoBehaviour orchestrator) | 3, 10, 11, 12 | M |
-| 14 | Create `ZoneObjectiveProvider` (BotObjectiveManager adapter) | 8, 13 | M |
+| # | Task | Status |
+|---|------|--------|
+| 10 | `MapBoundsDetector` — auto-detect bounds from positions | Done |
+| 11 | `PoiScanner` — scan scene for containers/quests/exfils | Done |
+| 12 | `ZoneDiscovery` — discover zones from spawn points | Done |
+| 13 | `WorldGridManager` — MonoBehaviour orchestrator | Done |
+| 14 | `ZoneActionSelector` — POI-based action selection | Done |
+| 15 | `ZoneQuestBuilder` — quest factory for grid cells | Done |
+| 16 | `ZoneMovementConfig` — config model (14 properties) | Done |
+| 17 | Wire into `LocationData.Awake()` + `BotQuestBuilder.LoadAllQuests()` | Done |
+| 18 | Unit tests for `ZoneActionSelector` + `MapBoundsDetector` (22 tests) | Done |
 
-### Phase 3: Full Integration
+### Future Work
 
-| # | Task | Depends On | Est. Size |
-|---|------|-----------|-----------|
-| 15 | Add `ZoneMovementConfig` to config model + `config.json` | — | S |
-| 16 | Integrate with `BotJobAssignmentFactory` as fallback | 14, 15 | M |
-| 17 | Wire `WorldGridManager` into `LocationData.Awake()` | 13 | XS |
-| 18 | Add F12 menu config entries | 15 | S |
-| 19 | Add debug visualization (grid overlay, field vectors) | 13 | M |
+| # | Task | Est. Size |
+|---|------|-----------|
+| 19 | Add F12 menu config entries for zone movement toggle | S |
+| 20 | Add debug visualization (grid overlay, field vectors) | M |
+| 21 | Dynamic convergence field updates in `WorldGridManager.Update()` | S |
+| 22 | Runtime destination re-selection for more dynamic bot movement | M |
 
 ---
 

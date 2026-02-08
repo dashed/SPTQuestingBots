@@ -172,6 +172,27 @@ namespace SPTQuestingBots.Components
                     LoggingController.LogError("Could not add quest for going to random spawn points");
                 }
 
+                // Create zone movement quest (fallback objective source for bots with no other quests)
+                if (ConfigController.Config.Questing.ZoneMovement?.Enabled == true)
+                {
+                    var gridManager = Singleton<GameWorld>.Instance.GetComponent<ZoneMovement.Integration.WorldGridManager>();
+                    if (gridManager != null && gridManager.IsInitialized)
+                    {
+                        Quest zoneQuest = ZoneMovement.Integration.ZoneQuestBuilder.CreateZoneQuests(
+                            gridManager,
+                            ConfigController.Config.Questing.ZoneMovement
+                        );
+                        if (zoneQuest != null)
+                        {
+                            BotJobAssignmentFactory.AddQuest(zoneQuest);
+                        }
+                    }
+                    else
+                    {
+                        LoggingController.LogWarning("WorldGridManager not ready when building zone quests");
+                    }
+                }
+
                 // Create a quest where initial PMC's can run to your spawn point (not directly to you).
                 Models.Questing.Quest spawnRushQuest = null;
                 SpawnPointParams? playerSpawnPoint = Singleton<GameWorld>.Instance.GetComponent<LocationData>().GetMainPlayerSpawnPoint();

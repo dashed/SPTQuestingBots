@@ -58,6 +58,11 @@ namespace SPTQuestingBots.Components
 
             Singleton<GameWorld>.Instance.gameObject.GetOrAddComponent<BotLogic.HiveMind.BotHiveMindMonitor>();
 
+            if (ConfigController.Config.Questing.ZoneMovement?.Enabled == true)
+            {
+                Singleton<GameWorld>.Instance.gameObject.GetOrAddComponent<ZoneMovement.Integration.WorldGridManager>();
+            }
+
             if (ConfigController.Config.Questing.Enabled)
             {
                 QuestHelpers.ClearCache();
