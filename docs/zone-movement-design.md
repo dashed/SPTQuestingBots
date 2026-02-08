@@ -34,20 +34,20 @@ Replace QuestingBots' per-map JSON quest files with a **map-agnostic, physics-in
 [Players] → ConvergenceField (dynamic player attraction, 30s update)
 [Bot state] → FieldComposer (advection + convergence + momentum + noise)
 [Composite dir] → DestinationSelector → best neighbor cell
-[GridCell] → ZoneObjectiveProvider → BotObjectiveManager → GoToPositionAbstractAction
+[GridCell] → ZoneQuestBuilder → Quest → BotJobAssignmentFactory → BotObjectiveLayer
 ```
 
 ### Integration Strategy
 
-The zone movement system is a **fallback objective source**. Existing quest-based objectives take priority if available. This means:
+The zone movement system is a **fallback objective source** integrated via the existing quest pipeline. Existing quest-based objectives take priority. This means:
 
-1. `BotObjectiveManager` checks quest objectives first (existing behavior)
-2. If no quest available → query `ZoneObjectiveProvider` for a zone-based destination
-3. `ZoneObjectiveProvider` calls `DestinationSelector` → returns a `GridCell` → provides `Position` to the bot
-4. Bot uses existing `GoToPositionAbstractAction` to move (KEEP existing execution layer)
-5. When bot reaches destination → hold for configurable duration → request next destination
+1. `WorldGridManager` initializes in `LocationData.Awake()` (before `BotQuestBuilder`)
+2. `ZoneQuestBuilder.CreateZoneQuests()` creates a `Quest` in `BotQuestBuilder.LoadAllQuests()` with low desirability (5)
+3. Quest registered via `BotJobAssignmentFactory.AddQuest()` — bots pick it up through normal assignment flow
+4. `BotObjectiveLayer.trySetNextAction()` handles action-specific behavior (Ambush, Snipe, PlantItem, etc.)
+5. Quest is repeatable (`MaxBots = 99`) — bots cycle through grid cell objectives
 
-This is non-destructive: it doesn't break any existing functionality.
+This is non-destructive: it required **zero changes** to `BotObjectiveManager`, `BotJobAssignmentFactory`, or `BotObjectiveLayer`.
 
 ---
 
@@ -278,7 +278,7 @@ Phases 2 and 3 from the original plan were merged. The quest pipeline integratio
 
 ### 5.2 Config Model (Implemented)
 
-`ZoneMovementConfig` — 14 properties under `questing.zone_movement`:
+`ZoneMovementConfig` — 12 properties under `questing.zone_movement`:
 
 | Property | Default | Description |
 |----------|---------|-------------|
