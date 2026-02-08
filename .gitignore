@@ -1,16 +1,77 @@
+## .NET / C#
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstats
+*.rsuser
+
+## MSBuild
+[Dd]ebugPublic/
+*.build.csdef
+*.[Pp]ublish.xml
+*.azurePubxml
+*.pubxml
+*.publishproj
+
+## NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+
+## Test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.TestAdapter.GlobalSettings.xml
+coverage*.json
+coverage*.xml
+coverage*.info
+*.trx
+
+## JetBrains Rider
+.idea/
+*.sln.iml
+
+## Game assemblies (copied from SPT installation)
+libs/
+
+## VS Code
 .vscode/
+
+## OS files
+.DS_Store
+Thumbs.db
+desktop.ini
 Icon/
+
+## Build output
+build/
+artifacts/
+publish/
+out/
+
+## Node.js (legacy TypeScript source)
 node_modules/
+
+## Legacy BepInEx dev (SPT 3.x project structure)
 bepinex_dev/Libraries/
-bepinex_dev/SPTQuestingBots/.vs
-bepinex_dev/SPTQuestingBots/packages
-bepinex_dev/SPTQuestingBots/bin
-bepinex_dev/SPTQuestingBots/obj
-bepinex_dev/SPTQuestingBots-InteropTest/.vs
-bepinex_dev/SPTQuestingBots-InteropTest/packages
-bepinex_dev/SPTQuestingBots-InteropTest/bin
-bepinex_dev/SPTQuestingBots-InteropTest/obj
-bepinex_dev/SPTQuestingBots-CustomBotGenExample/.vs
-bepinex_dev/SPTQuestingBots-CustomBotGenExample/packages
-bepinex_dev/SPTQuestingBots-CustomBotGenExample/bin
-bepinex_dev/SPTQuestingBots-CustomBotGenExample/obj
