@@ -327,17 +327,18 @@ Two BepInEx ConfigEntry fields in `QuestingBotsPluginConfig.cs` under "Zone Move
 - Player's current cell, dominant category, POI density
 - Gated behind `QuestingBotsPluginConfig.ZoneMovementDebugOverlay`
 
-### 5.7 Future Work
+### 5.7 Future Work → Phase 4
 
-- Enhanced debug visualization (3D grid cell outlines, field vector arrows, POI markers using GL drawing)
-- Integration of `GetRecommendedDestination` into bot objective lifecycle for truly dynamic destination cycling
-- Per-bot field computation (unique momentum vectors per bot)
+See **Section 8** for detailed Phase 4 implementation plans:
+- **Phase 4A**: Per-bot field state (`BotFieldState`, `ZoneMathUtils.ComputeMomentum`) — S ✅
+- **Phase 4B**: Dynamic objective selection (`ZoneObjectiveCycler`, factory integration) — M
+- **Phase 4C**: Enhanced 2D debug minimap (grid cells, field arrows, bot dots) — M
 
 ---
 
 ## 6. Test Strategy
 
-### 6.1 Unit Tests — 143 client tests total
+### 6.1 Unit Tests — 167 client tests total (Phases 1–4A)
 
 All use the existing `Vector3` test shim (with `sqrMagnitude`, `magnitude`, `operator-`).
 
@@ -353,13 +354,21 @@ All use the existing `Vector3` test shim (with `sqrMagnitude`, `magnitude`, `ope
 | `CellScorerTests` | 10 | Perfect alignment score, opposite direction penalty, POI density bonus, configurable weight |
 | `ZoneActionSelectorTests` | 13 | Distribution validation per category, hold durations, weight table integrity, edge cases |
 | `MapBoundsDetectorTests` | 9 | Single/multiple positions, padding, Y bounds, negative coordinates, error cases |
+| `ZoneMathUtilsTests` | 20 | GetDominantCategory (10 cases), ComputeCentroid (5 cases), ComputeMomentum (5 cases) |
+| `BotFieldStateTests` | 4 | ComputeMomentum delegation, GetNoiseAngle: different seeds, determinism, output range |
 
-### 6.2 Integration verification — compile-verified
+### 6.2 Phase 4B–4C Planned Tests
 
-Scene integration classes (`PoiScanner`, `ZoneDiscovery`, `WorldGridManager`, `ZoneQuestBuilder`, `ZoneDebugOverlay`) are thin adapters. Correctness verified by:
-1. Pure logic tests (Phases 1-2 cover all computation)
+| Test Class | Tests | Coverage |
+|------------|-------|----------|
+
+### 6.3 Integration verification — compile-verified
+
+Scene integration classes (`PoiScanner`, `ZoneDiscovery`, `WorldGridManager`, `ZoneQuestBuilder`, `ZoneDebugOverlay`, `ZoneObjectiveCycler`) are thin adapters. Correctness verified by:
+1. Pure logic tests (Phases 1-2 cover all computation, Phase 4A covers momentum/noise)
 2. In-game debug overlay (`ZoneDebugOverlay` — F12 toggle, shows grid/POI stats)
-3. Manual testing on 2-3 maps
+3. In-game debug minimap (Phase 4C — shows field vectors, bot positions, cell categories)
+4. Manual testing on 2-3 maps
 
 ---
 
@@ -402,17 +411,362 @@ Scene integration classes (`PoiScanner`, `ZoneDiscovery`, `WorldGridManager`, `Z
 | 21 | Dynamic convergence field updates in `WorldGridManager.Update()` | Done |
 | 22 | `GetRecommendedDestination` API for dynamic bot destinations | Done |
 
-### Future Work
+### Phase 4: Dynamic Destination Cycling (PLANNED)
 
-| # | Task | Est. Size |
-|---|------|-----------|
-| 23 | Enhanced 3D debug visualization (GL grid outlines, field vector arrows) | M |
-| 24 | Integrate `GetRecommendedDestination` into bot objective lifecycle | M |
-| 25 | Per-bot field computation with individual momentum vectors | S |
+Phase 4 makes zone movement **truly dynamic**: bots choose their next destination based on live field state (advection, convergence, per-bot momentum, per-bot noise) instead of picking from a static pool of pre-built objectives. This is the Phobos-equivalent of `GotoObjectiveStrategy.AssignNewObjective()` → `LocationSystem.RequestNear()`.
+
+Phase 4 is split into three sub-phases with explicit dependencies:
+
+| # | Task | Depends On | Est. Size |
+|---|------|-----------|-----------|
+| 23 | Per-bot field state (`BotFieldState`, `ZoneMathUtils.ComputeMomentum`) | — | S |
+| 24 | Dynamic objective selection (`ZoneObjectiveCycler`, factory integration) | 23 | M |
+| 25 | Enhanced 2D debug minimap (grid cells, field arrows, bot dots) | 23, 24 | M |
 
 ---
 
-## 8. Risk Assessment
+## 8. Phase 4 Detailed Plans
+
+### 8.1 Phase 4A: Per-Bot Field State (#23) ✅ COMPLETE
+
+**Goal**: Give each bot unique momentum and noise vectors so field composition produces distinct directions per bot, eliminating herd movement.
+
+**Research basis**: Phobos computes momentum on-the-fly in `LocationSystem.RequestNear()` as `(requestCoords - previousCoords)` — momentum is derived from the last assigned location, not stored explicitly. We adopt the same pattern but wrap it in a testable data class.
+
+#### New File: `ZoneMovement/Core/BotFieldState.cs` (~35 lines)
+
+```csharp
+public sealed class BotFieldState
+{
+    public Vector3 PreviousDestination { get; set; }
+    public int NoiseSeed { get; }
+
+    public BotFieldState(int noiseSeed)
+    {
+        NoiseSeed = noiseSeed;
+        PreviousDestination = Vector3.zero;
+    }
+
+    /// Computes normalized XZ momentum from previous destination to current position.
+    public (float momX, float momZ) ComputeMomentum(Vector3 currentPosition)
+        => ZoneMathUtils.ComputeMomentum(PreviousDestination, currentPosition);
+
+    /// Returns a per-bot noise angle using seeded random + time variation.
+    public float GetNoiseAngle(float time)
+    {
+        // Hash seed + time-bucket to get deterministic-per-bot-but-varying-over-time noise
+        int timeBucket = (int)(time / 5f); // changes every 5s
+        var rng = new System.Random(NoiseSeed ^ timeBucket);
+        return (float)(rng.NextDouble() * 2 * System.Math.PI - System.Math.PI);
+    }
+}
+```
+
+#### Modified File: `ZoneMovement/Core/ZoneMathUtils.cs` (+15 lines)
+
+```csharp
+/// Computes normalized XZ-plane momentum direction from 'from' to 'to'.
+/// Returns (0, 0) if positions are coincident.
+public static (float momX, float momZ) ComputeMomentum(Vector3 from, Vector3 to)
+{
+    float dx = to.x - from.x;
+    float dz = to.z - from.z;
+    float mag = (float)Math.Sqrt(dx * dx + dz * dz);
+    if (mag < 0.001f) return (0f, 0f);
+    return (dx / mag, dz / mag);
+}
+```
+
+#### Modified File: `WorldGridManager.cs` (+25 lines)
+
+```csharp
+private readonly Dictionary<string, BotFieldState> botFieldStates = new();
+
+public BotFieldState GetOrCreateBotState(string botProfileId)
+{
+    if (!botFieldStates.TryGetValue(botProfileId, out var state))
+    {
+        state = new BotFieldState(botProfileId.GetHashCode());
+        botFieldStates[botProfileId] = state;
+    }
+    return state;
+}
+
+/// Per-bot overload using tracked momentum and noise.
+public Vector3? GetRecommendedDestination(string botProfileId, Vector3 botPosition)
+{
+    if (!IsInitialized) return null;
+    var state = GetOrCreateBotState(botProfileId);
+    var (momX, momZ) = state.ComputeMomentum(botPosition);
+    // ... compose with per-bot noise from state.GetNoiseAngle(Time.time) ...
+    // ... update state.PreviousDestination on success ...
+}
+```
+
+#### Tests: 9 new tests
+
+| Test | Coverage |
+|------|----------|
+| `ComputeMomentum_SamePoint_ReturnsZero` | Zero-distance edge case |
+| `ComputeMomentum_NorthDirection_ReturnsPositiveZ` | Cardinal direction |
+| `ComputeMomentum_EastDirection_ReturnsPositiveX` | Cardinal direction |
+| `ComputeMomentum_DiagonalDirection_Normalized` | Normalization check |
+| `ComputeMomentum_IgnoresYAxis` | XZ plane only |
+| `BotFieldState_ComputeMomentum_DelegatesToUtils` | Integration |
+| `BotFieldState_GetNoiseAngle_DifferentSeeds_DifferentAngles` | Per-bot uniqueness |
+| `BotFieldState_GetNoiseAngle_SameSeedAndTime_Deterministic` | Reproducibility |
+| `BotFieldState_GetNoiseAngle_RangeIsPiToPi` | Output bounds |
+
+#### File Summary
+
+| File | Action | Lines |
+|------|--------|-------|
+| `ZoneMovement/Core/BotFieldState.cs` | NEW | ~35 |
+| `ZoneMovement/Core/ZoneMathUtils.cs` | MOD | +15 |
+| `ZoneMovement/Integration/WorldGridManager.cs` | MOD | +25 |
+| `tests/.../ZoneMovement/BotFieldStateTests.cs` | NEW | ~60 |
+| `tests/.../ZoneMovement/ZoneMathUtilsTests.cs` | MOD | +25 |
+| `tests/.../SPTQuestingBots.Client.Tests.csproj` | MOD | +1 link |
+
+---
+
+### 8.2 Phase 4B: Dynamic Objective Selection (#24)
+
+**Goal**: When a bot finishes a zone movement objective, select the next objective using live field state (via `GetRecommendedDestination`) instead of the default nearest-to-bot selection.
+
+**Research basis**: Phobos's `GotoObjectiveStrategy.AssignNewObjective()` calls `LocationSystem.RequestNear(squad, position, previousLocation)` which computes advection + convergence + momentum + noise to pick the best neighboring cell. We replicate this pattern by intercepting objective selection in `BotJobAssignmentFactory` for zone quests.
+
+#### Architecture: Single Integration Point
+
+```
+Bot completes zone objective
+  → BotObjectiveManager.Update() detects HasWaitedLongEnoughAfterEnding
+  → BotJobAssignmentFactory.GetCurrentJobAssignment()
+  → DoesBotHaveNewJobAssignment() → GetNewBotJobAssignment()
+  → quest selected = zone quest (by desirability weighting)
+  → [NEW] ZoneObjectiveCycler.SelectZoneObjective() replaces NearestToBot()
+  → Returns field-based QuestObjective
+```
+
+#### New File: `ZoneMovement/Integration/ZoneObjectiveCycler.cs` (~55 lines)
+
+```csharp
+public static class ZoneObjectiveCycler
+{
+    /// Selects a zone quest objective using live field state instead of nearest-to-bot.
+    /// Returns null if no matching objective found (falls back to default selection).
+    public static QuestObjective SelectZoneObjective(
+        BotOwner bot,
+        Quest zoneQuest,
+        WorldGridManager gridManager)
+    {
+        if (gridManager == null || !gridManager.IsInitialized)
+            return null;
+
+        // Get field-based recommended destination using per-bot state
+        Vector3? destination = gridManager.GetRecommendedDestination(
+            bot.Profile.Id, bot.Position);
+
+        if (!destination.HasValue)
+            return null;
+
+        // Find the grid cell for the destination
+        GridCell cell = gridManager.GetCellForBot(destination.Value);
+        if (cell == null)
+            return null;
+
+        // Find the matching objective by cell coordinates
+        string objectiveName = $"Zone ({cell.Col},{cell.Row})";
+        QuestObjective match = zoneQuest.AllObjectives
+            .FirstOrDefault(o => o.Name == objectiveName);
+
+        if (match != null && match.CanAssignBot(bot))
+            return match;
+
+        // Fallback: find nearest navigable cell objective
+        return zoneQuest.RemainingObjectivesForBot(bot)
+            ?.Where(o => o.CanAssignBot(bot))
+            ?.NearestToBot(bot);
+    }
+}
+```
+
+#### Modified File: `Controllers/BotJobAssignmentFactory.cs` (~15 lines)
+
+In `GetNewBotJobAssignment()`, after the quest is selected and before the objective loop, add zone quest detection:
+
+```csharp
+// [NEW] For zone quests, use field-based selection instead of nearest-to-bot
+if (quest?.Name == ConfigController.Config.Questing.ZoneMovement.QuestName)
+{
+    WorldGridManager gridManager = Singleton<GameWorld>.Instance
+        ?.GetComponent<WorldGridManager>();
+
+    QuestObjective zoneObjective = ZoneObjectiveCycler.SelectZoneObjective(
+        bot, quest, gridManager);
+
+    if (zoneObjective != null)
+    {
+        objective = zoneObjective;
+        break;
+    }
+}
+```
+
+#### Phobos Destination Lifecycle Comparison
+
+| Step | Phobos | QuestingBots (After #24) |
+|------|--------|--------------------------|
+| Trigger | Timer expires or all agents reached/failed | `HasWaitedLongEnoughAfterEnding()` |
+| Request | `LocationSystem.RequestNear(squad, pos, prev)` | `ZoneObjectiveCycler.SelectZoneObjective(bot, quest, gridManager)` |
+| Momentum | `(requestCoords - previousCoords)` | `BotFieldState.ComputeMomentum(botPosition)` |
+| Fields | `advection[x,y] + convergence[x,y] + noise` | `FieldComposer.GetCompositeDirection(...)` |
+| Selection | Best-angle neighbor cell | `DestinationSelector.SelectDestination(...)` |
+| Assignment | `squad.Objective.Location = newLocation` | `BotJobAssignment(bot, quest, matchingObjective)` |
+| Hold timer | `_guardDuration.SampleGaussian()` | `QuestObjectiveStep.MinElapsedTime` (already per-step) |
+
+#### Test Strategy
+
+The core logic (field composition, momentum, destination selection) is already tested in Phases 1-2. The new code in ZoneObjectiveCycler is thin integration glue — primarily string matching on objective names. Testing:
+
+| Test | Coverage |
+|------|----------|
+| Objective name matching format `"Zone (col,row)"` validated | Already covered by ZoneQuestBuilder tests (existing) |
+| Fallback to NearestToBot when no grid match | Integration test (manual) |
+| Factory integration | In-game validation via debug overlay |
+
+#### File Summary
+
+| File | Action | Lines |
+|------|--------|-------|
+| `ZoneMovement/Integration/ZoneObjectiveCycler.cs` | NEW | ~55 |
+| `Controllers/BotJobAssignmentFactory.cs` | MOD | +15 |
+
+---
+
+### 8.3 Phase 4C: Enhanced 2D Debug Minimap (#25)
+
+**Goal**: Add a 2D minimap overlay that visualizes grid cells, field vectors, bot positions, and zone sources — providing real-time feedback on the zone movement system's behavior.
+
+**Research basis**: Phobos's `Diag/ZoneTelemetry.cs` uses OnGUI (not GL/Gizmos) to render an 800px 2D minimap with cell coloring, advection/convergence arrows, agent dots, zone dots, grid lines, and a legend. This approach is simpler and more informative than 3D world-space drawing. We adopt the same pattern.
+
+#### Architecture
+
+```
+ZoneDebugOverlay.OnGUI()
+  ├── [existing] Text panel (grid stats, player cell, POI breakdown)
+  └── [NEW] RenderMinimap()
+        ├── Draw cells (colored by dominant POI category)
+        ├── Draw advection vectors (white arrows per cell)
+        ├── Draw convergence vectors (red arrows per cell)
+        ├── Draw zone source dots (blue)
+        ├── Draw bot position dots (cyan)
+        ├── Draw player position dot (white)
+        ├── Draw grid lines
+        └── Draw legend
+```
+
+#### New File: `ZoneMovement/Diag/DebugDrawing.cs` (~65 lines)
+
+Static helper class (mirrors Phobos's `Diag/DebugUI.cs`):
+
+```csharp
+public static class DebugDrawing
+{
+    /// Draws a line using GUIUtility.RotateAroundPivot (Phobos pattern).
+    public static void DrawLine(Vector2 start, Vector2 end, float thickness)
+
+    /// Draws a line with a custom color.
+    public static void DrawLine(Vector2 start, Vector2 end, float thickness, Color color)
+
+    /// Draws a filled rectangle.
+    public static void DrawFilledRect(Rect rect, Color color)
+
+    /// Draws a rectangle outline.
+    public static void DrawRectOutline(Rect rect, Color color, float thickness)
+
+    /// Draws a dot (small filled square).
+    public static void DrawDot(Vector2 center, float radius, Color color)
+
+    /// Draws centered text.
+    public static Rect Label(Vector2 position, string text, bool centered = true)
+}
+```
+
+#### Modified File: `ZoneDebugOverlay.cs` (major expansion, +200 lines)
+
+Key additions:
+- `RenderMinimap()` method (~120 lines) — mirrors Phobos's `RenderGrid()`
+- Cell color map: `PoiCategory` → `Color` dictionary
+- Grid-to-screen coordinate mapping (world min/max → display rect)
+- Per-cell advection/convergence vector access from WorldGridManager
+- Bot/player position overlay using cached lists from WorldGridManager
+- Legend panel
+
+Cell color scheme:
+
+| POI Category | Color | Hex |
+|-------------|-------|-----|
+| Container | Gold | `(0.9, 0.75, 0.2, 0.7)` |
+| LooseLoot | Orange | `(0.9, 0.5, 0.1, 0.7)` |
+| Quest | Green | `(0.2, 0.8, 0.3, 0.7)` |
+| Exfil | Red | `(0.8, 0.2, 0.2, 0.7)` |
+| SpawnPoint | Blue | `(0.3, 0.4, 0.8, 0.7)` |
+| Synthetic | Gray | `(0.3, 0.3, 0.3, 0.7)` |
+| Non-navigable | Black | `(0.1, 0.1, 0.1, 0.8)` |
+
+#### Modified File: `WorldGridManager.cs` (+15 lines)
+
+Expose field data for visualization:
+
+```csharp
+/// Advection field instance (for debug visualization).
+public AdvectionField Advection => advectionField;
+
+/// Convergence field instance (for debug visualization).
+public ConvergenceField Convergence => convergenceField;
+
+/// Cached human player positions from last update.
+public IReadOnlyList<Vector3> CachedPlayerPositions => cachedPlayerPositions;
+
+/// Cached bot positions from last update.
+public IReadOnlyList<Vector3> CachedBotPositions => cachedBotPositions;
+
+/// Zone source positions discovered during initialization.
+public IReadOnlyList<(Vector3 position, float strength)> ZoneSources => zoneSources;
+```
+
+(Also requires storing `zoneSources` during `Awake()`.)
+
+#### Modified File: `QuestingBotsPluginConfig.cs` (+5 lines)
+
+```csharp
+public static ConfigEntry<bool> ZoneMovementDebugMinimap { get; private set; }
+// In Init(): ZoneMovementDebugMinimap = config.Bind("Zone Movement", "Debug Minimap", false, ...);
+```
+
+#### Test Strategy
+
+Debug visualization is purely visual — no unit tests. Verified by:
+1. F12 toggle → minimap appears/disappears
+2. Visual inspection: cells colored correctly, vectors point expected directions
+3. Player/bot dots track correctly in real-time
+4. Grid lines align with cell boundaries
+
+#### File Summary
+
+| File | Action | Lines |
+|------|--------|-------|
+| `ZoneMovement/Diag/DebugDrawing.cs` | NEW | ~65 |
+| `ZoneMovement/Integration/ZoneDebugOverlay.cs` | MOD | +200 |
+| `ZoneMovement/Integration/WorldGridManager.cs` | MOD | +15 |
+| `Configuration/QuestingBotsPluginConfig.cs` | MOD | +5 |
+
+---
+
+## 9. Risk Assessment
+
+### Phases 1–3 (existing)
 
 | Risk | Mitigation |
 |------|-----------|
@@ -423,9 +777,22 @@ Scene integration classes (`PoiScanner`, `ZoneDiscovery`, `WorldGridManager`, `Z
 | Performance with many bots | Fields computed per-bot but use simple math; convergence cached for 30s |
 | New maps added to SPT | Zero config needed — auto-detection handles any map geometry |
 
+### Phase 4 (new)
+
+| Risk | Mitigation |
+|------|-----------|
+| Zone objective name matching fragile | Names follow strict format `"Zone (col,row)"` set by ZoneQuestBuilder. Add constant. |
+| Per-bot state dictionary grows unbounded | BotFieldState is ~20 bytes. Dictionary keyed by profile ID. Cleared on raid end via `WorldGridManager.OnDestroy()`. |
+| OnGUI minimap performance with 150+ cells | Redraw only on convergence update interval (30s) using cached texture. Or: only draw when overlay enabled. |
+| Factory integration changes break quest selection | Minimal change (~15 lines). Zone quest branch is isolated with null-check fallback to default NearestToBot. |
+| Noise determinism causes visible patterns | Time-bucket rotation (5s) + XOR with seed ensures variation. Tunable via NoiseWeight config. |
+| GetRecommendedDestination API backward compat | New overload `(string botId, Vector3 pos)` alongside existing `(Vector3 pos, float momX, float momZ)`. |
+
 ---
 
-## 9. Success Criteria
+## 10. Success Criteria
+
+### Phases 1–3
 
 1. Bots move dynamically around the map toward interesting areas
 2. Bots converge toward (but don't swarm) the human player
@@ -433,3 +800,11 @@ Scene integration classes (`PoiScanner`, `ZoneDiscovery`, `WorldGridManager`, `Z
 4. Works on all maps without per-map configuration
 5. All pure-logic tests pass
 6. No measurable performance regression vs current quest system
+
+### Phase 4
+
+7. Each bot follows a unique path (no herd movement) due to per-bot momentum + noise
+8. Bots cycle through destinations dynamically based on live convergence/advection fields
+9. Debug minimap accurately visualizes grid state, field vectors, and bot positions
+10. Zone objective cycling integrates cleanly with the existing quest factory (zero changes to BotObjectiveManager/BotObjectiveLayer)
+11. At least 12 new unit tests pass for BotFieldState and ComputeMomentum

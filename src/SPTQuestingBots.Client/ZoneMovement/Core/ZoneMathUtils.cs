@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -9,6 +10,25 @@ namespace SPTQuestingBots.ZoneMovement.Core;
 /// </summary>
 public static class ZoneMathUtils
 {
+    /// <summary>
+    /// Computes the normalized XZ-plane momentum direction from <paramref name="from"/> to
+    /// <paramref name="to"/>. The Y axis is ignored since bots move on the horizontal plane.
+    /// </summary>
+    /// <param name="from">The origin position (e.g. previous destination).</param>
+    /// <param name="to">The target position (e.g. current bot position).</param>
+    /// <returns>
+    /// A normalized (momX, momZ) tuple, or (0, 0) if the positions are coincident.
+    /// </returns>
+    public static (float momX, float momZ) ComputeMomentum(Vector3 from, Vector3 to)
+    {
+        float dx = to.x - from.x;
+        float dz = to.z - from.z;
+        float mag = (float)Math.Sqrt(dx * dx + dz * dz);
+        if (mag < 0.001f)
+            return (0f, 0f);
+        return (dx / mag, dz / mag);
+    }
+
     /// <summary>
     /// Determines the dominant POI category in a cell by finding the category
     /// with the highest total weight.

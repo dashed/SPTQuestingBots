@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using SPTQuestingBots.ZoneMovement.Core;
@@ -196,5 +197,54 @@ public class ZoneMathUtilsTests
         Assert.That(result.x, Is.EqualTo(5f).Within(0.001f));
         Assert.That(result.y, Is.EqualTo(5f).Within(0.001f));
         Assert.That(result.z, Is.EqualTo(5f).Within(0.001f));
+    }
+
+    // ── ComputeMomentum ────────────────────────────────────────────
+
+    [Test]
+    public void ComputeMomentum_SamePoint_ReturnsZero()
+    {
+        var (momX, momZ) = ZoneMathUtils.ComputeMomentum(new Vector3(5, 0, 5), new Vector3(5, 0, 5));
+
+        Assert.That(momX, Is.EqualTo(0f).Within(0.001f));
+        Assert.That(momZ, Is.EqualTo(0f).Within(0.001f));
+    }
+
+    [Test]
+    public void ComputeMomentum_EastDirection_ReturnsPositiveX()
+    {
+        var (momX, momZ) = ZoneMathUtils.ComputeMomentum(new Vector3(0, 0, 0), new Vector3(10, 0, 0));
+
+        Assert.That(momX, Is.EqualTo(1f).Within(0.001f));
+        Assert.That(momZ, Is.EqualTo(0f).Within(0.001f));
+    }
+
+    [Test]
+    public void ComputeMomentum_NorthDirection_ReturnsPositiveZ()
+    {
+        var (momX, momZ) = ZoneMathUtils.ComputeMomentum(new Vector3(0, 0, 0), new Vector3(0, 0, 10));
+
+        Assert.That(momX, Is.EqualTo(0f).Within(0.001f));
+        Assert.That(momZ, Is.EqualTo(1f).Within(0.001f));
+    }
+
+    [Test]
+    public void ComputeMomentum_DiagonalDirection_Normalized()
+    {
+        var (momX, momZ) = ZoneMathUtils.ComputeMomentum(new Vector3(0, 0, 0), new Vector3(10, 0, 10));
+
+        float expected = (float)(1.0 / Math.Sqrt(2.0));
+        Assert.That(momX, Is.EqualTo(expected).Within(0.001f));
+        Assert.That(momZ, Is.EqualTo(expected).Within(0.001f));
+    }
+
+    [Test]
+    public void ComputeMomentum_IgnoresYAxis()
+    {
+        var (momX, momZ) = ZoneMathUtils.ComputeMomentum(new Vector3(0, 0, 0), new Vector3(10, 999, 0));
+
+        // Y difference should not affect XZ momentum
+        Assert.That(momX, Is.EqualTo(1f).Within(0.001f));
+        Assert.That(momZ, Is.EqualTo(0f).Within(0.001f));
     }
 }

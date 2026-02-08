@@ -45,6 +45,9 @@ public class WorldGridManager : MonoBehaviour
     /// <summary>Cached bot positions, refreshed each convergence update.</summary>
     private readonly List<Vector3> cachedBotPositions = new List<Vector3>();
 
+    /// <summary>Per-bot field state for unique momentum and noise vectors.</summary>
+    private readonly Dictionary<string, BotFieldState> botFieldStates = new Dictionary<string, BotFieldState>();
+
     /// <summary>
     /// Initializes the grid, POIs, zone sources, and field components.
     /// </summary>
@@ -179,6 +182,21 @@ public class WorldGridManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Gets or creates per-bot field state for the given bot profile ID.
+    /// </summary>
+    /// <param name="botProfileId">The bot's unique profile ID.</param>
+    /// <returns>The bot's field state instance.</returns>
+    public BotFieldState GetOrCreateBotState(string botProfileId)
+    {
+        if (!botFieldStates.TryGetValue(botProfileId, out var state))
+        {
+            state = new BotFieldState(botProfileId.GetHashCode());
+            botFieldStates[botProfileId] = state;
+        }
+        return state;
+    }
+
+    /// <summary>
     /// Computes the best next destination for a bot using live field state.
     /// Uses cached player/bot positions from the most recent <see cref="Update"/> tick.
     /// </summary>
@@ -199,6 +217,46 @@ public class WorldGridManager : MonoBehaviour
 
         var targetCell = destinationSelector.SelectDestination(Grid, currentCell, dirX, dirZ, botPosition);
         return targetCell?.Center;
+    }
+
+    /// <summary>
+    /// Computes the best next destination for a bot using per-bot tracked momentum and noise.
+    /// Uses <see cref="BotFieldState"/> to give each bot a unique field composition result,
+    /// eliminating herd movement.
+    /// </summary>
+    /// <param name="botProfileId">The bot's unique profile ID (for per-bot state lookup).</param>
+    /// <param name="botPosition">The bot's current world position.</param>
+    /// <returns>The recommended destination position, or <c>null</c> if not initialized.</returns>
+    public Vector3? GetRecommendedDestination(string botProfileId, Vector3 botPosition)
+    {
+        if (!IsInitialized)
+            return null;
+
+        var currentCell = Grid.GetCell(botPosition);
+        if (currentCell == null)
+            return null;
+
+        var state = GetOrCreateBotState(botProfileId);
+        var (momX, momZ) = state.ComputeMomentum(botPosition);
+
+        // Get advection (zone attraction + crowd repulsion)
+        advectionField.GetAdvection(botPosition, cachedBotPositions, out float advX, out float advZ);
+
+        // Get convergence (player attraction)
+        convergenceField.GetConvergence(botPosition, cachedPlayerPositions, Time.time, out float convX, out float convZ);
+
+        // Per-bot noise instead of global random
+        float noiseAngle = state.GetNoiseAngle(Time.time);
+        fieldComposer.GetCompositeDirection(advX, advZ, convX, convZ, momX, momZ, noiseAngle, out float dirX, out float dirZ);
+
+        var targetCell = destinationSelector.SelectDestination(Grid, currentCell, dirX, dirZ, botPosition);
+        if (targetCell != null)
+        {
+            state.PreviousDestination = targetCell.Center;
+            return targetCell.Center;
+        }
+
+        return null;
     }
 
     /// <summary>
