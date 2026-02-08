@@ -50,7 +50,8 @@ public class QuestingBotsDynamicRouter(
     ISptLogger<QuestingBotsDynamicRouter> logger,
     QuestingBotsConfigLoader configLoader,
     CommonUtils commonUtils,
-    ConfigServer configServer)
+    ConfigServer configServer
+)
     : DynamicRouter(
         jsonUtil,
         [
@@ -72,22 +73,16 @@ public class QuestingBotsDynamicRouter(
                     var urlParts = url.Split('/');
                     if (!double.TryParse(urlParts[^1], out var factor))
                     {
-                        return jsonUtil.Serialize(
-                                new { resp = "ERROR", message = "Invalid factor" }
-                            ) ?? "{}";
+                        return jsonUtil.Serialize(new { resp = "ERROR", message = "Invalid factor" }) ?? "{}";
                     }
 
                     var botConfig = configServer.GetConfig<BotConfig>();
                     var basePScavChance = configLoader.Config.BasePScavConversionChance;
-                    botConfig.ChanceAssaultScavHasPlayerScavName = (int)
-                        Math.Round(basePScavChance * factor);
-                    commonUtils.LogInfo(
-                        $"Adjusted PScav spawn chance to {botConfig.ChanceAssaultScavHasPlayerScavName}%"
-                    );
+                    botConfig.ChanceAssaultScavHasPlayerScavName = (int)Math.Round(basePScavChance * factor);
+                    commonUtils.LogInfo($"Adjusted PScav spawn chance to {botConfig.ChanceAssaultScavHasPlayerScavName}%");
 
                     return jsonUtil.Serialize(new { resp = "OK" }) ?? "{}";
                 }
             ),
         ]
-    )
-{ }
+    ) { }

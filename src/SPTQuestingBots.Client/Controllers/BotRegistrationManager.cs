@@ -1,13 +1,13 @@
-﻿using Comfort.Common;
-using EFT;
-using SPTQuestingBots.BotLogic.BotMonitor;
-using SPTQuestingBots.Configuration;
-using SPTQuestingBots.Helpers;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Comfort.Common;
+using EFT;
+using SPTQuestingBots.BotLogic.BotMonitor;
+using SPTQuestingBots.Configuration;
+using SPTQuestingBots.Helpers;
 
 namespace SPTQuestingBots.Controllers
 {
@@ -17,7 +17,7 @@ namespace SPTQuestingBots.Controllers
         Scav,
         PScav,
         PMC,
-        Boss
+        Boss,
     }
 
     public static class BotRegistrationManager
@@ -40,12 +40,14 @@ namespace SPTQuestingBots.Controllers
             WildSpawnType.bossZryachiy,
             WildSpawnType.followerZryachiy,
             WildSpawnType.gifter,
-            WildSpawnType.shooterBTR
+            WildSpawnType.shooterBTR,
         };
 
         public static IReadOnlyList<BotOwner> PMCs => registeredPMCs.AsReadOnly();
         public static IReadOnlyList<BotOwner> Bosses => registeredBosses.AsReadOnly();
+
         public static bool IsARegisteredPMC(this BotOwner bot) => registeredPMCs.Contains(bot);
+
         public static bool IsARegisteredBoss(this BotOwner bot) => registeredBosses.Contains(bot);
 
         public static void Clear()
@@ -96,10 +98,14 @@ namespace SPTQuestingBots.Controllers
         {
             switch (botType)
             {
-                case BotType.Scav: return botTypeValueConfig.Scav;
-                case BotType.PScav: return botTypeValueConfig.PScav;
-                case BotType.PMC: return botTypeValueConfig.PMC;
-                case BotType.Boss: return botTypeValueConfig.Boss;
+                case BotType.Scav:
+                    return botTypeValueConfig.Scav;
+                case BotType.PScav:
+                    return botTypeValueConfig.PScav;
+                case BotType.PMC:
+                    return botTypeValueConfig.PMC;
+                case BotType.Boss:
+                    return botTypeValueConfig.Boss;
             }
 
             return null;
@@ -110,9 +116,14 @@ namespace SPTQuestingBots.Controllers
             SpawnedBotCount++;
             string message = "Spawned ";
 
-            // If initial PMC's need to spawn but haven't yet, assume the bot is a boss. Otherwise, PMC's should have already spawned. 
+            // If initial PMC's need to spawn but haven't yet, assume the bot is a boss. Otherwise, PMC's should have already spawned.
             Singleton<GameWorld>.Instance.TryGetComponent(out Components.Spawning.PMCGenerator pmcGenerator);
-            if ((pmcGenerator != null) && pmcGenerator.HasGeneratedBots && !pmcGenerator.IsSpawningBots && (pmcGenerator.SpawnedGroupCount == 0))
+            if (
+                (pmcGenerator != null)
+                && pmcGenerator.HasGeneratedBots
+                && !pmcGenerator.IsSpawningBots
+                && (pmcGenerator.SpawnedGroupCount == 0)
+            )
             {
                 message += "boss " + botOwner.GetText() + " (" + registeredBosses.Count + "/" + ZeroWaveTotalBotCount + ")";
             }
@@ -124,7 +135,6 @@ namespace SPTQuestingBots.Controllers
             message += " (" + botOwner.Side + ")";
             LoggingController.LogInfo(message);
         }
-
 
         public static void RegisterPMC(BotOwner botOwner)
         {
@@ -160,8 +170,7 @@ namespace SPTQuestingBots.Controllers
             {
                 botOwner
                     .GetOrAddObjectiveManager()
-                    .BotMonitor
-                    .GetMonitor<BotQuestingDecisionMonitor>()
+                    .BotMonitor.GetMonitor<BotQuestingDecisionMonitor>()
                     .ForceDecision(BotQuestingDecision.Sleep);
 
                 sleepingBotIds.Add(botOwner.ProfileId);
@@ -174,8 +183,7 @@ namespace SPTQuestingBots.Controllers
             {
                 botOwner
                     .GetOrAddObjectiveManager()
-                    .BotMonitor
-                    .GetMonitor<BotQuestingDecisionMonitor>()
+                    .BotMonitor.GetMonitor<BotQuestingDecisionMonitor>()
                     .ForceDecision(BotQuestingDecision.None);
 
                 sleepingBotIds.Remove(botOwner.ProfileId);

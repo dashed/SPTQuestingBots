@@ -19,19 +19,18 @@ namespace SPTQuestingBots.Models
         [JsonProperty("z")]
         public float Z { get; set; } = float.NaN;
 
-        public SerializableVector3()
-        {
+        public SerializableVector3() { }
 
-        }
-
-        public SerializableVector3(float x, float y, float z) : this()
+        public SerializableVector3(float x, float y, float z)
+            : this()
         {
             X = x;
             Y = y;
             Z = z;
         }
 
-        public SerializableVector3(Vector3 vector) : this()
+        public SerializableVector3(Vector3 vector)
+            : this()
         {
             X = vector.x;
             Y = vector.y;
@@ -45,9 +44,12 @@ namespace SPTQuestingBots.Models
 
         public bool Any(float n)
         {
-            if (X.Equals(n)) return true;
-            if (Y.Equals(n)) return true;
-            if (Z.Equals(n)) return true;
+            if (X.Equals(n))
+                return true;
+            if (Y.Equals(n))
+                return true;
+            if (Z.Equals(n))
+                return true;
 
             return false;
         }

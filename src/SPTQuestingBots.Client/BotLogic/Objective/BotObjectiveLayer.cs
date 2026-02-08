@@ -14,10 +14,8 @@ namespace SPTQuestingBots.BotLogic.Objective
 {
     internal class BotObjectiveLayer : CustomLayerForQuesting
     {
-        public BotObjectiveLayer(BotOwner _botOwner, int _priority) : base(_botOwner, _priority, 25)
-        {
-            
-        }
+        public BotObjectiveLayer(BotOwner _botOwner, int _priority)
+            : base(_botOwner, _priority, 25) { }
 
         public override string GetName()
         {

@@ -4,9 +4,9 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using SPT.Reflection.Patching;
 using EFT;
 using EFT.Game.Spawning;
+using SPT.Reflection.Patching;
 using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.Patches.Spawning.Advanced
@@ -19,7 +19,14 @@ namespace SPTQuestingBots.Patches.Spawning.Advanced
         }
 
         [PatchPostfix]
-        protected static void PatchPostfix(BotZone botZone, BotCreationDataClass data, bool withCheckMinMax, bool newWave, List<ISpawnPoint> pointsToSpawn, bool forcedSpawn)
+        protected static void PatchPostfix(
+            BotZone botZone,
+            BotCreationDataClass data,
+            bool withCheckMinMax,
+            bool newWave,
+            List<ISpawnPoint> pointsToSpawn,
+            bool forcedSpawn
+        )
         {
             if (!QuestingBotsPluginConfig.ShowSpawnDebugMessages.Value)
             {

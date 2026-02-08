@@ -12,7 +12,8 @@ namespace SPTQuestingBots.Components
 {
     public class PathRenderer : MonoBehaviour
     {
-        private Dictionary<string, Models.Pathing.PathVisualizationData> paths = new Dictionary<string, Models.Pathing.PathVisualizationData>();
+        private Dictionary<string, Models.Pathing.PathVisualizationData> paths =
+            new Dictionary<string, Models.Pathing.PathVisualizationData>();
         private object pathDictLock = new object();
 
         protected void LateUpdate()

@@ -1,4 +1,9 @@
-﻿using BepInEx;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using BepInEx;
 using BepInEx.Bootstrap;
 using EFT;
 using SPTQuestingBots.BotLogic.ExternalMods.Functions.Extract;
@@ -6,11 +11,6 @@ using SPTQuestingBots.BotLogic.ExternalMods.Functions.Hearing;
 using SPTQuestingBots.BotLogic.ExternalMods.Functions.Loot;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SPTQuestingBots.BotLogic.ExternalMods.ModInfo
 {
@@ -25,23 +25,27 @@ namespace SPTQuestingBots.BotLogic.ExternalMods.ModInfo
         public PluginInfo PluginInfo { get; private set; } = null;
 
         public virtual string IncompatibilityMessage => "";
+
         public virtual bool IsCompatible() => IsVersionCompatible();
 
         public virtual bool CanUseInterop { get; protected set; } = false;
+
         public virtual bool CheckInteropAvailability() => false;
 
         private bool checkedIfInstalled = false;
 
         public virtual AbstractExtractFunction CreateExtractFunction(BotOwner _botOwner) => new InternalExtractFunction(_botOwner);
+
         public virtual AbstractHearingFunction CreateHearingFunction(BotOwner _botOwner) => new InternalHearingFunction(_botOwner);
+
         public virtual AbstractLootFunction CreateLootFunction(BotOwner _botOwner) => new InternalLootFunction(_botOwner);
 
         public bool CheckIfInstalled()
         {
             checkedIfInstalled = true;
 
-            IEnumerable<PluginInfo> matchingPlugins = Chainloader.PluginInfos
-                .Where(p => p.Value.Metadata.GUID == GUID)
+            IEnumerable<PluginInfo> matchingPlugins = Chainloader
+                .PluginInfos.Where(p => p.Value.Metadata.GUID == GUID)
                 .Select(p => p.Value);
 
             if (!matchingPlugins.Any())

@@ -17,7 +17,8 @@ namespace SPTQuestingBots.Models
             Name = _name;
         }
 
-        public BotBrainType(string _name, WildSpawnType _spawnType) : this(_name)
+        public BotBrainType(string _name, WildSpawnType _spawnType)
+            : this(_name)
         {
             SpawnType = _spawnType;
         }

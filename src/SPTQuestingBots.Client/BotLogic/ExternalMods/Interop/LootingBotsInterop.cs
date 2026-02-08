@@ -1,15 +1,12 @@
-﻿using BepInEx.Bootstrap;
-
-using EFT;
-
-using HarmonyLib;
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using BepInEx.Bootstrap;
+using EFT;
+using HarmonyLib;
 
 namespace LootingBots
 {
@@ -43,7 +40,8 @@ namespace LootingBots
          */
         public static bool Init()
         {
-            if (!IsLootingBotsLoaded()) return false;
+            if (!IsLootingBotsLoaded())
+                return false;
 
             // Only check for the External class once
             if (!_LootingBotsInteropInited)
@@ -69,8 +67,10 @@ namespace LootingBots
          */
         public static bool TryForceBotToScanLoot(BotOwner botOwner)
         {
-            if (!Init()) return false;
-            if (_ForceBotToScanLootMethod == null) return false;
+            if (!Init())
+                return false;
+            if (_ForceBotToScanLootMethod == null)
+                return false;
 
             return (bool)_ForceBotToScanLootMethod.Invoke(null, new object[] { botOwner });
         }
@@ -80,8 +80,10 @@ namespace LootingBots
          */
         public static bool TryPreventBotFromLooting(BotOwner botOwner, float duration)
         {
-            if (!Init()) return false;
-            if (_PreventBotFromLootingMethod == null) return false;
+            if (!Init())
+                return false;
+            if (_PreventBotFromLootingMethod == null)
+                return false;
 
             return (bool)_PreventBotFromLootingMethod.Invoke(null, new object[] { botOwner, duration });
         }

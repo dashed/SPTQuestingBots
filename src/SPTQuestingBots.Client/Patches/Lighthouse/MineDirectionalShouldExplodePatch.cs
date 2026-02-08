@@ -42,8 +42,9 @@ namespace SPTQuestingBots.Patches.Lighthouse
                 return true;
             }
 
-            IEnumerable<MineDirectional> bridgeMines = Singleton<GameWorld>.Instance.MineManager.Mines
-                .Where(mine => mine.transform.parent.gameObject.name == lighthouseMinesGameObjectName);
+            IEnumerable<MineDirectional> bridgeMines = Singleton<GameWorld>.Instance.MineManager.Mines.Where(mine =>
+                mine.transform.parent.gameObject.name == lighthouseMinesGameObjectName
+            );
 
             if (!bridgeMines.Contains(__instance))
             {

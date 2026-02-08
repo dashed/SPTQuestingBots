@@ -45,7 +45,8 @@ public class QuestingBotGenerateRouter(
     BotNameService botNameService,
     WeightedRandomHelper weightedRandomHelper,
     ConfigServer configServer,
-    CommonUtils commonUtils)
+    CommonUtils commonUtils
+)
     : StaticRouter(
         jsonUtil,
         [
@@ -64,20 +65,21 @@ public class QuestingBotGenerateRouter(
                             if (bot?.Info?.Settings?.Role is not "assault")
                             {
                                 commonUtils.LogDebug(
-                                    $"Tried generating a player Scav, but a bot with role {bot?.Info?.Settings?.Role} was returned");
+                                    $"Tried generating a player Scav, but a bot with role {bot?.Info?.Settings?.Role} was returned"
+                                );
                                 continue;
                             }
 
                             botNameService.AddRandomPmcNameToBotMainProfileNicknameProperty(bot);
-                            SetRandomisedGameVersionAndCategory(
-                                bot.Info, pmcConfig, weightedRandomHelper);
+                            SetRandomisedGameVersionAndCategory(bot.Info, pmcConfig, weightedRandomHelper);
                         }
                     }
 
                     return httpResponseUtil.GetBody(bots);
                 }
             ),
-        ])
+        ]
+    )
 {
     /// <summary>
     /// Sets a random game version and the corresponding member category on
@@ -85,10 +87,7 @@ public class QuestingBotGenerateRouter(
     /// <c>BotGenerator.SetRandomisedGameVersionAndCategory</c>, which is
     /// <c>protected</c> and cannot be called directly.
     /// </summary>
-    private static void SetRandomisedGameVersionAndCategory(
-        Info botInfo,
-        PmcConfig pmcConfig,
-        WeightedRandomHelper weightedRandom)
+    private static void SetRandomisedGameVersionAndCategory(Info botInfo, PmcConfig pmcConfig, WeightedRandomHelper weightedRandom)
     {
         // Special case
         if (string.Equals(botInfo.Nickname, "nikita", StringComparison.OrdinalIgnoreCase))

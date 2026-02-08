@@ -1,20 +1,18 @@
-﻿using EFT;
-using SPTQuestingBots.BehaviorExtensions;
-using SPTQuestingBots.BotLogic.BotMonitor;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using EFT;
+using SPTQuestingBots.BehaviorExtensions;
+using SPTQuestingBots.BotLogic.BotMonitor;
 
 namespace SPTQuestingBots.BotLogic.Follow
 {
     internal class BotFollowerRegroupLayer : CustomLayerForQuesting
     {
-        public BotFollowerRegroupLayer(BotOwner _botOwner, int _priority) : base(_botOwner, _priority, 250)
-        {
-
-        }
+        public BotFollowerRegroupLayer(BotOwner _botOwner, int _priority)
+            : base(_botOwner, _priority, 250) { }
 
         public override string GetName()
         {

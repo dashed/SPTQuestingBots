@@ -6,8 +6,8 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using SPT.Common.Http;
 using Newtonsoft.Json;
+using SPT.Common.Http;
 using SPTQuestingBots.Configuration;
 
 namespace SPTQuestingBots.Controllers
@@ -49,12 +49,15 @@ namespace SPTQuestingBots.Controllers
             Type targetType = Helpers.TarkovTypeHelpers.FindTargetTypeByField(fieldName);
             LoggingController.LogInfo("Found type for " + fieldName + ": " + targetType.FullName, true);
 
-            serializerSettings = targetType.GetField(fieldName, BindingFlags.Public | BindingFlags.Static).GetValue(null) as JsonSerializerSettings;
+            serializerSettings =
+                targetType.GetField(fieldName, BindingFlags.Public | BindingFlags.Static).GetValue(null) as JsonSerializerSettings;
         }
 
         public static void AdjustPScavChance(float timeRemainingFactor, bool preventPScav)
         {
-            double factor = preventPScav ? 0 : InterpolateForFirstCol(Config.AdjustPScavChance.ChanceVsTimeRemainingFraction, timeRemainingFactor);
+            double factor = preventPScav
+                ? 0
+                : InterpolateForFirstCol(Config.AdjustPScavChance.ChanceVsTimeRemainingFraction, timeRemainingFactor);
 
             GetJson("/QuestingBots/AdjustPScavChance/" + factor, "Could not adjust PScav conversion chance");
         }
@@ -127,7 +130,7 @@ namespace SPTQuestingBots.Controllers
             return _templates.Templates;
         }
 
-        public static Dictionary<string,Dictionary<string,object>> GetEFTQuestSettings()
+        public static Dictionary<string, Dictionary<string, object>> GetEFTQuestSettings()
         {
             string errorMessage = "Cannot retrieve EFT quest settings.";
             string json = GetJson("/QuestingBots/GetEFTQuestSettings", errorMessage);
@@ -238,7 +241,9 @@ namespace SPTQuestingBots.Controllers
                     ServerResponseError serverResponse = JsonConvert.DeserializeObject<ServerResponseError>(json);
                     if (serverResponse?.StatusCode != System.Net.HttpStatusCode.OK)
                     {
-                        throw new System.Net.WebException("Could not retrieve configuration settings from the server. Response: " + serverResponse.StatusCode.ToString());
+                        throw new System.Net.WebException(
+                            "Could not retrieve configuration settings from the server. Response: " + serverResponse.StatusCode.ToString()
+                        );
                     }
                 }
 

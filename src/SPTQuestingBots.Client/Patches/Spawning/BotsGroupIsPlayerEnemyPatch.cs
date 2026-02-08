@@ -1,16 +1,16 @@
-﻿using EFT;
-using HarmonyLib;
-using SPT.Reflection.Patching;
-using SPTQuestingBots.Components.Spawning;
-using SPTQuestingBots.Controllers;
-using SPTQuestingBots.Helpers;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
+using EFT;
+using HarmonyLib;
+using SPT.Reflection.Patching;
+using SPTQuestingBots.Components.Spawning;
+using SPTQuestingBots.Controllers;
+using SPTQuestingBots.Helpers;
 
 namespace SPTQuestingBots.Patches.Spawning
 {
@@ -26,14 +26,20 @@ namespace SPTQuestingBots.Patches.Spawning
         [PatchTranspiler]
         protected static IEnumerable<CodeInstruction> PatchTranspiler(IEnumerable<CodeInstruction> originalInstructions)
         {
-            MethodInfo isSuitableMethodInfo = typeof(BotsGroup).GetMethod(nameof(BotsGroup.IsSuitable), BindingFlags.Public | BindingFlags.Instance);
+            MethodInfo isSuitableMethodInfo = typeof(BotsGroup).GetMethod(
+                nameof(BotsGroup.IsSuitable),
+                BindingFlags.Public | BindingFlags.Instance
+            );
 
             List<CodeInstruction> modifiedInstructions = originalInstructions.ToList();
 
             for (int i = 0; i < modifiedInstructions.Count; i++)
             {
                 // Search for "if (this.IsSuitable(role))"
-                if ((modifiedInstructions[i].opcode == OpCodes.Call) && ((MethodInfo)modifiedInstructions[i].operand == isSuitableMethodInfo))
+                if (
+                    (modifiedInstructions[i].opcode == OpCodes.Call)
+                    && ((MethodInfo)modifiedInstructions[i].operand == isSuitableMethodInfo)
+                )
                 {
                     // Remove the "return false" inside the "if" block
                     for (int j = i + 2; j < i + 4; j++)
@@ -97,7 +103,8 @@ namespace SPTQuestingBots.Patches.Spawning
                 return;
             }
 
-            string message = $"Group containing bot {__instance.InitialBot.GetText()} will be hostile toward bot {player.GetText()}: {__result}";
+            string message =
+                $"Group containing bot {__instance.InitialBot.GetText()} will be hostile toward bot {player.GetText()}: {__result}";
             if (!__result)
             {
                 LoggingController.LogWarning(message);

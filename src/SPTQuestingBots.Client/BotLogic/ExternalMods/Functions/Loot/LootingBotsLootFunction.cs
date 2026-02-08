@@ -15,10 +15,8 @@ namespace SPTQuestingBots.BotLogic.ExternalMods.Functions.Loot
 
         private static string _lootingLogicName => "Looting";
 
-        public LootingBotsLootFunction(BotOwner _botOwner) : base(_botOwner)
-        {
-            
-        }
+        public LootingBotsLootFunction(BotOwner _botOwner)
+            : base(_botOwner) { }
 
         public override bool IsSearchingForLoot() => IsMonitoredLayerActive();
 
@@ -38,7 +36,9 @@ namespace SPTQuestingBots.BotLogic.ExternalMods.Functions.Loot
             }
             else
             {
-                LoggingController.LogWarning("Cannot prevent " + BotOwner.GetText() + " from looting. Looting Bots Interop not initialized properly or is outdated.");
+                LoggingController.LogWarning(
+                    "Cannot prevent " + BotOwner.GetText() + " from looting. Looting Bots Interop not initialized properly or is outdated."
+                );
             }
 
             return false;
@@ -54,7 +54,9 @@ namespace SPTQuestingBots.BotLogic.ExternalMods.Functions.Loot
             }
             else
             {
-                LoggingController.LogWarning("Cannot instruct " + BotOwner.GetText() + " to loot. Looting Bots Interop not initialized properly or is outdated.");
+                LoggingController.LogWarning(
+                    "Cannot instruct " + BotOwner.GetText() + " to loot. Looting Bots Interop not initialized properly or is outdated."
+                );
             }
 
             return false;

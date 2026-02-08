@@ -20,15 +20,12 @@ namespace SPTQuestingBots.Models.Pathing
 
         public IEnumerable<Vector3> PathData
         {
-            get
-            {
-                return new ReadOnlyCollection<Vector3>(pathData);
-            }
+            get { return new ReadOnlyCollection<Vector3>(pathData); }
             set
             {
                 lock (lineRendererLockObj)
                 {
-                    pathData = value.ToArray(); 
+                    pathData = value.ToArray();
                 }
             }
         }
@@ -38,17 +35,20 @@ namespace SPTQuestingBots.Models.Pathing
             PathName = _pathName;
         }
 
-        public PathVisualizationData(string _pathName, Vector3[] _pathData): this(_pathName)
+        public PathVisualizationData(string _pathName, Vector3[] _pathData)
+            : this(_pathName)
         {
             pathData = _pathData;
         }
 
-        public PathVisualizationData(string _pathName, Vector3[] _pathData, Color _color) : this(_pathName, _pathData)
+        public PathVisualizationData(string _pathName, Vector3[] _pathData, Color _color)
+            : this(_pathName, _pathData)
         {
             LineColor = _color;
         }
 
-        public PathVisualizationData(string _pathName, Vector3[] _pathData, Color _color, float _lineThickness) : this(_pathName, _pathData, _color)
+        public PathVisualizationData(string _pathName, Vector3[] _pathData, Color _color, float _lineThickness)
+            : this(_pathName, _pathData, _color)
         {
             LineThickness = _lineThickness;
         }
@@ -107,7 +107,7 @@ namespace SPTQuestingBots.Models.Pathing
             LineThickness = other.LineThickness;
         }
 
-        public void ChangeName (string newName)
+        public void ChangeName(string newName)
         {
             PathName = newName;
         }

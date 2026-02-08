@@ -37,7 +37,8 @@ public class CommonUtils
         ISptLogger<CommonUtils> logger,
         DatabaseService databaseService,
         LocaleService localeService,
-        QuestingBotsConfigLoader configLoader)
+        QuestingBotsConfigLoader configLoader
+    )
     {
         _logger = logger;
         _databaseService = databaseService;

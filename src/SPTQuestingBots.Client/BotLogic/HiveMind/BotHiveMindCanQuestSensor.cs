@@ -10,25 +10,25 @@ namespace SPTQuestingBots.BotLogic.HiveMind
 {
     public class BotHiveMindCanQuestSensor : BotHiveMindAbstractSensor
     {
-        public BotHiveMindCanQuestSensor() : base(false)
-        {
-
-        }
+        public BotHiveMindCanQuestSensor()
+            : base(false) { }
 
         public override void Update(Action<BotOwner> additionalAction = null)
         {
-            Action<BotOwner> updateFromObjectiveManager = new Action<BotOwner>((bot) =>
-            {
-                Components.BotObjectiveManager objectiveManager = bot.GetObjectiveManager();
-                if (objectiveManager != null)
+            Action<BotOwner> updateFromObjectiveManager = new Action<BotOwner>(
+                (bot) =>
                 {
-                    botState[bot] = objectiveManager.IsQuestingAllowed;
+                    Components.BotObjectiveManager objectiveManager = bot.GetObjectiveManager();
+                    if (objectiveManager != null)
+                    {
+                        botState[bot] = objectiveManager.IsQuestingAllowed;
+                    }
+                    else
+                    {
+                        botState[bot] = defaultValue;
+                    }
                 }
-                else
-                {
-                    botState[bot] = defaultValue;
-                }
-            });
+            );
 
             base.Update(updateFromObjectiveManager);
         }

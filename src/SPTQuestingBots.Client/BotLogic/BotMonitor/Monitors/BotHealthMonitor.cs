@@ -1,13 +1,13 @@
-﻿using EFT;
-using EFT.HealthSystem;
-using SPTQuestingBots.BotLogic.HiveMind;
-using SPTQuestingBots.Controllers;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using EFT;
+using EFT.HealthSystem;
+using SPTQuestingBots.BotLogic.HiveMind;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
 {
@@ -26,7 +26,8 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
         public float NotAbleBodiedTime => notAbleBodiedTimer.ElapsedMilliseconds / 1000;
         public float NeedsToHealTime => mustHealTimer.ElapsedMilliseconds / 1000;
 
-        public BotHealthMonitor(BotOwner _botOwner) : base(_botOwner) { }
+        public BotHealthMonitor(BotOwner _botOwner)
+            : base(_botOwner) { }
 
         public override void Update()
         {
@@ -76,7 +77,14 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
                     reasons.Add("overweight");
                 }
 
-                LoggingController.LogWarning("Waited " + NotAbleBodiedTime + "s for " + BotOwner.GetText() + " to be able-bodied due to: " + string.Join(", ", reasons));
+                LoggingController.LogWarning(
+                    "Waited "
+                        + NotAbleBodiedTime
+                        + "s for "
+                        + BotOwner.GetText()
+                        + " to be able-bodied due to: "
+                        + string.Join(", ", reasons)
+                );
                 BotHiveMindMonitor.SeparateBotFromGroup(BotOwner);
                 return;
             }
@@ -142,7 +150,10 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
         private bool needsToEatOrDrink()
         {
             // Check if the bot needs to drink something
-            if (100f * BotOwner.HealthController.Hydration.Current / BotOwner.HealthController.Hydration.Maximum < ConfigController.Config.Questing.BotQuestingRequirements.MinHydration)
+            if (
+                100f * BotOwner.HealthController.Hydration.Current / BotOwner.HealthController.Hydration.Maximum
+                < ConfigController.Config.Questing.BotQuestingRequirements.MinHydration
+            )
             {
                 if (!NeedsToEatOrDrink)
                 {
@@ -152,7 +163,10 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
             }
 
             // Check if the bot needs to eat something
-            if (100f * BotOwner.HealthController.Energy.Current / BotOwner.HealthController.Energy.Maximum < ConfigController.Config.Questing.BotQuestingRequirements.MinEnergy)
+            if (
+                100f * BotOwner.HealthController.Energy.Current / BotOwner.HealthController.Energy.Maximum
+                < ConfigController.Config.Questing.BotQuestingRequirements.MinEnergy
+            )
             {
                 if (!NeedsToEatOrDrink)
                 {
@@ -178,18 +192,31 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
             ValueStruct healthRightLeg = BotOwner.HealthController.GetBodyPartHealth(EBodyPart.RightLeg);
 
             // Check if any of the bot's body parts need to be healed
-            if
-            (
+            if (
                 (100f * healthHead.Current / healthHead.Maximum < ConfigController.Config.Questing.BotQuestingRequirements.MinHealthHead)
-                || (100f * healthChest.Current / healthChest.Maximum < ConfigController.Config.Questing.BotQuestingRequirements.MinHealthChest)
-                || (100f * healthStomach.Current / healthStomach.Maximum < ConfigController.Config.Questing.BotQuestingRequirements.MinHealthStomach)
-                || (100f * healthLeftLeg.Current / healthLeftLeg.Maximum < ConfigController.Config.Questing.BotQuestingRequirements.MinHealthLegs)
-                || (100f * healthRightLeg.Current / healthRightLeg.Maximum < ConfigController.Config.Questing.BotQuestingRequirements.MinHealthLegs)
+                || (
+                    100f * healthChest.Current / healthChest.Maximum
+                    < ConfigController.Config.Questing.BotQuestingRequirements.MinHealthChest
+                )
+                || (
+                    100f * healthStomach.Current / healthStomach.Maximum
+                    < ConfigController.Config.Questing.BotQuestingRequirements.MinHealthStomach
+                )
+                || (
+                    100f * healthLeftLeg.Current / healthLeftLeg.Maximum
+                    < ConfigController.Config.Questing.BotQuestingRequirements.MinHealthLegs
+                )
+                || (
+                    100f * healthRightLeg.Current / healthRightLeg.Maximum
+                    < ConfigController.Config.Questing.BotQuestingRequirements.MinHealthLegs
+                )
             )
             {
                 if (!HasLowHealth)
                 {
-                    LoggingController.LogDebug("Bot " + BotOwner.GetText() + " has one or more body parts with health too low for questing");
+                    LoggingController.LogDebug(
+                        "Bot " + BotOwner.GetText() + " has one or more body parts with health too low for questing"
+                    );
                 }
                 return true;
             }
@@ -204,7 +231,10 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
         private bool isOverweight()
         {
             // Check if the bot is too overweight
-            if (100f * BotOwner.GetPlayer.Physical.Overweight > ConfigController.Config.Questing.BotQuestingRequirements.MaxOverweightPercentage)
+            if (
+                100f * BotOwner.GetPlayer.Physical.Overweight
+                > ConfigController.Config.Questing.BotQuestingRequirements.MaxOverweightPercentage
+            )
             {
                 if (!IsOverweight)
                 {

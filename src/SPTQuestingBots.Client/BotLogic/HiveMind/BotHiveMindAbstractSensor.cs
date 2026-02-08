@@ -12,10 +12,7 @@ namespace SPTQuestingBots.BotLogic.HiveMind
         protected Dictionary<BotOwner, bool> botState = new Dictionary<BotOwner, bool>();
         protected bool defaultValue = false;
 
-        public BotHiveMindAbstractSensor()
-        {
-
-        }
+        public BotHiveMindAbstractSensor() { }
 
         public BotHiveMindAbstractSensor(bool _defaultValue)
         {

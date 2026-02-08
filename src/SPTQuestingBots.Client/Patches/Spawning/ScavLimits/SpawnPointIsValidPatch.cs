@@ -18,21 +18,27 @@ namespace SPTQuestingBots.Patches.Spawning.ScavLimits
         protected override MethodBase GetTargetMethod()
         {
             string methodName = "IsValid";
-            Type[] argumentTypes = new Type[] { typeof(ISpawnPoint), typeof(IReadOnlyCollection<IPlayer>), typeof(float), typeof(GClass699) };
+            Type[] argumentTypes = new Type[]
+            {
+                typeof(ISpawnPoint),
+                typeof(IReadOnlyCollection<IPlayer>),
+                typeof(float),
+                typeof(GClass699),
+            };
 
             Type targetType = Helpers.TarkovTypeHelpers.FindTargetTypeByMethod(methodName, argumentTypes);
             Controllers.LoggingController.LogInfo("Found type for SpawnPointIsValidPatch: " + targetType.FullName);
 
-            return targetType.GetMethod(
-                methodName,
-                BindingFlags.Public | BindingFlags.Static,
-                null,
-                argumentTypes,
-                null);
+            return targetType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Static, null, argumentTypes, null);
         }
 
         [PatchPostfix]
-        protected static void PatchPostfix(ref bool __result, ISpawnPoint spawnPoint, IReadOnlyCollection<IPlayer> players, float distanceSqr)
+        protected static void PatchPostfix(
+            ref bool __result,
+            ISpawnPoint spawnPoint,
+            IReadOnlyCollection<IPlayer> players,
+            float distanceSqr
+        )
         {
             if (!__result)
             {
@@ -44,7 +50,9 @@ namespace SPTQuestingBots.Patches.Spawning.ScavLimits
                 return;
             }
 
-            float maxDistanceBetweenSpawnPoints = Singleton<GameWorld>.Instance.gameObject.GetComponent<Components.LocationData>().MaxDistanceBetweenSpawnPoints;
+            float maxDistanceBetweenSpawnPoints = Singleton<GameWorld>
+                .Instance.gameObject.GetComponent<Components.LocationData>()
+                .MaxDistanceBetweenSpawnPoints;
             float exclusionRadius = maxDistanceBetweenSpawnPoints * QuestingBotsPluginConfig.ScavSpawningExclusionRadiusMapFraction.Value;
 
             float minDistanceFromPlayers = players.HumanAndSimulatedPlayers().Min(p => Vector3.Distance(spawnPoint.Position, p.Position));

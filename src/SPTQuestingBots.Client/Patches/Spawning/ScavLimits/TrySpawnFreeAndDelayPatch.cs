@@ -73,7 +73,10 @@ namespace SPTQuestingBots.Patches.Spawning.ScavLimits
             }
 
             // Check if the rate limit should be used
-            if (NonWavesSpawnScenarioCreatePatch.TotalSpawnedScavs + pendingScavCount <= QuestingBotsPluginConfig.ScavSpawnLimitThreshold.Value)
+            if (
+                NonWavesSpawnScenarioCreatePatch.TotalSpawnedScavs + pendingScavCount
+                <= QuestingBotsPluginConfig.ScavSpawnLimitThreshold.Value
+            )
             {
                 return allowSpawn(pendingScavCount);
             }
@@ -121,7 +124,7 @@ namespace SPTQuestingBots.Patches.Spawning.ScavLimits
 
             float retryDelay = ConfigController.Config.BotSpawns.EftNewSpawnSystemAdjustments.NonWaveRetryDelayAfterBlocked;
             nextRetryTimeDelayField.SetValue(NonWavesSpawnScenarioCreatePatch.MostRecentNonWavesSpawnScenario, retryDelay);
-            
+
             return false;
         }
 
@@ -131,7 +134,9 @@ namespace SPTQuestingBots.Patches.Spawning.ScavLimits
             int recentlySpawnedScavs = NonWavesSpawnScenarioCreatePatch.GetSpawnedScavCount(timeWindow, true);
             float recentScavSpawnRate = recentlySpawnedScavs * 60f / timeWindow;
 
-            Controllers.LoggingController.LogDebug(recentlySpawnedScavs + " Scavs have spawned in the last " + timeWindow + "s. Rate=" + recentScavSpawnRate);
+            Controllers.LoggingController.LogDebug(
+                recentlySpawnedScavs + " Scavs have spawned in the last " + timeWindow + "s. Rate=" + recentScavSpawnRate
+            );
         }
     }
 }

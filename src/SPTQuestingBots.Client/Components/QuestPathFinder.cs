@@ -14,10 +14,7 @@ namespace SPTQuestingBots.Components
     {
         private Dictionary<(Vector3, Vector3), StaticPathData> staticPaths = new Dictionary<(Vector3, Vector3), StaticPathData>();
 
-        public QuestPathFinder()
-        {
-
-        }
+        public QuestPathFinder() { }
 
         public void Clear()
         {
@@ -26,7 +23,7 @@ namespace SPTQuestingBots.Components
 
         public IList<StaticPathData> GetStaticPaths(Vector3 target)
         {
-            IList <StaticPathData> paths = new List<StaticPathData>();
+            IList<StaticPathData> paths = new List<StaticPathData>();
             foreach ((Vector3 from, Vector3 to) in staticPaths.Keys)
             {
                 if (staticPaths[(from, to)].Status != UnityEngine.AI.NavMeshPathStatus.PathComplete)
@@ -95,7 +92,11 @@ namespace SPTQuestingBots.Components
                         continue;
                     }
 
-                    StaticPathData path = new StaticPathData(from, to, ConfigController.Config.Questing.BotSearchDistances.OjectiveReachedIdeal);
+                    StaticPathData path = new StaticPathData(
+                        from,
+                        to,
+                        ConfigController.Config.Questing.BotSearchDistances.OjectiveReachedIdeal
+                    );
                     if (path.Status == UnityEngine.AI.NavMeshPathStatus.PathComplete)
                     {
                         LoggingController.LogDebug("Found a static path from waypoint " + from + " to waypoint " + to + " for " + quest);
@@ -103,7 +104,10 @@ namespace SPTQuestingBots.Components
                     }
                     else
                     {
-                        LoggingController.LogWarning("Could not find a static path from waypoint " + from + " to waypoint " + to + " for " + quest, true);
+                        LoggingController.LogWarning(
+                            "Could not find a static path from waypoint " + from + " to waypoint " + to + " for " + quest,
+                            true
+                        );
                     }
                 }
             }
@@ -120,20 +124,36 @@ namespace SPTQuestingBots.Components
                         continue;
                     }
 
-                    StaticPathData path = new StaticPathData(waypoint, firstStepPosition, ConfigController.Config.Questing.BotSearchDistances.OjectiveReachedIdeal);
+                    StaticPathData path = new StaticPathData(
+                        waypoint,
+                        firstStepPosition,
+                        ConfigController.Config.Questing.BotSearchDistances.OjectiveReachedIdeal
+                    );
                     if (path.Status == UnityEngine.AI.NavMeshPathStatus.PathComplete)
                     {
-                        LoggingController.LogDebug("Found a static path from " + waypoint + " to " + firstStepPosition + " for " + questObjective + " in " + quest);
+                        LoggingController.LogDebug(
+                            "Found a static path from " + waypoint + " to " + firstStepPosition + " for " + questObjective + " in " + quest
+                        );
                         tmpStaticPaths.Add((waypoint, firstStepPosition), path);
                     }
                     else
                     {
-                        LoggingController.LogWarning("Could not find a static path from " + waypoint + " to " + firstStepPosition + " for " + questObjective + " in " + quest, true);
+                        LoggingController.LogWarning(
+                            "Could not find a static path from "
+                                + waypoint
+                                + " to "
+                                + firstStepPosition
+                                + " for "
+                                + questObjective
+                                + " in "
+                                + quest,
+                            true
+                        );
                     }
                 }
             }
 
-            // Check if any of the paths can be chained together. If so, add them to the dictionary so they can be quickly retrieved during the raid. 
+            // Check if any of the paths can be chained together. If so, add them to the dictionary so they can be quickly retrieved during the raid.
             tmpStaticPaths = addCombinedPaths(tmpStaticPaths);
 
             // Add the new static paths to the dictionary
@@ -172,7 +192,9 @@ namespace SPTQuestingBots.Components
                             continue;
                         }
 
-                        LoggingController.LogDebug("Created a combined static path from " + combinedPath.StartPosition + " to " + combinedPath.TargetPosition);
+                        LoggingController.LogDebug(
+                            "Created a combined static path from " + combinedPath.StartPosition + " to " + combinedPath.TargetPosition
+                        );
                         paths.Add((combinedPath.StartPosition, combinedPath.TargetPosition), combinedPath);
                         newPaths++;
                     }
@@ -192,7 +214,9 @@ namespace SPTQuestingBots.Components
                             continue;
                         }
 
-                        LoggingController.LogDebug("Created a combined static path from " + combinedPath.StartPosition + " to " + combinedPath.TargetPosition);
+                        LoggingController.LogDebug(
+                            "Created a combined static path from " + combinedPath.StartPosition + " to " + combinedPath.TargetPosition
+                        );
                         paths.Add((combinedPath.StartPosition, combinedPath.TargetPosition), combinedPath);
                         newPaths++;
                     }

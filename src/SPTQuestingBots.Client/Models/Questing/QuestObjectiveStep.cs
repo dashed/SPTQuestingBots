@@ -23,7 +23,7 @@ namespace SPTQuestingBots.Models.Questing
         PlantItem,
         ToggleSwitch,
         RequestExtract,
-        CloseNearbyDoors
+        CloseNearbyDoors,
     }
 
     public class QuestObjectiveStep
@@ -59,27 +59,28 @@ namespace SPTQuestingBots.Models.Questing
         [JsonIgnore]
         public WorldInteractiveObject InteractiveObject { get; set; } = null;
 
-        public QuestObjectiveStep()
-        {
+        public QuestObjectiveStep() { }
 
-        }
-
-        public QuestObjectiveStep(SerializableVector3 position) : this()
+        public QuestObjectiveStep(SerializableVector3 position)
+            : this()
         {
             SerializablePosition = position;
         }
 
-        public QuestObjectiveStep(Vector3 position) : this()
+        public QuestObjectiveStep(Vector3 position)
+            : this()
         {
             SerializablePosition = new SerializableVector3(position);
         }
 
-        public QuestObjectiveStep(Vector3 position, QuestAction actionType) : this(position)
+        public QuestObjectiveStep(Vector3 position, QuestAction actionType)
+            : this(position)
         {
             ActionType = actionType;
         }
 
-        public QuestObjectiveStep(Vector3 position, QuestAction actionType, Configuration.MinMaxConfig minElapsedTime) : this(position, actionType)
+        public QuestObjectiveStep(Vector3 position, QuestAction actionType, Configuration.MinMaxConfig minElapsedTime)
+            : this(position, actionType)
         {
             MinElapsedTime = minElapsedTime;
         }
@@ -128,7 +129,9 @@ namespace SPTQuestingBots.Models.Questing
                 return false;
             }
 
-            Vector3? navMeshPosition = Singleton<GameWorld>.Instance.GetComponent<Components.LocationData>().FindNearestNavMeshPosition(SerializablePosition.ToUnityVector3(), maxDistance);
+            Vector3? navMeshPosition = Singleton<GameWorld>
+                .Instance.GetComponent<Components.LocationData>()
+                .FindNearestNavMeshPosition(SerializablePosition.ToUnityVector3(), maxDistance);
             if (!navMeshPosition.HasValue)
             {
                 LoggingController.LogError("Cannot find NavMesh position for " + SerializablePosition.ToUnityVector3().ToString());

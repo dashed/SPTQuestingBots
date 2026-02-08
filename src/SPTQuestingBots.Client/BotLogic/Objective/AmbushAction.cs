@@ -1,10 +1,10 @@
-﻿using EFT;
-using SPTQuestingBots.BotLogic.BotMonitor.Monitors;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using EFT;
+using SPTQuestingBots.BotLogic.BotMonitor.Monitors;
 
 namespace SPTQuestingBots.BotLogic.Objective
 {
@@ -13,12 +13,14 @@ namespace SPTQuestingBots.BotLogic.Objective
         private bool allowedToIgnoreHearing = true;
         private bool isIgnoringHearing = false;
 
-        public AmbushAction(BotOwner _BotOwner) : base(_BotOwner, 100)
+        public AmbushAction(BotOwner _BotOwner)
+            : base(_BotOwner, 100)
         {
             SetBaseAction(BotActionNodesClass.CreateNode(BotLogicDecision.holdPosition, BotOwner));
         }
 
-        public AmbushAction(BotOwner _BotOwner, bool _allowedToIgnoreHearing) : this(_BotOwner)
+        public AmbushAction(BotOwner _BotOwner, bool _allowedToIgnoreHearing)
+            : this(_BotOwner)
         {
             allowedToIgnoreHearing = _allowedToIgnoreHearing;
         }
@@ -53,7 +55,7 @@ namespace SPTQuestingBots.BotLogic.Objective
             UpdateBaseAction(data);
 
             // While the bot is moving to the ambush position, have it look where it's going. Once at the ambush position, have it look to the
-            // a specific location if defined by the quest. Otherwise, have it look where it just came from. 
+            // a specific location if defined by the quest. Otherwise, have it look where it just came from.
             if (!ObjectiveManager.IsCloseToObjective())
             {
                 UpdateBotSteering();

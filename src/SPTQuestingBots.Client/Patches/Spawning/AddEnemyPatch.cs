@@ -5,9 +5,9 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using SPT.Reflection.Patching;
 using Comfort.Common;
 using EFT;
+using SPT.Reflection.Patching;
 using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.Patches.Spawning
@@ -49,7 +49,11 @@ namespace SPTQuestingBots.Patches.Spawning
 
             // Check if the the bot group was created by this mod
             bool isGroupFromBotGenerator = false;
-            foreach (Components.Spawning.BotGenerator botGenerator in Singleton<GameWorld>.Instance.gameObject.GetComponents(typeof(Components.Spawning.BotGenerator)))
+            foreach (
+                Components.Spawning.BotGenerator botGenerator in Singleton<GameWorld>.Instance.gameObject.GetComponents(
+                    typeof(Components.Spawning.BotGenerator)
+                )
+            )
             {
                 if (botGenerator.GetBotGroups().Any(g => g.SpawnedBots.Any(b => groupMemberIDs.Contains(b.Profile.Id))))
                 {
@@ -60,7 +64,9 @@ namespace SPTQuestingBots.Patches.Spawning
 
             if (isGroupFromBotGenerator)
             {
-                LoggingController.LogWarning("Preventing BotsGroup::AddEnemy from running due to EBotEnemyCause.pmcBossKill because the victim was in a bot group created by this mod");
+                LoggingController.LogWarning(
+                    "Preventing BotsGroup::AddEnemy from running due to EBotEnemyCause.pmcBossKill because the victim was in a bot group created by this mod"
+                );
                 return false;
 
                 // TODO: The victim list is updated after this method runs, so this doesn't work. However, I don't think we actually care because you will still

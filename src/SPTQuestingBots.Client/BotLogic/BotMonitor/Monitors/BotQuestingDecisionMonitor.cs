@@ -1,15 +1,15 @@
-﻿using Comfort.Common;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Comfort.Common;
 using EFT;
 using SPTQuestingBots.BotLogic.BotMonitor.Monitors;
 using SPTQuestingBots.BotLogic.HiveMind;
 using SPTQuestingBots.Configuration;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SPTQuestingBots.BotLogic.BotMonitor
 {
@@ -42,14 +42,15 @@ namespace SPTQuestingBots.BotLogic.BotMonitor
         private Components.BotQuestBuilder botQuestBuilder;
 
         private bool allowedToTakeABreak() => ObjectiveManager.IsAllowedToTakeABreak();
+
         private bool allowedToInvestigate() => ObjectiveManager.IsAllowedToInvestigate();
 
-        public BotQuestingDecisionMonitor(BotOwner _botOwner) : base(_botOwner) { }
+        public BotQuestingDecisionMonitor(BotOwner _botOwner)
+            : base(_botOwner) { }
 
         public bool IsAllowedToQuest()
         {
-            if
-            (
+            if (
                 CurrentDecision == BotQuestingDecision.None
                 || CurrentDecision == BotQuestingDecision.Inactive
                 || CurrentDecision == BotQuestingDecision.WaitForQuestData
@@ -141,7 +142,10 @@ namespace SPTQuestingBots.BotLogic.BotMonitor
                 return BotQuestingDecision.WaitForGroup;
             }
 
-            if (BotMonitor.GetMonitor<BotLootingMonitor>().IsForcedToSearchForLoot && BotMonitor.GetMonitor<BotLootingMonitor>().BossWillAllowLootingByDistance)
+            if (
+                BotMonitor.GetMonitor<BotLootingMonitor>().IsForcedToSearchForLoot
+                && BotMonitor.GetMonitor<BotLootingMonitor>().BossWillAllowLootingByDistance
+            )
             {
                 setLootingHiveMindState(true);
                 return BotQuestingDecision.CheckForLoot;
@@ -253,12 +257,20 @@ namespace SPTQuestingBots.BotLogic.BotMonitor
             return BotQuestingDecision.Quest;
         }
 
-        private void setLootingHiveMindState(bool value) => BotHiveMindMonitor.UpdateValueForBot(BotHiveMindSensorType.WantsToLoot, BotOwner, value);
+        private void setLootingHiveMindState(bool value) =>
+            BotHiveMindMonitor.UpdateValueForBot(BotHiveMindSensorType.WantsToLoot, BotOwner, value);
 
-        private bool isFollowerTooFarFromBossForQuesting() => BotMonitor.GetMonitor<BotQuestingMonitor>().DistanceToBoss > getFollowerTargetDistanceQuesting();
+        private bool isFollowerTooFarFromBossForQuesting() =>
+            BotMonitor.GetMonitor<BotQuestingMonitor>().DistanceToBoss > getFollowerTargetDistanceQuesting();
+
         private double getFollowerTargetDistanceQuesting()
         {
-            MinMaxConfig targetFollowerRangeQuesting = ConfigController.Config.Questing.BotQuestingRequirements.MaxFollowerDistance.TargetRangeQuesting;
+            MinMaxConfig targetFollowerRangeQuesting = ConfigController
+                .Config
+                .Questing
+                .BotQuestingRequirements
+                .MaxFollowerDistance
+                .TargetRangeQuesting;
 
             if (CurrentDecision == BotQuestingDecision.FollowBoss)
             {
@@ -268,10 +280,17 @@ namespace SPTQuestingBots.BotLogic.BotMonitor
             return targetFollowerRangeQuesting.Max;
         }
 
-        private bool isFollowerTooFarFromBossForCombat() => BotMonitor.GetMonitor<BotQuestingMonitor>().DistanceToBoss > getFollowerTargetDistanceCombat();
+        private bool isFollowerTooFarFromBossForCombat() =>
+            BotMonitor.GetMonitor<BotQuestingMonitor>().DistanceToBoss > getFollowerTargetDistanceCombat();
+
         private double getFollowerTargetDistanceCombat()
         {
-            MinMaxConfig targetFollowerRangeQuesting = ConfigController.Config.Questing.BotQuestingRequirements.MaxFollowerDistance.TargetRangeCombat;
+            MinMaxConfig targetFollowerRangeQuesting = ConfigController
+                .Config
+                .Questing
+                .BotQuestingRequirements
+                .MaxFollowerDistance
+                .TargetRangeCombat;
 
             if (CurrentDecision == BotQuestingDecision.HelpBoss)
             {

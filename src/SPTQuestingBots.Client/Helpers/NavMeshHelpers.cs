@@ -27,7 +27,9 @@ namespace SPTQuestingBots.Helpers
             float minExtent = Math.Min(Math.Min(bounds.size.x, bounds.size.x), bounds.size.x) / 2;
             if (minExtent < radius)
             {
-                LoggingController.LogInfo("Radius " + radius + " is larger than min bounds extent " + minExtent + " of size " + bounds.size);
+                LoggingController.LogInfo(
+                    "Radius " + radius + " is larger than min bounds extent " + minExtent + " of size " + bounds.size
+                );
 
                 return Enumerable.Empty<Vector3>();
             }
@@ -51,7 +53,9 @@ namespace SPTQuestingBots.Helpers
                 {
                     for (int z = 0; z <= lengthCount; z++)
                     {
-                        testPoints.Add(new Vector3(origin.x + (widthSpacing * x), origin.y + (heightSpacing * y), origin.z + (lengthSpacing * z)));
+                        testPoints.Add(
+                            new Vector3(origin.x + (widthSpacing * x), origin.y + (heightSpacing * y), origin.z + (lengthSpacing * z))
+                        );
                     }
                 }
             }
@@ -84,7 +88,13 @@ namespace SPTQuestingBots.Helpers
 
             if (!navMeshPoints.Any())
             {
-                LoggingController.LogWarning("Could not find any NavMesh points from " + colliderTestPoints.Count() + " test points using radius " + searchRadius + "m");
+                LoggingController.LogWarning(
+                    "Could not find any NavMesh points from "
+                        + colliderTestPoints.Count()
+                        + " test points using radius "
+                        + searchRadius
+                        + "m"
+                );
                 LoggingController.LogWarning("Test points: " + string.Join(",", colliderTestPoints));
             }
 

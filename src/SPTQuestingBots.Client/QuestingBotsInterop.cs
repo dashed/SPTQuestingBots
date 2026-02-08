@@ -1,12 +1,12 @@
-﻿using BepInEx.Bootstrap;
-using EFT;
-using HarmonyLib;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using BepInEx.Bootstrap;
+using EFT;
+using HarmonyLib;
 
 namespace SPTQuestingBots
 {
@@ -61,7 +61,8 @@ namespace SPTQuestingBots
          */
         public static bool Init()
         {
-            if (!IsQuestingBotsLoaded()) return false;
+            if (!IsQuestingBotsLoaded())
+                return false;
 
             // Only check for the External class once
             if (!_QuestingBotsInteropInited)
@@ -89,10 +90,14 @@ namespace SPTQuestingBots
          */
         public static QuestingBotsBotGeneratorStatus GetBotGeneratorStatus()
         {
-            if (!Init()) return new QuestingBotsBotGeneratorStatus();
-            if (_GetRemainingBotGeneratorsMethod == null) return new QuestingBotsBotGeneratorStatus();
-            if (_GetCurrentBotGeneratorProgressMethod == null) return new QuestingBotsBotGeneratorStatus();
-            if (_GetCurrentBotGeneratorTypeMethod == null) return new QuestingBotsBotGeneratorStatus();
+            if (!Init())
+                return new QuestingBotsBotGeneratorStatus();
+            if (_GetRemainingBotGeneratorsMethod == null)
+                return new QuestingBotsBotGeneratorStatus();
+            if (_GetCurrentBotGeneratorProgressMethod == null)
+                return new QuestingBotsBotGeneratorStatus();
+            if (_GetCurrentBotGeneratorTypeMethod == null)
+                return new QuestingBotsBotGeneratorStatus();
 
             int remainingGenerators = (int)_GetRemainingBotGeneratorsMethod.Invoke(null, new object[] { });
             int currentGeneratorProgress = (int)_GetCurrentBotGeneratorProgressMethod.Invoke(null, new object[] { });
@@ -106,8 +111,10 @@ namespace SPTQuestingBots
          */
         public static string GetCurrentDecision(BotOwner bot)
         {
-            if (!Init()) return "";
-            if (_GetCurrentDecisionMethod == null) return "";
+            if (!Init())
+                return "";
+            if (_GetCurrentDecisionMethod == null)
+                return "";
 
             string decision = (string)_GetCurrentDecisionMethod.Invoke(null, new object[] { bot });
 

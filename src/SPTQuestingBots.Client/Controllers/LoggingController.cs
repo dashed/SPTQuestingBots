@@ -14,7 +14,9 @@ namespace SPTQuestingBots.Controllers
         public static BepInEx.Logging.ManualLogSource Logger { get; set; } = null;
 
         public static string GetText(this IEnumerable<Player> players) => string.Join(",", players.Select(b => b?.GetText()));
+
         public static string GetText(this IEnumerable<IPlayer> players) => string.Join(",", players.Select(b => b?.GetText()));
+
         public static string GetText(this IEnumerable<BotOwner> bots) => string.Join(",", bots.Select(b => b?.GetText()));
 
         public static string GetText(this BotOwner bot)
@@ -26,7 +28,7 @@ namespace SPTQuestingBots.Controllers
 
             return bot.GetPlayer.GetText();
         }
-        
+
         public static string GetText(this Player player)
         {
             if (player == null)

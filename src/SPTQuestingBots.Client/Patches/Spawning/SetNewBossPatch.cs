@@ -5,8 +5,8 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using EFT;
-using SPTQuestingBots.Controllers;
 using SPT.Reflection.Patching;
+using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
 
 namespace SPTQuestingBots.Patches.Spawning

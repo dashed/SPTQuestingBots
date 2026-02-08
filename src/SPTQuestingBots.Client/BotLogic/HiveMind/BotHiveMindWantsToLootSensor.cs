@@ -11,10 +11,8 @@ namespace SPTQuestingBots.BotLogic.HiveMind
     {
         private static Dictionary<BotOwner, DateTime> botLastLootingTime = new Dictionary<BotOwner, DateTime>();
 
-        public BotHiveMindWantsToLootSensor() : base(false)
-        {
-
-        }
+        public BotHiveMindWantsToLootSensor()
+            : base(false) { }
 
         public override void RegisterBot(BotOwner bot)
         {

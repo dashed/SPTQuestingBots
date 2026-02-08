@@ -68,7 +68,8 @@ public class QuestingBotsStaticRouter(
     JsonUtil jsonUtil,
     QuestingBotsConfigLoader configLoader,
     QuestHelper questHelper,
-    ConfigServer configServer)
+    ConfigServer configServer
+)
     : StaticRouter(
         jsonUtil,
         [
@@ -105,9 +106,7 @@ public class QuestingBotsStaticRouter(
                 "/QuestingBots/GetEFTQuestSettings",
                 async (url, info, sessionId, output) =>
                 {
-                    var settings = configLoader.LoadJsonFile<object>(
-                        "config/eftQuestSettings.json"
-                    );
+                    var settings = configLoader.LoadJsonFile<object>("config/eftQuestSettings.json");
                     return jsonUtil.Serialize(new { settings }) ?? "{}";
                 }
             ),
@@ -118,9 +117,7 @@ public class QuestingBotsStaticRouter(
                 "/QuestingBots/GetZoneAndItemQuestPositions",
                 async (url, info, sessionId, output) =>
                 {
-                    var zoneAndItemPositions = configLoader.LoadJsonFile<object>(
-                        "config/zoneAndItemQuestPositions.json"
-                    );
+                    var zoneAndItemPositions = configLoader.LoadJsonFile<object>("config/zoneAndItemQuestPositions.json");
                     return jsonUtil.Serialize(new { zoneAndItemPositions }) ?? "{}";
                 }
             ),
@@ -133,9 +130,7 @@ public class QuestingBotsStaticRouter(
                 async (url, info, sessionId, output) =>
                 {
                     var locationConfig = configServer.GetConfig<LocationConfig>();
-                    return jsonUtil.Serialize(
-                            new { maps = locationConfig.ScavRaidTimeSettings.Maps }
-                        ) ?? "{}";
+                    return jsonUtil.Serialize(new { maps = locationConfig.ScavRaidTimeSettings.Maps }) ?? "{}";
                 }
             ),
             // ── GET /QuestingBots/GetUSECChance ──────────────────────────
@@ -151,5 +146,4 @@ public class QuestingBotsStaticRouter(
                 }
             ),
         ]
-    )
-{ }
+    ) { }

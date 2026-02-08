@@ -38,11 +38,20 @@ namespace SPTQuestingBots.Models
 
         public void ManualUpdate(bool value, bool withDebugCallback = true)
         {
-            if (value && !BotOwner.Mover.NoSprint && BotOwner.GetPlayer.Physical.CanSprint && (BotOwner.GetPlayer.Physical.Stamina.NormalValue > staminaLimits.Max))
+            if (
+                value
+                && !BotOwner.Mover.NoSprint
+                && BotOwner.GetPlayer.Physical.CanSprint
+                && (BotOwner.GetPlayer.Physical.Stamina.NormalValue > staminaLimits.Max)
+            )
             {
                 trySprint(true, withDebugCallback);
             }
-            if (!value && BotOwner.Mover.NoSprint || !BotOwner.GetPlayer.Physical.CanSprint || (BotOwner.GetPlayer.Physical.Stamina.NormalValue < staminaLimits.Min))
+            if (
+                !value && BotOwner.Mover.NoSprint
+                || !BotOwner.GetPlayer.Physical.CanSprint
+                || (BotOwner.GetPlayer.Physical.Stamina.NormalValue < staminaLimits.Min)
+            )
             {
                 trySprint(false, withDebugCallback);
             }

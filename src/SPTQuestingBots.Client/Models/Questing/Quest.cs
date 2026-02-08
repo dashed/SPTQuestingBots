@@ -86,7 +86,7 @@ namespace SPTQuestingBots.Models.Questing
 
         public string Name => Template?.Name ?? name;
         public bool IsEFTQuest => Template != null;
-        
+
         // Return all objectives in the quest
         public ReadOnlyCollection<QuestObjective> AllObjectives => new ReadOnlyCollection<QuestObjective>(objectives);
         public int NumberOfObjectives => AllObjectives.Count;
@@ -95,17 +95,16 @@ namespace SPTQuestingBots.Models.Questing
         public IEnumerable<QuestObjective> ValidObjectives => AllObjectives.Where(o => o.GetFirstStepPosition() != null);
         public int NumberOfValidObjectives => ValidObjectives.Count();
 
-        public Quest()
-        {
+        public Quest() { }
 
-        }
-
-        public Quest(string _name) : this()
+        public Quest(string _name)
+            : this()
         {
             name = _name;
         }
 
-        public Quest(RawQuestClass template) : this()
+        public Quest(RawQuestClass template)
+            : this()
         {
             Template = template;
         }
@@ -173,7 +172,8 @@ namespace SPTQuestingBots.Models.Questing
                 return false;
             }
 
-            bool canAssign = canAssignForBotType(bot)
+            bool canAssign =
+                canAssignForBotType(bot)
                 && ((bot.Profile.Info.Level >= MinLevel) || !ConfigController.Config.Questing.BotQuestingRequirements.ExcludeBotsByLevel)
                 && ((bot.Profile.Info.Level <= MaxLevel) || !ConfigController.Config.Questing.BotQuestingRequirements.ExcludeBotsByLevel)
                 && (raidTime >= MinRaidET)
@@ -226,11 +226,10 @@ namespace SPTQuestingBots.Models.Questing
             return GetObjective(matchTest);
         }
 
-        private QuestObjective GetObjective<T>(Func<T, bool> matchTestFunc) where T : QuestObjective
+        private QuestObjective GetObjective<T>(Func<T, bool> matchTestFunc)
+            where T : QuestObjective
         {
-            IEnumerable<T> matchingObjectives = objectives
-                .OfType<T>()
-                .Where(o => matchTestFunc(o) == true);
+            IEnumerable<T> matchingObjectives = objectives.OfType<T>().Where(o => matchTestFunc(o) == true);
 
             if (matchingObjectives.Count() == 0)
             {
@@ -239,7 +238,13 @@ namespace SPTQuestingBots.Models.Questing
 
             if (matchingObjectives.Count() > 1)
             {
-                LoggingController.LogWarning("Found multiple quest objectives: " + string.Join(", ", matchingObjectives.Select(o => o.ToString())) + " for quest " + Name + ". Returning the first one.");
+                LoggingController.LogWarning(
+                    "Found multiple quest objectives: "
+                        + string.Join(", ", matchingObjectives.Select(o => o.ToString()))
+                        + " for quest "
+                        + Name
+                        + ". Returning the first one."
+                );
             }
 
             return matchingObjectives.First();
@@ -247,7 +252,9 @@ namespace SPTQuestingBots.Models.Questing
 
         private bool isSwitchInCorrectPosition(string switchID, bool mustBeOpen)
         {
-            EFT.Interactive.Switch requiredSwitch = Singleton<GameWorld>.Instance.GetComponent<Components.LocationData>().FindSwitch(switchID);
+            EFT.Interactive.Switch requiredSwitch = Singleton<GameWorld>
+                .Instance.GetComponent<Components.LocationData>()
+                .FindSwitch(switchID);
             if (requiredSwitch == null)
             {
                 return true;

@@ -1,15 +1,15 @@
-﻿using EFT;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using EFT;
 using SPTQuestingBots.BotLogic.ExternalMods;
 using SPTQuestingBots.BotLogic.ExternalMods.Functions.Extract;
 using SPTQuestingBots.Components.Spawning;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
 using SPTQuestingBots.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
@@ -17,7 +17,7 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
     public class BotExtractMonitor : AbstractBotMonitor
     {
         public bool IsTryingToExtract { get; private set; } = false;
-        
+
         private bool _isBotReadyToExtract = false;
         public bool IsBotReadyToExtract
         {
@@ -39,7 +39,8 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
         private int minEFTQuestsForExtract = int.MaxValue;
         private System.Random random;
 
-        public BotExtractMonitor(BotOwner _botOwner) : base(_botOwner) { }
+        public BotExtractMonitor(BotOwner _botOwner)
+            : base(_botOwner) { }
 
         public override void Start()
         {
@@ -72,7 +73,9 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
             float remainingRaidTime = RaidHelpers.GetRemainingRaidTimeSeconds();
             if (remainingRaidTime < ConfigController.Config.Questing.ExtractionRequirements.MustExtractTimeRemaining)
             {
-                LoggingController.LogInfo(BotOwner.GetText() + " is ready to extract because the raid will be over in " + remainingRaidTime + " seconds.");
+                LoggingController.LogInfo(
+                    BotOwner.GetText() + " is ready to extract because the raid will be over in " + remainingRaidTime + " seconds."
+                );
                 return true;
             }
 
@@ -108,7 +111,9 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
             int totalQuestsCompleted = BotOwner.NumberOfCompletedOrAchivedQuests();
             if (totalQuestsCompleted >= minTotalQuestsForExtract)
             {
-                LoggingController.LogInfo(BotOwner.GetText() + " has completed " + totalQuestsCompleted + " quests and is ready to extract.");
+                LoggingController.LogInfo(
+                    BotOwner.GetText() + " has completed " + totalQuestsCompleted + " quests and is ready to extract."
+                );
                 return true;
             }
             //LoggingController.LogInfo(botOwner.GetText() + " has completed " + totalQuestsCompleted + "/" + minTotalQuestsForExtract + " quests");
@@ -129,7 +134,9 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
             int EFTQuestsCompleted = BotOwner.NumberOfCompletedOrAchivedEFTQuests();
             if (EFTQuestsCompleted >= minEFTQuestsForExtract)
             {
-                LoggingController.LogInfo(BotOwner.GetText() + " has completed " + EFTQuestsCompleted + " EFT quests and is ready to extract.");
+                LoggingController.LogInfo(
+                    BotOwner.GetText() + " has completed " + EFTQuestsCompleted + " EFT quests and is ready to extract."
+                );
                 return true;
             }
             //LoggingController.LogInfo(botOwner.GetText() + " has completed " + EFTQuestsCompleted + "/" + minEFTQuestsForExtract + " EFT quests");

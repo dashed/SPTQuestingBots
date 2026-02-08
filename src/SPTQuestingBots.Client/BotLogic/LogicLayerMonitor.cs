@@ -26,7 +26,8 @@ namespace SPTQuestingBots.BotLogic
         private float maxLayerSearchTime = 300;
 
         public bool CanLayerBeUsed => layer?.IsActive == true;
-        public double TimeSinceLastRequested => lastRequestedTimer.IsRunning ? lastRequestedTimer.ElapsedMilliseconds / 1000.0 : double.MaxValue;
+        public double TimeSinceLastRequested =>
+            lastRequestedTimer.IsRunning ? lastRequestedTimer.ElapsedMilliseconds / 1000.0 : double.MaxValue;
 
         private static IReadOnlyList<Type> _QuestingBotsBrainLayers;
         public static IReadOnlyList<Type> QuestingBotsBrainLayers
@@ -35,7 +36,8 @@ namespace SPTQuestingBots.BotLogic
             {
                 if ((_QuestingBotsBrainLayers == null) || (_QuestingBotsBrainLayers.Count == 0))
                 {
-                    _QuestingBotsBrainLayers = typeof(QuestingBotsPlugin).Assembly.GetTypes()
+                    _QuestingBotsBrainLayers = typeof(QuestingBotsPlugin)
+                        .Assembly.GetTypes()
                         .Where(type => type.IsSubclassOf(typeof(BehaviorExtensions.CustomLayerDelayedUpdate)))
                         .ToList()
                         .AsReadOnly();
@@ -103,7 +105,9 @@ namespace SPTQuestingBots.BotLogic
             }
             catch (Exception ex)
             {
-                LoggingController.LogError("Exception while checking if layer " + LayerName + " should be used for bot " + botOwner.GetText() + ": " + ex.Message);
+                LoggingController.LogError(
+                    "Exception while checking if layer " + LayerName + " should be used for bot " + botOwner.GetText() + ": " + ex.Message
+                );
                 LoggingController.LogError(ex.StackTrace);
             }
 
@@ -113,7 +117,6 @@ namespace SPTQuestingBots.BotLogic
             }
 
             return isRequested;
-
         }
 
         public bool CanUseLayer(float minTimeFromLastUse)
@@ -156,7 +159,9 @@ namespace SPTQuestingBots.BotLogic
 
         public static ReadOnlyCollection<AICoreLayerClass<BotLogicDecision>> GetBrainLayersForBot(BotOwner botOwner)
         {
-            ReadOnlyCollection<AICoreLayerClass<BotLogicDecision>> emptyCollection = new ReadOnlyCollection<AICoreLayerClass<BotLogicDecision>>(new AICoreLayerClass<BotLogicDecision>[0]);
+            ReadOnlyCollection<AICoreLayerClass<BotLogicDecision>> emptyCollection = new ReadOnlyCollection<
+                AICoreLayerClass<BotLogicDecision>
+            >(new AICoreLayerClass<BotLogicDecision>[0]);
 
             // This happens sometimes, and I don't know why
             if (botOwner?.Brain?.BaseBrain == null)
@@ -176,7 +181,8 @@ namespace SPTQuestingBots.BotLogic
             }
 
             // Get the list of brain layers for the bot
-            List<AICoreLayerClass<BotLogicDecision>> layerList = (List<AICoreLayerClass<BotLogicDecision>>)layerListField.GetValue(botOwner.Brain.BaseBrain);
+            List<AICoreLayerClass<BotLogicDecision>> layerList =
+                (List<AICoreLayerClass<BotLogicDecision>>)layerListField.GetValue(botOwner.Brain.BaseBrain);
             if (layerList == null)
             {
                 LoggingController.LogError("Could not retrieve brain layers for bot " + botOwner.GetText());
@@ -227,6 +233,7 @@ namespace SPTQuestingBots.BotLogic
         }
 
         private static string bigBrainCustomLayerWrapperTypeName = "DrakiaXYZ.BigBrain.Internal.CustomLayerWrapper";
+
         public static CustomLayer GetExternalCustomLayer(AICoreLayerClass<BotLogicDecision> layer)
         {
             if (layer == null)

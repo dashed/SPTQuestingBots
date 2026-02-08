@@ -1,10 +1,10 @@
-﻿using Newtonsoft.Json;
-using SPTQuestingBots.Controllers;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.Configuration
 {
@@ -43,10 +43,7 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("level_range")]
         public double[][] LevelRange { get; set; } = new double[0][];
 
-        public QuestSettingsConfig()
-        {
-
-        }
+        public QuestSettingsConfig() { }
 
         public static void ApplyQuestSettingsFromConfig(Models.Questing.Quest quest, QuestSettingsConfig settings)
         {

@@ -18,32 +18,30 @@ public class BotLocationServiceTests
     public void SetUp()
     {
         var logger = Substitute.For<ISptLogger<CommonUtils>>();
-        _configLoader = CreateConfigLoader(new QuestingBotsConfig
-        {
-            Enabled = true,
-            BotSpawns = new BotSpawnsConfig
+        _configLoader = CreateConfigLoader(
+            new QuestingBotsConfig
             {
                 Enabled = true,
-                PmcHostilityAdjustments = new PmcHostilityAdjustmentsConfig
+                BotSpawns = new BotSpawnsConfig
                 {
                     Enabled = true,
-                    PmcsAlwaysHostileAgainstPmcs = true,
-                    PmcsAlwaysHostileAgainstScavs = true,
-                    GlobalScavEnemyChance = 75,
-                    PmcEnemyRoles = ["pmcBEAR", "pmcUSEC"],
-                },
-                BotCapAdjustments = new BotCapAdjustmentsConfig
-                {
-                    UseEftBotCaps = true,
-                    OnlyDecreaseBotCaps = false,
-                    MapSpecificAdjustments = new Dictionary<string, int>
+                    PmcHostilityAdjustments = new PmcHostilityAdjustmentsConfig
                     {
-                        ["default"] = 0,
-                        ["factory4_day"] = 3,
+                        Enabled = true,
+                        PmcsAlwaysHostileAgainstPmcs = true,
+                        PmcsAlwaysHostileAgainstScavs = true,
+                        GlobalScavEnemyChance = 75,
+                        PmcEnemyRoles = ["pmcBEAR", "pmcUSEC"],
+                    },
+                    BotCapAdjustments = new BotCapAdjustmentsConfig
+                    {
+                        UseEftBotCaps = true,
+                        OnlyDecreaseBotCaps = false,
+                        MapSpecificAdjustments = new Dictionary<string, int> { ["default"] = 0, ["factory4_day"] = 3 },
                     },
                 },
-            },
-        });
+            }
+        );
         _commonUtils = new CommonUtils(logger, null!, null!, _configLoader);
     }
 
@@ -86,10 +84,7 @@ public class BotLocationServiceTests
     [Test]
     public void DisableBotWaves_AlreadyEmptyLists_StaysEmpty()
     {
-        var waves = new Dictionary<string, List<BossLocationSpawn>>
-        {
-            ["factory4_day"] = [],
-        };
+        var waves = new Dictionary<string, List<BossLocationSpawn>> { ["factory4_day"] = [] };
 
         var service = CreateService();
         service.DisableBotWaves(waves, "boss");
@@ -149,14 +144,11 @@ public class BotLocationServiceTests
         Assert.Multiple(() =>
         {
             // PMC roles should be set to 100
-            Assert.That(settings.ChancedEnemies[0].EnemyChance, Is.EqualTo(100),
-                "pmcBEAR should be 100% enemy");
-            Assert.That(settings.ChancedEnemies[1].EnemyChance, Is.EqualTo(100),
-                "pmcUSEC should be 100% enemy");
+            Assert.That(settings.ChancedEnemies[0].EnemyChance, Is.EqualTo(100), "pmcBEAR should be 100% enemy");
+            Assert.That(settings.ChancedEnemies[1].EnemyChance, Is.EqualTo(100), "pmcUSEC should be 100% enemy");
 
             // Non-PMC roles should be zeroed out
-            Assert.That(settings.ChancedEnemies[2].EnemyChance, Is.EqualTo(0),
-                "bossKilla should be zeroed out");
+            Assert.That(settings.ChancedEnemies[2].EnemyChance, Is.EqualTo(0), "bossKilla should be zeroed out");
 
             // SavageEnemyChance updated to config value
             Assert.That(settings.SavageEnemyChance, Is.EqualTo(75));
@@ -188,8 +180,11 @@ public class BotLocationServiceTests
         InvokePrivate(service, "AdjustBotHostilityChances", settings);
 
         Assert.That(settings.ChancedEnemies, Has.Count.EqualTo(2));
-        Assert.That(settings.ChancedEnemies.Any(ce => ce.Role == "pmcUSEC" && ce.EnemyChance == 100),
-            Is.True, "pmcUSEC should be added with 100% enemy chance");
+        Assert.That(
+            settings.ChancedEnemies.Any(ce => ce.Role == "pmcUSEC" && ce.EnemyChance == 100),
+            Is.True,
+            "pmcUSEC should be added with 100% enemy chance"
+        );
     }
 
     [Test]
@@ -241,10 +236,7 @@ public class BotLocationServiceTests
         {
             BotRole = "pmcUSEC",
             SavageEnemyChance = 50,
-            ChancedEnemies =
-            [
-                new ChancedEnemy { Role = "bossKilla", EnemyChance = 80 },
-            ],
+            ChancedEnemies = [new ChancedEnemy { Role = "bossKilla", EnemyChance = 80 }],
         };
 
         var service = CreateService();
@@ -275,28 +267,26 @@ public class BotLocationServiceTests
             _commonUtils,
             null!, // DatabaseService only needed for methods we test via reflection
             _configLoader,
-            null!); // ConfigServer only needed for lazy-loaded configs
+            null!
+        ); // ConfigServer only needed for lazy-loaded configs
     }
 
     private static void InvokePrivate(object target, string methodName, params object[] args)
     {
-        var method = target.GetType().GetMethod(methodName,
-            BindingFlags.NonPublic | BindingFlags.Instance);
+        var method = target.GetType().GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance);
         method!.Invoke(target, args);
     }
 
     private static QuestingBotsConfigLoader CreateConfigLoader(QuestingBotsConfig config)
     {
-        var loader = new QuestingBotsConfigLoader(
-            Substitute.For<ISptLogger<QuestingBotsConfigLoader>>());
+        var loader = new QuestingBotsConfigLoader(Substitute.For<ISptLogger<QuestingBotsConfigLoader>>());
         SetPrivateField(loader, "_config", config);
         return loader;
     }
 
     private static void SetPrivateField(object target, string fieldName, object? value)
     {
-        var field = target.GetType().GetField(fieldName,
-            BindingFlags.NonPublic | BindingFlags.Instance);
+        var field = target.GetType().GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Instance);
         field!.SetValue(target, value);
     }
 }

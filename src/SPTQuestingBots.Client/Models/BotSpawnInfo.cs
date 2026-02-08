@@ -34,7 +34,8 @@ namespace SPTQuestingBots.Models
             BotGenerator = botGenerator;
         }
 
-        public BotSpawnInfo(BotCreationDataClass data, BotGenerator botGenerator, Configuration.MinMaxConfig raidETRangeToSpawn) : this(data, botGenerator)
+        public BotSpawnInfo(BotCreationDataClass data, BotGenerator botGenerator, Configuration.MinMaxConfig raidETRangeToSpawn)
+            : this(data, botGenerator)
         {
             RaidETRangeToSpawn = raidETRangeToSpawn;
         }

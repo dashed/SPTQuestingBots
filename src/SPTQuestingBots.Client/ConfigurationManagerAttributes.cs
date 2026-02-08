@@ -1,15 +1,15 @@
 ﻿/// <summary>
 /// Class that specifies how a setting should be displayed inside the ConfigurationManager settings window.
-/// 
+///
 /// Usage:
 /// This class template has to be copied inside the plugin's project and referenced by its code directly.
 /// make a new instance, assign any fields that you want to override, and pass it as a tag for your setting.
-/// 
+///
 /// If a field is null (default), it will be ignored and won't change how the setting is displayed.
 /// If a field is non-null (you assigned a value to it), it will override default behavior.
 /// </summary>
-/// 
-/// <example> 
+///
+/// <example>
 /// Here's an example of overriding order of settings and marking one of the settings as advanced:
 /// <code>
 /// // Override IsAdvanced and Order
@@ -19,8 +19,8 @@
 /// Config.Bind("X", "3", 3, new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 2 }));
 /// </code>
 /// </example>
-/// 
-/// <remarks> 
+///
+/// <remarks>
 /// You can read more and see examples in the readme at https://github.com/BepInEx/BepInEx.ConfigurationManager
 /// You can optionally remove fields that you won't use from this class, it's the same as leaving them null.
 /// </remarks>
@@ -56,11 +56,11 @@ internal sealed class ConfigurationManagerAttributes
     ///     {
     ///         // Make sure nothing else is selected since we aren't focusing on a text box with GUI.FocusControl.
     ///         GUIUtility.keyboardControl = -1;
-    ///                     
+    ///
     ///         // Use Input.GetKeyDown and others here, remember to set isEditing to false after you're done!
     ///         // It's best to check Input.anyKeyDown and set isEditing to false immediately if it's true,
     ///         // so that the input doesn't have a chance to propagate to the game itself.
-    /// 
+    ///
     ///         if (GUILayout.Button("Stop"))
     ///             isEditing = false;
     ///     }
@@ -69,7 +69,7 @@ internal sealed class ConfigurationManagerAttributes
     ///         if (GUILayout.Button("Start"))
     ///             isEditing = true;
     ///     }
-    /// 
+    ///
     ///     // This will only be true when isEditing is true and you hold any key
     ///     GUILayout.Label("Any key pressed: " + Input.anyKey);
     /// }
@@ -100,7 +100,7 @@ internal sealed class ConfigurationManagerAttributes
     public object DefaultValue;
 
     /// <summary>
-    /// Force the "Reset" button to not be displayed, even if a valid DefaultValue is available. 
+    /// Force the "Reset" button to not be displayed, even if a valid DefaultValue is available.
     /// </summary>
     public bool? HideDefaultButton;
 

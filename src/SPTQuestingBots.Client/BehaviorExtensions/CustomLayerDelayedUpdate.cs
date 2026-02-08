@@ -23,27 +23,26 @@ namespace SPTQuestingBots.BehaviorExtensions
         Sleep,
         ToggleSwitch,
         UnlockDoor,
-        CloseNearbyDoors
+        CloseNearbyDoors,
     }
 
     internal abstract class CustomLayerDelayedUpdate : CustomLayer
     {
         protected static int updateInterval { get; private set; } = 100;
         protected bool previousState { get; private set; } = false;
-        
+
         private BotActionType nextAction = BotActionType.Undefined;
         private BotActionType previousAction = BotActionType.Undefined;
         private string actionReason = "???";
         private Stopwatch updateTimer = Stopwatch.StartNew();
         private Stopwatch pauseLayerTimer = Stopwatch.StartNew();
         private float pauseLayerTime = 0;
-        
-        public CustomLayerDelayedUpdate(BotOwner _botOwner, int _priority) : base(_botOwner, _priority)
-        {
-            
-        }
 
-        public CustomLayerDelayedUpdate(BotOwner _botOwner, int _priority, int delayInterval) : this(_botOwner, _priority)
+        public CustomLayerDelayedUpdate(BotOwner _botOwner, int _priority)
+            : base(_botOwner, _priority) { }
+
+        public CustomLayerDelayedUpdate(BotOwner _botOwner, int _priority, int delayInterval)
+            : this(_botOwner, _priority)
         {
             updateInterval = delayInterval;
         }
@@ -61,18 +60,30 @@ namespace SPTQuestingBots.BehaviorExtensions
 
             switch (nextAction)
             {
-                case BotActionType.GoToObjective: return new Action(typeof(BotLogic.Objective.GoToObjectiveAction), actionReason);
-                case BotActionType.FollowBoss: return new Action(typeof(BotLogic.Follow.FollowBossAction), actionReason);
-                case BotActionType.HoldPosition: return new Action(typeof(BotLogic.Objective.HoldAtObjectiveAction), actionReason);
-                case BotActionType.Ambush: return new Action(typeof(BotLogic.Objective.AmbushAction), actionReason);
-                case BotActionType.Snipe: return new Action(typeof(BotLogic.Objective.SnipeAction), actionReason);
-                case BotActionType.PlantItem: return new Action(typeof(BotLogic.Objective.PlantItemAction), actionReason);
-                case BotActionType.BossRegroup: return new Action(typeof(BotLogic.Follow.BossRegroupAction), actionReason);
-                case BotActionType.FollowerRegroup: return new Action(typeof(BotLogic.Follow.FollowerRegroupAction), actionReason);
-                case BotActionType.Sleep: return new Action(typeof(BotLogic.Sleep.SleepingAction), actionReason);
-                case BotActionType.ToggleSwitch: return new Action(typeof(BotLogic.Objective.ToggleSwitchAction), actionReason);
-                case BotActionType.UnlockDoor: return new Action(typeof(BotLogic.Objective.UnlockDoorAction), actionReason);
-                case BotActionType.CloseNearbyDoors: return new Action(typeof(BotLogic.Objective.CloseNearbyDoorsAction), actionReason);
+                case BotActionType.GoToObjective:
+                    return new Action(typeof(BotLogic.Objective.GoToObjectiveAction), actionReason);
+                case BotActionType.FollowBoss:
+                    return new Action(typeof(BotLogic.Follow.FollowBossAction), actionReason);
+                case BotActionType.HoldPosition:
+                    return new Action(typeof(BotLogic.Objective.HoldAtObjectiveAction), actionReason);
+                case BotActionType.Ambush:
+                    return new Action(typeof(BotLogic.Objective.AmbushAction), actionReason);
+                case BotActionType.Snipe:
+                    return new Action(typeof(BotLogic.Objective.SnipeAction), actionReason);
+                case BotActionType.PlantItem:
+                    return new Action(typeof(BotLogic.Objective.PlantItemAction), actionReason);
+                case BotActionType.BossRegroup:
+                    return new Action(typeof(BotLogic.Follow.BossRegroupAction), actionReason);
+                case BotActionType.FollowerRegroup:
+                    return new Action(typeof(BotLogic.Follow.FollowerRegroupAction), actionReason);
+                case BotActionType.Sleep:
+                    return new Action(typeof(BotLogic.Sleep.SleepingAction), actionReason);
+                case BotActionType.ToggleSwitch:
+                    return new Action(typeof(BotLogic.Objective.ToggleSwitchAction), actionReason);
+                case BotActionType.UnlockDoor:
+                    return new Action(typeof(BotLogic.Objective.UnlockDoorAction), actionReason);
+                case BotActionType.CloseNearbyDoors:
+                    return new Action(typeof(BotLogic.Objective.CloseNearbyDoorsAction), actionReason);
             }
 
             throw new InvalidOperationException("Invalid action selected for layer");

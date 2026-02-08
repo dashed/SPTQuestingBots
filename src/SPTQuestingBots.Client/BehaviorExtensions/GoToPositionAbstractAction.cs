@@ -37,7 +37,8 @@ namespace SPTQuestingBots.BehaviorExtensions
         protected double TimeSinceLastVault => timeSinceLastVaultTimer.ElapsedMilliseconds / 1000.0;
         protected double TimeSinceLastBrainLayerMessage => timeSinceLastBrainLayerMessageTimer.ElapsedMilliseconds / 1000.0;
 
-        public GoToPositionAbstractAction(BotOwner _BotOwner, int delayInterval) : base(_BotOwner, delayInterval)
+        public GoToPositionAbstractAction(BotOwner _BotOwner, int delayInterval)
+            : base(_BotOwner, delayInterval)
         {
             if (botZoneField == null)
             {
@@ -45,10 +46,8 @@ namespace SPTQuestingBots.BehaviorExtensions
             }
         }
 
-        public GoToPositionAbstractAction(BotOwner _BotOwner) : this(_BotOwner, updateInterval)
-        {
-
-        }
+        public GoToPositionAbstractAction(BotOwner _BotOwner)
+            : this(_BotOwner, updateInterval) { }
 
         public override void Start()
         {
@@ -79,7 +78,10 @@ namespace SPTQuestingBots.BehaviorExtensions
         public NavMeshPathStatus? RecalculatePath(Vector3 position, float targetVariationAllowed, float reachDist, bool force = false)
         {
             // If a bot is jumping or vaulting, recalculate its path after it finishes
-            if (BotOwner.GetPlayer.MovementContext.PlayerAnimatorIsJumpSetted() || BotOwner.GetPlayer.MovementContext.PlayerAnimatorGetIsVaulting())
+            if (
+                BotOwner.GetPlayer.MovementContext.PlayerAnimatorIsJumpSetted()
+                || BotOwner.GetPlayer.MovementContext.PlayerAnimatorGetIsVaulting()
+            )
             {
                 ObjectiveManager.BotPath.ForcePathRecalculation();
                 return ObjectiveManager.BotPath.Status;
@@ -90,7 +92,12 @@ namespace SPTQuestingBots.BehaviorExtensions
                 return ObjectiveManager.BotPath.Status;
             }
 
-            Models.Pathing.BotPathUpdateNeededReason updateReason = ObjectiveManager.BotPath.CheckIfUpdateIsNeeded(position, targetVariationAllowed, reachDist, force);
+            Models.Pathing.BotPathUpdateNeededReason updateReason = ObjectiveManager.BotPath.CheckIfUpdateIsNeeded(
+                position,
+                targetVariationAllowed,
+                reachDist,
+                force
+            );
 
             if (ObjectiveManager.BotPath.Status != NavMeshPathStatus.PathInvalid)
             {
@@ -118,7 +125,12 @@ namespace SPTQuestingBots.BehaviorExtensions
 
             if (!loggedBrainLayerError || (TimeSinceLastBrainLayerMessage >= BRAIN_LAYER_ERROR_MESSAGE_INTERVAL))
             {
-                LoggingController.LogError("Cannot recalculate path for " + BotOwner.GetText() + " because the active brain layer is not a Questing Bots layer. This is normally caused by an exception in the update logic of another layer. Active layer name: " + activeLayerName);
+                LoggingController.LogError(
+                    "Cannot recalculate path for "
+                        + BotOwner.GetText()
+                        + " because the active brain layer is not a Questing Bots layer. This is normally caused by an exception in the update logic of another layer. Active layer name: "
+                        + activeLayerName
+                );
 
                 loggedBrainLayerError = true;
                 timeSinceLastBrainLayerMessageTimer.Restart();
@@ -205,7 +217,11 @@ namespace SPTQuestingBots.BehaviorExtensions
 
             string pathName = "BotPath_" + BotOwner.Id + "_" + DateTime.Now.ToFileTime();
 
-            Models.Pathing.PathVisualizationData botPathRendering = new Models.Pathing.PathVisualizationData(pathName, adjustedPathCorners.ToArray(), color);
+            Models.Pathing.PathVisualizationData botPathRendering = new Models.Pathing.PathVisualizationData(
+                pathName,
+                adjustedPathCorners.ToArray(),
+                color
+            );
             Singleton<GameWorld>.Instance.GetComponent<PathRenderer>().AddOrUpdatePath(botPathRendering);
         }
 
@@ -271,8 +287,7 @@ namespace SPTQuestingBots.BehaviorExtensions
             }
 
             // Try jumping
-            if
-            (
+            if (
                 (StuckTime >= ConfigController.Config.Questing.StuckBotDetection.StuckBotRemedies.MinTimeBeforeJumping)
                 && (TimeSinceLastJump > ConfigController.Config.Questing.StuckBotDetection.StuckBotRemedies.JumpDebounceTime)
             )
@@ -291,8 +306,7 @@ namespace SPTQuestingBots.BehaviorExtensions
             }
 
             // Try vaulting
-            if
-            (
+            if (
                 (StuckTime >= ConfigController.Config.Questing.StuckBotDetection.StuckBotRemedies.MinTimeBeforeVaulting)
                 && (TimeSinceLastVault > ConfigController.Config.Questing.StuckBotDetection.StuckBotRemedies.VaultDebounceTime)
             )

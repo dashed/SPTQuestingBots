@@ -17,8 +17,10 @@ namespace SPTQuestingBots.Patches.Spawning
 
         protected override MethodBase GetTargetMethod()
         {
-            return typeof(MatchmakerPlayerControllerClass)
-                .GetMethod(nameof(MatchmakerPlayerControllerClass.UpdateMatchingStatus), BindingFlags.Public | BindingFlags.Instance);
+            return typeof(MatchmakerPlayerControllerClass).GetMethod(
+                nameof(MatchmakerPlayerControllerClass.UpdateMatchingStatus),
+                BindingFlags.Public | BindingFlags.Instance
+            );
         }
 
         [PatchPostfix]

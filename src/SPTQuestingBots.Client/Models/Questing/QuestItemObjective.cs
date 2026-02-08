@@ -14,12 +14,11 @@ namespace SPTQuestingBots.Models.Questing
 
         private string ItemName = null;
 
-        public QuestItemObjective() : base()
-        {
+        public QuestItemObjective()
+            : base() { }
 
-        }
-
-        public QuestItemObjective(LootItem item, Vector3 position) : base(position)
+        public QuestItemObjective(LootItem item, Vector3 position)
+            : base(position)
         {
             Item = item;
             ItemName = Item.Item.LocalizedName();

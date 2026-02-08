@@ -1,9 +1,9 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace SPTQuestingBots.Configuration
 {
@@ -21,9 +21,6 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("max_initial_rogues")]
         public int MaxInitialRogues { get; set; } = 6;
 
-        public LimitInitialBossSpawnsConfig()
-        {
-
-        }
+        public LimitInitialBossSpawnsConfig() { }
     }
 }

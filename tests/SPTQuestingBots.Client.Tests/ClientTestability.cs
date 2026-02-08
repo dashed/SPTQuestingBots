@@ -53,18 +53,12 @@ public class ClientTestabilityTests
     [Test]
     public void TestProjectCanResolveNUnit()
     {
-        Assert.That(
-            typeof(TestFixtureAttribute).Assembly.GetName().Name,
-            Is.EqualTo("nunit.framework")
-        );
+        Assert.That(typeof(TestFixtureAttribute).Assembly.GetName().Name, Is.EqualTo("nunit.framework"));
     }
 
     [Test]
     public void TestProjectCanResolveNSubstitute()
     {
-        Assert.That(
-            typeof(NSubstitute.Substitute).Assembly.GetName().Name,
-            Is.EqualTo("NSubstitute")
-        );
+        Assert.That(typeof(NSubstitute.Substitute).Assembly.GetName().Name, Is.EqualTo("NSubstitute"));
     }
 }

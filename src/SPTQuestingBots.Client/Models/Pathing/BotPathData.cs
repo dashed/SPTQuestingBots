@@ -27,8 +27,9 @@ namespace SPTQuestingBots.Models.Pathing
         public float DistanceToTarget => Vector3.Distance(bot.Position, TargetPosition);
 
         private BotOwner bot;
-        
-        public BotPathData(BotOwner botOwner) : base()
+
+        public BotPathData(BotOwner botOwner)
+            : base()
         {
             bot = botOwner;
         }
@@ -43,7 +44,12 @@ namespace SPTQuestingBots.Models.Pathing
             Status = UnityEngine.AI.NavMeshPathStatus.PathPartial;
         }
 
-        public BotPathUpdateNeededReason CheckIfUpdateIsNeeded(Vector3 target, float targetVariationAllowed = 0.2f, float reachDistance = 0.5f, bool force = false)
+        public BotPathUpdateNeededReason CheckIfUpdateIsNeeded(
+            Vector3 target,
+            float targetVariationAllowed = 0.2f,
+            float reachDistance = 0.5f,
+            bool force = false
+        )
         {
             bool requiresUpdate = false;
             BotPathUpdateNeededReason reason = BotPathUpdateNeededReason.None;
@@ -72,7 +78,9 @@ namespace SPTQuestingBots.Models.Pathing
             {
                 if (Status == UnityEngine.AI.NavMeshPathStatus.PathInvalid)
                 {
-                    Vector3? navMeshPosition = Singleton<GameWorld>.Instance.GetComponent<Components.LocationData>().FindNearestNavMeshPosition(bot.Position, 2);
+                    Vector3? navMeshPosition = Singleton<GameWorld>
+                        .Instance.GetComponent<Components.LocationData>()
+                        .FindNearestNavMeshPosition(bot.Position, 2);
                     if (!navMeshPosition.HasValue)
                     {
                         LoggingController.LogError("Cannot find NavMesh position for " + bot.GetText());
@@ -92,7 +100,10 @@ namespace SPTQuestingBots.Models.Pathing
                     requiresUpdate = true;
                     reason = BotPathUpdateNeededReason.IncompletePath;
                 }
-                else if ((Status == UnityEngine.AI.NavMeshPathStatus.PathPartial) && (Time.time - LastSetTime > ConfigController.Config.Questing.BotPathing.IncompletePathRetryInterval))
+                else if (
+                    (Status == UnityEngine.AI.NavMeshPathStatus.PathPartial)
+                    && (Time.time - LastSetTime > ConfigController.Config.Questing.BotPathing.IncompletePathRetryInterval)
+                )
                 {
                     requiresUpdate = true;
                     reason = BotPathUpdateNeededReason.IncompletePath;
@@ -126,7 +137,7 @@ namespace SPTQuestingBots.Models.Pathing
                 if (!requiresUpdate && Corners.Any() && currentPath.Any() && (currentPath.Last() != Corners.Last()))
                 {
                     // Only update the path if the bot has moved from the start position set in the currently cached path. Otherwise, the path may
-                    // constantly be recalculated as brain layers are switched. 
+                    // constantly be recalculated as brain layers are switched.
                     requiresUpdate &= distanceFromStartPosition > ConfigController.Config.Questing.BotPathing.MaxStartPositionDiscrepancy;
                     reason = BotPathUpdateNeededReason.RefreshNeededPath;
                 }
@@ -171,7 +182,11 @@ namespace SPTQuestingBots.Models.Pathing
                 foreach (StaticPathData staticPath in staticPaths)
                 {
                     // Check if Unity can form a complete path from the bot to the static path's endpoint
-                    UnityEngine.AI.NavMeshPathStatus staticPathStatus = CreatePathSegment(bot.Position, staticPath.StartPosition, out Vector3[] staticPathCorners);
+                    UnityEngine.AI.NavMeshPathStatus staticPathStatus = CreatePathSegment(
+                        bot.Position,
+                        staticPath.StartPosition,
+                        out Vector3[] staticPathCorners
+                    );
                     if (staticPathStatus == UnityEngine.AI.NavMeshPathStatus.PathComplete)
                     {
                         Corners = staticPathCorners;
@@ -181,7 +196,14 @@ namespace SPTQuestingBots.Models.Pathing
                         StaticPathData combinedPath = Append(staticPath);
                         SetCorners(combinedPath.Corners);
 
-                        LoggingController.LogInfo("Using static path from " + staticPath.StartPosition + " to " + staticPath.TargetPosition + " for " + bot.GetText());
+                        LoggingController.LogInfo(
+                            "Using static path from "
+                                + staticPath.StartPosition
+                                + " to "
+                                + staticPath.TargetPosition
+                                + " for "
+                                + bot.GetText()
+                        );
                         //LoggingController.LogInfo("Path to Static Path: " + string.Join(", ", staticPathCorners));
                         //LoggingController.LogInfo("Static Path: " + string.Join(", ", staticPath.Corners));
                         //LoggingController.LogInfo("Combined Path: " + string.Join(", ", Corners));

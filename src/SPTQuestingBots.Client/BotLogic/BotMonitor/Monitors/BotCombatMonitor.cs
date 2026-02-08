@@ -1,15 +1,15 @@
-﻿using EFT;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using EFT;
 using SPTQuestingBots.BotLogic.ExternalMods;
 using SPTQuestingBots.BotLogic.ExternalMods.ModInfo;
 using SPTQuestingBots.BotLogic.HiveMind;
 using SPTQuestingBots.Configuration;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
@@ -18,11 +18,23 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
     {
         public bool IsInCombat { get; private set; } = false;
 
-        private MinMaxConfig minMaxSearchTimeAfterCombat = ConfigController.Config.Questing.BotQuestingRequirements.SearchTimeAfterCombat.PrioritizedQuesting;
-        private double searchTimeAfterCombat = ConfigController.Config.Questing.BotQuestingRequirements.SearchTimeAfterCombat.PrioritizedQuesting.Min;
+        private MinMaxConfig minMaxSearchTimeAfterCombat = ConfigController
+            .Config
+            .Questing
+            .BotQuestingRequirements
+            .SearchTimeAfterCombat
+            .PrioritizedQuesting;
+        private double searchTimeAfterCombat = ConfigController
+            .Config
+            .Questing
+            .BotQuestingRequirements
+            .SearchTimeAfterCombat
+            .PrioritizedQuesting
+            .Min;
         private System.Random random = new System.Random();
 
-        public BotCombatMonitor(BotOwner _botOwner) : base(_botOwner) { }
+        public BotCombatMonitor(BotOwner _botOwner)
+            : base(_botOwner) { }
 
         public override void Start()
         {

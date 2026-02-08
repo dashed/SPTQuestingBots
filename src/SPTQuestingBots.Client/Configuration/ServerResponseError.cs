@@ -1,11 +1,11 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace SPTQuestingBots.Configuration
 {
@@ -21,9 +21,6 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("data")]
         public object Data { get; set; } = null;
 
-        public ServerResponseError()
-        {
-
-        }
+        public ServerResponseError() { }
     }
 }

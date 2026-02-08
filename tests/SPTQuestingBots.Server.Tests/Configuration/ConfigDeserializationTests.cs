@@ -74,32 +74,31 @@ public class ConfigDeserializationTests
     public void Deserialize_BotSpawnsSection_ParsesBlacklistedBrains()
     {
         var json = """
-        {
-            "bot_spawns": {
-                "blacklisted_pmc_bot_brains": ["bossKilla", "bossTagilla", "followerGluharSnipe"]
+            {
+                "bot_spawns": {
+                    "blacklisted_pmc_bot_brains": ["bossKilla", "bossTagilla", "followerGluharSnipe"]
+                }
             }
-        }
-        """;
+            """;
 
         var config = JsonConvert.DeserializeObject<QuestingBotsConfig>(json)!;
-        Assert.That(config.BotSpawns.BlacklistedPmcBotBrains,
-            Is.EqualTo(new[] { "bossKilla", "bossTagilla", "followerGluharSnipe" }));
+        Assert.That(config.BotSpawns.BlacklistedPmcBotBrains, Is.EqualTo(new[] { "bossKilla", "bossTagilla", "followerGluharSnipe" }));
     }
 
     [Test]
     public void Deserialize_PmcSpawnConfig_Parses2DArrays()
     {
         var json = """
-        {
-            "bot_spawns": {
-                "pmcs": {
-                    "fraction_of_max_players_vs_raidET": [[0.0, 0.75], [0.5, 0.5], [1.0, 0.25]],
-                    "bots_per_group_distribution": [[1, 80], [2, 15], [3, 5]],
-                    "bot_difficulty_as_online": [[0, 40], [1, 40], [2, 15], [3, 5]]
+            {
+                "bot_spawns": {
+                    "pmcs": {
+                        "fraction_of_max_players_vs_raidET": [[0.0, 0.75], [0.5, 0.5], [1.0, 0.25]],
+                        "bots_per_group_distribution": [[1, 80], [2, 15], [3, 5]],
+                        "bot_difficulty_as_online": [[0, 40], [1, 40], [2, 15], [3, 5]]
+                    }
                 }
             }
-        }
-        """;
+            """;
 
         var config = JsonConvert.DeserializeObject<QuestingBotsConfig>(json)!;
         var pmcs = config.BotSpawns.Pmcs;
@@ -118,18 +117,18 @@ public class ConfigDeserializationTests
     public void Deserialize_HostilityAdjustments_ParsesConfig()
     {
         var json = """
-        {
-            "bot_spawns": {
-                "pmc_hostility_adjustments": {
-                    "enabled": true,
-                    "pmcs_always_hostile_against_pmcs": true,
-                    "pmcs_always_hostile_against_scavs": false,
-                    "global_scav_enemy_chance": 50,
-                    "pmc_enemy_roles": ["pmcBEAR", "pmcUSEC"]
+            {
+                "bot_spawns": {
+                    "pmc_hostility_adjustments": {
+                        "enabled": true,
+                        "pmcs_always_hostile_against_pmcs": true,
+                        "pmcs_always_hostile_against_scavs": false,
+                        "global_scav_enemy_chance": 50,
+                        "pmc_enemy_roles": ["pmcBEAR", "pmcUSEC"]
+                    }
                 }
             }
-        }
-        """;
+            """;
 
         var config = JsonConvert.DeserializeObject<QuestingBotsConfig>(json)!;
         var hostility = config.BotSpawns.PmcHostilityAdjustments;
@@ -148,13 +147,13 @@ public class ConfigDeserializationTests
     public void Deserialize_AdjustPScavChance_ParsesCurve()
     {
         var json = """
-        {
-            "adjust_pscav_chance": {
-                "enabled": true,
-                "chance_vs_time_remaining_fraction": [[0.0, 100], [0.5, 50], [1.0, 0]]
+            {
+                "adjust_pscav_chance": {
+                    "enabled": true,
+                    "chance_vs_time_remaining_fraction": [[0.0, 100], [0.5, 50], [1.0, 0]]
+                }
             }
-        }
-        """;
+            """;
 
         var config = JsonConvert.DeserializeObject<QuestingBotsConfig>(json)!;
 
@@ -162,8 +161,7 @@ public class ConfigDeserializationTests
         {
             Assert.That(config.AdjustPScavChance.Enabled, Is.True);
             Assert.That(config.AdjustPScavChance.ChanceVsTimeRemainingFraction, Has.Length.EqualTo(3));
-            Assert.That(config.AdjustPScavChance.ChanceVsTimeRemainingFraction[2],
-                Is.EqualTo(new double[] { 1.0, 0 }));
+            Assert.That(config.AdjustPScavChance.ChanceVsTimeRemainingFraction[2], Is.EqualTo(new double[] { 1.0, 0 }));
         });
     }
 
@@ -181,20 +179,20 @@ public class ConfigDeserializationTests
     public void Deserialize_BotCapAdjustments_ParsesMapSpecificAdjustments()
     {
         var json = """
-        {
-            "bot_spawns": {
-                "bot_cap_adjustments": {
-                    "use_EFT_bot_caps": true,
-                    "only_decrease_bot_caps": false,
-                    "map_specific_adjustments": {
-                        "default": 0,
-                        "factory4_day": 3,
-                        "bigmap": -2
+            {
+                "bot_spawns": {
+                    "bot_cap_adjustments": {
+                        "use_EFT_bot_caps": true,
+                        "only_decrease_bot_caps": false,
+                        "map_specific_adjustments": {
+                            "default": 0,
+                            "factory4_day": 3,
+                            "bigmap": -2
+                        }
                     }
                 }
             }
-        }
-        """;
+            """;
 
         var config = JsonConvert.DeserializeObject<QuestingBotsConfig>(json)!;
         var caps = config.BotSpawns.BotCapAdjustments;
@@ -213,18 +211,18 @@ public class ConfigDeserializationTests
     public void Deserialize_QuestingSection_ParsesEftQuestLevelRange()
     {
         var json = """
-        {
-            "questing": {
-                "bot_quests": {
-                    "eft_quests": {
-                        "desirability": 50,
-                        "max_bots_per_quest": 2,
-                        "level_range": [[10, 5], [20, 10], [40, 20]]
+            {
+                "questing": {
+                    "bot_quests": {
+                        "eft_quests": {
+                            "desirability": 50,
+                            "max_bots_per_quest": 2,
+                            "level_range": [[10, 5], [20, 10], [40, 20]]
+                        }
                     }
                 }
             }
-        }
-        """;
+            """;
 
         var config = JsonConvert.DeserializeObject<QuestingBotsConfig>(json)!;
         var eftQuests = config.Questing.BotQuests.EftQuests;
@@ -243,8 +241,7 @@ public class ConfigDeserializationTests
     {
         // Find the config.json relative to the test assembly location
         var testDir = TestContext.CurrentContext.TestDirectory;
-        var configPath = Path.GetFullPath(
-            Path.Combine(testDir, "..", "..", "..", "..", "..", "config", "config.json"));
+        var configPath = Path.GetFullPath(Path.Combine(testDir, "..", "..", "..", "..", "..", "config", "config.json"));
 
         if (!File.Exists(configPath))
         {

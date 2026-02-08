@@ -33,14 +33,22 @@ namespace SPTQuestingBots
 
             if (!confirmNoPreviousVersionExists())
             {
-                Chainloader.DependencyErrors.Add("An older version of " + ModName + " still exists in '/BepInEx/plugins'. Please remove SPTQuestingBots.dll from that directory, or this mod will not work correctly.");
+                Chainloader.DependencyErrors.Add(
+                    "An older version of "
+                        + ModName
+                        + " still exists in '/BepInEx/plugins'. Please remove SPTQuestingBots.dll from that directory, or this mod will not work correctly."
+                );
                 return;
             }
 
             Logger.LogInfo("Loading QuestingBots...getting configuration data...");
             if (ConfigController.GetConfig() == null)
             {
-                Chainloader.DependencyErrors.Add("Could not load " + ModName + " because it cannot communicate with the server. Please ensure the mod has been installed correctly.");
+                Chainloader.DependencyErrors.Add(
+                    "Could not load "
+                        + ModName
+                        + " because it cannot communicate with the server. Please ensure the mod has been installed correctly."
+                );
                 return;
             }
 
@@ -72,7 +80,7 @@ namespace SPTQuestingBots
                     //new Patches.Debug.HandleFinishedTaskPatch().Enable();
                     //new Patches.Debug.HandleFinishedTaskPatch2().Enable();
                 }
-                
+
                 if (ConfigController.Config.BotSpawns.Enabled)
                 {
                     new Patches.Spawning.GameStartPatch().Enable();
@@ -98,7 +106,10 @@ namespace SPTQuestingBots
                         new Patches.Spawning.InitBossSpawnLocationPatch().Enable();
                     }
 
-                    if (ConfigController.Config.BotSpawns.PMCHostilityAdjustments.Enabled && ConfigController.Config.BotSpawns.PMCHostilityAdjustments.PMCsAlwaysHostileAgainstPMCs)
+                    if (
+                        ConfigController.Config.BotSpawns.PMCHostilityAdjustments.Enabled
+                        && ConfigController.Config.BotSpawns.PMCHostilityAdjustments.PMCsAlwaysHostileAgainstPMCs
+                    )
                     {
                         new Patches.Spawning.BotsGroupIsPlayerEnemyPatch().Enable();
                     }
@@ -115,14 +126,17 @@ namespace SPTQuestingBots
                     }
                 }
 
-                if ((ConfigController.Config.BotSpawns.Enabled && ConfigController.Config.BotSpawns.PScavs.Enabled) || ConfigController.Config.AdjustPScavChance.Enabled)
+                if (
+                    (ConfigController.Config.BotSpawns.Enabled && ConfigController.Config.BotSpawns.PScavs.Enabled)
+                    || ConfigController.Config.AdjustPScavChance.Enabled
+                )
                 {
                     new Patches.PScavProfilePatch().Enable();
                 }
-                
+
                 // Add options to the F12 menu
                 QuestingBotsPluginConfig.BuildConfigOptions(Config);
-                
+
                 this.GetOrAddComponent<TarkovData>();
             }
 

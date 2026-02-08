@@ -4,8 +4,8 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using SPT.Reflection.Patching;
 using EFT;
+using SPT.Reflection.Patching;
 using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.Patches.Spawning
@@ -14,9 +14,7 @@ namespace SPTQuestingBots.Patches.Spawning
     {
         protected override MethodBase GetTargetMethod()
         {
-            MethodInfo methodInfo = typeof(BossSpawnScenario)
-                .GetMethods(BindingFlags.Public | BindingFlags.Static)
-                .First();
+            MethodInfo methodInfo = typeof(BossSpawnScenario).GetMethods(BindingFlags.Public | BindingFlags.Static).First();
 
             LoggingController.LogInfo("Found method for InitBossSpawnLocationPatch: " + methodInfo.Name);
 
@@ -37,7 +35,9 @@ namespace SPTQuestingBots.Patches.Spawning
                 // Ignore boss waves that require some type of interaction (i.e. Raiders that only spawn when a lever is pulled)
                 if (bossWave.TriggerType != SpawnTriggerType.none)
                 {
-                    LoggingController.LogInfo("Ignoring " + bossWave.BossName + " boss wave. Trigger type: " + bossWave.TriggerType.ToString());
+                    LoggingController.LogInfo(
+                        "Ignoring " + bossWave.BossName + " boss wave. Trigger type: " + bossWave.TriggerType.ToString()
+                    );
                     continue;
                 }
 

@@ -4,9 +4,9 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using SPT.Reflection.Patching;
 using Comfort.Common;
 using EFT;
+using SPT.Reflection.Patching;
 using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.Patches
@@ -29,7 +29,11 @@ namespace SPTQuestingBots.Patches
             }
 
             // Disable all bot generators
-            foreach (Components.Spawning.BotGenerator botGenerator in Singleton<GameWorld>.Instance.gameObject.GetComponents(typeof(Components.Spawning.BotGenerator)))
+            foreach (
+                Components.Spawning.BotGenerator botGenerator in Singleton<GameWorld>.Instance.gameObject.GetComponents(
+                    typeof(Components.Spawning.BotGenerator)
+                )
+            )
             {
                 //LoggingController.LogInfo("Disabling " + botGenerator.GetType().FullName + "...");
                 botGenerator.enabled = false;

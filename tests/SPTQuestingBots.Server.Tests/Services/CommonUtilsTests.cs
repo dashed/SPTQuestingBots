@@ -154,10 +154,8 @@ public class CommonUtilsTests
 
     private static QuestingBotsConfigLoader CreateConfigLoader(QuestingBotsConfig config)
     {
-        var loader = new QuestingBotsConfigLoader(
-            Substitute.For<ISptLogger<QuestingBotsConfigLoader>>());
-        var field = typeof(QuestingBotsConfigLoader).GetField("_config",
-            BindingFlags.NonPublic | BindingFlags.Instance);
+        var loader = new QuestingBotsConfigLoader(Substitute.For<ISptLogger<QuestingBotsConfigLoader>>());
+        var field = typeof(QuestingBotsConfigLoader).GetField("_config", BindingFlags.NonPublic | BindingFlags.Instance);
         field!.SetValue(loader, config);
         return loader;
     }

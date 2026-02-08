@@ -1,16 +1,16 @@
-﻿using EFT;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using EFT;
 using SPTQuestingBots.BotLogic.ExternalMods.ModInfo;
 using SPTQuestingBots.BotLogic.Follow;
 using SPTQuestingBots.BotLogic.HiveMind;
 using SPTQuestingBots.BotLogic.Objective;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
@@ -29,10 +29,13 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
         private Stopwatch followersTooFarTimer = new Stopwatch();
 
         public float DistanceToBoss => BotHiveMindMonitor.GetDistanceToBoss(BotOwner);
-        public bool NeedToRegroupWithFollowers => followersTooFarTimer.ElapsedMilliseconds > ConfigController.Config.Questing.BotQuestingRequirements.MaxFollowerDistance.MaxWaitTime * 1000;
+        public bool NeedToRegroupWithFollowers =>
+            followersTooFarTimer.ElapsedMilliseconds
+            > ConfigController.Config.Questing.BotQuestingRequirements.MaxFollowerDistance.MaxWaitTime * 1000;
         public bool StuckTooManyTimes => ObjectiveManager.StuckCount >= ConfigController.Config.Questing.StuckBotDetection.MaxCount;
 
-        public BotQuestingMonitor(BotOwner _botOwner) : base(_botOwner) { }
+        public BotQuestingMonitor(BotOwner _botOwner)
+            : base(_botOwner) { }
 
         public override void Update()
         {
@@ -41,7 +44,7 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
             DoesBossNeedHelp = HasABoss && doesBossNeedHelp();
 
             IsQuesting = isQuesting();
-            IsFollowing= isFollowing();
+            IsFollowing = isFollowing();
             IsRegrouping = isRegrouping();
             ShouldWaitForFollowers = shouldWaitForFollowers();
 
@@ -56,7 +59,9 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
 
             if (ObjectiveManager.IsQuestingAllowed && BotMonitor.GetMonitor<BotQuestingMonitor>().StuckTooManyTimes)
             {
-                LoggingController.LogWarning("Bot " + BotOwner.GetText() + " was stuck " + ObjectiveManager.StuckCount + " times and likely is unable to quest.");
+                LoggingController.LogWarning(
+                    "Bot " + BotOwner.GetText() + " was stuck " + ObjectiveManager.StuckCount + " times and likely is unable to quest."
+                );
                 ObjectiveManager.StopQuesting();
                 BotOwner.Mover.Stop();
                 BotHiveMindMonitor.SeparateBotFromGroup(BotOwner);
@@ -64,7 +69,9 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
         }
 
         private bool isQuesting() => BotOwner.IsLayerActive(nameof(BotObjectiveLayer));
+
         private bool isFollowing() => BotOwner.IsLayerActive(nameof(BotFollowerLayer));
+
         private bool isRegrouping() => BotOwner.IsLogicActive(nameof(BossRegroupAction));
 
         private bool shouldWaitForFollowers()
@@ -81,8 +88,7 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
                 .Where(f => (f != null) && !f.IsDead)
                 .Select(f => Vector3.Distance(BotOwner.Position, f.Position));
 
-            if
-            (
+            if (
                 followerDistances.Any(d => d > ConfigController.Config.Questing.BotQuestingRequirements.MaxFollowerDistance.Furthest)
                 || followerDistances.All(d => d > ConfigController.Config.Questing.BotQuestingRequirements.MaxFollowerDistance.Nearest)
             )

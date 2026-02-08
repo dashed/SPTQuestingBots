@@ -77,14 +77,14 @@ namespace SPTQuestingBots.Components
 
             foreach (Condition condition in quest.Template.Conditions[eQuestStatus])
             {
-                // Check if a condition-check exists for player level. If so, use that value if it's higher than the current minimum level. 
+                // Check if a condition-check exists for player level. If so, use that value if it's higher than the current minimum level.
                 ConditionLevel conditionLevel = condition as ConditionLevel;
                 if (conditionLevel != null)
                 {
                     UpdateMinLevel(quest, GetLevelFromConditionLevel(conditionLevel));
                 }
 
-                // Check if another quest must be completed first. If so, use its minimum player level if it's higher than the current minimum level. 
+                // Check if another quest must be completed first. If so, use its minimum player level if it's higher than the current minimum level.
                 ConditionQuest conditionQuest = condition as ConditionQuest;
                 if (conditionQuest != null)
                 {
@@ -95,7 +95,7 @@ namespace SPTQuestingBots.Components
 
         private int GetLevelFromConditionLevel(ConditionLevel conditionLevel)
         {
-            // TO DO: This might be needed to set maximum player levels for quests in the future, but I don't think this exists in EFT right now. 
+            // TO DO: This might be needed to set maximum player levels for quests in the future, but I don't think this exists in EFT right now.
             if ((conditionLevel.compareMethod != ECompareMethod.MoreOrEqual) && (conditionLevel.compareMethod != ECompareMethod.More))
             {
                 return 0;

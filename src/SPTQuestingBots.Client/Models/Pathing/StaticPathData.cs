@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using UnityEngine.AI;
-using UnityEngine;
 using HarmonyLib;
+using UnityEngine;
+using UnityEngine.AI;
 
 namespace SPTQuestingBots.Models.Pathing
 {
@@ -23,10 +23,7 @@ namespace SPTQuestingBots.Models.Pathing
         public bool HasPath => Corners.Length > 0;
         public float TimeSinceLastSet => Time.time - LastSetTime;
 
-        public StaticPathData()
-        {
-
-        }
+        public StaticPathData() { }
 
         public StaticPathData(Vector3 start, Vector3 target, float reachDistance)
         {

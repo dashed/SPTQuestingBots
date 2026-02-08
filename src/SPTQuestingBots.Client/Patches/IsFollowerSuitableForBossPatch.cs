@@ -4,8 +4,8 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using SPT.Reflection.Patching;
 using EFT;
+using SPT.Reflection.Patching;
 using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.Patches
@@ -22,7 +22,7 @@ namespace SPTQuestingBots.Patches
         [PatchPrefix]
         protected static bool PatchPrefix(ref bool __result, BotBoss __instance, BotOwner offer)
         {
-            // EFT sometimes instructs bots ask themselves to be followers of themselves. I guess they're really lonely, so we'll allow it.  
+            // EFT sometimes instructs bots ask themselves to be followers of themselves. I guess they're really lonely, so we'll allow it.
             if (__instance.Owner.Profile.Id == offer.Profile.Id)
             {
                 return true;
@@ -60,7 +60,9 @@ namespace SPTQuestingBots.Patches
                 return true;
             }
 
-            Controllers.LoggingController.LogInfo("Preventing " + offer.GetText() + " from becoming a follower for " + __instance.Owner.GetText());
+            Controllers.LoggingController.LogInfo(
+                "Preventing " + offer.GetText() + " from becoming a follower for " + __instance.Owner.GetText()
+            );
 
             __result = false;
             return false;

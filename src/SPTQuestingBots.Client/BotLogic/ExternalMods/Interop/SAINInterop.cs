@@ -1,14 +1,14 @@
-﻿using BepInEx.Bootstrap;
-using Comfort.Common;
-using EFT;
-using EFT.Interactive;
-using HarmonyLib;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using BepInEx.Bootstrap;
+using Comfort.Common;
+using EFT;
+using EFT.Interactive;
+using HarmonyLib;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -52,7 +52,8 @@ namespace SAIN.Plugin
          */
         public static bool Init()
         {
-            if (!IsSAINLoaded()) return false;
+            if (!IsSAINLoaded())
+                return false;
 
             // Only check for the External class once
             if (!_SAINInteropInited)
@@ -90,9 +91,12 @@ namespace SAIN.Plugin
         /// <returns>True if the bot was successfully set to ignore hearing</returns>
         public static bool IgnoreHearing(BotOwner botOwner, bool value, bool ignoreUnderFire, float duration = 0)
         {
-            if (botOwner == null) return false;
-            if (!Init()) return false;
-            if (_IgnoreHearingMethod == null) return false;
+            if (botOwner == null)
+                return false;
+            if (!Init())
+                return false;
+            if (_IgnoreHearingMethod == null)
+                return false;
 
             return (bool)_IgnoreHearingMethod.Invoke(null, new object[] { botOwner, value, ignoreUnderFire, duration });
         }
@@ -105,9 +109,12 @@ namespace SAIN.Plugin
         public static string GetPersonality(BotOwner botOwner)
         {
             string result = string.Empty;
-            if (botOwner == null) return result;
-            if (!Init()) return result;
-            if (_GetPersonalityMethod == null) return result;
+            if (botOwner == null)
+                return result;
+            if (!Init())
+                return result;
+            if (_GetPersonalityMethod == null)
+                return result;
 
             result = (string)_GetPersonalityMethod.Invoke(null, new object[] { botOwner });
             return result;
@@ -120,9 +127,12 @@ namespace SAIN.Plugin
         /// <returns>True if the list was successfully updated</returns>
         public static bool GetExtractedBots(List<string> list)
         {
-            if (list == null) return false;
-            if (!Init()) return false;
-            if (_GetExtractedBotsMethod == null) return false;
+            if (list == null)
+                return false;
+            if (!Init())
+                return false;
+            if (_GetExtractedBotsMethod == null)
+                return false;
 
             _GetExtractedBotsMethod.Invoke(null, new object[] { list });
             return true;
@@ -135,9 +145,12 @@ namespace SAIN.Plugin
         /// <returns>True if the list was successfully updated</returns>
         public static bool GetExtractedBots(List<ExtractionInfo> list)
         {
-            if (list == null) return false;
-            if (!Init()) return false;
-            if (_GetExtractionInfosMethod == null) return false;
+            if (list == null)
+                return false;
+            if (!Init())
+                return false;
+            if (_GetExtractionInfosMethod == null)
+                return false;
 
             _GetExtractionInfosMethod.Invoke(null, new object[] { list });
             return true;
@@ -148,8 +161,10 @@ namespace SAIN.Plugin
          */
         public static bool TryExtractBot(BotOwner botOwner)
         {
-            if (!Init()) return false;
-            if (_ExtractBotMethod == null) return false;
+            if (!Init())
+                return false;
+            if (_ExtractBotMethod == null)
+                return false;
 
             return (bool)_ExtractBotMethod.Invoke(null, new object[] { botOwner });
         }
@@ -159,8 +174,10 @@ namespace SAIN.Plugin
          */
         public static bool TrySetExfilForBot(BotOwner botOwner)
         {
-            if (!Init()) return false;
-            if (_SetExfilForBotMethod == null) return false;
+            if (!Init())
+                return false;
+            if (_SetExfilForBotMethod == null)
+                return false;
 
             return (bool)_SetExfilForBotMethod.Invoke(null, new object[] { botOwner });
         }
@@ -173,14 +190,20 @@ namespace SAIN.Plugin
         /// <param name="ratioSameOverAll">How many nodes along a path are allowed to be the same divided by the total nodes in the Path To Test. Example: 3 nodes are the same, with 10 total nodes = 0.3 ratio, so if the input value is 0.25, this will return false.</param>
         /// <param name="sqrDistCheck">How Close a node can be to be considered the same.</param>
         /// <returns>True if the path leads in the same direction as their active enemy.</returns>
-        public static bool IsPathTowardEnemy(NavMeshPath path, BotOwner botOwner, float ratioSameOverAll = 0.25f, float sqrDistCheck = 0.05f)
+        public static bool IsPathTowardEnemy(
+            NavMeshPath path,
+            BotOwner botOwner,
+            float ratioSameOverAll = 0.25f,
+            float sqrDistCheck = 0.05f
+        )
         {
-            if (!Init()) return false;
-            if (_IsPathTowardEnemyMethod == null) return false;
+            if (!Init())
+                return false;
+            if (_IsPathTowardEnemyMethod == null)
+                return false;
 
             return (bool)_IsPathTowardEnemyMethod.Invoke(null, new object[] { path, botOwner, ratioSameOverAll, sqrDistCheck });
         }
-
 
         /// <summary>
         /// Compare a NavMeshPath to the pre-calculated NavMeshPath that leads directly to a bot's Active Enemy.
@@ -192,20 +215,23 @@ namespace SAIN.Plugin
         /// <returns>True if the path leads in the same direction as their active enemy.</returns>
         public static bool CanBotQuest(BotOwner botOwner, Vector3 questPosition, float dotThreshold = 0.33f)
         {
-            if (!Init()) return false;
-            if (_CanBotQuestMethod == null) return false;
+            if (!Init())
+                return false;
+            if (_CanBotQuestMethod == null)
+                return false;
 
             return (bool)_CanBotQuestMethod.Invoke(null, new object[] { botOwner, questPosition, dotThreshold });
         }
 
         public static float TimeSinceSenseEnemy(BotOwner botOwner)
         {
-            if (!Init()) return float.MaxValue;
-            if (_TimeSinceSenseEnemyMethod == null) return float.MaxValue;
+            if (!Init())
+                return float.MaxValue;
+            if (_TimeSinceSenseEnemyMethod == null)
+                return float.MaxValue;
 
             return (float)_TimeSinceSenseEnemyMethod.Invoke(null, new object[] { botOwner });
         }
-
     }
 
     public class ExtractionInfo

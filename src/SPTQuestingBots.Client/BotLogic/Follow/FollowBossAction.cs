@@ -12,10 +12,8 @@ namespace SPTQuestingBots.BotLogic.Follow
     {
         private bool wasStuck = false;
 
-        public FollowBossAction(BotOwner _BotOwner) : base(_BotOwner)
-        {
-
-        }
+        public FollowBossAction(BotOwner _BotOwner)
+            : base(_BotOwner) { }
 
         public override void Start()
         {
@@ -45,10 +43,15 @@ namespace SPTQuestingBots.BotLogic.Follow
             CanSprint = HiveMind.BotHiveMindMonitor.GetValueForBot(HiveMind.BotHiveMindSensorType.CanSprintToObjective, boss);
             CanSprint &= IsAllowedToSprint();
 
-            float allowedVariation = ConfigController.Config.Questing.BotQuestingRequirements.MaxFollowerDistance.TargetPositionVariationAllowed;
+            float allowedVariation = ConfigController
+                .Config
+                .Questing
+                .BotQuestingRequirements
+                .MaxFollowerDistance
+                .TargetPositionVariationAllowed;
             RecalculatePath(boss.Position, allowedVariation, 0.5f);
 
-            // Check if the bot is unable to reach its boss. If so, fall back to the default EFT layer for a bit. 
+            // Check if the bot is unable to reach its boss. If so, fall back to the default EFT layer for a bit.
             if (checkIfBotIsStuck())
             {
                 if (!wasStuck)

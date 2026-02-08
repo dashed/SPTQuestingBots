@@ -36,24 +36,34 @@ namespace SPTQuestingBots.Models
         {
             Type type = typeof(T);
 
-            PropertyInfo[] matchingProperties = type
-                .GetProperties(bindingFlags)
+            PropertyInfo[] matchingProperties = type.GetProperties(bindingFlags)
                 .Where(p => p.GetCustomAttribute<JsonPropertyAttribute>()?.PropertyName == jsonPropertyName)
                 .ToArray();
 
             if (matchingProperties.Length == 0)
             {
-                string allPropertiesText = string.Join(", ", type
-                .GetProperties(bindingFlags)
-                .Select(p => p.GetCustomAttribute<JsonPropertyAttribute>()?.PropertyName)
-                .Where(n => n?.Length > 0)
-                .ToArray());
+                string allPropertiesText = string.Join(
+                    ", ",
+                    type.GetProperties(bindingFlags)
+                        .Select(p => p.GetCustomAttribute<JsonPropertyAttribute>()?.PropertyName)
+                        .Where(n => n?.Length > 0)
+                        .ToArray()
+                );
 
-                throw new InvalidOperationException("Cannot find JSON property " + jsonPropertyName + " for " + type.FullName + ". Available properties: " + allPropertiesText);
+                throw new InvalidOperationException(
+                    "Cannot find JSON property "
+                        + jsonPropertyName
+                        + " for "
+                        + type.FullName
+                        + ". Available properties: "
+                        + allPropertiesText
+                );
             }
             if (matchingProperties.Length > 1)
             {
-                throw new InvalidOperationException("Found more than one match for JSON property " + jsonPropertyName + " for " + type.FullName);
+                throw new InvalidOperationException(
+                    "Found more than one match for JSON property " + jsonPropertyName + " for " + type.FullName
+                );
             }
 
             if (val.GetType() == typeof(JArray))
@@ -65,7 +75,14 @@ namespace SPTQuestingBots.Models
                 }
                 catch (Exception)
                 {
-                    LoggingController.LogError("Cannot convert JArray to " + matchingProperties[0].PropertyType.FullName + " for property " + jsonPropertyName + " of type " + type.FullName);
+                    LoggingController.LogError(
+                        "Cannot convert JArray to "
+                            + matchingProperties[0].PropertyType.FullName
+                            + " for property "
+                            + jsonPropertyName
+                            + " of type "
+                            + type.FullName
+                    );
                     throw;
                 }
             }
@@ -79,7 +96,14 @@ namespace SPTQuestingBots.Models
                 }
                 catch (Exception)
                 {
-                    LoggingController.LogError("Cannot convert JObject to " + matchingProperties[0].PropertyType.FullName + " for property " + jsonPropertyName + " of type " + type.FullName);
+                    LoggingController.LogError(
+                        "Cannot convert JObject to "
+                            + matchingProperties[0].PropertyType.FullName
+                            + " for property "
+                            + jsonPropertyName
+                            + " of type "
+                            + type.FullName
+                    );
                     throw;
                 }
             }

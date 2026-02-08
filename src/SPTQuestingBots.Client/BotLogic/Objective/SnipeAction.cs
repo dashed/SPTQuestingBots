@@ -9,9 +9,7 @@ namespace SPTQuestingBots.BotLogic.Objective
 {
     public class SnipeAction : AmbushAction
     {
-        public SnipeAction(BotOwner _BotOwner) : base(_BotOwner, false)
-        {
-
-        }
+        public SnipeAction(BotOwner _BotOwner)
+            : base(_BotOwner, false) { }
     }
 }

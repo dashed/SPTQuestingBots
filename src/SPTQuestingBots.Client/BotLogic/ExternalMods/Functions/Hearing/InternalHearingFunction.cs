@@ -9,10 +9,8 @@ namespace SPTQuestingBots.BotLogic.ExternalMods.Functions.Hearing
 {
     public class InternalHearingFunction : AbstractHearingFunction
     {
-        public InternalHearingFunction(BotOwner _botOwner) : base(_botOwner)
-        {
-
-        }
+        public InternalHearingFunction(BotOwner _botOwner)
+            : base(_botOwner) { }
 
         public override bool TryIgnoreHearing(bool value, bool ignoreUnderFire, float duration = 0)
         {

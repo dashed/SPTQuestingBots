@@ -12,12 +12,11 @@ namespace SPTQuestingBots.Models.Questing
     {
         public SpawnPointParams? SpawnPoint { get; set; } = null;
 
-        public QuestSpawnPointObjective() : base()
-        {
+        public QuestSpawnPointObjective()
+            : base() { }
 
-        }
-
-        public QuestSpawnPointObjective(SpawnPointParams spawnPoint, Vector3 position) : base(position)
+        public QuestSpawnPointObjective(SpawnPointParams spawnPoint, Vector3 position)
+            : base(position)
         {
             SpawnPoint = spawnPoint;
         }

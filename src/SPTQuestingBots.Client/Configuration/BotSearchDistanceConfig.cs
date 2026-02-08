@@ -1,9 +1,9 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace SPTQuestingBots.Configuration
 {
@@ -18,9 +18,6 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("max_navmesh_path_error")]
         public float MaxNavMeshPathError { get; set; } = 10;
 
-        public BotSearchDistanceConfig()
-        {
-
-        }
+        public BotSearchDistanceConfig() { }
     }
 }

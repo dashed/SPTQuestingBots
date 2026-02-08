@@ -4,9 +4,9 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using SPT.Reflection.Patching;
 using Comfort.Common;
 using EFT;
+using SPT.Reflection.Patching;
 using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.Patches
@@ -33,7 +33,8 @@ namespace SPTQuestingBots.Patches
             if ((pmcGenerator != null) && pmcGenerator.HasGeneratedBots)
             {
                 BotOwner[] aliveInitialPMCs = pmcGenerator.AliveBots()?.ToArray();
-                message += ". Initial PMC's remaining: " + (aliveInitialPMCs.Length - (aliveInitialPMCs.Any(p => p.Id == __instance.Id) ? 1 : 0));
+                message +=
+                    ". Initial PMC's remaining: " + (aliveInitialPMCs.Length - (aliveInitialPMCs.Any(p => p.Id == __instance.Id) ? 1 : 0));
             }
 
             LoggingController.LogInfo(message);

@@ -129,9 +129,7 @@ public class QuestingBotsConfigLoader
     /// <returns>The directory containing the mod assembly.</returns>
     public static string GetModPath()
     {
-        var assemblyDir = Path.GetDirectoryName(
-            typeof(QuestingBotsConfigLoader).Assembly.Location
-        );
+        var assemblyDir = Path.GetDirectoryName(typeof(QuestingBotsConfigLoader).Assembly.Location);
         return assemblyDir ?? ".";
     }
 }

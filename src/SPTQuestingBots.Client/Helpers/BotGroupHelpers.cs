@@ -25,7 +25,15 @@ namespace SPTQuestingBots.Helpers
                 list.Add(botOwner);
             }
 
-            BotsGroup group = new BotsGroup(zone, botSpawner.BotGame, initialBot, list, botSpawner.DeadBodiesController, botSpawner.AllPlayers, true);
+            BotsGroup group = new BotsGroup(
+                zone,
+                botSpawner.BotGame,
+                initialBot,
+                list,
+                botSpawner.DeadBodiesController,
+                botSpawner.AllPlayers,
+                true
+            );
             group.TargetMembersCount = targetMembersCount;
             botSpawner.Groups.Add(zone, side, group, true);
             // ------------------------------------------
@@ -42,15 +50,14 @@ namespace SPTQuestingBots.Helpers
                 return Enumerable.Empty<BotOwner>();
             }
 
-            return Singleton<IBotGame>.Instance.BotsController.Bots.BotOwners
-                .Where(b => b.IsZryachiyOrFollower())
-                .Where(b => !b.IsDead);
+            return Singleton<IBotGame>.Instance.BotsController.Bots.BotOwners.Where(b => b.IsZryachiyOrFollower()).Where(b => !b.IsDead);
         }
 
         public static Player GetPlayer(this IPlayer player)
         {
-            IEnumerable<Player> matchingPlayers = Singleton<GameWorld>.Instance.AllAlivePlayersList
-                .Where(p => p.ProfileId == player?.ProfileId);
+            IEnumerable<Player> matchingPlayers = Singleton<GameWorld>.Instance.AllAlivePlayersList.Where(p =>
+                p.ProfileId == player?.ProfileId
+            );
 
             if (matchingPlayers.Count() == 1)
             {
@@ -62,8 +69,9 @@ namespace SPTQuestingBots.Helpers
 
         public static BotOwner GetBotOwner(this IPlayer player)
         {
-            IEnumerable<BotOwner> matchingOwners = Singleton<IBotGame>.Instance.BotsController.Bots.BotOwners
-                .Where(b => b.Profile.Id == player?.Profile?.Id);
+            IEnumerable<BotOwner> matchingOwners = Singleton<IBotGame>.Instance.BotsController.Bots.BotOwners.Where(b =>
+                b.Profile.Id == player?.Profile?.Id
+            );
 
             if (matchingOwners.Count() == 1)
             {
@@ -90,17 +98,19 @@ namespace SPTQuestingBots.Helpers
                 return;
             }
 
-            IPlayer[] enemyMatches = playerGroup.Enemies
-                    .Where(e => e.Key.Profile.Id == playerToAlly.Profile.Id)
-                    .Select(e => e.Key)
-                    .ToArray();
+            IPlayer[] enemyMatches = playerGroup
+                .Enemies.Where(e => e.Key.Profile.Id == playerToAlly.Profile.Id)
+                .Select(e => e.Key)
+                .ToArray();
 
             List<BotOwner> groupMemberList = SPT.Custom.CustomAI.AIExtensions.GetAllMembers(playerGroup);
             string groupMembersText = string.Join(", ", groupMemberList.Select(m => m.GetText()));
 
             foreach (IPlayer remainingEnemy in enemyMatches)
             {
-                LoggingController.LogDebug("Group containing " + groupMembersText + " has paused their hostility with " + remainingEnemy.GetText());
+                LoggingController.LogDebug(
+                    "Group containing " + groupMembersText + " has paused their hostility with " + remainingEnemy.GetText()
+                );
                 playerGroup.RemoveEnemy(remainingEnemy);
             }
 

@@ -34,10 +34,7 @@ public class PMCConversionService
     private PmcConfig? _pmcConfig;
     private BotConfig? _botConfig;
 
-    public PMCConversionService(
-        CommonUtils commonUtils,
-        QuestingBotsConfigLoader configLoader,
-        ConfigServer configServer)
+    public PMCConversionService(CommonUtils commonUtils, QuestingBotsConfigLoader configLoader, ConfigServer configServer)
     {
         _commonUtils = commonUtils;
         _configLoader = configLoader;
@@ -94,7 +91,6 @@ public class PMCConversionService
             }
         }
 
-        _commonUtils.LogInfo(
-            $"Removed {removedBrains} blacklisted brain types from being used for PMC's and Player Scav's");
+        _commonUtils.LogInfo($"Removed {removedBrains} blacklisted brain types from being used for PMC's and Player Scav's");
     }
 }

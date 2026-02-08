@@ -11,7 +11,10 @@ namespace SPTQuestingBots.Helpers
     {
         public static Type FindTargetTypeByMethod(string methodName)
         {
-            Predicate<MethodInfo> methodInfoPredicate = (m) => { return m.Name.Contains(methodName); };
+            Predicate<MethodInfo> methodInfoPredicate = (m) =>
+            {
+                return m.Name.Contains(methodName);
+            };
 
             try
             {
@@ -25,7 +28,10 @@ namespace SPTQuestingBots.Helpers
 
         public static Type FindTargetTypeByMethod(string methodName, Type[] parameterTypes)
         {
-            Predicate<MethodInfo> methodInfoPredicate = (m) => { return m.Name.Contains(methodName) && m.HasAllParameterTypesInOrder(parameterTypes); };
+            Predicate<MethodInfo> methodInfoPredicate = (m) =>
+            {
+                return m.Name.Contains(methodName) && m.HasAllParameterTypesInOrder(parameterTypes);
+            };
 
             try
             {
@@ -33,13 +39,19 @@ namespace SPTQuestingBots.Helpers
             }
             catch (TypeLoadException e)
             {
-                throw new TypeLoadException($"Cannot find any type containing method {methodName} and types {string.Join(", ", parameterTypes.Select(t => t.Name))}", e);
+                throw new TypeLoadException(
+                    $"Cannot find any type containing method {methodName} and types {string.Join(", ", parameterTypes.Select(t => t.Name))}",
+                    e
+                );
             }
         }
 
         public static Type FindTargetTypeByField(string fieldName)
         {
-            Predicate<FieldInfo> fieldInfoPredicate = (m) => { return m.Name.Contains(fieldName); };
+            Predicate<FieldInfo> fieldInfoPredicate = (m) =>
+            {
+                return m.Name.Contains(fieldName);
+            };
 
             try
             {
@@ -100,8 +112,8 @@ namespace SPTQuestingBots.Helpers
 
         private static Type findTargetType_Internal<T>(Predicate<T> containsObjectPredicate)
         {
-            List<Type> targetTypeOptions = SPT.Reflection.Utils.PatchConstants.EftTypes
-                .Where(t => t.getTypeObjects<T>().Any(m => containsObjectPredicate(m)))
+            List<Type> targetTypeOptions = SPT
+                .Reflection.Utils.PatchConstants.EftTypes.Where(t => t.getTypeObjects<T>().Any(m => containsObjectPredicate(m)))
                 .ToList();
 
             if (targetTypeOptions.Count != 1)

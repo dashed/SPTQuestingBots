@@ -29,7 +29,8 @@ public class ChanceArrayValidationTests
             null!, // BotLocationService not needed for array validation
             null!, // PMCConversionService not needed
             null!, // ConfigServer not needed
-            Array.Empty<SptMod>());
+            Array.Empty<SptMod>()
+        );
     }
 
     // ── Null and empty ───────────────────────────────────────────────
@@ -51,35 +52,51 @@ public class ChanceArrayValidationTests
     [Test]
     public void SingleRowWithTwoColumns_ReturnsTrue()
     {
-        double[][] array = [[1.0, 0.5]];
+        double[][] array =
+        [
+            [1.0, 0.5],
+        ];
         Assert.That(_plugin.IsChanceArrayValid(array, false), Is.True);
     }
 
     [Test]
     public void RowWithOneColumn_ReturnsFalse()
     {
-        double[][] array = [[1.0]];
+        double[][] array =
+        [
+            [1.0],
+        ];
         Assert.That(_plugin.IsChanceArrayValid(array, false), Is.False);
     }
 
     [Test]
     public void RowWithThreeColumns_ReturnsFalse()
     {
-        double[][] array = [[1.0, 0.5, 0.3]];
+        double[][] array =
+        [
+            [1.0, 0.5, 0.3],
+        ];
         Assert.That(_plugin.IsChanceArrayValid(array, false), Is.False);
     }
 
     [Test]
     public void EmptyRow_ReturnsFalse()
     {
-        double[][] array = [[]];
+        double[][] array =
+        [
+            [],
+        ];
         Assert.That(_plugin.IsChanceArrayValid(array, false), Is.False);
     }
 
     [Test]
     public void MixedValidAndInvalidRows_ReturnsFalse()
     {
-        double[][] array = [[1.0, 0.5], [2.0]]; // second row only 1 column
+        double[][] array =
+        [
+            [1.0, 0.5],
+            [2.0],
+        ]; // second row only 1 column
         Assert.That(_plugin.IsChanceArrayValid(array, false), Is.False);
     }
 
@@ -88,42 +105,63 @@ public class ChanceArrayValidationTests
     [Test]
     public void IntegerLeftColumn_WhenRequired_ReturnsTrue()
     {
-        double[][] array = [[1.0, 0.5], [2.0, 0.3], [3.0, 0.2]];
+        double[][] array =
+        [
+            [1.0, 0.5],
+            [2.0, 0.3],
+            [3.0, 0.2],
+        ];
         Assert.That(_plugin.IsChanceArrayValid(array, shouldLeftColumnBeIntegers: true), Is.True);
     }
 
     [Test]
     public void NonIntegerLeftColumn_WhenRequired_ReturnsFalse()
     {
-        double[][] array = [[1.5, 0.5]];
+        double[][] array =
+        [
+            [1.5, 0.5],
+        ];
         Assert.That(_plugin.IsChanceArrayValid(array, shouldLeftColumnBeIntegers: true), Is.False);
     }
 
     [Test]
     public void NonIntegerLeftColumn_WhenNotRequired_ReturnsTrue()
     {
-        double[][] array = [[0.5, 0.75], [1.5, 0.25]];
+        double[][] array =
+        [
+            [0.5, 0.75],
+            [1.5, 0.25],
+        ];
         Assert.That(_plugin.IsChanceArrayValid(array, shouldLeftColumnBeIntegers: false), Is.True);
     }
 
     [Test]
     public void ZeroLeftColumn_WhenIntegersRequired_ReturnsTrue()
     {
-        double[][] array = [[0.0, 1.0]];
+        double[][] array =
+        [
+            [0.0, 1.0],
+        ];
         Assert.That(_plugin.IsChanceArrayValid(array, shouldLeftColumnBeIntegers: true), Is.True);
     }
 
     [Test]
     public void NegativeIntegerLeftColumn_WhenIntegersRequired_ReturnsTrue()
     {
-        double[][] array = [[-1.0, 0.5]];
+        double[][] array =
+        [
+            [-1.0, 0.5],
+        ];
         Assert.That(_plugin.IsChanceArrayValid(array, shouldLeftColumnBeIntegers: true), Is.True);
     }
 
     [Test]
     public void NegativeNonIntegerLeftColumn_WhenIntegersRequired_ReturnsFalse()
     {
-        double[][] array = [[-1.5, 0.5]];
+        double[][] array =
+        [
+            [-1.5, 0.5],
+        ];
         Assert.That(_plugin.IsChanceArrayValid(array, shouldLeftColumnBeIntegers: true), Is.False);
     }
 
@@ -132,21 +170,37 @@ public class ChanceArrayValidationTests
     [Test]
     public void MultipleValidRows_ReturnsTrue()
     {
-        double[][] array = [[0.0, 0.75], [0.5, 0.50], [1.0, 0.25]];
+        double[][] array =
+        [
+            [0.0, 0.75],
+            [0.5, 0.50],
+            [1.0, 0.25],
+        ];
         Assert.That(_plugin.IsChanceArrayValid(array, false), Is.True);
     }
 
     [Test]
     public void TypicalGroupDistribution_ReturnsTrue()
     {
-        double[][] array = [[1, 80], [2, 15], [3, 5]];
+        double[][] array =
+        [
+            [1, 80],
+            [2, 15],
+            [3, 5],
+        ];
         Assert.That(_plugin.IsChanceArrayValid(array, shouldLeftColumnBeIntegers: true), Is.True);
     }
 
     [Test]
     public void TypicalDifficultyDistribution_ReturnsTrue()
     {
-        double[][] array = [[0, 40], [1, 40], [2, 15], [3, 5]];
+        double[][] array =
+        [
+            [0, 40],
+            [1, 40],
+            [2, 15],
+            [3, 5],
+        ];
         Assert.That(_plugin.IsChanceArrayValid(array, shouldLeftColumnBeIntegers: true), Is.True);
     }
 
@@ -156,8 +210,10 @@ public class ChanceArrayValidationTests
     {
         var loader = new QuestingBotsConfigLoader(Substitute.For<ISptLogger<QuestingBotsConfigLoader>>());
         // Set the private _config field via reflection so the loader doesn't try to read from disk
-        var field = typeof(QuestingBotsConfigLoader).GetField("_config",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var field = typeof(QuestingBotsConfigLoader).GetField(
+            "_config",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
+        );
         field!.SetValue(loader, config);
         return loader;
     }

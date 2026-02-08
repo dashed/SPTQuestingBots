@@ -48,7 +48,7 @@ namespace SPTQuestingBots.CoroutineExtensions
                 LoggingController.LogWarning(messageTextPrefix(extraDetail) + messageTextSuffix(), true);
             }
             hadToWait = true;
-            
+
             yield return null;
             cycleTimer.Restart();
         }

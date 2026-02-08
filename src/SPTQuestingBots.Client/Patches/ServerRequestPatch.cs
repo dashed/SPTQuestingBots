@@ -48,10 +48,7 @@ namespace SPTQuestingBots.Patches
             [JsonProperty("GeneratePScav")]
             public bool GeneratePScav { get; set; }
 
-            public ModifiedParams()
-            {
-
-            }
+            public ModifiedParams() { }
 
             public ModifiedParams(List<WaveInfoClass> _conditions, bool _GeneratePScav)
             {
@@ -72,7 +69,8 @@ namespace SPTQuestingBots.Patches
             public override bool Equals(object value)
             {
                 ModifiedParams modifiedParams = value as ModifiedParams;
-                return modifiedParams != null && EqualityComparer<List<WaveInfoClass>>.Default.Equals(Conditions, modifiedParams.Conditions);
+                return modifiedParams != null
+                    && EqualityComparer<List<WaveInfoClass>>.Default.Equals(Conditions, modifiedParams.Conditions);
             }
         }
     }

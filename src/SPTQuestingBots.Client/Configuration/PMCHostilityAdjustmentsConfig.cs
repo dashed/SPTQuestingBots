@@ -1,9 +1,9 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace SPTQuestingBots.Configuration
 {
@@ -24,9 +24,6 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("pmc_enemy_roles")]
         public string[] PMCEnemyRoles { get; set; } = new string[0];
 
-        public PMCHostilityAdjustmentsConfig()
-        {
-
-        }
+        public PMCHostilityAdjustmentsConfig() { }
     }
 }

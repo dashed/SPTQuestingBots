@@ -33,12 +33,14 @@ namespace SPTQuestingBots.BehaviorExtensions
         protected double ActionElapsedTimeRemaining => Math.Max(0, ObjectiveManager.MinElapsedActionTime - ActionElpasedTime);
         protected bool IsSprintDelayed => sprintDelayTimer.ElapsedMilliseconds / 1000.0 - sprintDelayTime < 0;
 
-        public CustomLogicDelayedUpdate(BotOwner botOwner) : base(botOwner)
+        public CustomLogicDelayedUpdate(BotOwner botOwner)
+            : base(botOwner)
         {
             ObjectiveManager = botOwner.GetOrAddObjectiveManager();
         }
 
-        public CustomLogicDelayedUpdate(BotOwner botOwner, int delayInterval) : this(botOwner)
+        public CustomLogicDelayedUpdate(BotOwner botOwner, int delayInterval)
+            : this(botOwner)
         {
             updateInterval = delayInterval;
         }
@@ -100,7 +102,7 @@ namespace SPTQuestingBots.BehaviorExtensions
             // Move as fast as possible
             ObjectiveManager.BotSprintingController.ManualUpdate(canSprint);
             BotOwner.SetTargetMoveSpeed(1f);
-            
+
             // Open doors blocking the bot's path
             BotOwner.DoorOpener.ManualUpdate();
         }
@@ -210,7 +212,7 @@ namespace SPTQuestingBots.BehaviorExtensions
             foreach (Door door in FindNearbyDoors(maxDistanceMaxAngle.Distance))
             {
                 if (door.DoorState == EDoorState.Open)
-                { 
+                {
                     continue;
                 }
 
@@ -232,7 +234,9 @@ namespace SPTQuestingBots.BehaviorExtensions
 
         public IEnumerable<Door> FindNearbyDoors(float distance)
         {
-            return Singleton<GameWorld>.Instance.GetComponent<Components.LocationData>().FindAllDoorsNearPosition(BotOwner.Position, distance, EDoorState.Open);
+            return Singleton<GameWorld>
+                .Instance.GetComponent<Components.LocationData>()
+                .FindAllDoorsNearPosition(BotOwner.Position, distance, EDoorState.Open);
         }
 
         public bool TryLookToLastCorner()
@@ -250,8 +254,8 @@ namespace SPTQuestingBots.BehaviorExtensions
         public Vector3? FindDangerPoint()
         {
             // Enumerate all alive bots on the map
-            IEnumerable<Vector3> alivePlayerPositions = Singleton<IBotGame>.Instance.BotsController.Bots.BotOwners
-                .Where(b => b.Id != BotOwner.Id)
+            IEnumerable<Vector3> alivePlayerPositions = Singleton<IBotGame>
+                .Instance.BotsController.Bots.BotOwners.Where(b => b.Id != BotOwner.Id)
                 .Where(b => b.BotState == EBotState.Active)
                 .Where(b => !b.IsDead)
                 .Select(b => b.Position)
@@ -278,8 +282,8 @@ namespace SPTQuestingBots.BehaviorExtensions
         public Vector3? FindNearestDangerPoint()
         {
             // Enumerate all alive bots on the map
-            IEnumerable<Vector3> alivePlayerPositions = Singleton<IBotGame>.Instance.BotsController.Bots.BotOwners
-                .Where(b => b.Id != BotOwner.Id)
+            IEnumerable<Vector3> alivePlayerPositions = Singleton<IBotGame>
+                .Instance.BotsController.Bots.BotOwners.Where(b => b.Id != BotOwner.Id)
                 .Where(b => b.BotState == EBotState.Active)
                 .Where(b => !b.IsDead)
                 .Select(b => b.Position)

@@ -5,12 +5,12 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Comfort.Common;
+using EFT;
 using EFT.Interactive;
 using EFT.InventoryLogic;
-using EFT;
+using HarmonyLib;
 using SPTQuestingBots.Controllers;
 using UnityEngine;
-using HarmonyLib;
 
 namespace SPTQuestingBots.Helpers
 {
@@ -29,7 +29,12 @@ namespace SPTQuestingBots.Helpers
             return keyItem;
         }
 
-        public static InteractionResult GetInteractionResult(this WorldInteractiveObject door, EInteractionType interactionType, BotOwner botOwner, KeyComponent key = null)
+        public static InteractionResult GetInteractionResult(
+            this WorldInteractiveObject door,
+            EInteractionType interactionType,
+            BotOwner botOwner,
+            KeyComponent key = null
+        )
         {
             try
             {
@@ -46,7 +51,9 @@ namespace SPTQuestingBots.Helpers
                 KeyInteractionResultClass unlockDoorInteractionResult = new KeyInteractionResultClass(key, null, true);
                 if (unlockDoorInteractionResult == null)
                 {
-                    throw new InvalidOperationException(botOwner.GetText() + " cannot use key " + key.Item.LocalizedName() + " to unlock door " + door.Id);
+                    throw new InvalidOperationException(
+                        botOwner.GetText() + " cannot use key " + key.Item.LocalizedName() + " to unlock door " + door.Id
+                    );
                 }
 
                 // Reduce the remaining usages for the key after the bot unlocks the door
@@ -95,7 +102,7 @@ namespace SPTQuestingBots.Helpers
                 }
                 LoggingController.LogInfo(botOwner.GetText() + " is " + interactionTypeText + " door " + door.Id + "...");
 
-                // StartDoorInteraction worked by itself in SPT-AKI 3.7.6, but starting in 3.8.0, doors would "break" without 
+                // StartDoorInteraction worked by itself in SPT-AKI 3.7.6, but starting in 3.8.0, doors would "break" without
                 // also running ExecuteDoorInteraction
                 door.ExecuteInteractionResult(interactionResult, botOwner.GetPlayer);
             }
@@ -108,7 +115,11 @@ namespace SPTQuestingBots.Helpers
             }
         }
 
-        public static void ExecuteInteractionResult(this WorldInteractiveObject worldInteractiveObject, InteractionResult interactionResult, Player player)
+        public static void ExecuteInteractionResult(
+            this WorldInteractiveObject worldInteractiveObject,
+            InteractionResult interactionResult,
+            Player player
+        )
         {
             if (worldInteractiveObject is Door)
             {

@@ -1,10 +1,10 @@
-﻿using EFT;
-using SPTQuestingBots.Controllers;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using EFT;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ExternalMods.Functions.Extract
 {
@@ -12,7 +12,8 @@ namespace SPTQuestingBots.BotLogic.ExternalMods.Functions.Extract
     {
         public override string MonitoredLayerName => "Exfiltration";
 
-        public InternalExtractFunction(BotOwner _botOwner) : base(_botOwner)
+        public InternalExtractFunction(BotOwner _botOwner)
+            : base(_botOwner)
         {
             _botOwner.Exfiltration.TimeToExfiltration = float.MaxValue;
         }

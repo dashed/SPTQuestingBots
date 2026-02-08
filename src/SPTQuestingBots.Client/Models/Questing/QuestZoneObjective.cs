@@ -11,17 +11,17 @@ namespace SPTQuestingBots.Models.Questing
     {
         public string ZoneID { get; set; } = null;
 
-        public QuestZoneObjective() : base()
-        {
+        public QuestZoneObjective()
+            : base() { }
 
-        }
-
-        public QuestZoneObjective(string zoneID) : this()
+        public QuestZoneObjective(string zoneID)
+            : this()
         {
             ZoneID = zoneID;
         }
 
-        public QuestZoneObjective(string zoneID, Vector3 position) : base(position)
+        public QuestZoneObjective(string zoneID, Vector3 position)
+            : base(position)
         {
             ZoneID = zoneID;
         }

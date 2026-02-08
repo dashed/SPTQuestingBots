@@ -30,9 +30,6 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("adjust_pscav_chance")]
         public AdjustPScavChanceConfig AdjustPScavChance { get; set; } = new AdjustPScavChanceConfig();
 
-        public ModConfig()
-        {
-
-        }
+        public ModConfig() { }
     }
 }

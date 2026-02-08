@@ -1,9 +1,9 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace SPTQuestingBots.Configuration
 {
@@ -66,9 +66,6 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("airdrop_chaser")]
         public QuestSettingsConfig AirdropChaser { get; set; } = new QuestSettingsConfig();
 
-        public BotQuestsConfig()
-        {
-
-        }
+        public BotQuestsConfig() { }
     }
 }

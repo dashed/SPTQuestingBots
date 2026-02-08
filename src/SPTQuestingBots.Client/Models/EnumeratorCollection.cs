@@ -21,10 +21,20 @@ namespace SPTQuestingBots.Models
             suffixEnumerator = suffix;
         }
 
-        object IEnumerator<object>.Current { get { return modifiedEnumerator; } }
-        object IEnumerator.Current { get { return modifiedEnumerator; } }
+        object IEnumerator<object>.Current
+        {
+            get { return modifiedEnumerator; }
+        }
+        object IEnumerator.Current
+        {
+            get { return modifiedEnumerator; }
+        }
 
-        bool IEnumerator.MoveNext() { return MoveNext(); }
+        bool IEnumerator.MoveNext()
+        {
+            return MoveNext();
+        }
+
         public bool MoveNext()
         {
             if (modifiedEnumerator != null)
@@ -43,10 +53,21 @@ namespace SPTQuestingBots.Models
             yield return suffixEnumerator;
         }
 
-        void IDisposable.Dispose() { Dispose(); }
+        void IDisposable.Dispose()
+        {
+            Dispose();
+        }
+
         public void Dispose() { }
 
-        void IEnumerator.Reset() { Reset(); }
-        public void Reset() { throw new NotImplementedException(); }
+        void IEnumerator.Reset()
+        {
+            Reset();
+        }
+
+        public void Reset()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

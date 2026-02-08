@@ -13,7 +13,8 @@ namespace SPTQuestingBots.BotLogic.Objective
         private float? maxWanderDistance = null;
         private bool wasStuck = false;
 
-        public HoldAtObjectiveAction(BotOwner _BotOwner) : base(_BotOwner, 100)
+        public HoldAtObjectiveAction(BotOwner _BotOwner)
+            : base(_BotOwner, 100)
         {
             SetBaseAction(BotActionNodesClass.CreateNode(BotLogicDecision.search, BotOwner));
         }

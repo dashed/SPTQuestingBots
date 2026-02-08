@@ -1,30 +1,32 @@
-﻿using BepInEx.Bootstrap;
-using Comfort.Common;
-using EFT;
-using SPTQuestingBots.BotLogic.BotMonitor.Monitors;
-using SPTQuestingBots.BotLogic.Objective;
-using SPTQuestingBots.Components;
-using SPTQuestingBots.Models.Questing;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BepInEx.Bootstrap;
+using Comfort.Common;
+using EFT;
+using SPTQuestingBots.BotLogic.BotMonitor.Monitors;
+using SPTQuestingBots.BotLogic.Objective;
+using SPTQuestingBots.Components;
+using SPTQuestingBots.Models.Questing;
 using UnityEngine;
 
 namespace SPTQuestingBots.Controllers
 {
     public static class BotJobAssignmentFactory
     {
-        private static CoroutineExtensions.EnumeratorWithTimeLimit enumeratorWithTimeLimit = new CoroutineExtensions.EnumeratorWithTimeLimit(ConfigController.Config.MaxCalcTimePerFrame);
+        private static CoroutineExtensions.EnumeratorWithTimeLimit enumeratorWithTimeLimit =
+            new CoroutineExtensions.EnumeratorWithTimeLimit(ConfigController.Config.MaxCalcTimePerFrame);
         private static List<Quest> allQuests = new List<Quest>();
         private static Dictionary<string, List<BotJobAssignment>> botJobAssignments = new Dictionary<string, List<BotJobAssignment>>();
 
         public static int QuestCount => allQuests.Count;
 
         public static Quest[] FindQuestsWithZone(string zoneId) => allQuests.Where(q => q.GetObjectiveForZoneID(zoneId) != null).ToArray();
+
         public static bool CanMoreBotsDoQuest(this Quest quest) => quest.NumberOfActiveBots() < quest.MaxBots;
 
         public static void Clear()
@@ -61,7 +63,7 @@ namespace SPTQuestingBots.Controllers
 
         public static void AddQuest(Quest quest)
         {
-            foreach(QuestObjective objective in quest.AllObjectives)
+            foreach (QuestObjective objective in quest.AllObjectives)
             {
                 objective.UpdateQuestObjectiveStepNumbers();
             }
@@ -70,7 +72,9 @@ namespace SPTQuestingBots.Controllers
             {
                 float newDesirability = quest.Desirability * ConfigController.Config.Questing.BotQuests.DesirabilityCampingMultiplier;
 
-                LoggingController.LogInfo("Adjusting desirability of camping quest " + quest.ToString() + " from " + quest.Desirability + " to " + newDesirability);
+                LoggingController.LogInfo(
+                    "Adjusting desirability of camping quest " + quest.ToString() + " from " + quest.Desirability + " to " + newDesirability
+                );
 
                 quest.Desirability = newDesirability;
             }
@@ -79,7 +83,9 @@ namespace SPTQuestingBots.Controllers
             {
                 float newDesirability = quest.Desirability * ConfigController.Config.Questing.BotQuests.DesirabilitySnipingMultiplier;
 
-                LoggingController.LogInfo("Adjusting desirability of sniping quest " + quest.ToString() + " from " + quest.Desirability + " to " + newDesirability);
+                LoggingController.LogInfo(
+                    "Adjusting desirability of sniping quest " + quest.ToString() + " from " + quest.Desirability + " to " + newDesirability
+                );
 
                 quest.Desirability = newDesirability;
             }
@@ -107,19 +113,26 @@ namespace SPTQuestingBots.Controllers
                     // Check if Lightkeeper Island quests should be blacklisted
                     if (locationId == "Lighthouse")
                     {
-                        bool visitsIsland = objective.GetAllPositions()
+                        bool visitsIsland = objective
+                            .GetAllPositions()
                             .Where(p => p.HasValue)
-                            .Any(position => Singleton<GameWorld>.Instance.GetComponent<LocationData>().IsPointOnLightkeeperIsland(position.Value));
+                            .Any(position =>
+                                Singleton<GameWorld>.Instance.GetComponent<LocationData>().IsPointOnLightkeeperIsland(position.Value)
+                            );
 
                         if (visitsIsland && !ConfigController.Config.Questing.BotQuests.LightkeeperIslandQuests.Enabled)
                         {
                             if (quest.TryRemoveObjective(objective))
                             {
-                                LoggingController.LogInfo("Removing quest objective on Lightkeeper island: " + objective + " for quest " + quest);
+                                LoggingController.LogInfo(
+                                    "Removing quest objective on Lightkeeper island: " + objective + " for quest " + quest
+                                );
                             }
                             else
                             {
-                                LoggingController.LogError("Could not remove quest objective on Lightkeeper island: " + objective + " for quest " + quest);
+                                LoggingController.LogError(
+                                    "Could not remove quest objective on Lightkeeper island: " + objective + " for quest " + quest
+                                );
                             }
                         }
                     }
@@ -128,10 +141,11 @@ namespace SPTQuestingBots.Controllers
                     // Disable quests that try to go to the Scav Island, pathing is broken there
                     if (locationId == "Shoreline")
                     {
-                        bool visitsIsland = objective.GetAllPositions()
+                        bool visitsIsland = objective
+                            .GetAllPositions()
                             .Where(p => p.HasValue)
                             .Any(position => position.Value.x > 160 && position.Value.z > 360);
-                        
+
                         if (visitsIsland)
                         {
                             if (quest.TryRemoveObjective(objective))
@@ -140,7 +154,9 @@ namespace SPTQuestingBots.Controllers
                             }
                             else
                             {
-                                LoggingController.LogError("Could not remove quest objective on Scav island: " + objective + " for quest " + quest);
+                                LoggingController.LogError(
+                                    "Could not remove quest objective on Scav island: " + objective + " for quest " + quest
+                                );
                             }
                         }
                     }
@@ -204,7 +220,10 @@ namespace SPTQuestingBots.Controllers
             {
                 num += botJobAssignments[id]
                     .Where(a => a.StartTime.HasValue)
-                    .Where(a => (a.Status == JobAssignmentStatus.Active) || ((a.Status == JobAssignmentStatus.Pending) && (a.TimeSinceStarted().Value < pendingTimeLimit)))
+                    .Where(a =>
+                        (a.Status == JobAssignmentStatus.Active)
+                        || ((a.Status == JobAssignmentStatus.Pending) && (a.TimeSinceStarted().Value < pendingTimeLimit))
+                    )
                     .Where(a => a.QuestAssignment == quest)
                     .Count();
             }
@@ -385,7 +404,10 @@ namespace SPTQuestingBots.Controllers
             }
 
             double? timeSinceQuestEnded = quest.ElapsedTimeWhenLastEndedForBot(bot);
-            if (timeSinceQuestEnded.HasValue && (timeSinceQuestEnded >= ConfigController.Config.Questing.BotQuestingRequirements.RepeatQuestDelay))
+            if (
+                timeSinceQuestEnded.HasValue
+                && (timeSinceQuestEnded >= ConfigController.Config.Questing.BotQuestingRequirements.RepeatQuestDelay)
+            )
             {
                 LoggingController.LogInfo(bot.GetText() + " is now allowed to repeat quest " + quest.ToString());
 
@@ -406,9 +428,9 @@ namespace SPTQuestingBots.Controllers
         public static int TryArchiveRepeatableAssignments(this BotOwner bot)
         {
             BotJobAssignment[] matchingAssignments = botJobAssignments[bot.Profile.Id]
-                    .Where(a => a.QuestAssignment.IsRepeatable)
-                    .Where(a => a.Status == JobAssignmentStatus.Completed)
-                    .ToArray();
+                .Where(a => a.QuestAssignment.IsRepeatable)
+                .Where(a => a.Status == JobAssignmentStatus.Completed)
+                .ToArray();
 
             matchingAssignments.ExecuteForEach(a => a.Archive());
 
@@ -525,7 +547,9 @@ namespace SPTQuestingBots.Controllers
                 return null;
             }
 
-            float maxDistanceBetweenExfils = Singleton<GameWorld>.Instance.GetComponent<Components.LocationData>().GetMaxDistanceBetweenExfils();
+            float maxDistanceBetweenExfils = Singleton<GameWorld>
+                .Instance.GetComponent<Components.LocationData>()
+                .GetMaxDistanceBetweenExfils();
             float minDistanceToSwitchExfil = maxDistanceBetweenExfils * ConfigController.Config.Questing.BotQuests.ExfilReachedMinFraction;
 
             // If the bot is close to its selected exfil (only used for quest selection), select a new one
@@ -547,7 +571,14 @@ namespace SPTQuestingBots.Controllers
             // Clear the bot's assignment if it's been doing the same quest for too long
             if (quest?.HasBotBeingDoingQuestTooLong(bot, out double? timeDoingQuest) == true)
             {
-                LoggingController.LogInfo(bot.GetText() + " has been performing quest " + quest.ToString() + " for " + timeDoingQuest.Value + "s and will get a new one.");
+                LoggingController.LogInfo(
+                    bot.GetText()
+                        + " has been performing quest "
+                        + quest.ToString()
+                        + " for "
+                        + timeDoingQuest.Value
+                        + "s and will get a new one."
+                );
                 quest = null;
                 objective = null;
             }
@@ -558,11 +589,11 @@ namespace SPTQuestingBots.Controllers
             do
             {
                 // Find the nearest objective for the bot's currently assigned quest (if any)
-                objective = quest?
-                    .RemainingObjectivesForBot(bot)?
-                    .Where(o => o.CanAssignBot(bot))?
-                    .Where(o => o.CanBotRepeatQuestObjective(bot))?
-                    .NearestToBot(bot);
+                objective = quest
+                    ?.RemainingObjectivesForBot(bot)
+                    ?.Where(o => o.CanAssignBot(bot))
+                    ?.Where(o => o.CanBotRepeatQuestObjective(bot))
+                    ?.NearestToBot(bot);
 
                 // Exit the loop if an objective was found for the bot
                 if (objective != null)
@@ -584,12 +615,16 @@ namespace SPTQuestingBots.Controllers
                     // First try allowing the bot to repeat quests it already completed
                     if (bot.TryArchiveRepeatableAssignments() > 0)
                     {
-                        LoggingController.LogWarning(bot.GetText() + " cannot select any quests. Trying to select a repeatable quest early instead...");
+                        LoggingController.LogWarning(
+                            bot.GetText() + " cannot select any quests. Trying to select a repeatable quest early instead..."
+                        );
                         continue;
                     }
 
                     // If there are still no quests available for the bot to select, give up trying to select one
-                    LoggingController.LogError(bot.GetText() + " could not select any of the following quests: " + string.Join(", ", bot.GetAllPossibleQuests()));
+                    LoggingController.LogError(
+                        bot.GetText() + " could not select any of the following quests: " + string.Join(", ", bot.GetAllPossibleQuests())
+                    );
                     botObjectiveManager?.StopQuesting();
 
                     // Try making the bot extract because it has nothing to do
@@ -602,7 +637,6 @@ namespace SPTQuestingBots.Controllers
                     LoggingController.LogError(bot.GetText() + " cannot select any quests. Questing disabled.");
                     return null;
                 }
-
             } while (objective == null);
 
             // Once a valid assignment is selected, assign it to the bot
@@ -629,9 +663,7 @@ namespace SPTQuestingBots.Controllers
         {
             Stopwatch questSelectionTimer = Stopwatch.StartNew();
 
-            Quest[] assignableQuests = bot.GetAllPossibleQuests()
-                .Where(q => !invalidQuests.Contains(q))
-                .ToArray();
+            Quest[] assignableQuests = bot.GetAllPossibleQuests().Where(q => !invalidQuests.Contains(q)).ToArray();
 
             if (!assignableQuests.Any())
             {
@@ -657,7 +689,9 @@ namespace SPTQuestingBots.Controllers
                 if (vectorToExfil.HasValue)
                 {
                     IEnumerable<Vector3> vectorsToObjectivePositions = validObjectivePositions.Select(p => p - bot.Position);
-                    IEnumerable<float> anglesToObjectives = vectorsToObjectivePositions.Select(p => Vector3.Angle(p - bot.Position, vectorToExfil.Value));
+                    IEnumerable<float> anglesToObjectives = vectorsToObjectivePositions.Select(p =>
+                        Vector3.Angle(p - bot.Position, vectorToExfil.Value)
+                    );
 
                     questExfilAngleRanges.Add(quest, new Configuration.MinMaxConfig(anglesToObjectives.Min(), anglesToObjectives.Max()));
                 }
@@ -691,20 +725,26 @@ namespace SPTQuestingBots.Controllers
             }
 
             System.Random random = new System.Random();
-            Dictionary<Quest, double> questDistanceFractions = questDistanceRanges
-                .ToDictionary(o => o.Key, o => 1 - (o.Value.Min + random.Next(-1 * maxRandomDistance, maxRandomDistance)) / maxDistance);
-            Dictionary<Quest, float> questDesirabilityFractions = questDistanceRanges
-                .ToDictionary(o => o.Key, o => 
-                (
-                    o.Key.Desirability * (o.Key.IsActiveForPlayer ? ConfigController.Config.Questing.BotQuests.DesirabilityActiveQuestMultiplier : 1)
-                    + random.Next(-1 * desirabilityRandomness, desirabilityRandomness)) / 100
-                );
-            Dictionary<Quest, double> questExfilAngleFactor = questExfilAngleRanges
-                .ToDictionary(o => o.Key, o => Math.Max(0, o.Value.Min - maxExfilAngle) / (180 - maxExfilAngle));
+            Dictionary<Quest, double> questDistanceFractions = questDistanceRanges.ToDictionary(
+                o => o.Key,
+                o => 1 - (o.Value.Min + random.Next(-1 * maxRandomDistance, maxRandomDistance)) / maxDistance
+            );
+            Dictionary<Quest, float> questDesirabilityFractions = questDistanceRanges.ToDictionary(
+                o => o.Key,
+                o =>
+                    (
+                        o.Key.Desirability
+                            * (o.Key.IsActiveForPlayer ? ConfigController.Config.Questing.BotQuests.DesirabilityActiveQuestMultiplier : 1)
+                        + random.Next(-1 * desirabilityRandomness, desirabilityRandomness)
+                    ) / 100
+            );
+            Dictionary<Quest, double> questExfilAngleFactor = questExfilAngleRanges.ToDictionary(
+                o => o.Key,
+                o => Math.Max(0, o.Value.Min - maxExfilAngle) / (180 - maxExfilAngle)
+            );
 
             IEnumerable<Quest> sortedQuests = questDistanceRanges
-                .OrderBy
-                (o =>
+                .OrderBy(o =>
                     (questDistanceFractions[o.Key] * distanceWeighting)
                     + (questDesirabilityFractions[o.Key] * desirabilityWeighting)
                     - (questExfilAngleFactor[o.Key] * exfilDirectionWeighting)
@@ -733,19 +773,14 @@ namespace SPTQuestingBots.Controllers
         {
             IEnumerable<BotJobAssignment> assignments = bot.GetCompletedOrAchivedQuests();
 
-            return assignments
-                .Distinct(a => a.QuestAssignment)
-                .Count();
+            return assignments.Distinct(a => a.QuestAssignment).Count();
         }
 
         public static int NumberOfCompletedOrAchivedEFTQuests(this BotOwner bot)
         {
             IEnumerable<BotJobAssignment> assignments = bot.GetCompletedOrAchivedQuests();
 
-            return assignments
-                .Distinct(a => a.QuestAssignment)
-                .Where(a => a.QuestAssignment.IsEFTQuest)
-                .Count();
+            return assignments.Distinct(a => a.QuestAssignment).Where(a => a.QuestAssignment.IsEFTQuest).Count();
         }
 
         public static void WriteQuestLogFile(long timestamp)
@@ -789,11 +824,7 @@ namespace SPTQuestingBots.Controllers
 
             string locationId = Singleton<GameWorld>.Instance.GetComponent<Components.LocationData>().CurrentLocation.Id;
 
-            string filename = ConfigController.GetLoggingPath()
-                + locationId.Replace(" ", "")
-                + "_"
-                + timestamp
-                + "_quests.csv";
+            string filename = ConfigController.GetLoggingPath() + locationId.Replace(" ", "") + "_" + timestamp + "_quests.csv";
 
             LoggingController.CreateLogFile("quest", filename, sb.ToString());
         }
@@ -815,7 +846,9 @@ namespace SPTQuestingBots.Controllers
 
             // Write the header row
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("Bot Name,Bot Nickname,Bot Difficulty,Bot Level,Assignment Status,Quest Name,Objective Name,Step Number,Start Time,End Time");
+            sb.AppendLine(
+                "Bot Name,Bot Nickname,Bot Difficulty,Bot Level,Assignment Status,Quest Name,Objective Name,Step Number,Start Time,End Time"
+            );
 
             // Write a row for every quest, objective, and step that each bot was assigned to perform
             foreach (string botID in botJobAssignments.Keys)
@@ -851,11 +884,7 @@ namespace SPTQuestingBots.Controllers
 
             string locationId = Singleton<GameWorld>.Instance.GetComponent<Components.LocationData>().CurrentLocation.Id;
 
-            string filename = ConfigController.GetLoggingPath()
-                + locationId.Replace(" ", "")
-                + "_"
-                + timestamp
-                + "_assignments.csv";
+            string filename = ConfigController.GetLoggingPath() + locationId.Replace(" ", "") + "_" + timestamp + "_assignments.csv";
 
             LoggingController.CreateLogFile("bot job assignment", filename, sb.ToString());
         }
@@ -879,7 +908,11 @@ namespace SPTQuestingBots.Controllers
             return allAssignments;
         }
 
-        public static IEnumerable<QuestObjective> GetQuestObjectivesNearPosition(Vector3 position, float distance, bool allowEFTQuests = true)
+        public static IEnumerable<QuestObjective> GetQuestObjectivesNearPosition(
+            Vector3 position,
+            float distance,
+            bool allowEFTQuests = true
+        )
         {
             List<QuestObjective> nearbyObjectives = new List<QuestObjective>();
 
@@ -919,11 +952,18 @@ namespace SPTQuestingBots.Controllers
 
                 if (botObjectiveManager.TryChangeObjective())
                 {
-                    LoggingController.LogWarning("Selected new quest for " + bot.GetText() + " because it has too many followers for its previous quest");
+                    LoggingController.LogWarning(
+                        "Selected new quest for " + bot.GetText() + " because it has too many followers for its previous quest"
+                    );
                 }
                 else
                 {
-                    LoggingController.LogError("Cannot select new quest for " + bot.GetText() + ". It has too many followers for quest " + botJobAssignment.QuestAssignment.ToString());
+                    LoggingController.LogError(
+                        "Cannot select new quest for "
+                            + bot.GetText()
+                            + ". It has too many followers for quest "
+                            + botJobAssignment.QuestAssignment.ToString()
+                    );
                 }
             }
         }

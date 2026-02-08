@@ -1,9 +1,9 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace SPTQuestingBots.Configuration
 {
@@ -33,9 +33,6 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("default_chance_of_bots_having_keys")]
         public float DefaultChanceOfBotsHavingKeys { get; set; } = 25;
 
-        public UnlockingDoorsConfig()
-        {
-
-        }
+        public UnlockingDoorsConfig() { }
     }
 }

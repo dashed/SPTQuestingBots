@@ -4,8 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Comfort.Common;
-using EFT.Interactive;
 using EFT;
+using EFT.Interactive;
 using EFT.Quests;
 using SPTQuestingBots.Components;
 using SPTQuestingBots.Controllers;
@@ -20,7 +20,7 @@ namespace SPTQuestingBots.Helpers
         private static Dictionary<Condition, IEnumerable<string>> allZoneIDsForCondition = new Dictionary<Condition, IEnumerable<string>>();
         private static Dictionary<Condition, float?> plantTimeForCondition = new Dictionary<Condition, float?>();
         private static Dictionary<Condition, float?> beaconTimeForCondition = new Dictionary<Condition, float?>();
-        
+
         public static void ClearCache()
         {
             allZoneIDsForCondition.Clear();
@@ -120,7 +120,7 @@ namespace SPTQuestingBots.Helpers
                     }
 
                     // Check if an objective has already been added for the item. This is to prevent duplicate objectives from being added for
-                    // some EFT quests. 
+                    // some EFT quests.
                     QuestObjective objective = quest.GetObjectiveForLootItem(target);
                     if (objective != null)
                     {
@@ -164,28 +164,46 @@ namespace SPTQuestingBots.Helpers
                         // Check if bots should open a specific door to get the item
                         if (zoneAndItemQuestPositions[target].MustUnlockNearbyDoor)
                         {
-                            IEnumerable<WorldInteractiveObject> matchingWorldInteractiveObjects = locationData.FindAllWorldInteractiveObjectsNearPosition(itemPosition, zoneAndItemQuestPositions[target].NearbyDoorSearchRadius);
+                            IEnumerable<WorldInteractiveObject> matchingWorldInteractiveObjects =
+                                locationData.FindAllWorldInteractiveObjectsNearPosition(
+                                    itemPosition,
+                                    zoneAndItemQuestPositions[target].NearbyDoorSearchRadius
+                                );
 
                             int matchingDoorCount = matchingWorldInteractiveObjects.Count();
                             if (matchingDoorCount == 0)
                             {
-                                LoggingController.LogInfo("Cannot find any doors to unlock for item " + item.Item.LocalizedName() + " for quest " + quest.Name);
+                                LoggingController.LogInfo(
+                                    "Cannot find any doors to unlock for item " + item.Item.LocalizedName() + " for quest " + quest.Name
+                                );
                             }
                             if (matchingDoorCount > 1)
                             {
-                                LoggingController.LogInfo("Found too many doors to unlock for item " + item.Item.LocalizedName() + " for quest " + quest.Name);
+                                LoggingController.LogInfo(
+                                    "Found too many doors to unlock for item " + item.Item.LocalizedName() + " for quest " + quest.Name
+                                );
                             }
                             if (matchingDoorCount == 1)
                             {
                                 doorIDToUnlock = matchingWorldInteractiveObjects.First().Id;
                                 interactionPositionForDoorToUnlock = zoneAndItemQuestPositions[target].NearbyDoorInteractionPosition;
-                                LoggingController.LogDebug("WorldInteractiveObject " + doorIDToUnlock + " must be unlocked for item " + item.Item.LocalizedName() + " for quest " + quest.Name);
+                                LoggingController.LogDebug(
+                                    "WorldInteractiveObject "
+                                        + doorIDToUnlock
+                                        + " must be unlocked for item "
+                                        + item.Item.LocalizedName()
+                                        + " for quest "
+                                        + quest.Name
+                                );
                             }
                         }
                     }
 
                     // Try to find the nearest NavMesh position next to the quest item.
-                    Vector3? navMeshTargetPoint = locationData.FindNearestNavMeshPosition(itemPosition, ConfigController.Config.Questing.QuestGeneration.NavMeshSearchDistanceItem);
+                    Vector3? navMeshTargetPoint = locationData.FindNearestNavMeshPosition(
+                        itemPosition,
+                        ConfigController.Config.Questing.QuestGeneration.NavMeshSearchDistanceItem
+                    );
                     if (!navMeshTargetPoint.HasValue)
                     {
                         LoggingController.LogError("Cannot find NavMesh point for quest item " + item.Item.LocalizedName());
@@ -193,7 +211,11 @@ namespace SPTQuestingBots.Helpers
                         if (ConfigController.Config.Debug.ShowZoneOutlines)
                         {
                             Vector3[] itemPositionOutline = DebugHelpers.GetSpherePoints(item.transform.position, 0.5f, 10);
-                            Models.Pathing.PathVisualizationData itemPositionSphere = new Models.Pathing.PathVisualizationData("QuestItem_" + item.Item.LocalizedName(), itemPositionOutline, Color.red);
+                            Models.Pathing.PathVisualizationData itemPositionSphere = new Models.Pathing.PathVisualizationData(
+                                "QuestItem_" + item.Item.LocalizedName(),
+                                itemPositionOutline,
+                                Color.red
+                            );
                             Singleton<GameWorld>.Instance.GetComponent<PathRenderer>().AddOrUpdatePath(itemPositionSphere);
                         }
 

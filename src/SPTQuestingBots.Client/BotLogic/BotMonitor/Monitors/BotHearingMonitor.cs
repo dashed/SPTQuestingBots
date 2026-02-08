@@ -1,16 +1,16 @@
-﻿using Comfort.Common;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Comfort.Common;
 using EFT;
 using SPTQuestingBots.BotLogic.ExternalMods;
 using SPTQuestingBots.BotLogic.ExternalMods.Functions.Hearing;
 using SPTQuestingBots.BotLogic.HiveMind;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
@@ -27,7 +27,8 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
         private Stopwatch totalSuspiciousTimer = new Stopwatch();
         private Stopwatch notSuspiciousTimer = Stopwatch.StartNew();
 
-        public BotHearingMonitor(BotOwner _botOwner) : base(_botOwner) { }
+        public BotHearingMonitor(BotOwner _botOwner)
+            : base(_botOwner) { }
 
         public override void Start()
         {
@@ -41,7 +42,10 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
             Singleton<BotEventHandler>.Instance.OnSoundPlayed += enemySoundHeard;
             soundPlayedEventAdded = true;
 
-            BotOwner.GetPlayer.OnIPlayerDeadOrUnspawn += (player) => { removeSoundPlayedEvent(); };
+            BotOwner.GetPlayer.OnIPlayerDeadOrUnspawn += (player) =>
+            {
+                removeSoundPlayedEvent();
+            };
 
             updateMaxSuspiciousTime();
         }
@@ -96,7 +100,10 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
                 return true;
             }
 
-            if (notSuspiciousTimer.ElapsedMilliseconds / 1000 > ConfigController.Config.Questing.BotQuestingRequirements.HearingSensor.SuspicionCooldownTime)
+            if (
+                notSuspiciousTimer.ElapsedMilliseconds / 1000
+                > ConfigController.Config.Questing.BotQuestingRequirements.HearingSensor.SuspicionCooldownTime
+            )
             {
                 //if (wasSuspiciousTooLong)
                 //{
@@ -173,7 +180,10 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
 
             // Adjust the sound power based on the bot's loadout and the type of noise
             float adjustedPower = power * BotOwner.HearingMultiplier();
-            adjustedPower *= (type == AISoundType.step) ? ConfigController.Config.Questing.BotQuestingRequirements.HearingSensor.LoudnessMultiplierFootsteps : 1;
+            adjustedPower *=
+                (type == AISoundType.step)
+                    ? ConfigController.Config.Questing.BotQuestingRequirements.HearingSensor.LoudnessMultiplierFootsteps
+                    : 1;
             if (adjustedPower < ConfigController.Config.Questing.BotQuestingRequirements.HearingSensor.MinCorrectedSoundPower)
             {
                 //LoggingController.LogInfo("Power: " + power + ", Adjusted Power: " + adjustedPower);

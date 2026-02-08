@@ -44,7 +44,8 @@ public class QuestingBotsServerPlugin(
     BotLocationService botLocationService,
     PMCConversionService pmcConversionService,
     ConfigServer configServer,
-    IReadOnlyList<SptMod> loadedMods) : IOnLoad
+    IReadOnlyList<SptMod> loadedMods
+) : IOnLoad
 {
     /// <summary>
     /// Mod names whose presence should cause the QuestingBots spawning
@@ -97,8 +98,7 @@ public class QuestingBotsServerPlugin(
         var botConfig = configServer.GetConfig<BotConfig>();
         config.BasePScavConversionChance = botConfig.ChanceAssaultScavHasPlayerScavName;
 
-        if (config.AdjustPScavChance.Enabled ||
-            (config.BotSpawns.Enabled && config.BotSpawns.PlayerScavs.Enabled))
+        if (config.AdjustPScavChance.Enabled || (config.BotSpawns.Enabled && config.BotSpawns.PlayerScavs.Enabled))
         {
             botConfig.ChanceAssaultScavHasPlayerScavName = 0;
         }
@@ -163,8 +163,10 @@ public class QuestingBotsServerPlugin(
 
         // If Rogues don't spawn immediately on Lighthouse, PMC spawns will
         // be significantly delayed because they wait for initial boss spawns
-        if (config.BotSpawns.LimitInitialBossSpawns.DisableRogueDelay &&
-            locationConfig.RogueLighthouseSpawnTimeSettings.WaitTimeSeconds > -1)
+        if (
+            config.BotSpawns.LimitInitialBossSpawns.DisableRogueDelay
+            && locationConfig.RogueLighthouseSpawnTimeSettings.WaitTimeSeconds > -1
+        )
         {
             locationConfig.RogueLighthouseSpawnTimeSettings.WaitTimeSeconds = -1;
             commonUtils.LogInfo("Removed SPT Rogue spawn delay");
@@ -190,12 +192,11 @@ public class QuestingBotsServerPlugin(
         foreach (var mod in loadedMods)
         {
             var modName = mod.ModMetadata?.Name ?? "";
-            if (SpawningModNames.Any(name =>
-                    modName.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0))
+            if (SpawningModNames.Any(name => modName.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0))
             {
                 commonUtils.LogWarning(
-                    $"Detected conflicting spawning mod '{modName}'. "
-                    + "QuestingBots spawning system has been disabled.");
+                    $"Detected conflicting spawning mod '{modName}'. " + "QuestingBots spawning system has been disabled."
+                );
                 return true;
             }
         }
@@ -292,7 +293,8 @@ public class QuestingBotsServerPlugin(
             {
                 commonUtils.LogError(
                     "Found a chance array with an invalid value in its left column. "
-                    + "Please ensure you are not using an outdated version of config.json.");
+                        + "Please ensure you are not using an outdated version of config.json."
+                );
                 return false;
             }
         }

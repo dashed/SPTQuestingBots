@@ -5,10 +5,10 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using SPT.Reflection.Patching;
 using Comfort.Common;
 using EFT;
 using HarmonyLib;
+using SPT.Reflection.Patching;
 using SPTQuestingBots.Components.Spawning;
 using SPTQuestingBots.Controllers;
 using UnityEngine;
@@ -41,7 +41,10 @@ namespace SPTQuestingBots.Patches.Spawning
 
             localGameObj = __instance;
 
-            IEnumerator originalEnumeratorWithMessage = addDebugMessageAfterEnumerator(__result, "Original start-game IEnumerator completed");
+            IEnumerator originalEnumeratorWithMessage = addDebugMessageAfterEnumerator(
+                __result,
+                "Original start-game IEnumerator completed"
+            );
             __result = new Models.EnumeratorCollection(originalEnumeratorWithMessage, waitForBotGenerators(), spawnMissedWaves());
 
             LoggingController.LogDebug("Injected wait-for-bot-gen IEnumerator into start-game IEnumerator");
@@ -102,7 +105,10 @@ namespace SPTQuestingBots.Patches.Spawning
 
                 yield return new WaitForSeconds(waitIterationDuration / 1000f);
 
-                TimeHasComeScreenClassChangeStatusPatch.ChangeStatus("Generating " + BotGenerator.CurrentBotGeneratorType + "s", BotGenerator.CurrentBotGeneratorProgress / 100f);
+                TimeHasComeScreenClassChangeStatusPatch.ChangeStatus(
+                    "Generating " + BotGenerator.CurrentBotGeneratorType + "s",
+                    BotGenerator.CurrentBotGeneratorProgress / 100f
+                );
             }
 
             if (hadToWait)
@@ -117,7 +123,9 @@ namespace SPTQuestingBots.Patches.Spawning
         {
             if (localGameObj as LocalGame == null)
             {
-                LoggingController.LogError("Cannot write WavesSpawnScenario spawn messages for the current BaseLocalGame because it is not a LocalGame");
+                LoggingController.LogError(
+                    "Cannot write WavesSpawnScenario spawn messages for the current BaseLocalGame because it is not a LocalGame"
+                );
 
                 return;
             }
@@ -132,7 +140,9 @@ namespace SPTQuestingBots.Patches.Spawning
 
             foreach (BotWaveDataClass wave in wavesSpawnScenario.SpawnWaves.ToArray())
             {
-                LoggingController.LogInfo("BotWaveDataClass at " + wave.Time + "s: " + wave.BotsCount + " bots of type " + wave.WildSpawnType.ToString());
+                LoggingController.LogInfo(
+                    "BotWaveDataClass at " + wave.Time + "s: " + wave.BotsCount + " bots of type " + wave.WildSpawnType.ToString()
+                );
             }
         }
     }

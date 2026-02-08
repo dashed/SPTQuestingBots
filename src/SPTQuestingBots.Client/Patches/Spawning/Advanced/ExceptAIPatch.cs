@@ -4,8 +4,8 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using SPT.Reflection.Patching;
 using EFT;
+using SPT.Reflection.Patching;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
 
@@ -24,7 +24,7 @@ namespace SPTQuestingBots.Patches.Spawning.Advanced
         }
 
         [PatchPrefix]
-        protected static bool PatchPrefix(ref IEnumerable<IPlayer>  __result, IEnumerable<IPlayer> persons)
+        protected static bool PatchPrefix(ref IEnumerable<IPlayer> __result, IEnumerable<IPlayer> persons)
         {
             __result = persons.HumanAndSimulatedPlayers();
 

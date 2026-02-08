@@ -20,10 +20,8 @@ namespace SPTQuestingBots.BotLogic.Objective
 
         private double unlockDebounceTime => unlockDebounceTimer.ElapsedMilliseconds / 1000.0;
 
-        public GoToObjectiveAction(BotOwner _BotOwner) : base(_BotOwner, 100)
-        {
-
-        }
+        public GoToObjectiveAction(BotOwner _BotOwner)
+            : base(_BotOwner, 100) { }
 
         public override void Start()
         {
@@ -86,7 +84,7 @@ namespace SPTQuestingBots.BotLogic.Objective
 
             ObjectiveManager.StartJobAssigment();
 
-            // Recalculate a path to the bot's objective. This should be done cyclically in case locked doors are opened, etc. 
+            // Recalculate a path to the bot's objective. This should be done cyclically in case locked doors are opened, etc.
             tryMoveToObjective();
 
             if (checkIfBotIsStuck())
@@ -136,9 +134,14 @@ namespace SPTQuestingBots.BotLogic.Objective
             }
 
             // Check if a door must be unlocked to complete proceed with the objective
-            if ((ObjectiveManager.DoorIDToUnlockForObjective != "") && (ObjectiveManager.BotPath.DistanceToTarget < ConfigController.Config.Questing.UnlockingDoors.SearchRadius))
+            if (
+                (ObjectiveManager.DoorIDToUnlockForObjective != "")
+                && (ObjectiveManager.BotPath.DistanceToTarget < ConfigController.Config.Questing.UnlockingDoors.SearchRadius)
+            )
             {
-                WorldInteractiveObject doorToUnlockForObjective = Singleton<GameWorld>.Instance.GetComponent<Components.LocationData>().FindWorldInteractiveObjectsByID(ObjectiveManager.DoorIDToUnlockForObjective);
+                WorldInteractiveObject doorToUnlockForObjective = Singleton<GameWorld>
+                    .Instance.GetComponent<Components.LocationData>()
+                    .FindWorldInteractiveObjectsByID(ObjectiveManager.DoorIDToUnlockForObjective);
 
                 if ((doorToUnlockForObjective != null) && (doorToUnlockForObjective.DoorState == EDoorState.Locked))
                 {
@@ -159,10 +162,17 @@ namespace SPTQuestingBots.BotLogic.Objective
             // so who am I to judge?
             if (distanceToEndOfPath > ConfigController.Config.Questing.BotSearchDistances.MaxNavMeshPathError)
             {
-                // Check if this is the first time an incomplete path was generated. If so, write a warning message. 
+                // Check if this is the first time an incomplete path was generated. If so, write a warning message.
                 if (ObjectiveManager.HasCompletePath)
                 {
-                    LoggingController.LogInfo("Bot " + BotOwner.GetText() + " cannot find a complete path to its objective (" + ObjectiveManager + "). Trying anyway. Distance from end of path to objective: " + missingDistance);
+                    LoggingController.LogInfo(
+                        "Bot "
+                            + BotOwner.GetText()
+                            + " cannot find a complete path to its objective ("
+                            + ObjectiveManager
+                            + "). Trying anyway. Distance from end of path to objective: "
+                            + missingDistance
+                    );
                     ObjectiveManager.ReportIncompletePath();
                 }
 
@@ -176,7 +186,9 @@ namespace SPTQuestingBots.BotLogic.Objective
                 if (ObjectiveManager.MustUnlockDoor || isAllowedToUnlockDoors())
                 {
                     // Find a door for the bot to unlock
-                    bool foundDoor = ObjectiveManager.MustUnlockDoor || tryFindLockedDoorToOpen(ConfigController.Config.Questing.UnlockingDoors.SearchRadius);
+                    bool foundDoor =
+                        ObjectiveManager.MustUnlockDoor
+                        || tryFindLockedDoorToOpen(ConfigController.Config.Questing.UnlockingDoors.SearchRadius);
                     Door door = ObjectiveManager.GetCurrentQuestInteractiveObject() as Door;
 
                     // If there is a door for the bot to unlock, have it try doing that
@@ -193,7 +205,14 @@ namespace SPTQuestingBots.BotLogic.Objective
             // Check if the bot got "close enough" to its objective
             if (distanceToObjective < ConfigController.Config.Questing.BotSearchDistances.ObjectiveReachedNavMeshPathError)
             {
-                LoggingController.LogInfo("Bot " + BotOwner.GetText() + " cannot find a complete path to its objective (" + ObjectiveManager + "). Got close enough. Remaining distance to objective: " + distanceToObjective);
+                LoggingController.LogInfo(
+                    "Bot "
+                        + BotOwner.GetText()
+                        + " cannot find a complete path to its objective ("
+                        + ObjectiveManager
+                        + "). Got close enough. Remaining distance to objective: "
+                        + distanceToObjective
+                );
                 ObjectiveManager.CompleteObjective();
 
                 return true;
@@ -202,7 +221,14 @@ namespace SPTQuestingBots.BotLogic.Objective
             //LoggingController.LogInfo("Distance to objective: " + distanceToObjective + ", Distance to end of path: " + distanceToEndOfPath + ", Missing distance: " + missingDistance);
 
             // If all previous checks fail, the bot is unable to reach its objective position
-            LoggingController.LogWarning("Bot " + BotOwner.GetText() + " cannot find a complete path to its objective (" + ObjectiveManager + "). Giving up. Remaining distance to objective: " + distanceToObjective);
+            LoggingController.LogWarning(
+                "Bot "
+                    + BotOwner.GetText()
+                    + " cannot find a complete path to its objective ("
+                    + ObjectiveManager
+                    + "). Giving up. Remaining distance to objective: "
+                    + distanceToObjective
+            );
             ObjectiveManager.FailObjective();
             ObjectiveManager.StuckCount++;
 
@@ -241,13 +267,17 @@ namespace SPTQuestingBots.BotLogic.Objective
 
         private bool tryFindLockedDoorToOpen(float searchDistance)
         {
-            IEnumerable<WorldInteractiveObject> lockedDoors = Singleton<GameWorld>.Instance.GetComponent<Components.LocationData>().FindLockedDoorsNearPosition(ObjectiveManager.Position.Value, searchDistance);
+            IEnumerable<WorldInteractiveObject> lockedDoors = Singleton<GameWorld>
+                .Instance.GetComponent<Components.LocationData>()
+                .FindLockedDoorsNearPosition(ObjectiveManager.Position.Value, searchDistance);
             if (!lockedDoors.Any())
             {
                 return false;
             }
 
-            WorldInteractiveObject nearestAccessibleDoor = Singleton<GameWorld>.Instance.GetComponent<Components.LocationData>().FindFirstAccessibleDoor(lockedDoors, BotOwner.Position);
+            WorldInteractiveObject nearestAccessibleDoor = Singleton<GameWorld>
+                .Instance.GetComponent<Components.LocationData>()
+                .FindFirstAccessibleDoor(lockedDoors, BotOwner.Position);
             if (nearestAccessibleDoor == null)
             {
                 return false;
@@ -259,10 +289,14 @@ namespace SPTQuestingBots.BotLogic.Objective
 
         private void ensureRequiredDoorIsOpen()
         {
-            WorldInteractiveObject worldInteractiveObject = Singleton<GameWorld>.Instance.GetComponent<Components.LocationData>().FindWorldInteractiveObjectsByID(ObjectiveManager.DoorIDToUnlockForObjective);
+            WorldInteractiveObject worldInteractiveObject = Singleton<GameWorld>
+                .Instance.GetComponent<Components.LocationData>()
+                .FindWorldInteractiveObjectsByID(ObjectiveManager.DoorIDToUnlockForObjective);
             if (worldInteractiveObject == null)
             {
-                LoggingController.LogError("Bot " + BotOwner.GetText() + " cannot find door " + ObjectiveManager.DoorIDToUnlockForObjective);
+                LoggingController.LogError(
+                    "Bot " + BotOwner.GetText() + " cannot find door " + ObjectiveManager.DoorIDToUnlockForObjective
+                );
                 return;
             }
 

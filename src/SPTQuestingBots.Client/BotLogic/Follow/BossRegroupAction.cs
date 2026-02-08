@@ -14,7 +14,8 @@ namespace SPTQuestingBots.BotLogic.Follow
     {
         private bool wasStuck = false;
 
-        public BossRegroupAction(BotOwner _BotOwner) : base(_BotOwner, 100)
+        public BossRegroupAction(BotOwner _BotOwner)
+            : base(_BotOwner, 100)
         {
             SetBaseAction(BotActionNodesClass.CreateNode(BotLogicDecision.simplePatrol, BotOwner));
         }
@@ -44,24 +45,36 @@ namespace SPTQuestingBots.BotLogic.Follow
             CanSprint = IsAllowedToSprint();
 
             // Force the bot to regroup for a certain amount of time after starting this action
-            bool mustRegroup = ActionElpasedTime < ConfigController.Config.Questing.BotQuestingRequirements.MaxFollowerDistance.MinRegroupTime;
+            bool mustRegroup =
+                ActionElpasedTime < ConfigController.Config.Questing.BotQuestingRequirements.MaxFollowerDistance.MinRegroupTime;
 
             // determine the location of the nearest follower and the target distance to it
             Vector3 locationOfNearestGroupMember = BotHiveMindMonitor.GetLocationOfNearestGroupMember(BotOwner);
-            float targetDistance = (float)ConfigController.Config.Questing.BotQuestingRequirements.MaxFollowerDistance.TargetRangeQuesting.Min;
-            
+            float targetDistance = (float)
+                ConfigController.Config.Questing.BotQuestingRequirements.MaxFollowerDistance.TargetRangeQuesting.Min;
+
             // Check if the bot should find its nearest follower
             if (mustRegroup || Vector3.Distance(BotOwner.Position, locationOfNearestGroupMember) > targetDistance + 2)
             {
-                float allowedVariation = ConfigController.Config.Questing.BotQuestingRequirements.MaxFollowerDistance.TargetPositionVariationAllowed;
+                float allowedVariation = ConfigController
+                    .Config
+                    .Questing
+                    .BotQuestingRequirements
+                    .MaxFollowerDistance
+                    .TargetPositionVariationAllowed;
                 RecalculatePath(locationOfNearestGroupMember, allowedVariation, targetDistance);
             }
             else
             {
-                ObjectiveManager.PauseRequest = ConfigController.Config.Questing.BotQuestingRequirements.MaxFollowerDistance.RegroupPauseTime;
+                ObjectiveManager.PauseRequest = ConfigController
+                    .Config
+                    .Questing
+                    .BotQuestingRequirements
+                    .MaxFollowerDistance
+                    .RegroupPauseTime;
             }
 
-            // Check if the bot is unable to reach its boss. If so, fall back to the default EFT layer for a bit. 
+            // Check if the bot is unable to reach its boss. If so, fall back to the default EFT layer for a bit.
             if (checkIfBotIsStuck())
             {
                 if (!wasStuck)
@@ -69,7 +82,9 @@ namespace SPTQuestingBots.BotLogic.Follow
                     IReadOnlyCollection<BotOwner> followers = HiveMind.BotHiveMindMonitor.GetFollowers(BotOwner);
                     string followersText = string.Join(", ", followers.Select(f => f.GetText()));
 
-                    LoggingController.LogWarning("Boss " + BotOwner.GetText() + " has been waiting for his followers (" + followersText + ") for a long time...");
+                    LoggingController.LogWarning(
+                        "Boss " + BotOwner.GetText() + " has been waiting for his followers (" + followersText + ") for a long time..."
+                    );
                 }
                 wasStuck = true;
 

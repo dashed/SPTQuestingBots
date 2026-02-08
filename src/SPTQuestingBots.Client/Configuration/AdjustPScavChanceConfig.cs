@@ -1,9 +1,9 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace SPTQuestingBots.Configuration
 {
@@ -15,9 +15,6 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("chance_vs_time_remaining_fraction")]
         public double[][] ChanceVsTimeRemainingFraction { get; set; } = new double[0][];
 
-        public AdjustPScavChanceConfig()
-        {
-
-        }
+        public AdjustPScavChanceConfig() { }
     }
 }

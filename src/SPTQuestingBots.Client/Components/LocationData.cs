@@ -87,7 +87,7 @@ namespace SPTQuestingBots.Components
             {
                 MaxTotalBots = botmax;
             }
-            
+
             //LoggingController.LogInfo("Max total bots on the map (" + CurrentLocation.Id + ") at the same time: " + MaxTotalBots);
         }
 
@@ -113,7 +113,7 @@ namespace SPTQuestingBots.Components
 
             EFT.Interactive.Switch[] allSwitches = FindObjectsOfType<EFT.Interactive.Switch>();
             switches.AddRange(allSwitches.ToDictionary(s => s.Id, s => s));
-            
+
             //LoggingController.LogInfo("Found switches: " + string.Join(", ", allSwitches.Select(s => s.Id)));
 
             foreach (EFT.Interactive.Switch sw in allSwitches)
@@ -124,7 +124,16 @@ namespace SPTQuestingBots.Components
 
         private void reportSwitchChange(WorldInteractiveObject obj, EDoorState prevState, EDoorState nextState)
         {
-            LoggingController.LogInfo("Switch " + obj.Id + " has changed from " + prevState.ToString() + " to " + nextState.ToString() + ". Interacting Player: " + (obj.InteractingPlayer?.Profile?.Nickname ?? "(none)"));
+            LoggingController.LogInfo(
+                "Switch "
+                    + obj.Id
+                    + " has changed from "
+                    + prevState.ToString()
+                    + " to "
+                    + nextState.ToString()
+                    + ". Interacting Player: "
+                    + (obj.InteractingPlayer?.Profile?.Nickname ?? "(none)")
+            );
         }
 
         public EFT.Interactive.Switch FindSwitch(string id)
@@ -148,7 +157,13 @@ namespace SPTQuestingBots.Components
                 // EFT has multiple WorldInteractiveObjects with the same ID on Lighthouse in SPT 3.10. Why, BSG...
                 if (IDsForWorldInteractiveObjects.ContainsKey(worldInteractiveObject.Id))
                 {
-                    LoggingController.LogWarning("Already found WorldInteractiveObject with ID " + worldInteractiveObject.Id + ". Not including the one at " + worldInteractiveObject.transform.position + ".");
+                    LoggingController.LogWarning(
+                        "Already found WorldInteractiveObject with ID "
+                            + worldInteractiveObject.Id
+                            + ". Not including the one at "
+                            + worldInteractiveObject.transform.position
+                            + "."
+                    );
                     continue;
                 }
 
@@ -175,7 +190,7 @@ namespace SPTQuestingBots.Components
 
                 areLockedDoorsUnlocked.Add(worldInteractiveObject, false);
 
-                foreach(NoPowerTip noPowerTip in allNoPowerTips)
+                foreach (NoPowerTip noPowerTip in allNoPowerTips)
                 {
                     if (!doorHasNoPowerTip(worldInteractiveObject, noPowerTip))
                     {
@@ -256,7 +271,11 @@ namespace SPTQuestingBots.Components
                 .Select(d => d.Value);
         }
 
-        public IEnumerable<WorldInteractiveObject> FindAllWorldInteractiveObjectsNearPosition(Vector3 position, float maxDistance, EDoorState doorState)
+        public IEnumerable<WorldInteractiveObject> FindAllWorldInteractiveObjectsNearPosition(
+            Vector3 position,
+            float maxDistance,
+            EDoorState doorState
+        )
         {
             return IDsForWorldInteractiveObjects
                 .Where(d => d.Value.DoorState == doorState)
@@ -332,18 +351,15 @@ namespace SPTQuestingBots.Components
             if (CurrentLocation.Id == "TarkovStreets")
             {
                 // Band-aid fix for BSG not completing the generation of bot-cell data for all parts of the map
-                SpawnPointParams[] validSpawnPointParams = CurrentLocation.SpawnPointParams
-                    .Where(s => s.Position.z < 440)
-                    .ToArray();
+                SpawnPointParams[] validSpawnPointParams = CurrentLocation.SpawnPointParams.Where(s => s.Position.z < 440).ToArray();
 
                 return validSpawnPointParams;
             }
 
             if (CurrentLocation.Id.Contains("factory"))
             {
-                
-                SpawnPointParams[] validSpawnPointParams = CurrentLocation.SpawnPointParams
-                    .Where(s => !isOutsideNearTransitOnFactory(s.Position) && !isInsideBrokenSiloOnFactory(s.Position))
+                SpawnPointParams[] validSpawnPointParams = CurrentLocation
+                    .SpawnPointParams.Where(s => !isOutsideNearTransitOnFactory(s.Position) && !isInsideBrokenSiloOnFactory(s.Position))
                     .ToArray();
 
                 return validSpawnPointParams;
@@ -363,7 +379,8 @@ namespace SPTQuestingBots.Components
         }
 
         // This isn't actually used anywhere in this mod, but I left it in here because it's a pretty nifty algorithm
-        public bool TryGetObjectNearPosition<T>(Vector3 position, float maxDistance, bool onlyVisible, out T obj) where T: Behaviour
+        public bool TryGetObjectNearPosition<T>(Vector3 position, float maxDistance, bool onlyVisible, out T obj)
+            where T : Behaviour
         {
             obj = null;
 
@@ -495,31 +512,85 @@ namespace SPTQuestingBots.Components
 
         public SpawnPointParams? TryGetFurthestSpawnPointFromAllPlayers(ESpawnCategoryMask allowedCategories, EPlayerSideMask allowedSides)
         {
-            return TryGetFurthestSpawnPointFromPlayers(Singleton<GameWorld>.Instance.AllAlivePlayersList, allowedCategories, allowedSides, new SpawnPointParams[0]);
+            return TryGetFurthestSpawnPointFromPlayers(
+                Singleton<GameWorld>.Instance.AllAlivePlayersList,
+                allowedCategories,
+                allowedSides,
+                new SpawnPointParams[0]
+            );
         }
 
-        public SpawnPointParams? TryGetFurthestSpawnPointFromAllPlayers(ESpawnCategoryMask allowedCategories, EPlayerSideMask allowedSides, SpawnPointParams[] excludedSpawnPoints)
+        public SpawnPointParams? TryGetFurthestSpawnPointFromAllPlayers(
+            ESpawnCategoryMask allowedCategories,
+            EPlayerSideMask allowedSides,
+            SpawnPointParams[] excludedSpawnPoints
+        )
         {
-            return TryGetFurthestSpawnPointFromPlayers(Singleton<GameWorld>.Instance.AllAlivePlayersList, allowedCategories, allowedSides, new SpawnPointParams[0]);
+            return TryGetFurthestSpawnPointFromPlayers(
+                Singleton<GameWorld>.Instance.AllAlivePlayersList,
+                allowedCategories,
+                allowedSides,
+                new SpawnPointParams[0]
+            );
         }
 
-        public SpawnPointParams? TryGetFurthestSpawnPointFromPlayers(IEnumerable<Player> players, ESpawnCategoryMask allowedCategories, EPlayerSideMask allowedSides, float distanceFromAllPlayers = 5)
+        public SpawnPointParams? TryGetFurthestSpawnPointFromPlayers(
+            IEnumerable<Player> players,
+            ESpawnCategoryMask allowedCategories,
+            EPlayerSideMask allowedSides,
+            float distanceFromAllPlayers = 5
+        )
         {
-            return TryGetFurthestSpawnPointFromPlayers(players, allowedCategories, allowedSides, new SpawnPointParams[0], distanceFromAllPlayers);
+            return TryGetFurthestSpawnPointFromPlayers(
+                players,
+                allowedCategories,
+                allowedSides,
+                new SpawnPointParams[0],
+                distanceFromAllPlayers
+            );
         }
 
-        public SpawnPointParams? TryGetFurthestSpawnPointFromPlayers(Vector3[] positions, ESpawnCategoryMask allowedCategories, EPlayerSideMask allowedSides, float distanceFromAllPlayers = 5)
+        public SpawnPointParams? TryGetFurthestSpawnPointFromPlayers(
+            Vector3[] positions,
+            ESpawnCategoryMask allowedCategories,
+            EPlayerSideMask allowedSides,
+            float distanceFromAllPlayers = 5
+        )
         {
-            return TryGetFurthestSpawnPointFromPositions(positions, allowedCategories, allowedSides, new SpawnPointParams[0], distanceFromAllPlayers);
+            return TryGetFurthestSpawnPointFromPositions(
+                positions,
+                allowedCategories,
+                allowedSides,
+                new SpawnPointParams[0],
+                distanceFromAllPlayers
+            );
         }
 
-        public SpawnPointParams? TryGetFurthestSpawnPointFromPlayers(IEnumerable<Player> players, ESpawnCategoryMask allowedCategories, EPlayerSideMask allowedSides, SpawnPointParams[] excludedSpawnPoints, float distanceFromAllPlayers = 5)
+        public SpawnPointParams? TryGetFurthestSpawnPointFromPlayers(
+            IEnumerable<Player> players,
+            ESpawnCategoryMask allowedCategories,
+            EPlayerSideMask allowedSides,
+            SpawnPointParams[] excludedSpawnPoints,
+            float distanceFromAllPlayers = 5
+        )
         {
             Vector3[] playerPositions = players.Select(p => p.Position).ToArray();
-            return TryGetFurthestSpawnPointFromPositions(playerPositions, allowedCategories, allowedSides, excludedSpawnPoints, distanceFromAllPlayers);
+            return TryGetFurthestSpawnPointFromPositions(
+                playerPositions,
+                allowedCategories,
+                allowedSides,
+                excludedSpawnPoints,
+                distanceFromAllPlayers
+            );
         }
 
-        public SpawnPointParams? TryGetFurthestSpawnPointFromPositions(Vector3[] positions, ESpawnCategoryMask allowedCategories, EPlayerSideMask allowedSides, SpawnPointParams[] excludedSpawnPoints, float distanceFromAllPlayers = 5)
+        public SpawnPointParams? TryGetFurthestSpawnPointFromPositions(
+            Vector3[] positions,
+            ESpawnCategoryMask allowedCategories,
+            EPlayerSideMask allowedSides,
+            SpawnPointParams[] excludedSpawnPoints,
+            float distanceFromAllPlayers = 5
+        )
         {
             Vector3[] allPlayerPositions = Singleton<GameWorld>.Instance.AllAlivePlayersList.Select(p => p.Position).ToArray();
             SpawnPointParams[] allSpawnPoints = GetAllValidSpawnPointParams();
@@ -529,7 +600,7 @@ namespace SPTQuestingBots.Components
                 .Where(s => !excludedSpawnPoints.Contains(s))
                 .Where(s => s.Categories.Any(allowedCategories))
                 .Where(s => s.Sides.Any(allowedSides));
-            
+
             // Remove spawn points that are too close to other bots or you
             SpawnPointParams[] eligibleSpawnPoints = validSpawnPoints
                 .Where(s => allPlayerPositions.All(p => Vector3.Distance(s.Position, p) > distanceFromAllPlayers))
@@ -539,11 +610,11 @@ namespace SPTQuestingBots.Components
             {
                 if (validSpawnPoints.Any())
                 {
-                    float maxDistance = validSpawnPoints
-                        .Select(s => allPlayerPositions.Min(p => Vector3.Distance(s.Position, p)))
-                        .Max();
+                    float maxDistance = validSpawnPoints.Select(s => allPlayerPositions.Min(p => Vector3.Distance(s.Position, p))).Max();
 
-                    LoggingController.LogWarning("Maximum distance from other players using " + validSpawnPoints.Count() + " spawn points: " + maxDistance);
+                    LoggingController.LogWarning(
+                        "Maximum distance from other players using " + validSpawnPoints.Count() + " spawn points: " + maxDistance
+                    );
                 }
                 else
                 {
@@ -600,7 +671,13 @@ namespace SPTQuestingBots.Components
             // The furthest spawn point from all reference positions is the one that has the furthest minimum distance to all of them
             KeyValuePair<SpawnPointParams, float> selectedPoint = nearestReferencePoints.OrderBy(p => p.Value).Last();
 
-            LoggingController.LogDebug("Found furthest spawn point " + selectedPoint.Key.Position.ToUnityVector3().ToString() + " that is " + selectedPoint.Value + "m from other players");
+            LoggingController.LogDebug(
+                "Found furthest spawn point "
+                    + selectedPoint.Key.Position.ToUnityVector3().ToString()
+                    + " that is "
+                    + selectedPoint.Value
+                    + "m from other players"
+            );
 
             return selectedPoint.Key;
         }
@@ -628,7 +705,10 @@ namespace SPTQuestingBots.Components
             {
                 SpawnPointParams nextPosition = GetNearestSpawnPoint(position, spawnPoints.ToArray().AddRangeToArray(excludedSpawnPoints));
 
-                Vector3? navMeshPosition = FindNearestNavMeshPosition(nextPosition.Position, ConfigController.Config.Questing.QuestGeneration.NavMeshSearchDistanceSpawn);
+                Vector3? navMeshPosition = FindNearestNavMeshPosition(
+                    nextPosition.Position,
+                    ConfigController.Config.Questing.QuestGeneration.NavMeshSearchDistanceSpawn
+                );
                 if (!navMeshPosition.HasValue)
                 {
                     excludedSpawnPoints = excludedSpawnPoints.AddItem(nextPosition).ToArray();
@@ -651,7 +731,11 @@ namespace SPTQuestingBots.Components
             return allSpawnPoints.Where(s => Vector3.Distance(position, s.Position) < distance);
         }
 
-        public SpawnPointParams GetNearestSpawnPoint(Vector3 postition, SpawnPointParams[] excludedSpawnPoints, SpawnPointParams[] allSpawnPoints)
+        public SpawnPointParams GetNearestSpawnPoint(
+            Vector3 postition,
+            SpawnPointParams[] excludedSpawnPoints,
+            SpawnPointParams[] allSpawnPoints
+        )
         {
             if (allSpawnPoints.Length == 0)
             {
@@ -682,7 +766,9 @@ namespace SPTQuestingBots.Components
             // Ensure at least one possible spawn point hasn't also been excluded
             if (excludedSpawnPoints.Contains(nearestSpawnPoint))
             {
-                throw new InvalidOperationException("All possible spawn points (" + allSpawnPoints.Length + ") are in the blacklist (" + excludedSpawnPoints.Length + ")");
+                throw new InvalidOperationException(
+                    "All possible spawn points (" + allSpawnPoints.Length + ") are in the blacklist (" + excludedSpawnPoints.Length + ")"
+                );
             }
 
             return nearestSpawnPoint;
@@ -716,21 +802,28 @@ namespace SPTQuestingBots.Components
                 door.transform.position + new Vector3(searchDistance, 0, 0) + new Vector3(0, searchOffset, 0),
                 door.transform.position - new Vector3(searchDistance, 0, 0) + new Vector3(0, searchOffset, 0),
                 door.transform.position + new Vector3(0, 0, searchDistance) + new Vector3(0, searchOffset, 0),
-                door.transform.position - new Vector3(0, 0, searchDistance) + new Vector3(0, searchOffset, 0)
+                door.transform.position - new Vector3(0, 0, searchDistance) + new Vector3(0, searchOffset, 0),
             };
 
             // Test each position
             foreach (Vector3 possibleInteractionPosition in possibleInteractionPositions)
             {
                 // Determine if a valid NavMesh location can be found for the position
-                Vector3? navMeshPosition = FindNearestNavMeshPosition(possibleInteractionPosition, ConfigController.Config.Questing.QuestGeneration.NavMeshSearchDistanceDoors);
+                Vector3? navMeshPosition = FindNearestNavMeshPosition(
+                    possibleInteractionPosition,
+                    ConfigController.Config.Questing.QuestGeneration.NavMeshSearchDistanceDoors
+                );
                 if (!navMeshPosition.HasValue)
                 {
                     LoggingController.LogInfo("Cannot access position " + possibleInteractionPosition.ToString() + " for door " + door.Id);
 
                     if (ConfigController.Config.Debug.Enabled && ConfigController.Config.Debug.ShowDoorInteractionTestPoints)
                     {
-                        DebugHelpers.outlinePosition(possibleInteractionPosition, Color.white, ConfigController.Config.Questing.QuestGeneration.NavMeshSearchDistanceDoors);
+                        DebugHelpers.outlinePosition(
+                            possibleInteractionPosition,
+                            Color.white,
+                            ConfigController.Config.Questing.QuestGeneration.NavMeshSearchDistanceDoors
+                        );
                     }
 
                     continue;
@@ -783,7 +876,10 @@ namespace SPTQuestingBots.Components
             return null;
         }
 
-        public WorldInteractiveObject FindFirstAccessibleDoor(IEnumerable<WorldInteractiveObject> worldInteractiveObjects, Vector3 startingPosition)
+        public WorldInteractiveObject FindFirstAccessibleDoor(
+            IEnumerable<WorldInteractiveObject> worldInteractiveObjects,
+            Vector3 startingPosition
+        )
         {
             foreach (WorldInteractiveObject worldInteractiveObject in worldInteractiveObjects)
             {
@@ -808,7 +904,10 @@ namespace SPTQuestingBots.Components
                 }
 
                 // Prevent doors that require power from being unlocked before the power is turned on
-                if (noPowerTipsForDoors.ContainsKey(worldInteractiveObject) && noPowerTipsForDoors[worldInteractiveObject].isActiveAndEnabled)
+                if (
+                    noPowerTipsForDoors.ContainsKey(worldInteractiveObject)
+                    && noPowerTipsForDoors[worldInteractiveObject].isActiveAndEnabled
+                )
                 {
                     LoggingController.LogInfo("NoPowerTip for door " + worldInteractiveObject.Id + " is still active.");
                     continue;
@@ -889,7 +988,9 @@ namespace SPTQuestingBots.Components
 
             if (QuestingBotsPluginConfig.QuestLocationName.Value.Length == 0)
             {
-                LoggingController.LogErrorToServerConsole("The name of custom quest locations cannot be an empty string. Please create a name in the F12 advanced menu.");
+                LoggingController.LogErrorToServerConsole(
+                    "The name of custom quest locations cannot be an empty string. Please create a name in the F12 advanced menu."
+                );
                 return;
             }
 
@@ -904,9 +1005,13 @@ namespace SPTQuestingBots.Components
                 return;
             }
 
-            Models.Questing.StoredQuestLocation location = new Models.Questing.StoredQuestLocation(QuestingBotsPluginConfig.QuestLocationName.Value, mainPlayer.Position);
+            Models.Questing.StoredQuestLocation location = new Models.Questing.StoredQuestLocation(
+                QuestingBotsPluginConfig.QuestLocationName.Value,
+                mainPlayer.Position
+            );
 
-            string filename = ConfigController.GetLoggingPath()
+            string filename =
+                ConfigController.GetLoggingPath()
                 + CurrentLocation.Id.Replace(" ", "")
                 + "_"
                 + awakeTime.ToFileTimeUtc()

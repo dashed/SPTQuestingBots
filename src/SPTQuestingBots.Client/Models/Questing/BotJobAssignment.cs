@@ -43,7 +43,8 @@ namespace SPTQuestingBots.Models.Questing
             updateBotInfo();
         }
 
-        public BotJobAssignment(BotOwner bot, Quest quest, QuestObjective objective) : this(bot)
+        public BotJobAssignment(BotOwner bot, Quest quest, QuestObjective objective)
+            : this(bot)
         {
             QuestAssignment = quest;
             QuestObjectiveAssignment = objective;

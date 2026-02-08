@@ -16,12 +16,10 @@ namespace SPTQuestingBots.Models.Questing
         public Vector3? Position => QuestObjectiveStepAssignment?.GetPosition();
         public bool IsSpawnSearchQuest => QuestObjectiveAssignment is QuestSpawnPointObjective;
 
-        public JobAssignment()
-        {
+        public JobAssignment() { }
 
-        }
-
-        public JobAssignment(Quest _quest, QuestObjective _objective, QuestObjectiveStep _step) : this()
+        public JobAssignment(Quest _quest, QuestObjective _objective, QuestObjectiveStep _step)
+            : this()
         {
             QuestAssignment = _quest;
             QuestObjectiveAssignment = _objective;
@@ -31,7 +29,12 @@ namespace SPTQuestingBots.Models.Questing
         public override string ToString()
         {
             string stepNumberText = QuestObjectiveStepAssignment?.StepNumber?.ToString() ?? "???";
-            return "Step #" + stepNumberText + " for objective " + (QuestObjectiveAssignment?.ToString() ?? "???") + " in quest " + QuestAssignment.Name;
+            return "Step #"
+                + stepNumberText
+                + " for objective "
+                + (QuestObjectiveAssignment?.ToString() ?? "???")
+                + " in quest "
+                + QuestAssignment.Name;
         }
 
         public object Clone()

@@ -9,7 +9,8 @@ namespace SPTQuestingBots.Controllers
 {
     public static class BotObjectiveManagerFactory
     {
-        private static Dictionary<BotOwner, Components.BotObjectiveManager> botObjectiveManagers = new Dictionary<BotOwner, Components.BotObjectiveManager>();
+        private static Dictionary<BotOwner, Components.BotObjectiveManager> botObjectiveManagers =
+            new Dictionary<BotOwner, Components.BotObjectiveManager>();
 
         public static void Clear()
         {

@@ -1,14 +1,14 @@
-﻿using DrakiaXYZ.BigBrain.Brains;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using DrakiaXYZ.BigBrain.Brains;
 using EFT;
 using SPTQuestingBots.BotLogic.ExternalMods.Functions.Extract;
 using SPTQuestingBots.BotLogic.ExternalMods.Functions.Hearing;
 using SPTQuestingBots.Configuration;
 using SPTQuestingBots.Controllers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SPTQuestingBots.BotLogic.ExternalMods.ModInfo
 {
@@ -92,10 +92,10 @@ namespace SPTQuestingBots.BotLogic.ExternalMods.ModInfo
                 return -1;
             }
 
-            IEnumerable<int> sainBrainLayerPrioritiesForBotRole = BrainManager.CustomLayersReadOnly
-                    .Where(l => l.Value.customLayerType.FullName.StartsWith("SAIN."))
-                    .Where(l => l.Value.CustomLayerBrains.Contains(brainName))
-                    .Select(i => i.Value.customLayerPriority);
+            IEnumerable<int> sainBrainLayerPrioritiesForBotRole = BrainManager
+                .CustomLayersReadOnly.Where(l => l.Value.customLayerType.FullName.StartsWith("SAIN."))
+                .Where(l => l.Value.CustomLayerBrains.Contains(brainName))
+                .Select(i => i.Value.customLayerPriority);
 
             if (sainBrainLayerPrioritiesForBotRole.Any())
             {

@@ -15,7 +15,8 @@ namespace SPTQuestingBots.Helpers
 {
     public static class DebugHelpers
     {
-        public static IEnumerable<Vector3> ApplyOffset(this IEnumerable<Vector3> points, Vector3 offset) => points.Select(point => point + offset);
+        public static IEnumerable<Vector3> ApplyOffset(this IEnumerable<Vector3> points, Vector3 offset) =>
+            points.Select(point => point + offset);
 
         public static Vector3 IncreaseVector3ToMinSize(Vector3 vector, float minSize)
         {
@@ -60,26 +61,21 @@ namespace SPTQuestingBots.Helpers
             return new Vector3[]
             {
                 bounds.min,
-
                 new Vector3(bounds.min.x, bounds.min.y, bounds.max.z),
                 new Vector3(bounds.min.x, bounds.max.y, bounds.max.z),
                 new Vector3(bounds.min.x, bounds.min.y, bounds.max.z),
-
                 new Vector3(bounds.max.x, bounds.min.y, bounds.max.z),
                 new Vector3(bounds.max.x, bounds.max.y, bounds.max.z),
                 new Vector3(bounds.max.x, bounds.min.y, bounds.max.z),
-
                 new Vector3(bounds.max.x, bounds.min.y, bounds.min.z),
                 new Vector3(bounds.max.x, bounds.max.y, bounds.min.z),
                 new Vector3(bounds.max.x, bounds.min.y, bounds.min.z),
-
                 bounds.min,
-
                 new Vector3(bounds.min.x, bounds.max.y, bounds.min.z),
                 new Vector3(bounds.min.x, bounds.max.y, bounds.max.z),
                 bounds.max,
                 new Vector3(bounds.max.x, bounds.max.y, bounds.min.z),
-                new Vector3(bounds.min.x, bounds.max.y, bounds.min.z)
+                new Vector3(bounds.min.x, bounds.max.y, bounds.min.z),
             };
         }
 
@@ -93,7 +89,11 @@ namespace SPTQuestingBots.Helpers
             string pathName = "Postion_" + "_" + DateTime.Now.ToFileTime();
 
             Vector3[] positionOutlinePoints = GetSpherePoints(position, radius, 10);
-            Models.Pathing.PathVisualizationData positionOutline = new Models.Pathing.PathVisualizationData(pathName, positionOutlinePoints, color);
+            Models.Pathing.PathVisualizationData positionOutline = new Models.Pathing.PathVisualizationData(
+                pathName,
+                positionOutlinePoints,
+                color
+            );
             Singleton<GameWorld>.Instance.GetComponent<PathRenderer>().AddOrUpdatePath(positionOutline);
         }
 
@@ -134,9 +134,12 @@ namespace SPTQuestingBots.Helpers
         {
             switch (status)
             {
-                case NavMeshPathStatus.PathComplete: return Color.green;
-                case NavMeshPathStatus.PathPartial: return Color.yellow;
-                default: return Color.red;
+                case NavMeshPathStatus.PathComplete:
+                    return Color.green;
+                case NavMeshPathStatus.PathPartial:
+                    return Color.yellow;
+                default:
+                    return Color.red;
             }
         }
 
@@ -144,10 +147,14 @@ namespace SPTQuestingBots.Helpers
         {
             switch (botState)
             {
-                case EBotState.Active: return Color.green;
-                case EBotState.PreActive: return Color.yellow;
-                case EBotState.ActiveFail: return Color.red;
-                default: return Color.yellow;
+                case EBotState.Active:
+                    return Color.green;
+                case EBotState.PreActive:
+                    return Color.yellow;
+                case EBotState.ActiveFail:
+                    return Color.red;
+                default:
+                    return Color.yellow;
             }
         }
 

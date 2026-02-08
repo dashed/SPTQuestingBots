@@ -19,7 +19,8 @@ namespace SPTQuestingBots.BotLogic.ExternalMods
         public static SAINModInfo SAINModInfo { get; private set; } = new SAINModInfo();
         public static LootingBotsModInfo LootingBotsModInfo { get; private set; } = new LootingBotsModInfo();
         public static DonutsModInfo DonutsModInfo { get; private set; } = new DonutsModInfo();
-        public static PerformanceImprovementsModInfo PerformanceImprovementsModInfo { get; private set; } = new PerformanceImprovementsModInfo();
+        public static PerformanceImprovementsModInfo PerformanceImprovementsModInfo { get; private set; } =
+            new PerformanceImprovementsModInfo();
         public static PleaseJustFightModInfo PleaseJustFightModInfo { get; private set; } = new PleaseJustFightModInfo();
 
         private static List<AbstractExternalModInfo> externalMods = new List<AbstractExternalModInfo>
@@ -28,14 +29,19 @@ namespace SPTQuestingBots.BotLogic.ExternalMods
             LootingBotsModInfo,
             DonutsModInfo,
             PerformanceImprovementsModInfo,
-            PleaseJustFightModInfo
+            PleaseJustFightModInfo,
         };
 
-        public static AbstractExtractFunction CreateExtractFunction(this BotOwner _botOwner) => SAINModInfo.CreateExtractFunction(_botOwner);
-        public static AbstractHearingFunction CreateHearingFunction(this BotOwner _botOwner) => SAINModInfo.CreateHearingFunction(_botOwner);
+        public static AbstractExtractFunction CreateExtractFunction(this BotOwner _botOwner) =>
+            SAINModInfo.CreateExtractFunction(_botOwner);
+
+        public static AbstractHearingFunction CreateHearingFunction(this BotOwner _botOwner) =>
+            SAINModInfo.CreateHearingFunction(_botOwner);
+
         public static AbstractLootFunction CreateLootFunction(this BotOwner _botOwner) => LootingBotsModInfo.CreateLootFunction(_botOwner);
 
         public static int GetMinimumCombatLayerPriority(string _brainName) => SAINModInfo.GetMinimumLayerPriority(_brainName);
+
         public static MinMaxConfig GetSearchTimeAfterCombat(string _brainName) => SAINModInfo.GetSearchTimeAfterCombat(_brainName);
 
         public static void CheckForExternalMods()

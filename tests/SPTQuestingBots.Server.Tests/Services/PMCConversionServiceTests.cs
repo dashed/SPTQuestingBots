@@ -21,14 +21,13 @@ public class PMCConversionServiceTests
     public void SetUp()
     {
         var logger = Substitute.For<ISptLogger<CommonUtils>>();
-        _configLoader = CreateConfigLoader(new QuestingBotsConfig
-        {
-            Enabled = true,
-            BotSpawns = new BotSpawnsConfig
+        _configLoader = CreateConfigLoader(
+            new QuestingBotsConfig
             {
-                BlacklistedPmcBotBrains = ["bossKilla", "bossTagilla", "followerGluharSnipe"],
-            },
-        });
+                Enabled = true,
+                BotSpawns = new BotSpawnsConfig { BlacklistedPmcBotBrains = ["bossKilla", "bossTagilla", "followerGluharSnipe"] },
+            }
+        );
         _commonUtils = new CommonUtils(logger, null!, null!, _configLoader);
     }
 
@@ -50,27 +49,15 @@ public class PMCConversionServiceTests
             },
             ["bear"] = new()
             {
-                ["bigmap"] = new()
-                {
-                    ["bossTagilla"] = 3,
-                    ["assault"] = 8,
-                },
+                ["bigmap"] = new() { ["bossTagilla"] = 3, ["assault"] = 8 },
             },
         };
 
         // PlayerScavBrainType: Dict<map, Dict<brain, weight>>
         var playerScavBrains = new Dictionary<string, Dictionary<string, int>>
         {
-            ["factory4_day"] = new()
-            {
-                ["bossKilla"] = 1,
-                ["assault"] = 10,
-            },
-            ["bigmap"] = new()
-            {
-                ["assault"] = 10,
-                ["bossTagilla"] = 2,
-            },
+            ["factory4_day"] = new() { ["bossKilla"] = 1, ["assault"] = 10 },
+            ["bigmap"] = new() { ["assault"] = 10, ["bossTagilla"] = 2 },
         };
 
         var service = CreateServiceWithConfigs(pmcType, playerScavBrains);
@@ -108,21 +95,11 @@ public class PMCConversionServiceTests
         {
             ["usec"] = new()
             {
-                ["factory4_day"] = new()
-                {
-                    ["assault"] = 5,
-                    ["pmcBot"] = 10,
-                },
+                ["factory4_day"] = new() { ["assault"] = 5, ["pmcBot"] = 10 },
             },
         };
 
-        var playerScavBrains = new Dictionary<string, Dictionary<string, int>>
-        {
-            ["factory4_day"] = new()
-            {
-                ["assault"] = 10,
-            },
-        };
+        var playerScavBrains = new Dictionary<string, Dictionary<string, int>> { ["factory4_day"] = new() { ["assault"] = 10 } };
 
         var service = CreateServiceWithConfigs(pmcType, playerScavBrains);
         service.RemoveBlacklistedBrainTypes();
@@ -138,33 +115,24 @@ public class PMCConversionServiceTests
     public void RemoveBlacklistedBrainTypes_EmptyBlacklist_NoChanges()
     {
         // Override config with empty blacklist
-        _configLoader = CreateConfigLoader(new QuestingBotsConfig
-        {
-            Enabled = true,
-            BotSpawns = new BotSpawnsConfig
+        _configLoader = CreateConfigLoader(
+            new QuestingBotsConfig
             {
-                BlacklistedPmcBotBrains = [],
-            },
-        });
-        _commonUtils = new CommonUtils(
-            Substitute.For<ISptLogger<CommonUtils>>(), null!, null!, _configLoader);
+                Enabled = true,
+                BotSpawns = new BotSpawnsConfig { BlacklistedPmcBotBrains = [] },
+            }
+        );
+        _commonUtils = new CommonUtils(Substitute.For<ISptLogger<CommonUtils>>(), null!, null!, _configLoader);
 
         var pmcType = new Dictionary<string, Dictionary<string, Dictionary<string, double>>>
         {
             ["usec"] = new()
             {
-                ["factory4_day"] = new()
-                {
-                    ["bossKilla"] = 1,
-                    ["assault"] = 5,
-                },
+                ["factory4_day"] = new() { ["bossKilla"] = 1, ["assault"] = 5 },
             },
         };
 
-        var playerScavBrains = new Dictionary<string, Dictionary<string, int>>
-        {
-            ["factory4_day"] = new() { ["bossKilla"] = 1 },
-        };
+        var playerScavBrains = new Dictionary<string, Dictionary<string, int>> { ["factory4_day"] = new() { ["bossKilla"] = 1 } };
 
         var service = CreateServiceWithConfigs(pmcType, playerScavBrains);
         service.RemoveBlacklistedBrainTypes();
@@ -190,12 +158,10 @@ public class PMCConversionServiceTests
 
     private PMCConversionService CreateServiceWithConfigs(
         Dictionary<string, Dictionary<string, Dictionary<string, double>>> pmcType,
-        Dictionary<string, Dictionary<string, int>> playerScavBrains)
+        Dictionary<string, Dictionary<string, int>> playerScavBrains
+    )
     {
-        var service = new PMCConversionService(
-            _commonUtils,
-            _configLoader,
-            null!); // ConfigServer not used when we inject configs via reflection
+        var service = new PMCConversionService(_commonUtils, _configLoader, null!); // ConfigServer not used when we inject configs via reflection
 
         // Create uninitialized SPT config records and set only the properties we need.
         // This bypasses 'required' property validation while letting us test our logic.
@@ -213,16 +179,14 @@ public class PMCConversionServiceTests
 
     private static QuestingBotsConfigLoader CreateConfigLoader(QuestingBotsConfig config)
     {
-        var loader = new QuestingBotsConfigLoader(
-            Substitute.For<ISptLogger<QuestingBotsConfigLoader>>());
+        var loader = new QuestingBotsConfigLoader(Substitute.For<ISptLogger<QuestingBotsConfigLoader>>());
         SetPrivateField(loader, "_config", config);
         return loader;
     }
 
     private static void SetPrivateField(object target, string fieldName, object? value)
     {
-        var field = target.GetType().GetField(fieldName,
-            BindingFlags.NonPublic | BindingFlags.Instance);
+        var field = target.GetType().GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Instance);
         field!.SetValue(target, value);
     }
 }

@@ -66,9 +66,6 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("bot_quests")]
         public BotQuestsConfig BotQuests { get; set; } = new BotQuestsConfig();
 
-        public QuestingConfig()
-        {
-
-        }
+        public QuestingConfig() { }
     }
 }

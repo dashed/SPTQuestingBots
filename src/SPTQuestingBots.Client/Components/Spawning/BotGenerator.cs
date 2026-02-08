@@ -46,7 +46,9 @@ namespace SPTQuestingBots.Components.Spawning
         public int SpawnedGroupCount => BotGroups.Count(g => g.HaveAllBotsSpawned);
         public int RemainingGroupsToSpawnCount => BotGroups.Count(g => !g.HaveAllBotsSpawned);
         public bool HasRemainingSpawns => !HasGeneratedBots || BotGroups.Any(g => !g.HaveAllBotsSpawned);
+
         public IReadOnlyCollection<Models.BotSpawnInfo> GetBotGroups() => BotGroups.ToArray();
+
         public int MaxBotsToGenerate => Math.Min(MaxAliveBots, MaxGeneratedBots - GeneratedBotCount);
         public int GeneratorProgress => 100 * GeneratedBotCount / MaxGeneratedBots;
 
@@ -65,6 +67,7 @@ namespace SPTQuestingBots.Components.Spawning
         /// Called whenever Unity's Awake() method runs
         /// </summary>
         protected abstract void Init();
+
         private void Awake()
         {
             awake_Internal();
@@ -81,6 +84,7 @@ namespace SPTQuestingBots.Components.Spawning
         /// Called whenever Unity's Update() method runs
         /// </summary>
         protected abstract void Refresh();
+
         private void Update()
         {
             Refresh();
@@ -115,7 +119,8 @@ namespace SPTQuestingBots.Components.Spawning
             StartCoroutine(spawnBotGroups(BotGroups.ToArray()));
         }
 
-        public static void RegisterBotGenerator<T>(bool isPScavGenerator = false) where T : BotGenerator
+        public static void RegisterBotGenerator<T>(bool isPScavGenerator = false)
+            where T : BotGenerator
         {
             registeredBotGenerators.Add(() => Singleton<GameWorld>.Instance.gameObject.GetOrAddComponent<T>(), isPScavGenerator);
         }
@@ -150,7 +155,11 @@ namespace SPTQuestingBots.Components.Spawning
             return false;
         }
 
-        public static bool AreAnyPositionsCloseToAnyGeneratedBots(IEnumerable<Vector3> positions, float distanceFromPlayers, out float distance)
+        public static bool AreAnyPositionsCloseToAnyGeneratedBots(
+            IEnumerable<Vector3> positions,
+            float distanceFromPlayers,
+            out float distance
+        )
         {
             foreach (BotGenerator botGenerator in Singleton<GameWorld>.Instance.gameObject.GetComponents(typeof(BotGenerator)))
             {
@@ -413,7 +422,9 @@ namespace SPTQuestingBots.Components.Spawning
         {
             while (TryLoadBotsProfilesOnStartPatch.RemainingBotGenerationTasks > 0)
             {
-                LoggingController.LogInfo("Waiting for " + TryLoadBotsProfilesOnStartPatch.RemainingBotGenerationTasks + " EFT bot preset generator(s)...");
+                LoggingController.LogInfo(
+                    "Waiting for " + TryLoadBotsProfilesOnStartPatch.RemainingBotGenerationTasks + " EFT bot preset generator(s)..."
+                );
                 await Task.Delay(100);
             }
         }
@@ -450,7 +461,15 @@ namespace SPTQuestingBots.Components.Spawning
                 {
                     if (GeneratedBotCount < MaxGeneratedBots)
                     {
-                        LoggingController.LogErrorToServerConsole("Only " + GeneratedBotCount + " of " + MaxGeneratedBots + " " + BotTypeName + "s were generated due to an error.");
+                        LoggingController.LogErrorToServerConsole(
+                            "Only "
+                                + GeneratedBotCount
+                                + " of "
+                                + MaxGeneratedBots
+                                + " "
+                                + BotTypeName
+                                + "s were generated due to an error."
+                        );
                     }
 
                     HasGeneratedBots = true;
@@ -463,7 +482,9 @@ namespace SPTQuestingBots.Components.Spawning
             BotSpawner botSpawnerClass = Singleton<IBotGame>.Instance.BotsController.BotSpawner;
             IBotCreator ibotCreator = botSpawnerClass.BotCreator;
 
-            LoggingController.LogInfo("Generating " + botdifficulty.ToString() + " " + BotTypeName + " group (Number of bots: " + bots + ")...");
+            LoggingController.LogInfo(
+                "Generating " + botdifficulty.ToString() + " " + BotTypeName + " group (Number of bots: " + bots + ")..."
+            );
 
             Models.BotSpawnInfo botSpawnInfo = null;
             while (botSpawnInfo == null)
@@ -477,22 +498,53 @@ namespace SPTQuestingBots.Components.Spawning
                     EPlayerSide spawnSide = EPlayerSide.Savage;
 
                     BotProfileDataClass botProfileData = new BotProfileDataClass(spawnSide, spawnType, botdifficulty, 0f, null, false);
-                    BotCreationDataClass botSpawnData = await BotCreationDataClass.Create(botProfileData, ibotCreator, bots, botSpawnerClass);
+                    BotCreationDataClass botSpawnData = await BotCreationDataClass.Create(
+                        botProfileData,
+                        ibotCreator,
+                        bots,
+                        botSpawnerClass
+                    );
 
                     if (botSpawnData.Profiles.Count != bots)
                     {
-                        LoggingController.LogWarning("Requested " + bots + " " + BotTypeName + "s but only " + botSpawnData.Profiles.Count + " were generated. Trying again...");
+                        LoggingController.LogWarning(
+                            "Requested "
+                                + bots
+                                + " "
+                                + BotTypeName
+                                + "s but only "
+                                + botSpawnData.Profiles.Count
+                                + " were generated. Trying again..."
+                        );
                         continue;
                     }
 
                     botSpawnInfo = new Models.BotSpawnInfo(botSpawnData, this);
 
                     string profileListText = string.Join(", ", botSpawnData.Profiles.Select(p => p.Nickname));
-                    LoggingController.LogInfo("Generating " + botdifficulty.ToString() + " " + BotTypeName + " group (Number of bots: " + bots + ")...done. (" + profileListText + ")");
+                    LoggingController.LogInfo(
+                        "Generating "
+                            + botdifficulty.ToString()
+                            + " "
+                            + BotTypeName
+                            + " group (Number of bots: "
+                            + bots
+                            + ")...done. ("
+                            + profileListText
+                            + ")"
+                    );
                 }
                 catch (NullReferenceException nre)
                 {
-                    LoggingController.LogWarning("Generating " + botdifficulty.ToString() + " " + BotTypeName + " group (Number of bots: " + bots + ")...failed. Trying again...");
+                    LoggingController.LogWarning(
+                        "Generating "
+                            + botdifficulty.ToString()
+                            + " "
+                            + BotTypeName
+                            + " group (Number of bots: "
+                            + bots
+                            + ")...failed. Trying again..."
+                    );
 
                     LoggingController.LogError(nre.Message);
                     LoggingController.LogError(nre.StackTrace);
@@ -566,7 +618,9 @@ namespace SPTQuestingBots.Components.Spawning
                 {
                     if (Time.time > timeWhenWarningWillBeShown)
                     {
-                        LoggingController.LogWarning("Still waiting for " + botGroupsToSpawn.Count + " " + BotTypeName + " group(s) to spawn...");
+                        LoggingController.LogWarning(
+                            "Still waiting for " + botGroupsToSpawn.Count + " " + BotTypeName + " group(s) to spawn..."
+                        );
                         timeWhenWarningWillBeShown = Time.time + 3f;
                     }
 
@@ -612,7 +666,7 @@ namespace SPTQuestingBots.Components.Spawning
                 SpawnBots(botGroup, spawnPositions);
                 botGroup.StartSpawn();
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 LoggingController.LogError(spawningLogMessage + "failed!");
                 LoggingController.LogError(e.Message);
@@ -633,7 +687,10 @@ namespace SPTQuestingBots.Components.Spawning
                 botSpawnInfo.Data.AddPosition(position, GetClosestCorePoint(position).Id);
             }
 
-            Action<BotOwner> setBossAction = (bot) => { StartCoroutine(botSpawnInfo.WaitForFollowersAndSetBoss(bot)); };
+            Action<BotOwner> setBossAction = (bot) =>
+            {
+                StartCoroutine(botSpawnInfo.WaitForFollowersAndSetBoss(bot));
+            };
 
             ActivateBotMethodsWrapper groupActionsWrapper = new ActivateBotMethodsWrapper(botSpawnInfo, setBossAction);
 

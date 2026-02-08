@@ -1,4 +1,10 @@
-﻿using Comfort.Common;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Comfort.Common;
 using EFT;
 using EFT.Interactive;
 using SPTQuestingBots.BotLogic.BotMonitor.Monitors;
@@ -6,12 +12,6 @@ using SPTQuestingBots.BotLogic.HiveMind;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Models.Pathing;
 using SPTQuestingBots.Models.Questing;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace SPTQuestingBots.Components
@@ -40,7 +40,8 @@ namespace SPTQuestingBots.Components
         public bool IsJobAssignmentActive => assignment?.IsActive == true;
         public bool HasCompletePath => assignment.HasCompletePath;
         public string DoorIDToUnlockForObjective => assignment?.QuestObjectiveAssignment?.DoorIDToUnlock ?? "";
-        public Vector3? InteractionPositionForDoorToUnlockForObjective => assignment?.QuestObjectiveAssignment?.InteractionPositionToUnlockDoor?.ToUnityVector3();
+        public Vector3? InteractionPositionForDoorToUnlockForObjective =>
+            assignment?.QuestObjectiveAssignment?.InteractionPositionToUnlockDoor?.ToUnityVector3();
         public bool MustUnlockDoor => assignment?.DoorToUnlock != null;
         public QuestAction CurrentQuestAction => assignment?.QuestObjectiveStepAssignment?.ActionType ?? QuestAction.Undefined;
         public double MinElapsedActionTime => assignment?.MinElapsedTime ?? 0;
@@ -49,13 +50,17 @@ namespace SPTQuestingBots.Components
 
         public double TimeSpentAtObjective => timeSpentAtObjectiveTimer.ElapsedMilliseconds / 1000.0;
         public float DistanceToObjective => Position.HasValue ? Vector3.Distance(Position.Value, botOwner.Position) : float.NaN;
-        public float DistanceFromLastObjective => (lastAssignment?.Position != null) ? Vector3.Distance(lastAssignment.Position.Value, botOwner.Position) : float.MaxValue;
+        public float DistanceFromLastObjective =>
+            (lastAssignment?.Position != null) ? Vector3.Distance(lastAssignment.Position.Value, botOwner.Position) : float.MaxValue;
 
         public bool IsCloseToObjective(float distance) => DistanceToObjective <= distance;
+
         public bool IsCloseToObjective() => IsCloseToObjective(ConfigController.Config.Questing.BotSearchDistances.OjectiveReachedIdeal);
 
         public void StartJobAssigment() => assignment.Start();
+
         public void ReportIncompletePath() => assignment.HasCompletePath = false;
+
         public void RetryPath() => assignment.HasCompletePath = true;
 
         public override string ToString()
@@ -100,7 +105,8 @@ namespace SPTQuestingBots.Components
             }
 
             // Override the EFT distance that makes bots "avoid danger" when the BTR is near
-            botOwner.Settings.FileSettings.Mind.AVOID_BTR_RADIUS_SQR = ConfigController.Config.Questing.BTRRunDistance * ConfigController.Config.Questing.BTRRunDistance;
+            botOwner.Settings.FileSettings.Mind.AVOID_BTR_RADIUS_SQR =
+                ConfigController.Config.Questing.BTRRunDistance * ConfigController.Config.Questing.BTRRunDistance;
         }
 
         private void updateBotType()
@@ -131,7 +137,9 @@ namespace SPTQuestingBots.Components
 
             if (botType == BotType.Undetermined)
             {
-                LoggingController.LogError("Could not determine bot type for " + botOwner.GetText() + " (Brain type: " + botOwner.Brain.BaseBrain.ShortName() + ")");
+                LoggingController.LogError(
+                    "Could not determine bot type for " + botOwner.GetText() + " (Brain type: " + botOwner.Brain.BaseBrain.ShortName() + ")"
+                );
             }
 
             IsInitialized = true;
@@ -204,7 +212,9 @@ namespace SPTQuestingBots.Components
             {
                 if (botOwner.NumberOfConsecutiveFailedAssignments() >= ConfigController.Config.Questing.StuckBotDetection.MaxCount)
                 {
-                    LoggingController.LogWarning(botOwner.GetText() + " has failed too many consecutive assignments and is no longer allowed to quest.");
+                    LoggingController.LogWarning(
+                        botOwner.GetText() + " has failed too many consecutive assignments and is no longer allowed to quest."
+                    );
                     botOwner.Mover.Stop();
                     IsQuestingAllowed = false;
                     return;
@@ -251,7 +261,9 @@ namespace SPTQuestingBots.Components
                 BotObjectiveManager followerObjectiveManager = follower.GetObjectiveManager();
                 if (followerObjectiveManager == null)
                 {
-                    LoggingController.LogError("Could not get BotObjectiveManager component for follower " + follower.GetText() + " of " + botOwner.GetText());
+                    LoggingController.LogError(
+                        "Could not get BotObjectiveManager component for follower " + follower.GetText() + " of " + botOwner.GetText()
+                    );
                     continue;
                 }
 
@@ -269,7 +281,9 @@ namespace SPTQuestingBots.Components
         public bool TryChangeObjective()
         {
             double? timeSinceJobEnded = assignment?.TimeSinceEnded();
-            if (timeSinceJobEnded.HasValue && (timeSinceJobEnded.Value < ConfigController.Config.Questing.MinTimeBetweenSwitchingObjectives))
+            if (
+                timeSinceJobEnded.HasValue && (timeSinceJobEnded.Value < ConfigController.Config.Questing.MinTimeBetweenSwitchingObjectives)
+            )
             {
                 return false;
             }
@@ -314,7 +328,10 @@ namespace SPTQuestingBots.Components
                     return false;
                 }
 
-                if (!assignment.QuestAssignment.CanRunBetweenObjectives && (assignment.QuestAssignment.ElapsedTimeWhenLastEndedForBot(botOwner) > 0))
+                if (
+                    !assignment.QuestAssignment.CanRunBetweenObjectives
+                    && (assignment.QuestAssignment.ElapsedTimeWhenLastEndedForBot(botOwner) > 0)
+                )
                 {
                     //LoggingController.LogInfo("Bot " + botOwner.GetText() + " can no longer run for quest " + targetQuest.Name);
                     return false;
@@ -412,14 +429,15 @@ namespace SPTQuestingBots.Components
 
         public void SetExfiliationPointForQuesting()
         {
-            Dictionary<ExfiltrationPoint, float> exfiltrationPointDistances = Singleton<GameWorld>.Instance.ExfiltrationController.ExfiltrationPoints
-                .ToDictionary(p => p, p => Vector3.Distance(p.transform.position, botOwner.Position));
+            Dictionary<ExfiltrationPoint, float> exfiltrationPointDistances =
+                Singleton<GameWorld>.Instance.ExfiltrationController.ExfiltrationPoints.ToDictionary(
+                    p => p,
+                    p => Vector3.Distance(p.transform.position, botOwner.Position)
+                );
 
             if (exfiltrationPointDistances.Count > 0)
             {
-                KeyValuePair<ExfiltrationPoint, float> furthestPoint = exfiltrationPointDistances
-                    .OrderBy(p => p.Value)
-                    .Last();
+                KeyValuePair<ExfiltrationPoint, float> furthestPoint = exfiltrationPointDistances.OrderBy(p => p.Value).Last();
 
                 exfiltrationPoint = furthestPoint.Key;
 
@@ -452,7 +470,9 @@ namespace SPTQuestingBots.Components
             // Only set an objective for the bot if its type is allowed to spawn and all quests have been loaded and generated
             if (IsQuestingAllowed && Singleton<GameWorld>.Instance.GetComponent<Components.BotQuestBuilder>().HaveQuestsBeenBuilt)
             {
-                LoggingController.LogInfo("Setting objective for " + botOwner.GetText() + " (Brain type: " + botOwner.Brain.BaseBrain.ShortName() + ")...");
+                LoggingController.LogInfo(
+                    "Setting objective for " + botOwner.GetText() + " (Brain type: " + botOwner.Brain.BaseBrain.ShortName() + ")..."
+                );
                 try
                 {
                     SetObjective(botOwner.GetCurrentJobAssignment());

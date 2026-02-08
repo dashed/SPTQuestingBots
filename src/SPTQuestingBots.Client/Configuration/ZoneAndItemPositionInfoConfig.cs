@@ -22,12 +22,14 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("nearbyDoorInteractionPosition")]
         public SerializableVector3 NearbyDoorInteractionPosition { get; private set; } = null;
 
-        public ZoneAndItemPositionInfoConfig()
-        {
+        public ZoneAndItemPositionInfoConfig() { }
 
-        }
-
-        public ZoneAndItemPositionInfoConfig(SerializableVector3 _position, bool _mustUnlockNearbyDoor, float _nearbyDoorSearchRadius, SerializableVector3 _nearbyDoorInteractionPosition)
+        public ZoneAndItemPositionInfoConfig(
+            SerializableVector3 _position,
+            bool _mustUnlockNearbyDoor,
+            float _nearbyDoorSearchRadius,
+            SerializableVector3 _nearbyDoorInteractionPosition
+        )
         {
             Position = _position;
             MustUnlockNearbyDoor = _mustUnlockNearbyDoor;

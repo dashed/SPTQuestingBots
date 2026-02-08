@@ -1,13 +1,13 @@
-﻿using EFT;
-using SPTQuestingBots.BehaviorExtensions;
-using SPTQuestingBots.BotLogic.BotMonitor.Monitors;
-using SPTQuestingBots.Components;
-using SPTQuestingBots.Controllers;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using EFT;
+using SPTQuestingBots.BehaviorExtensions;
+using SPTQuestingBots.BotLogic.BotMonitor.Monitors;
+using SPTQuestingBots.Components;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.BotMonitor
 {
@@ -73,7 +73,8 @@ namespace SPTQuestingBots.BotLogic.BotMonitor
             monitors.Values.ExecuteForEach(monitor => monitor.OnDestroy());
         }
 
-        public T GetMonitor<T>() where T : AbstractBotMonitor
+        public T GetMonitor<T>()
+            where T : AbstractBotMonitor
         {
             Type monitorType = typeof(T);
 

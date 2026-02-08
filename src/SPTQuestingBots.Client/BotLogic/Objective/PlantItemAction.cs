@@ -9,7 +9,8 @@ namespace SPTQuestingBots.BotLogic.Objective
 {
     public class PlantItemAction : BehaviorExtensions.GoToPositionAbstractAction
     {
-        public PlantItemAction(BotOwner _BotOwner) : base(_BotOwner, 100)
+        public PlantItemAction(BotOwner _BotOwner)
+            : base(_BotOwner, 100)
         {
             SetBaseAction(BotActionNodesClass.CreateNode(BotLogicDecision.lay, BotOwner));
         }
@@ -33,7 +34,7 @@ namespace SPTQuestingBots.BotLogic.Objective
             UpdateBaseAction(data);
 
             // If the bot is travelling to its objective location, have it look where it's going. If it's at its objective location, have it
-            // look where it came from because that's where threats will most likely appear. 
+            // look where it came from because that's where threats will most likely appear.
             if (!ObjectiveManager.IsCloseToObjective())
             {
                 UpdateBotSteering();

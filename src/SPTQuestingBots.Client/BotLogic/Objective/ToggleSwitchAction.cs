@@ -14,10 +14,8 @@ namespace SPTQuestingBots.BotLogic.Objective
 {
     public class ToggleSwitchAction : BehaviorExtensions.GoToPositionAbstractAction
     {
-        public ToggleSwitchAction(BotOwner _BotOwner) : base(_BotOwner, 100)
-        {
-            
-        }
+        public ToggleSwitchAction(BotOwner _BotOwner)
+            : base(_BotOwner, 100) { }
 
         public override void Start()
         {
@@ -87,7 +85,12 @@ namespace SPTQuestingBots.BotLogic.Objective
 
             if (checkIfBotIsStuck())
             {
-                LoggingController.LogWarning(BotOwner.GetText() + " got stuck while trying to toggle switch " + ObjectiveManager.GetCurrentQuestInteractiveObject().Id + ". Giving up.");
+                LoggingController.LogWarning(
+                    BotOwner.GetText()
+                        + " got stuck while trying to toggle switch "
+                        + ObjectiveManager.GetCurrentQuestInteractiveObject().Id
+                        + ". Giving up."
+                );
 
                 if (ObjectiveManager.TryChangeObjective())
                 {
@@ -109,7 +112,11 @@ namespace SPTQuestingBots.BotLogic.Objective
                 //if (!pathStatus.HasValue || (pathStatus.Value != NavMeshPathStatus.PathComplete))
                 if (!pathStatus.HasValue || (BotOwner.Mover?.IsPathComplete(ObjectiveManager.Position.Value, 0.5f) != true))
                 {
-                    LoggingController.LogWarning(BotOwner.GetText() + " cannot find a complete path to switch " + ObjectiveManager.GetCurrentQuestInteractiveObject().Id);
+                    LoggingController.LogWarning(
+                        BotOwner.GetText()
+                            + " cannot find a complete path to switch "
+                            + ObjectiveManager.GetCurrentQuestInteractiveObject().Id
+                    );
 
                     ObjectiveManager.FailObjective();
 
@@ -129,7 +136,9 @@ namespace SPTQuestingBots.BotLogic.Objective
             else
             {
                 // Presumably, if somebody is interacting with the switch, there is nothing else the bot needs to do for this objective
-                LoggingController.LogWarning("Somebody is already interacting with switch " + ObjectiveManager.GetCurrentQuestInteractiveObject().Id);
+                LoggingController.LogWarning(
+                    "Somebody is already interacting with switch " + ObjectiveManager.GetCurrentQuestInteractiveObject().Id
+                );
             }
 
             ObjectiveManager.CompleteObjective();

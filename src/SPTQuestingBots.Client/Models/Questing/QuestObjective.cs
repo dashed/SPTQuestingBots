@@ -52,22 +52,22 @@ namespace SPTQuestingBots.Models.Questing
         public ReadOnlyCollection<QuestObjectiveStep> AllSteps => new ReadOnlyCollection<QuestObjectiveStep>(questObjectiveSteps);
         public int StepCount => questObjectiveSteps.Length;
 
-        public QuestObjective()
-        {
+        public QuestObjective() { }
 
-        }
-
-        public QuestObjective(QuestObjectiveStep[] steps) : this()
+        public QuestObjective(QuestObjectiveStep[] steps)
+            : this()
         {
             questObjectiveSteps = steps;
         }
 
-        public QuestObjective(QuestObjectiveStep step) : this()
+        public QuestObjective(QuestObjectiveStep step)
+            : this()
         {
             questObjectiveSteps = new QuestObjectiveStep[1] { step };
         }
 
-        public QuestObjective(Vector3 position) : this()
+        public QuestObjective(Vector3 position)
+            : this()
         {
             questObjectiveSteps = new QuestObjectiveStep[1] { new QuestObjectiveStep(position) };
         }
@@ -162,7 +162,12 @@ namespace SPTQuestingBots.Models.Questing
                 if (!step.TrySnapToNavMesh(maxNavMeshDistance))
                 {
                     allSnapped = false;
-                    LoggingController.LogError("Unable to snap position " + (step.GetPosition()?.ToString() ?? "???") + " to NavMesh for quest objective " + ToString());
+                    LoggingController.LogError(
+                        "Unable to snap position "
+                            + (step.GetPosition()?.ToString() ?? "???")
+                            + " to NavMesh for quest objective "
+                            + ToString()
+                    );
                 }
             }
 

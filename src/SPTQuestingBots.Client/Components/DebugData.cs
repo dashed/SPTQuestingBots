@@ -16,7 +16,7 @@ namespace SPTQuestingBots.Components
     public class DebugData : MonoBehaviour
     {
         public static List<string> BotFilter = new List<string>();
-        private readonly static float markerRadius = 0.5f;
+        private static readonly float markerRadius = 0.5f;
 
         private List<AbstractDebugGizmo> gizmos = new List<AbstractDebugGizmo>();
 
@@ -33,7 +33,10 @@ namespace SPTQuestingBots.Components
 
         protected void Awake()
         {
-            QuestingBotsPluginConfig.QuestOverlayFontSize.SettingChanged += (object sender, EventArgs e) => { updateGuiStyles(sender, e); };
+            QuestingBotsPluginConfig.QuestOverlayFontSize.SettingChanged += (object sender, EventArgs e) =>
+            {
+                updateGuiStyles(sender, e);
+            };
             QuestingBotsPluginConfig.BotFilter.SettingChanged += (object sender, EventArgs e) =>
             {
                 ValidateBotFilter(QuestingBotsPluginConfig.BotFilter.Value);

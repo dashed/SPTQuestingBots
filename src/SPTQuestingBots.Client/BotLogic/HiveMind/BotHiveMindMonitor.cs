@@ -23,7 +23,7 @@ namespace SPTQuestingBots.BotLogic.HiveMind
         IsSuspicious,
         CanQuest,
         CanSprintToObjective,
-        WantsToLoot
+        WantsToLoot,
     }
 
     public class BotHiveMindMonitor : MonoBehaviourDelayedUpdate
@@ -32,7 +32,8 @@ namespace SPTQuestingBots.BotLogic.HiveMind
         internal static Dictionary<BotOwner, BotOwner> botBosses = new Dictionary<BotOwner, BotOwner>();
         internal static Dictionary<BotOwner, List<BotOwner>> botFollowers = new Dictionary<BotOwner, List<BotOwner>>();
 
-        private static Dictionary<BotHiveMindSensorType, BotHiveMindAbstractSensor> sensors = new Dictionary<BotHiveMindSensorType, BotHiveMindAbstractSensor>();
+        private static Dictionary<BotHiveMindSensorType, BotHiveMindAbstractSensor> sensors =
+            new Dictionary<BotHiveMindSensorType, BotHiveMindAbstractSensor>();
 
         public BotHiveMindMonitor()
         {
@@ -164,17 +165,16 @@ namespace SPTQuestingBots.BotLogic.HiveMind
 
         public static ReadOnlyCollection<BotOwner> GetFollowers(BotOwner bot)
         {
-            return botFollowers.ContainsKey(bot) ? new ReadOnlyCollection<BotOwner>(botFollowers[bot]) : new ReadOnlyCollection<BotOwner>(new BotOwner[0]);
+            return botFollowers.ContainsKey(bot)
+                ? new ReadOnlyCollection<BotOwner>(botFollowers[bot])
+                : new ReadOnlyCollection<BotOwner>(new BotOwner[0]);
         }
 
         public static ReadOnlyCollection<BotOwner> GetAllGroupMembers(BotOwner bot)
         {
             BotOwner boss = GetBoss(bot) ?? bot;
 
-            BotOwner[] allGroupMembers = GetFollowers(boss)
-                .AddItem(boss)
-                .Where(b => b.Id != bot.Id)
-                .ToArray();
+            BotOwner[] allGroupMembers = GetFollowers(boss).AddItem(boss).Where(b => b.Id != bot.Id).ToArray();
 
             return new ReadOnlyCollection<BotOwner>(allGroupMembers);
         }
@@ -213,14 +213,14 @@ namespace SPTQuestingBots.BotLogic.HiveMind
         {
             IReadOnlyCollection<BotOwner> members = GetAllGroupMembers(bot);
 
-            IEnumerable<string> deadMemberNames = members
-                .Where(m => m.IsDead)
-                .Select(m => m.GetText());
+            IEnumerable<string> deadMemberNames = members.Where(m => m.IsDead).Select(m => m.GetText());
             if (deadMemberNames.Any())
             {
-                LoggingController.LogError(bot.GetText() + " is trying to regroup with dead followers: " + string.Join(", ", deadMemberNames));
+                LoggingController.LogError(
+                    bot.GetText() + " is trying to regroup with dead followers: " + string.Join(", ", deadMemberNames)
+                );
             }
-            
+
             if (members.Count == 0)
             {
                 return bot.Position;
@@ -310,7 +310,9 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                     BotOwner newBoss = bot.Boss.Followers.RandomElement();
                     newBoss.Boss.SetBoss(bot.Boss.Followers.Count);
 
-                    LoggingController.LogInfo("Selected a new boss for " + bot.Boss.Followers.Count + " followers: " + bot.BotsGroup.BossGroup.Boss.GetText());
+                    LoggingController.LogInfo(
+                        "Selected a new boss for " + bot.Boss.Followers.Count + " followers: " + bot.BotsGroup.BossGroup.Boss.GetText()
+                    );
                 }
             }
 
@@ -452,7 +454,9 @@ namespace SPTQuestingBots.BotLogic.HiveMind
 
                     if (follower.IsDead)
                     {
-                        Controllers.LoggingController.LogDebug("Follower " + follower.GetText() + " for " + boss.GetText() + " is now dead.");
+                        Controllers.LoggingController.LogDebug(
+                            "Follower " + follower.GetText() + " for " + boss.GetText() + " is now dead."
+                        );
 
                         deadBots.Add(follower);
                     }

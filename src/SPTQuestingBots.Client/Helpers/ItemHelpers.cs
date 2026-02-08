@@ -5,9 +5,9 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Comfort.Common;
+using EFT;
 using EFT.Interactive;
 using EFT.InventoryLogic;
-using EFT;
 using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.Helpers
@@ -34,7 +34,10 @@ namespace SPTQuestingBots.Helpers
         {
             Type playerType = typeof(Player);
 
-            FieldInfo inventoryControllerField = playerType.GetField("_inventoryController", BindingFlags.NonPublic | BindingFlags.Instance);
+            FieldInfo inventoryControllerField = playerType.GetField(
+                "_inventoryController",
+                BindingFlags.NonPublic | BindingFlags.Instance
+            );
             return (InventoryController)inventoryControllerField.GetValue(bot.GetPlayer);
         }
 
@@ -89,13 +92,18 @@ namespace SPTQuestingBots.Helpers
             InventoryController inventoryControllerClass = GetInventoryController(botOwner);
 
             Weapon holsterWeapon = inventoryControllerClass.Inventory.Equipment.GetSlot(EquipmentSlot.Holster).ContainedItem as Weapon;
-            Weapon primaryWeapon = inventoryControllerClass.Inventory.Equipment.GetSlot(EquipmentSlot.FirstPrimaryWeapon).ContainedItem as Weapon;
-            Weapon secondaryWeapon = inventoryControllerClass.Inventory.Equipment.GetSlot(EquipmentSlot.SecondPrimaryWeapon).ContainedItem as Weapon;
+            Weapon primaryWeapon =
+                inventoryControllerClass.Inventory.Equipment.GetSlot(EquipmentSlot.FirstPrimaryWeapon).ContainedItem as Weapon;
+            Weapon secondaryWeapon =
+                inventoryControllerClass.Inventory.Equipment.GetSlot(EquipmentSlot.SecondPrimaryWeapon).ContainedItem as Weapon;
 
             List<Weapon> weapons = new List<Weapon>();
-            if (holsterWeapon != null) weapons.Add(holsterWeapon);
-            if (primaryWeapon != null) weapons.Add(primaryWeapon);
-            if (secondaryWeapon != null) weapons.Add(secondaryWeapon);
+            if (holsterWeapon != null)
+                weapons.Add(holsterWeapon);
+            if (primaryWeapon != null)
+                weapons.Add(primaryWeapon);
+            if (secondaryWeapon != null)
+                weapons.Add(secondaryWeapon);
 
             return weapons;
         }
@@ -106,7 +114,7 @@ namespace SPTQuestingBots.Helpers
 
             Item headset = inventoryControllerClass.Inventory.Equipment.GetSlot(EquipmentSlot.Earpiece).ContainedItem;
             Item helmet = inventoryControllerClass.Inventory.Equipment.GetSlot(EquipmentSlot.Headwear).ContainedItem;
-            
+
             float multiplier = 1;
 
             if (headset != null)
@@ -173,13 +181,23 @@ namespace SPTQuestingBots.Helpers
                 {
                     possibleSlots.Add(EquipmentSlot.SecuredContainer);
                 }
-                possibleSlots.AddRange(new EquipmentSlot[] { EquipmentSlot.Backpack, EquipmentSlot.TacticalVest, EquipmentSlot.ArmorVest, EquipmentSlot.Pockets });
+                possibleSlots.AddRange(
+                    new EquipmentSlot[]
+                    {
+                        EquipmentSlot.Backpack,
+                        EquipmentSlot.TacticalVest,
+                        EquipmentSlot.ArmorVest,
+                        EquipmentSlot.Pockets,
+                    }
+                );
 
                 // Try to find an available grid in the equipment slots to which the key can be transferred
                 ItemAddress locationForItem = botOwner.FindLocationForItem(item, possibleSlots, inventoryController);
                 if (locationForItem == null)
                 {
-                    LoggingController.LogError("Cannot find any location to put key " + item.LocalizedName() + " for " + botOwner.GetText());
+                    LoggingController.LogError(
+                        "Cannot find any location to put key " + item.LocalizedName() + " for " + botOwner.GetText()
+                    );
                     return false;
                 }
 
@@ -191,7 +209,7 @@ namespace SPTQuestingBots.Helpers
                     return false;
                 }
 
-                Action<IResult> callbackAction = (result) => 
+                Action<IResult> callbackAction = (result) =>
                 {
                     if (result.Succeed)
                     {
@@ -219,7 +237,12 @@ namespace SPTQuestingBots.Helpers
             }
         }
 
-        public static ItemAddress FindLocationForItem(this BotOwner botOwner, Item item, IEnumerable<EquipmentSlot> possibleSlots, InventoryController botInventoryController)
+        public static ItemAddress FindLocationForItem(
+            this BotOwner botOwner,
+            Item item,
+            IEnumerable<EquipmentSlot> possibleSlots,
+            InventoryController botInventoryController
+        )
         {
             foreach (EquipmentSlot slot in possibleSlots)
             {
@@ -235,7 +258,9 @@ namespace SPTQuestingBots.Helpers
                     LocationInGrid locationInGrid = grid.FindFreeSpace(item);
                     if (locationInGrid != null)
                     {
-                        LoggingController.LogInfo(botOwner.GetText() + " will receive " + item.LocalizedName() + " in its " + slot.ToString() + "...");
+                        LoggingController.LogInfo(
+                            botOwner.GetText() + " will receive " + item.LocalizedName() + " in its " + slot.ToString() + "..."
+                        );
 
                         return grid.CreateItemAddress(locationInGrid);
                     }
@@ -297,8 +322,8 @@ namespace SPTQuestingBots.Helpers
             {
                 InventoryController inventoryControllerClass = GetInventoryController(botOwner);
 
-                IEnumerable<KeyComponent> matchingKeys = inventoryControllerClass.Inventory.Equipment
-                    .GetItemComponentsInChildren<KeyComponent>(false)
+                IEnumerable<KeyComponent> matchingKeys = inventoryControllerClass
+                    .Inventory.Equipment.GetItemComponentsInChildren<KeyComponent>(false)
                     .Where(k => k.Template.KeyId == door.KeyId);
 
                 if (!matchingKeys.Any())

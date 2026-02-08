@@ -1,9 +1,9 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace SPTQuestingBots.Configuration
 {
@@ -30,9 +30,6 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("allow_zero_distance_sleeping")]
         public bool AllowZeroDistanceSleeping { get; set; } = false;
 
-        public DebugConfig()
-        {
-
-        }
+        public DebugConfig() { }
     }
 }

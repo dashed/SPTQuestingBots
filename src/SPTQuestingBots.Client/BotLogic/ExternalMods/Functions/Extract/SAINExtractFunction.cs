@@ -1,10 +1,10 @@
-﻿using EFT;
-using SPTQuestingBots.Controllers;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using EFT;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ExternalMods.Functions.Extract
 {
@@ -12,21 +12,22 @@ namespace SPTQuestingBots.BotLogic.ExternalMods.Functions.Extract
     {
         public override string MonitoredLayerName => "SAIN : Extract";
 
-        public SAINExtractFunction(BotOwner _botOwner) : base(_botOwner)
-        {
-
-        }
+        public SAINExtractFunction(BotOwner _botOwner)
+            : base(_botOwner) { }
 
         public override bool IsTryingToExtract() => IsMonitoredLayerActive();
 
         private bool tryExtractSingleBot(BotOwner botOwner) => SAIN.Plugin.SAINInterop.TryExtractBot(botOwner);
+
         private bool trySetExfilForBot(BotOwner botOwner) => SAIN.Plugin.SAINInterop.TrySetExfilForBot(botOwner);
 
         public override bool TryInstructBotToExtract()
         {
             if (!tryExtractSingleBot(BotOwner))
             {
-                LoggingController.LogWarning("Cannot instruct " + BotOwner.GetText() + " to extract. SAIN Interop not initialized properly or is outdated.");
+                LoggingController.LogWarning(
+                    "Cannot instruct " + BotOwner.GetText() + " to extract. SAIN Interop not initialized properly or is outdated."
+                );
 
                 return false;
             }
@@ -46,7 +47,11 @@ namespace SPTQuestingBots.BotLogic.ExternalMods.Functions.Extract
                 }
                 else
                 {
-                    LoggingController.LogWarning("Could not instruct follower " + follower.GetText() + " to extract now. SAIN Interop not initialized properly or is outdated.");
+                    LoggingController.LogWarning(
+                        "Could not instruct follower "
+                            + follower.GetText()
+                            + " to extract now. SAIN Interop not initialized properly or is outdated."
+                    );
                 }
             }
 

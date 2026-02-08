@@ -10,10 +10,8 @@ namespace SPTQuestingBots.CoroutineExtensions
 {
     internal class EnumeratorWithTimeLimit : MethodWithTimeLimit
     {
-        public EnumeratorWithTimeLimit(double _maxTimePerIteration) : base(_maxTimePerIteration)
-        {
-            
-        }
+        public EnumeratorWithTimeLimit(double _maxTimePerIteration)
+            : base(_maxTimePerIteration) { }
 
         public void Reset()
         {
@@ -32,21 +30,35 @@ namespace SPTQuestingBots.CoroutineExtensions
         public IEnumerator Run<TItem>(IEnumerable<TItem> collection, Action<TItem> collectionItemAction)
         {
             SetMethodName(collectionItemAction.Method.Name);
-            Action<TItem> action = (item) => { collectionItemAction(item); };
+            Action<TItem> action = (item) =>
+            {
+                collectionItemAction(item);
+            };
             yield return Run_Internal(collection, action);
         }
 
         public IEnumerator Run<TItem, T1>(IEnumerable<TItem> collection, Action<TItem, T1> collectionItemAction, T1 param1)
         {
             SetMethodName(collectionItemAction.Method.Name);
-            Action<TItem> action = (item) => { collectionItemAction(item, param1); };
+            Action<TItem> action = (item) =>
+            {
+                collectionItemAction(item, param1);
+            };
             yield return Run_Internal(collection, action);
         }
 
-        public IEnumerator Run<TItem, T1, T2>(IEnumerable<TItem> collection, Action<TItem, T1, T2> collectionItemAction, T1 param1, T2 param2)
+        public IEnumerator Run<TItem, T1, T2>(
+            IEnumerable<TItem> collection,
+            Action<TItem, T1, T2> collectionItemAction,
+            T1 param1,
+            T2 param2
+        )
         {
             SetMethodName(collectionItemAction.Method.Name);
-            Action<TItem> action = (item) => { collectionItemAction(item, param1, param2); };
+            Action<TItem> action = (item) =>
+            {
+                collectionItemAction(item, param1, param2);
+            };
             yield return Run_Internal(collection, action);
         }
 
@@ -59,14 +71,20 @@ namespace SPTQuestingBots.CoroutineExtensions
         public IEnumerator Repeat<T1>(int repetitions, Action<T1> action, T1 param1)
         {
             SetMethodName(action.Method.Name);
-            System.Action actionInternal = () => { action(param1); };
+            System.Action actionInternal = () =>
+            {
+                action(param1);
+            };
             yield return Repeat_Internal(repetitions, actionInternal);
         }
 
         public IEnumerator Repeat<T1, T2>(int repetitions, Action<T1, T2> action, T1 param1, T2 param2)
         {
             SetMethodName(action.Method.Name);
-            System.Action actionInternal = () => { action(param1, param2); };
+            System.Action actionInternal = () =>
+            {
+                action(param1, param2);
+            };
             yield return Repeat_Internal(repetitions, actionInternal);
         }
 
@@ -97,7 +115,9 @@ namespace SPTQuestingBots.CoroutineExtensions
             {
                 if (!conditionCheck())
                 {
-                    throw new TimeoutException("Condition check for \"" + this.MethodName + "\" was not successful within " + timeout + "ms.");
+                    throw new TimeoutException(
+                        "Condition check for \"" + this.MethodName + "\" was not successful within " + timeout + "ms."
+                    );
                 }
             }
             catch (Exception ex)

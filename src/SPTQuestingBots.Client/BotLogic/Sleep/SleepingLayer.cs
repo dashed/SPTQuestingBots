@@ -1,12 +1,12 @@
-﻿using Comfort.Common;
-using EFT;
-using SPTQuestingBots.BotLogic.BotMonitor.Monitors;
-using SPTQuestingBots.Controllers;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Comfort.Common;
+using EFT;
+using SPTQuestingBots.BotLogic.BotMonitor.Monitors;
+using SPTQuestingBots.Controllers;
 using UnityEngine;
 
 namespace SPTQuestingBots.BotLogic.Sleep
@@ -15,7 +15,8 @@ namespace SPTQuestingBots.BotLogic.Sleep
     {
         private Components.BotObjectiveManager objectiveManager = null;
 
-        public SleepingLayer(BotOwner _botOwner, int _priority) : base(_botOwner, _priority, 250)
+        public SleepingLayer(BotOwner _botOwner, int _priority)
+            : base(_botOwner, _priority, 250)
         {
             objectiveManager = _botOwner.GetOrAddObjectiveManager();
         }
@@ -61,7 +62,12 @@ namespace SPTQuestingBots.BotLogic.Sleep
 
             // Determine the distance from human players beyond which bots will be disabled
             int mapSpecificHumanDistance = 1000;
-            if (QuestingBotsPluginConfig.TarkovMapIDToEnum.TryGetValue(Singleton<GameWorld>.Instance.GetComponent<Components.LocationData>().CurrentLocation.Id, out TarkovMaps currentMap))
+            if (
+                QuestingBotsPluginConfig.TarkovMapIDToEnum.TryGetValue(
+                    Singleton<GameWorld>.Instance.GetComponent<Components.LocationData>().CurrentLocation.Id,
+                    out TarkovMaps currentMap
+                )
+            )
             {
                 mapSpecificHumanDistance = getMapSpecificHumanDistance(currentMap);
             }
@@ -84,7 +90,10 @@ namespace SPTQuestingBots.BotLogic.Sleep
             }
 
             // Allow bots to extract so new ones can spawn
-            if (!QuestingBotsPluginConfig.SleepingEnabledForQuestingBots.Value && (objectiveManager?.BotMonitor?.GetMonitor<BotExtractMonitor>()?.IsTryingToExtract == true))
+            if (
+                !QuestingBotsPluginConfig.SleepingEnabledForQuestingBots.Value
+                && (objectiveManager?.BotMonitor?.GetMonitor<BotExtractMonitor>()?.IsTryingToExtract == true)
+            )
             {
                 return updatePreviousState(false);
             }
@@ -103,8 +112,8 @@ namespace SPTQuestingBots.BotLogic.Sleep
             }
 
             // Enumerate all alive bots on the map
-            IEnumerable<BotOwner> allBots = Singleton<IBotGame>.Instance.BotsController.Bots.BotOwners
-                .Where(b => b.BotState == EBotState.Active)
+            IEnumerable<BotOwner> allBots = Singleton<IBotGame>
+                .Instance.BotsController.Bots.BotOwners.Where(b => b.BotState == EBotState.Active)
                 .Where(b => !b.IsDead);
 
             // Only allow bots to sleep if there are at least a certain number in total on the map
@@ -114,9 +123,7 @@ namespace SPTQuestingBots.BotLogic.Sleep
             }
 
             // Of alive bots, enumerate all besides this one that are active
-            IEnumerable<BotOwner> allOtherBots = allBots
-                .Where(b => b.gameObject.activeSelf)
-                .Where(b => b.Id != BotOwner.Id);
+            IEnumerable<BotOwner> allOtherBots = allBots.Where(b => b.gameObject.activeSelf).Where(b => b.Id != BotOwner.Id);
 
             foreach (BotOwner bot in allOtherBots)
             {
@@ -162,16 +169,26 @@ namespace SPTQuestingBots.BotLogic.Sleep
         {
             switch (map)
             {
-                case TarkovMaps.Customs: return QuestingBotsPluginConfig.SleepingMinDistanceToHumansCustoms.Value;
-                case TarkovMaps.Factory: return QuestingBotsPluginConfig.SleepingMinDistanceToHumansFactory.Value; 
-                case TarkovMaps.Interchange: return QuestingBotsPluginConfig.SleepingMinDistanceToHumansInterchange.Value;
-                case TarkovMaps.Labs: return QuestingBotsPluginConfig.SleepingMinDistanceToHumansLabs.Value;
-                case TarkovMaps.Lighthouse: return QuestingBotsPluginConfig.SleepingMinDistanceToHumansLighthouse.Value;
-                case TarkovMaps.Reserve: return QuestingBotsPluginConfig.SleepingMinDistanceToHumansReserve.Value;
-                case TarkovMaps.Shoreline: return QuestingBotsPluginConfig.SleepingMinDistanceToHumansShoreline.Value;
-                case TarkovMaps.Streets: return QuestingBotsPluginConfig.SleepingMinDistanceToHumansStreets.Value;
-                case TarkovMaps.Woods: return QuestingBotsPluginConfig.SleepingMinDistanceToHumansWoods.Value;
-                case TarkovMaps.GroundZero: return QuestingBotsPluginConfig.SleepingMinDistanceToHumansGroundZero.Value;
+                case TarkovMaps.Customs:
+                    return QuestingBotsPluginConfig.SleepingMinDistanceToHumansCustoms.Value;
+                case TarkovMaps.Factory:
+                    return QuestingBotsPluginConfig.SleepingMinDistanceToHumansFactory.Value;
+                case TarkovMaps.Interchange:
+                    return QuestingBotsPluginConfig.SleepingMinDistanceToHumansInterchange.Value;
+                case TarkovMaps.Labs:
+                    return QuestingBotsPluginConfig.SleepingMinDistanceToHumansLabs.Value;
+                case TarkovMaps.Lighthouse:
+                    return QuestingBotsPluginConfig.SleepingMinDistanceToHumansLighthouse.Value;
+                case TarkovMaps.Reserve:
+                    return QuestingBotsPluginConfig.SleepingMinDistanceToHumansReserve.Value;
+                case TarkovMaps.Shoreline:
+                    return QuestingBotsPluginConfig.SleepingMinDistanceToHumansShoreline.Value;
+                case TarkovMaps.Streets:
+                    return QuestingBotsPluginConfig.SleepingMinDistanceToHumansStreets.Value;
+                case TarkovMaps.Woods:
+                    return QuestingBotsPluginConfig.SleepingMinDistanceToHumansWoods.Value;
+                case TarkovMaps.GroundZero:
+                    return QuestingBotsPluginConfig.SleepingMinDistanceToHumansGroundZero.Value;
             }
 
             return int.MaxValue;

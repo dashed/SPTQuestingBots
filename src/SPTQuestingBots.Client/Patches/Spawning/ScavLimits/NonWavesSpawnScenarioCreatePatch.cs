@@ -63,12 +63,12 @@ namespace SPTQuestingBots.Patches.Spawning.ScavLimits
             if (excludeBotsBeforeThreshold)
             {
                 int initialScavs = 0;
-                scavsToCheck = scavsToCheck.SkipWhile(x => (initialScavs += x.Value) <= QuestingBotsPluginConfig.ScavSpawnLimitThreshold.Value);
+                scavsToCheck = scavsToCheck.SkipWhile(x =>
+                    (initialScavs += x.Value) <= QuestingBotsPluginConfig.ScavSpawnLimitThreshold.Value
+                );
             }
 
-            return scavsToCheck
-                .Where(x => x.Key >= elapsedTimeThreshold)
-                .Sum(x => x.Value);
+            return scavsToCheck.Where(x => x.Key >= elapsedTimeThreshold).Sum(x => x.Value);
         }
     }
 }

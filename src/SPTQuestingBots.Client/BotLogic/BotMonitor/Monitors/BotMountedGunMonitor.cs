@@ -1,9 +1,9 @@
-﻿using EFT;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using EFT;
 
 namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
 {
@@ -13,7 +13,8 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
 
         private LogicLayerMonitor stationaryWSLayerMonitor;
 
-        public BotMountedGunMonitor(BotOwner _botOwner) : base(_botOwner) { }
+        public BotMountedGunMonitor(BotOwner _botOwner)
+            : base(_botOwner) { }
 
         public override void Start()
         {

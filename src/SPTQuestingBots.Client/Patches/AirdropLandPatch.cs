@@ -4,10 +4,10 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using SPT.Reflection.Patching;
 using Comfort.Common;
 using EFT;
 using EFT.SynchronizableObjects;
+using SPT.Reflection.Patching;
 using UnityEngine;
 using UnityEngine.AI;
 

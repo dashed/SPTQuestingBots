@@ -8,9 +8,7 @@ namespace SPTQuestingBots.BotLogic.HiveMind
 {
     public class BotHiveMindIsSuspiciousSensor : BotHiveMindAbstractSensor
     {
-        public BotHiveMindIsSuspiciousSensor() : base(false)
-        {
-
-        }
+        public BotHiveMindIsSuspiciousSensor()
+            : base(false) { }
     }
 }

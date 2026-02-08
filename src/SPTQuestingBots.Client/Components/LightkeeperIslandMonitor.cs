@@ -34,15 +34,24 @@ namespace SPTQuestingBots.Components
 
             if (LightkeeperTraderZoneColliderHandler == null)
             {
-                throw new InvalidOperationException("LightkeeperTraderZoneColliderHandler was never initialized by LighthouseTraderZoneAwakePatch");
+                throw new InvalidOperationException(
+                    "LightkeeperTraderZoneColliderHandler was never initialized by LighthouseTraderZoneAwakePatch"
+                );
             }
 
             LighthouseTraderZone.OnPlayerAllowStatusChanged += playerAllowStatusChanged;
 
-            if (ConfigController.Config.Debug.ShowZoneOutlines && Singleton<GameWorld>.Instance.gameObject.TryGetComponent(out PathRenderer pathRender))
+            if (
+                ConfigController.Config.Debug.ShowZoneOutlines
+                && Singleton<GameWorld>.Instance.gameObject.TryGetComponent(out PathRenderer pathRender)
+            )
             {
                 Vector3[] colliderBounds = DebugHelpers.GetBoundingBoxPoints(LightkeeperTraderZoneColliderHandler.trigger.bounds);
-                Models.Pathing.PathVisualizationData zoneBoundingBox = new Models.Pathing.PathVisualizationData("LighthouseTraderZone", colliderBounds, Color.green);
+                Models.Pathing.PathVisualizationData zoneBoundingBox = new Models.Pathing.PathVisualizationData(
+                    "LighthouseTraderZone",
+                    colliderBounds,
+                    Color.green
+                );
 
                 pathRender.AddOrUpdatePath(zoneBoundingBox);
             }
@@ -111,7 +120,9 @@ namespace SPTQuestingBots.Components
                 return LightkeeperTraderZoneColliderHandler.trigger.bounds.Contains(position);
             }
 
-            LoggingController.LogWarning("LightkeeperTraderZoneColliderHandler is null. Using alternative check for position being on the island.");
+            LoggingController.LogWarning(
+                "LightkeeperTraderZoneColliderHandler is null. Using alternative check for position being on the island."
+            );
             return position.z > 325 && position.x > 183;
         }
 

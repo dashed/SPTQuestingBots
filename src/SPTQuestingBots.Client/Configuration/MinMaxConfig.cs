@@ -1,9 +1,9 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace SPTQuestingBots.Configuration
 {
@@ -15,12 +15,10 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("max")]
         public double Max { get; set; } = 100;
 
-        public MinMaxConfig()
-        {
+        public MinMaxConfig() { }
 
-        }
-
-        public MinMaxConfig(double min, double max): this()
+        public MinMaxConfig(double min, double max)
+            : this()
         {
             Min = min;
             Max = max;

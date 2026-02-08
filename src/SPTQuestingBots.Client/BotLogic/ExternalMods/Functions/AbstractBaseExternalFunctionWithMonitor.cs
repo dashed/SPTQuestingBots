@@ -16,13 +16,15 @@ namespace SPTQuestingBots.BotLogic.ExternalMods.Functions
 
         public bool CanMonitoredLayerBeUsed => layerMonitor.CanLayerBeUsed;
 
-        public AbstractBaseExternalFunctionWithMonitor(BotOwner _botOwner) : base(_botOwner)
+        public AbstractBaseExternalFunctionWithMonitor(BotOwner _botOwner)
+            : base(_botOwner)
         {
             layerMonitor = _botOwner.GetPlayer.gameObject.AddComponent<LogicLayerMonitor>();
             layerMonitor.Init(_botOwner, MonitoredLayerName);
         }
 
         public bool CanUseMonitoredLayer(float minTimeFromLastUse) => layerMonitor.CanUseLayer(minTimeFromLastUse);
+
         public void ResetMonitoredLayerCanUseTimer() => layerMonitor.RestartCanUseTimer();
 
         public bool IsMonitoredLayerActive()

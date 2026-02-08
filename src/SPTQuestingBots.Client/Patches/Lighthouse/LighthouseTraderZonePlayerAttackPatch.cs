@@ -5,8 +5,8 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Comfort.Common;
-using EFT.Interactive;
 using EFT;
+using EFT.Interactive;
 using SPT.Reflection.Patching;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
@@ -64,8 +64,10 @@ namespace SPTQuestingBots.Patches.Lighthouse
                 LoggingController.LogWarning("[DSP Not Changed] Aggressor does not have an encoded DSP.");
                 return;
             }
-            
-            LoggingController.LogInfo(lastAgressorPlayer.GetText() + " attacked " + player.GetText() + " on Lightkeeper Island. Updating their DSP...");
+
+            LoggingController.LogInfo(
+                lastAgressorPlayer.GetText() + " attacked " + player.GetText() + " on Lightkeeper Island. Updating their DSP..."
+            );
             if (!lastAgressorPlayer.TryReduceLightkeeperStanding())
             {
                 LoggingController.LogError("Could not update " + lastAgressorPlayer.GetText() + "'s DSP");

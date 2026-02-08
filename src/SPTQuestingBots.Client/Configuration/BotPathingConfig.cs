@@ -1,9 +1,9 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace SPTQuestingBots.Configuration
 {
@@ -15,9 +15,6 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("incomplete_path_retry_interval")]
         public float IncompletePathRetryInterval { get; set; } = 5;
 
-        public BotPathingConfig()
-        {
-
-        }
+        public BotPathingConfig() { }
     }
 }

@@ -4,8 +4,8 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using SPT.Reflection.Patching;
 using EFT;
+using SPT.Reflection.Patching;
 using SPTQuestingBots.Helpers;
 
 namespace SPTQuestingBots.Patches.Spawning.Advanced
@@ -20,9 +20,7 @@ namespace SPTQuestingBots.Patches.Spawning.Advanced
         [PatchPostfix]
         protected static void PatchPostfix(ref List<BotOwner> __result, BotZone zone)
         {
-            List<BotOwner> remainingBots = __result
-                .Where(b => !b.ShouldPlayerBeTreatedAsHuman())
-                .ToList();
+            List<BotOwner> remainingBots = __result.Where(b => !b.ShouldPlayerBeTreatedAsHuman()).ToList();
 
             __result = remainingBots;
         }

@@ -1,12 +1,12 @@
-﻿using Comfort.Common;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using Comfort.Common;
 using DrakiaXYZ.BigBrain.Brains;
 using EFT;
 using SPTQuestingBots.Components.Spawning;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace SPTQuestingBots.Helpers
 {
@@ -26,11 +26,19 @@ namespace SPTQuestingBots.Helpers
             }
 
             LoggingController.LogDebug("Loading QuestingBots...changing bot brains for questing: " + string.Join(", ", allNonSniperBrains));
-            BrainManager.AddCustomLayer(typeof(BotLogic.Objective.BotObjectiveLayer), allNonSniperBrains.ToStringList(), brainLayerPriorities.Questing);
+            BrainManager.AddCustomLayer(
+                typeof(BotLogic.Objective.BotObjectiveLayer),
+                allNonSniperBrains.ToStringList(),
+                brainLayerPriorities.Questing
+            );
 
             LoggingController.LogDebug("Loading QuestingBots...changing bot brains for following: " + string.Join(", ", allBrains));
             BrainManager.AddCustomLayer(typeof(BotLogic.Follow.BotFollowerLayer), allBrains.ToStringList(), brainLayerPriorities.Following);
-            BrainManager.AddCustomLayer(typeof(BotLogic.Follow.BotFollowerRegroupLayer), allBrains.ToStringList(), brainLayerPriorities.Regrouping);
+            BrainManager.AddCustomLayer(
+                typeof(BotLogic.Follow.BotFollowerRegroupLayer),
+                allBrains.ToStringList(),
+                brainLayerPriorities.Regrouping
+            );
         }
 
         public static IEnumerable<BotBrainType> AddTestBrain(this IEnumerable<BotBrainType> list)
@@ -45,11 +53,9 @@ namespace SPTQuestingBots.Helpers
 
         public static IEnumerable<BotBrainType> AddNormalScavBrains(this IEnumerable<BotBrainType> list)
         {
-            return list.Concat(new[]
-            {
-                new BotBrainType("Assault", WildSpawnType.assault),
-                new BotBrainType("CursAssault", WildSpawnType.cursedAssault)
-            });
+            return list.Concat(
+                new[] { new BotBrainType("Assault", WildSpawnType.assault), new BotBrainType("CursAssault", WildSpawnType.cursedAssault) }
+            );
         }
 
         public static IEnumerable<BotBrainType> AddSniperScavBrain(this IEnumerable<BotBrainType> list)
@@ -84,11 +90,9 @@ namespace SPTQuestingBots.Helpers
 
         public static IEnumerable<BotBrainType> AddPMCBrains(this IEnumerable<BotBrainType> list)
         {
-            return list.Concat(new[]
-            {
-                new BotBrainType("PmcBear", WildSpawnType.pmcBEAR),
-                new BotBrainType("PmcUsec", WildSpawnType.pmcUSEC)
-            });
+            return list.Concat(
+                new[] { new BotBrainType("PmcBear", WildSpawnType.pmcBEAR), new BotBrainType("PmcUsec", WildSpawnType.pmcUSEC) }
+            );
         }
 
         public static IEnumerable<BotBrainType> AddKnightBrain(this IEnumerable<BotBrainType> list)
@@ -98,11 +102,13 @@ namespace SPTQuestingBots.Helpers
 
         public static IEnumerable<BotBrainType> AddGoonFollowerBrains(this IEnumerable<BotBrainType> list)
         {
-            return list.Concat(new[]
-            {
-                new BotBrainType("BigPipe", WildSpawnType.followerBigPipe),
-                new BotBrainType("BirdEye", WildSpawnType.followerBirdEye)
-            });
+            return list.Concat(
+                new[]
+                {
+                    new BotBrainType("BigPipe", WildSpawnType.followerBigPipe),
+                    new BotBrainType("BirdEye", WildSpawnType.followerBirdEye),
+                }
+            );
         }
 
         public static IEnumerable<BotBrainType> AddCultistBrain(this IEnumerable<BotBrainType> list)
@@ -137,41 +143,44 @@ namespace SPTQuestingBots.Helpers
 
         public static IEnumerable<BotBrainType> AddNormalBossBrains(this IEnumerable<BotBrainType> list)
         {
-            return list.Concat(new[]
-            {
-                new BotBrainType("BossBully", WildSpawnType.bossBully),
-                new BotBrainType("BossSanitar", WildSpawnType.bossSanitar),
-                new BotBrainType("BossGluhar", WildSpawnType.bossGluhar),
-                new BotBrainType("BossKojaniy", WildSpawnType.bossKojaniy),
-                new BotBrainType("BossBoar", WildSpawnType.bossBoar),
-                new BotBrainType("BossKolontay", WildSpawnType.bossKolontay)
-            });
+            return list.Concat(
+                new[]
+                {
+                    new BotBrainType("BossBully", WildSpawnType.bossBully),
+                    new BotBrainType("BossSanitar", WildSpawnType.bossSanitar),
+                    new BotBrainType("BossGluhar", WildSpawnType.bossGluhar),
+                    new BotBrainType("BossKojaniy", WildSpawnType.bossKojaniy),
+                    new BotBrainType("BossBoar", WildSpawnType.bossBoar),
+                    new BotBrainType("BossKolontay", WildSpawnType.bossKolontay),
+                }
+            );
         }
 
         public static IEnumerable<BotBrainType> AddNormalBossFollowerBrains(this IEnumerable<BotBrainType> list)
         {
-            return list.Concat(new[]
-            {
-                new BotBrainType("FollowerBully", WildSpawnType.followerBully),
-                new BotBrainType("FollowerSanitar", WildSpawnType.followerSanitar),
-                new BotBrainType("TagillaFollower", WildSpawnType.followerTagilla),
-                new BotBrainType("FollowerGluharAssault", WildSpawnType.followerGluharAssault),
-                new BotBrainType("FollowerGluharProtect", WildSpawnType.followerGluharSecurity),
-                new BotBrainType("FollowerGluharScout", WildSpawnType.followerGluharScout),
-                new BotBrainType("FollowerKojaniy", WildSpawnType.followerKojaniy),
-                new BotBrainType("BoarSniper", WildSpawnType.bossBoarSniper),
-                new BotBrainType("FlBoar", WildSpawnType.followerBoar),
-                new BotBrainType("FlBoarCl", WildSpawnType.followerBoarClose1),
-                new BotBrainType("FlBoarSt", WildSpawnType.followerBoarClose2),
-                new BotBrainType("FlKlnAslt", WildSpawnType.followerKolontayAssault),
-                new BotBrainType("KolonSec", WildSpawnType.followerKolontaySecurity)
-            });
+            return list.Concat(
+                new[]
+                {
+                    new BotBrainType("FollowerBully", WildSpawnType.followerBully),
+                    new BotBrainType("FollowerSanitar", WildSpawnType.followerSanitar),
+                    new BotBrainType("TagillaFollower", WildSpawnType.followerTagilla),
+                    new BotBrainType("FollowerGluharAssault", WildSpawnType.followerGluharAssault),
+                    new BotBrainType("FollowerGluharProtect", WildSpawnType.followerGluharSecurity),
+                    new BotBrainType("FollowerGluharScout", WildSpawnType.followerGluharScout),
+                    new BotBrainType("FollowerKojaniy", WildSpawnType.followerKojaniy),
+                    new BotBrainType("BoarSniper", WildSpawnType.bossBoarSniper),
+                    new BotBrainType("FlBoar", WildSpawnType.followerBoar),
+                    new BotBrainType("FlBoarCl", WildSpawnType.followerBoarClose1),
+                    new BotBrainType("FlBoarSt", WildSpawnType.followerBoarClose2),
+                    new BotBrainType("FlKlnAslt", WildSpawnType.followerKolontayAssault),
+                    new BotBrainType("KolonSec", WildSpawnType.followerKolontaySecurity),
+                }
+            );
         }
 
         public static IEnumerable<BotBrainType> AddAllNormalBossBrains(this IEnumerable<BotBrainType> list)
         {
-            return list
-                .AddNormalBossBrains()
+            return list.AddNormalBossBrains()
                 .AddTagillaBrain()
                 .AddKillaBrain()
                 .AddRogueBrain()
@@ -182,43 +191,33 @@ namespace SPTQuestingBots.Helpers
 
         public static IEnumerable<BotBrainType> AddAllNormalBossFollowerBrains(this IEnumerable<BotBrainType> list)
         {
-            return list
-                .AddNormalBossFollowerBrains()
-                .AddGoonFollowerBrains();
+            return list.AddNormalBossFollowerBrains().AddGoonFollowerBrains();
         }
 
         public static IEnumerable<BotBrainType> AddAllNormalBossAndFollowerBrains(this IEnumerable<BotBrainType> list)
         {
-            return list
-                .AddAllNormalBossBrains()
-                .AddAllNormalBossFollowerBrains();
+            return list.AddAllNormalBossBrains().AddAllNormalBossFollowerBrains();
         }
 
         public static IEnumerable<BotBrainType> AddAllCultistBrains(this IEnumerable<BotBrainType> list)
         {
-            return list
-                .AddCultistBrain()
-                .AddCultistPriestBrain();
+            return list.AddCultistBrain().AddCultistPriestBrain();
         }
 
         public static IEnumerable<BotBrainType> AddZryachiyAndFollowerBrains(this IEnumerable<BotBrainType> list)
         {
-            return list
-                .AddZryachiyBrain()
-                .AddZryachiyFollowerBrain();
+            return list.AddZryachiyBrain().AddZryachiyFollowerBrain();
         }
 
         public static IEnumerable<BotBrainType> AddAllSniperBrains(this IEnumerable<BotBrainType> list)
         {
-            return list
-                .AddSniperScavBrain()
-                .AddZryachiyBrain()
-                .AddZryachiyFollowerBrain();
+            return list.AddSniperScavBrain().AddZryachiyBrain().AddZryachiyFollowerBrain();
         }
 
         public static IEnumerable<BotBrainType> GetAllNonSniperBrains()
         {
-            return Enumerable.Empty<BotBrainType>()
+            return Enumerable
+                .Empty<BotBrainType>()
                 .AddPMCBrains()
                 .AddNormalScavBrains()
                 .AddCrazyScavBrain()
@@ -228,8 +227,7 @@ namespace SPTQuestingBots.Helpers
 
         public static IEnumerable<BotBrainType> GetAllBrains()
         {
-            return GetAllNonSniperBrains()
-                .AddAllSniperBrains();
+            return GetAllNonSniperBrains().AddAllSniperBrains();
         }
 
         public static string[] ToStringArray(this IEnumerable<BotBrainType> list)
@@ -242,19 +240,13 @@ namespace SPTQuestingBots.Helpers
             return list.Select(i => i.ToString()).ToList();
         }
 
-        public static readonly WildSpawnType[] PMCSpawnTypes = new WildSpawnType[2]
-        {
-            WildSpawnType.pmcUSEC,
-            WildSpawnType.pmcBEAR
-        };
+        public static readonly WildSpawnType[] PMCSpawnTypes = new WildSpawnType[2] { WildSpawnType.pmcUSEC, WildSpawnType.pmcBEAR };
 
         public static bool WillBeAPMC(this BotOwner bot) => bot.Profile.WillBeAPMC();
 
         public static bool WillBeAPMC(this Profile profile)
         {
-            return Enumerable.Empty<BotBrainType>()
-                .AddPMCBrains()
-                .Any(b => b.SpawnType == profile.Info.Settings.Role);
+            return Enumerable.Empty<BotBrainType>().AddPMCBrains().Any(b => b.SpawnType == profile.Info.Settings.Role);
         }
 
         public static bool WillBeABoss(this BotOwner botOwner)
@@ -301,7 +293,7 @@ namespace SPTQuestingBots.Helpers
         }
 
         public static IEnumerable<Player> HumanAndSimulatedPlayers(this IEnumerable<Player> players) => players.HumanAndSimulatedPlayers();
-        
+
         public static IEnumerable<IPlayer> HumanAndSimulatedPlayers(this IEnumerable<IPlayer> players)
         {
             return players.Where(p => p.ShouldPlayerBeTreatedAsHuman());
@@ -330,12 +322,17 @@ namespace SPTQuestingBots.Helpers
         public static bool IsAlive(this BotOwner bot) => (bot.BotState == EBotState.Active) && !bot.IsDead;
 
         public static string GetActiveLayerName(this BotOwner bot) => bot.Brain.ActiveLayerName();
+
         public static string GetActiveLogicName(this BotOwner bot) => bot.Brain.GetActiveNodeReason();
 
         public static string GetActiveLayerTypeName(this BotOwner bot) => BrainManager.GetActiveLayer(bot)?.GetType()?.Name;
+
         public static string GetActiveLogicTypeName(this BotOwner bot) => BrainManager.GetActiveLogic(bot)?.GetType()?.Name;
 
-        public static bool IsLayerActive(this BotOwner bot, string layerTypeName) => bot.GetActiveLayerTypeName()?.Equals(layerTypeName) == true;
-        public static bool IsLogicActive(this BotOwner bot, string logicTypeName) => bot.GetActiveLogicTypeName()?.Equals(logicTypeName) == true;
+        public static bool IsLayerActive(this BotOwner bot, string layerTypeName) =>
+            bot.GetActiveLayerTypeName()?.Equals(layerTypeName) == true;
+
+        public static bool IsLogicActive(this BotOwner bot, string logicTypeName) =>
+            bot.GetActiveLogicTypeName()?.Equals(logicTypeName) == true;
     }
 }

@@ -46,7 +46,8 @@ public class BotLocationService
         CommonUtils commonUtils,
         DatabaseService databaseService,
         QuestingBotsConfigLoader configLoader,
-        ConfigServer configServer)
+        ConfigServer configServer
+    )
     {
         _commonUtils = commonUtils;
         _databaseService = databaseService;
@@ -241,11 +242,7 @@ public class BotLocationService
                 continue;
             }
 
-            settings.ChancedEnemies.Add(new ChancedEnemy
-            {
-                EnemyChance = 100,
-                Role = pmcRole,
-            });
+            settings.ChancedEnemies.Add(new ChancedEnemy { EnemyChance = 100, Role = pmcRole });
         }
     }
 
@@ -415,8 +412,7 @@ public class BotLocationService
 
             var originalSptCap = BotConfig.MaxBotCap[locationKey];
             var eftCap = location.Base.BotMax;
-            var shouldChangeBotCap = originalSptCap > eftCap
-                || !config.BotSpawns.BotCapAdjustments.OnlyDecreaseBotCaps;
+            var shouldChangeBotCap = originalSptCap > eftCap || !config.BotSpawns.BotCapAdjustments.OnlyDecreaseBotCaps;
 
             // Apply EFT's cap if configured and appropriate
             if (config.BotSpawns.BotCapAdjustments.UseEftBotCaps && shouldChangeBotCap)
@@ -425,10 +421,10 @@ public class BotLocationService
             }
 
             // Apply the fixed per-map adjustment (defaults to 0)
-            var fixedAdjustment = config.BotSpawns.BotCapAdjustments.MapSpecificAdjustments
-                .GetValueOrDefault(
-                    locationKey,
-                    config.BotSpawns.BotCapAdjustments.MapSpecificAdjustments.GetValueOrDefault("default", 0));
+            var fixedAdjustment = config.BotSpawns.BotCapAdjustments.MapSpecificAdjustments.GetValueOrDefault(
+                locationKey,
+                config.BotSpawns.BotCapAdjustments.MapSpecificAdjustments.GetValueOrDefault("default", 0)
+            );
             BotConfig.MaxBotCap[locationKey] += fixedAdjustment;
 
             var newCap = BotConfig.MaxBotCap[locationKey];
@@ -437,8 +433,9 @@ public class BotLocationService
             {
                 _commonUtils.LogInfo(
                     $"Updated bot cap for {locationKey} to {newCap} "
-                    + $"(Original SPT: {originalSptCap}, EFT: {eftCap}, "
-                    + $"fixed adjustment: {fixedAdjustment})");
+                        + $"(Original SPT: {originalSptCap}, EFT: {eftCap}, "
+                        + $"fixed adjustment: {fixedAdjustment})"
+                );
             }
         }
     }
