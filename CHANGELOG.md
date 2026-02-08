@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-02-08
+
+### Added
+- **Zone-based movement system** (Phase 1: pure logic layer) — grid + vector-field architecture inspired by Phobos
+  - `WorldGrid`: auto-sized 2D grid partitioning maps on the XZ plane (~150 cells per map, no per-map config)
+  - `GridCell`: spatial partition with POI tracking and navigability checks
+  - `PointOfInterest` + `PoiCategory`: typed POI model with category-based default weights
+  - `AdvectionField`: pushes bots toward geographic zones with crowd repulsion (inverse-square falloff)
+  - `ConvergenceField`: pulls bots toward human players with sqrt-distance falloff, cached with 30s update interval
+  - `FieldComposer`: combines advection, convergence, momentum, and noise into composite movement direction
+  - `CellScorer`: scores candidate cells by directional alignment + POI density blend
+  - `DestinationSelector`: picks best navigable neighbor cell for bot movement
+- 71 new unit tests for all zone movement classes (121 client tests total)
+- Comprehensive design document (`docs/zone-movement-design.md`)
+- Full XML documentation on all zone movement classes
+
 ## [1.2.0] - 2026-02-08
 
 ### Changed

@@ -22,6 +22,16 @@
     <Compile Include="../../src/SPTQuestingBots.Client/Helpers/RollingAverage.cs" Link="LinkedSources/RollingAverage.cs" />
     <Compile Include="../../src/SPTQuestingBots.Client/Models/SoftStuckDetector.cs" Link="LinkedSources/SoftStuckDetector.cs" />
     <Compile Include="../../src/SPTQuestingBots.Client/Models/HardStuckDetector.cs" Link="LinkedSources/HardStuckDetector.cs" />
+    <!-- Zone movement pure-logic classes (no Unity/EFT dependencies) -->
+    <Compile Include="../../src/SPTQuestingBots.Client/ZoneMovement/Core/PoiCategory.cs" Link="LinkedSources/ZoneMovement/PoiCategory.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/ZoneMovement/Core/PointOfInterest.cs" Link="LinkedSources/ZoneMovement/PointOfInterest.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/ZoneMovement/Core/GridCell.cs" Link="LinkedSources/ZoneMovement/GridCell.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/ZoneMovement/Core/WorldGrid.cs" Link="LinkedSources/ZoneMovement/WorldGrid.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/ZoneMovement/Fields/AdvectionField.cs" Link="LinkedSources/ZoneMovement/AdvectionField.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/ZoneMovement/Fields/ConvergenceField.cs" Link="LinkedSources/ZoneMovement/ConvergenceField.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/ZoneMovement/Fields/FieldComposer.cs" Link="LinkedSources/ZoneMovement/FieldComposer.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/ZoneMovement/Selection/CellScorer.cs" Link="LinkedSources/ZoneMovement/CellScorer.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/ZoneMovement/Selection/DestinationSelector.cs" Link="LinkedSources/ZoneMovement/DestinationSelector.cs" />
   </ItemGroup>
 
   <!--

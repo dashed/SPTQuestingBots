@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
     <LangVersion>latest</LangVersion>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <Authors>DanW</Authors>
     <Description>SPT Questing Bots - AI bot questing system for Single Player Tarkov</Description>
     <RepositoryType>git</RepositoryType>
