@@ -12,6 +12,7 @@ using SPTQuestingBots.BotLogic.BotMonitor.Monitors;
 using SPTQuestingBots.BotLogic.Objective;
 using SPTQuestingBots.Components;
 using SPTQuestingBots.Models.Questing;
+using SPTQuestingBots.ZoneMovement.Integration;
 using UnityEngine;
 
 namespace SPTQuestingBots.Controllers
@@ -597,12 +598,22 @@ namespace SPTQuestingBots.Controllers
             Stopwatch timeoutMonitor = Stopwatch.StartNew();
             do
             {
+                // For zone quests, use field-based selection instead of nearest-to-bot
+                if (quest?.Name == ConfigController.Config.Questing.ZoneMovement.QuestName)
+                {
+                    WorldGridManager gridManager = Singleton<GameWorld>.Instance?.GetComponent<WorldGridManager>();
+                    objective = ZoneObjectiveCycler.SelectZoneObjective(bot, quest, gridManager);
+                }
+
                 // Find the nearest objective for the bot's currently assigned quest (if any)
-                objective = quest
-                    ?.RemainingObjectivesForBot(bot)
-                    ?.Where(o => o.CanAssignBot(bot))
-                    ?.Where(o => o.CanBotRepeatQuestObjective(bot))
-                    ?.NearestToBot(bot);
+                if (objective == null)
+                {
+                    objective = quest
+                        ?.RemainingObjectivesForBot(bot)
+                        ?.Where(o => o.CanAssignBot(bot))
+                        ?.Where(o => o.CanBotRepeatQuestObjective(bot))
+                        ?.NearestToBot(bot);
+                }
 
                 // Exit the loop if an objective was found for the bot
                 if (objective != null)

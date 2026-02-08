@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-02-08
+
+### Added
+- **Zone movement Phase 4A: per-bot field state** — eliminates herd movement where all bots in the same cell choose the same direction
+  - `BotFieldState`: per-bot momentum (from tracked `PreviousDestination`) and seeded noise angle
+  - `ZoneMathUtils.ComputeMomentum()`: normalized XZ-plane direction for per-bot momentum derivation
+  - `WorldGridManager.GetRecommendedDestination(string, Vector3)`: new per-bot overload using auto-tracked momentum + noise via `BotFieldState`
+  - 9 new unit tests: `BotFieldStateTests` (4) + `ZoneMathUtilsTests.ComputeMomentum` (5)
+- **Zone movement Phase 4B: dynamic objective selection** — bots select next zone objective using live field state instead of nearest-to-bot
+  - `ZoneObjectiveCycler`: selects zone objectives via advection + convergence + per-bot momentum + noise, matching Phobos's `GotoObjectiveStrategy.AssignNewObjective()` pattern
+  - Integrated into `BotJobAssignmentFactory.GetNewBotJobAssignment()` with transparent fallback to default selection
+  - 5 new contract tests: `ZoneObjectiveCyclerTests` (naming convention validation)
+
+### Changed
+- Zone quests now use field-based objective cycling for dynamic, non-repetitive bot movement patterns
+- 172 client tests total (was 158), 58 server tests, 230 total
+
 ## [1.5.0] - 2026-02-08
 
 ### Added

@@ -16,7 +16,7 @@
 | **Bot spawning** | None (uses whatever spawns) | Custom PMC/PScav generation system (optional) |
 | **Stuck detection** | Two-tier: soft (EWMA) + hard (ring buffer + teleport) | Two-tier: soft (EWMA) + hard (ring buffer + teleport) — ported from Phobos |
 | **Performance** | Batch nav jobs, ECS data layout, AggressiveInlining | Batch nav jobs, PathfindingThrottle, sleeping system, for-loops, HashSet |
-| **Maturity** | v0.1.11 (early) | v1.5.0 (C# port with major enhancements) |
+| **Maturity** | v0.1.11 (early) | v1.6.0 (C# port with major enhancements) |
 
 **Key takeaway**: These mods have converged significantly. QuestingBots now incorporates Phobos-inspired features (zone-based movement fields with per-bot momentum/noise, two-tier stuck detection, batched pathfinding) alongside its original quest-driven objective system. The primary remaining differences are: Phobos takes full control of bot movement (custom `Player.Move()` calls), while QuestingBots delegates to BSG's mover; Phobos uses per-map JSON zone configurations, while QuestingBots auto-detects zones from spawn points; and QuestingBots has a full bot spawning system and server component that Phobos lacks.
 
@@ -36,7 +36,7 @@
 ### SPTQuestingBots
 
 - **Author**: DanW (`com.DanW.QuestingBots`), C# port by Alberto Leal
-- **Version**: 1.5.0
+- **Version**: 1.6.0
 - **Scope**: Full quest-driven behavior, zone-based fallback movement, boss/follower coordination, PMC/PScav spawning (optional), AI sleeping
 - **Approach**: Bots receive actual game quest objectives (from 12 per-map JSON files) and navigate to complete them. When no quests are available, a Phobos-inspired zone movement system uses advection/convergence fields to guide bots toward interesting map areas.
 - **Maturity**: Mature; 13 action types, extensive spawning system, broad bot-type support, zone movement with debug overlay
@@ -53,7 +53,7 @@
 | **Solution** | `Phobos.sln` (1 main project + Gym benchmark) | `SPTQuestingBots.sln` (2 main + 2 test projects) |
 | **Target** | netstandard2.1 | Client: net472, Server: net9.0, Tests: net9.0 |
 | **Build** | Standard .csproj | Makefile (`make build`, `make test`, `make ci`) |
-| **Testing** | Gym project (BenchmarkDotNet) | NUnit 3.x + NSubstitute (167 client + 58 server = 225 tests) |
+| **Testing** | Gym project (BenchmarkDotNet) | NUnit 3.x + NSubstitute (172 client + 58 server = 230 tests) |
 | **CI** | None observed | GitHub Actions (`ci.yml`) |
 | **Code style** | File-scoped namespaces, primary constructors | Block-scoped namespaces, traditional constructors, CSharpier formatting |
 
@@ -274,7 +274,8 @@ Both mods now use physics-inspired spatial systems for directing bot movement:
 | **Crowd repulsion** | Congestion avoidance in field computation | Inverse-square falloff from other bot positions (`AdvectionField`) |
 | **Field composition** | Combined field forces | `FieldComposer`: weighted advection + convergence + momentum + noise; per-bot via `BotFieldState` |
 | **Per-bot state** | Momentum derived on-the-fly in `LocationSystem.RequestNear()` | `BotFieldState`: tracked `PreviousDestination` + seeded noise per bot, eliminates herd movement |
-| **Destination selection** | Squad-assigned grid cells | `CellScorer` (direction alignment + POI density) → `DestinationSelector` (best navigable neighbor) |
+| **Destination selection** | Squad-assigned grid cells | `CellScorer` (direction alignment + POI density) → `DestinationSelector` (best navigable neighbor) → `ZoneObjectiveCycler` (field-based objective cycling) |
+| **Objective cycling** | `GotoObjectiveStrategy.AssignNewObjective()` → `LocationSystem.RequestNear()` | `ZoneObjectiveCycler.SelectZoneObjective()` → `WorldGridManager.GetRecommendedDestination()` (integrated into `BotJobAssignmentFactory`) |
 | **POI awareness** | Zone-level only | 6 categories: Container, LooseLoot, Quest, Exfil, SpawnPoint, Synthetic |
 | **Action selection** | GotoObjective / Guard | 5 action types with category-weighted probabilities (`ZoneActionSelector`) |
 | **Dynamic updates** | Runtime via zone config hot-reload | `WorldGridManager.Update()` caches live player/bot positions periodically |
@@ -298,6 +299,7 @@ Both mods now use physics-inspired spatial systems for directing bot movement:
 - `DestinationSelector`: picks best navigable neighbor cell
 - `ZoneActionSelector`: maps POI categories to varied bot actions with weighted random selection
 - `WorldGridManager.GetRecommendedDestination()`: two overloads — global (explicit momentum) and per-bot (auto-tracked momentum + noise via `BotFieldState`)
+- `ZoneObjectiveCycler`: selects next zone objective using live field state instead of nearest-to-bot, matching Phobos's `GotoObjectiveStrategy.AssignNewObjective()` → `LocationSystem.RequestNear()` pattern
 - Zone quests registered via `BotJobAssignmentFactory.AddQuest()` with low desirability (5) — zero changes to existing dispatch
 
 ### Quest-Based Objective Selection (QuestingBots Only)
@@ -724,8 +726,8 @@ Phobos declares no incompatibilities.
 | Aspect | Phobos | QuestingBots |
 |--------|--------|--------------|
 | **Unit tests** | None (Gym project is benchmarks) | NUnit + NSubstitute |
-| **Test count** | 0 | 225 (167 client + 58 server) |
-| **Client test coverage** | — | Stuck detection (4 files), zone movement Phases 1-3 (9 files), Phase 4A per-bot state (2 files), config deserialization |
+| **Test count** | 0 | 230 (172 client + 58 server) |
+| **Client test coverage** | — | Stuck detection (4 files), zone movement Phases 1-3 (9 files), Phase 4A per-bot state (2 files), Phase 4B contract tests (1 file), config deserialization |
 | **CI** | None | GitHub Actions (format-check → lint → build → test) |
 | **Benchmarks** | BenchmarkDotNet in Gym/ | None |
 | **Formatting** | Not configured | CSharpier + `.editorconfig` |
@@ -751,7 +753,9 @@ Since the original comparison, QuestingBots has ported several Phobos innovation
 
 3. **Zone-based movement fields** (v1.3.0-1.5.0): Built a full grid + vector-field system inspired by Phobos's advection/convergence architecture. Key difference: QuestingBots auto-detects map bounds and zones from spawn points, requiring no per-map JSON configuration. Per-bot field state (`BotFieldState`) tracks momentum and noise per bot — matching Phobos's pattern where `LocationSystem.RequestNear()` derives momentum from `(requestCoords - previousCoords)` — so each bot gets a unique direction even when occupying the same cell.
 
-4. **Ring buffers and EWMA** (v1.1.0): `PositionHistory` and `RollingAverage` helpers ported from Phobos's stuck detection.
+4. **Dynamic objective cycling** (v1.5.0): `ZoneObjectiveCycler` selects the next zone objective using live field state (advection + convergence + per-bot momentum + noise) instead of nearest-to-bot, matching Phobos's `GotoObjectiveStrategy.AssignNewObjective()` → `LocationSystem.RequestNear()` lifecycle. Integrated into `BotJobAssignmentFactory.GetNewBotJobAssignment()` with transparent fallback.
+
+5. **Ring buffers and EWMA** (v1.1.0): `PositionHistory` and `RollingAverage` helpers ported from Phobos's stuck detection.
 
 ### What QuestingBots Could Still Learn from Phobos
 
@@ -779,7 +783,7 @@ Since the original comparison, QuestingBots has ported several Phobos innovation
 
 6. **Server component**: Having quest data and bot generation on the server allows QuestingBots to leverage the full game database. Phobos is limited to client-side data.
 
-7. **Testing infrastructure**: QuestingBots has 225 unit tests and CI. Phobos has none, relying on manual testing and benchmarks.
+7. **Testing infrastructure**: QuestingBots has 230 unit tests and CI. Phobos has none, relying on manual testing and benchmarks.
 
 8. **Mod conflict detection**: QuestingBots actively detects and warns about conflicting mods both via BepInEx attributes and server-side checks. Phobos has no conflict detection.
 

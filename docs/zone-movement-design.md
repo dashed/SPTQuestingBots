@@ -331,14 +331,14 @@ Two BepInEx ConfigEntry fields in `QuestingBotsPluginConfig.cs` under "Zone Move
 
 See **Section 8** for detailed Phase 4 implementation plans:
 - **Phase 4A**: Per-bot field state (`BotFieldState`, `ZoneMathUtils.ComputeMomentum`) — S ✅
-- **Phase 4B**: Dynamic objective selection (`ZoneObjectiveCycler`, factory integration) — M
+- **Phase 4B**: Dynamic objective selection (`ZoneObjectiveCycler`, factory integration) — M ✅
 - **Phase 4C**: Enhanced 2D debug minimap (grid cells, field arrows, bot dots) — M
 
 ---
 
 ## 6. Test Strategy
 
-### 6.1 Unit Tests — 167 client tests total (Phases 1–4A)
+### 6.1 Unit Tests — 172 client tests total (Phases 1–4B)
 
 All use the existing `Vector3` test shim (with `sqrMagnitude`, `magnitude`, `operator-`).
 
@@ -356,8 +356,9 @@ All use the existing `Vector3` test shim (with `sqrMagnitude`, `magnitude`, `ope
 | `MapBoundsDetectorTests` | 9 | Single/multiple positions, padding, Y bounds, negative coordinates, error cases |
 | `ZoneMathUtilsTests` | 20 | GetDominantCategory (10 cases), ComputeCentroid (5 cases), ComputeMomentum (5 cases) |
 | `BotFieldStateTests` | 4 | ComputeMomentum delegation, GetNoiseAngle: different seeds, determinism, output range |
+| `ZoneObjectiveCyclerTests` | 5 | Naming convention contract between ZoneQuestBuilder and ZoneObjectiveCycler, format consistency |
 
-### 6.2 Phase 4B–4C Planned Tests
+### 6.2 Phase 4C Planned Tests
 
 | Test Class | Tests | Coverage |
 |------------|-------|----------|
@@ -530,7 +531,7 @@ public Vector3? GetRecommendedDestination(string botProfileId, Vector3 botPositi
 
 ---
 
-### 8.2 Phase 4B: Dynamic Objective Selection (#24)
+### 8.2 Phase 4B: Dynamic Objective Selection (#24) ✅ COMPLETE
 
 **Goal**: When a bot finishes a zone movement objective, select the next objective using live field state (via `GetRecommendedDestination`) instead of the default nearest-to-bot selection.
 

@@ -32,6 +32,8 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - Grid + vector-field architecture gives idle bots purposeful movement toward interesting map areas
 - Auto-detects map bounds from spawn points; no per-map configuration needed
 - Bots are pulled toward human players (convergence field) and pushed toward geographic zones (advection field)
+- Per-bot momentum and noise ensure each bot picks a unique direction, eliminating herd movement
+- Dynamic objective cycling: bots select next destination via live field state instead of nearest-to-bot
 - POI-aware: bots choose contextual actions (ambush, snipe, hold position) based on nearby containers, exfils, and quest triggers
 - Serves as fallback when no higher-priority quests are available
 - F12 menu toggles for enable/disable and debug overlay
