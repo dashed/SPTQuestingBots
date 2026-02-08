@@ -115,14 +115,14 @@ namespace SPTQuestingBots.Patches
 
             if (bot.Profile.Info.Settings.IsFollower())
             {
-                botSpawnerClass._followersBotsCount--;
+                botSpawnerClass.FollowersBotsCount--;
             }
             else if (bot.Profile.Info.Settings.IsBoss())
             {
-                botSpawnerClass._bossBotsCount--;
+                botSpawnerClass.BossBotsCount--;
             }
 
-            botSpawnerClass._allBotsCount--;
+            botSpawnerClass.AllBotsCount--;
         }
     }
 }

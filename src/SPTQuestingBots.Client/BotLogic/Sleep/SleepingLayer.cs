@@ -128,7 +128,7 @@ namespace SPTQuestingBots.BotLogic.Sleep
                 }
 
                 // Ignore bots that are in the same group
-                List<BotOwner> groupMemberList = SPT.Custom.CustomAI.AiHelpers.GetAllMembers(bot.BotsGroup);
+                List<BotOwner> groupMemberList = SPT.Custom.CustomAI.AIExtensions.GetAllMembers(bot.BotsGroup);
                 if (groupMemberList.Contains(BotOwner))
                 {
                     continue;

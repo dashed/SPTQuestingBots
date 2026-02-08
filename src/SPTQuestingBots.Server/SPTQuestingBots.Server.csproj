@@ -7,10 +7,10 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <InternalsVisibleTo>SPTQuestingBots.Server.Tests</InternalsVisibleTo>
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="SPTQuestingBots.Server.Tests" />
     <PackageReference Include="SemanticVersioning" Version="3.0.0" />
   </ItemGroup>
 

@@ -18,7 +18,7 @@ namespace SPTQuestingBots.BehaviorExtensions
     public abstract class CustomLogicDelayedUpdate : CustomLogic
     {
         protected Components.BotObjectiveManager ObjectiveManager { get; private set; }
-        protected GClass168 baseAction { get; private set; } = null;
+        protected BotNodeAbstractClass baseAction { get; private set; } = null;
         protected static int updateInterval { get; private set; } = 100;
 
         private Stopwatch updateTimer = Stopwatch.StartNew();
@@ -27,7 +27,7 @@ namespace SPTQuestingBots.BehaviorExtensions
         private float sprintDelayTime = 0;
 
         // Find by CreateNode(BotLogicDecision type, BotOwner bot) -> case BotLogicDecision.simplePatrol -> private gclass object
-        private GClass385 baseSteeringLogic = new GClass385();
+        private GClass395 baseSteeringLogic = new GClass395();
 
         protected double ActionElpasedTime => actionElapsedTime.ElapsedMilliseconds / 1000.0;
         protected double ActionElapsedTimeRemaining => Math.Max(0, ObjectiveManager.MinElapsedActionTime - ActionElpasedTime);
@@ -70,7 +70,7 @@ namespace SPTQuestingBots.BehaviorExtensions
             actionElapsedTime.Restart();
         }
 
-        public void SetBaseAction(GClass168 _baseAction)
+        public void SetBaseAction(BotNodeAbstractClass _baseAction)
         {
             baseAction = _baseAction;
         }
@@ -102,7 +102,7 @@ namespace SPTQuestingBots.BehaviorExtensions
             BotOwner.SetTargetMoveSpeed(1f);
             
             // Open doors blocking the bot's path
-            BotOwner.DoorOpener.Update();
+            BotOwner.DoorOpener.ManualUpdate();
         }
 
         public void UpdateBotSteering()
