@@ -514,6 +514,54 @@ namespace SPTQuestingBots.BotLogic.ECS
             return null;
         }
 
+        // ── Movement State Access ────────────────────────────────
+
+        /// <summary>
+        /// Check if a bot's custom mover is active by profile ID. O(1) lookup.
+        /// Used by BotMoverFixedUpdatePatch to conditionally skip BSG's ManualFixedUpdate.
+        /// </summary>
+        public static bool IsCustomMoverActive(string profileId)
+        {
+            if (profileId != null && _profileIdToEntity.TryGetValue(profileId, out var entity))
+                return entity.Movement.IsCustomMoverActive;
+            return false;
+        }
+
+        /// <summary>
+        /// Activate the custom mover for a bot (disables BSG's BotMover via patch).
+        /// </summary>
+        public static void ActivateCustomMover(BotOwner bot)
+        {
+            if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
+            {
+                entity.Movement.IsCustomMoverActive = true;
+            }
+        }
+
+        /// <summary>
+        /// Deactivate the custom mover for a bot and reset movement state.
+        /// BSG's BotMover will resume via patch.
+        /// </summary>
+        public static void DeactivateCustomMover(BotOwner bot)
+        {
+            if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
+            {
+                entity.Movement.Reset();
+            }
+        }
+
+        /// <summary>
+        /// Get the BotEntity for a profile ID for direct movement state access.
+        /// Used by CustomMoverController for per-frame movement state updates.
+        /// Returns null if the bot is not registered.
+        /// </summary>
+        public static BotEntity GetEntityByProfileId(string profileId)
+        {
+            if (profileId != null && _profileIdToEntity.TryGetValue(profileId, out var entity))
+                return entity;
+            return null;
+        }
+
         // ── Phase 8: Job Assignment Access ──────────────────────
 
         /// <summary>

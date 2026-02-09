@@ -70,6 +70,14 @@ namespace SPTQuestingBots
                 new Patches.ReturnToPoolPatch().Enable();
                 new Patches.BotOwnerSprintPatch().Enable();
 
+                // Custom mover patches (Phobos-style Player.Move replacement)
+                if (ConfigController.Config.Questing.BotPathing.UseCustomMover)
+                {
+                    new Patches.Movement.BotMoverFixedUpdatePatch().Enable();
+                    new Patches.Movement.MovementContextIsAIPatch().Enable();
+                    new Patches.Movement.EnableVaultPatch().Enable();
+                }
+
                 new Patches.Lighthouse.MineDirectionalShouldExplodePatch().Enable();
                 new Patches.Lighthouse.LighthouseTraderZoneAwakePatch().Enable();
                 new Patches.Lighthouse.LighthouseTraderZonePlayerAttackPatch().Enable();

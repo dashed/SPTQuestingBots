@@ -9,6 +9,7 @@ using EFT;
 using EFT.Interactive;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
+using SPTQuestingBots.Models.Pathing;
 using UnityEngine.AI;
 
 namespace SPTQuestingBots.BotLogic.Objective
@@ -35,7 +36,23 @@ namespace SPTQuestingBots.BotLogic.Objective
 
         public override void Update(DrakiaXYZ.BigBrain.Brains.CustomLayer.ActionData data)
         {
-            UpdateBotMovement(CanSprint);
+            // Execute custom mover every frame (before throttled updates)
+            if (UseCustomMover)
+            {
+                PathFollowerStatus status = TickCustomMover(CanSprint);
+
+                // When using custom mover, skip BSG movement helpers that conflict
+                // (UpdateBotMovement calls BotSprintingController which touches BSG mover)
+                BotOwner.SetPose(1f);
+                BotOwner.BotLay.GetUp(true);
+                BotOwner.BewarePlantedMine.Update();
+                BotOwner.DoorOpener.ManualUpdate();
+            }
+            else
+            {
+                UpdateBotMovement(CanSprint);
+            }
+
             UpdateBotSteering();
             UpdateBotMiscActions();
 

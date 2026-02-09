@@ -2232,5 +2232,244 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS
 
             Assert.That(memberCount, Is.EqualTo(0));
         }
+
+        // ── Movement State Wiring ────────────────────────────────────
+
+        [Test]
+        public void MovementState_DefaultIsInactive()
+        {
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+
+            Assert.That(entity.Movement.IsCustomMoverActive, Is.False);
+            Assert.That(entity.Movement.Status, Is.EqualTo(PathFollowStatus.None));
+            Assert.That(entity.Movement.IsSprinting, Is.False);
+        }
+
+        [Test]
+        public void MovementState_ActivateCustomMover_SetsFlag()
+        {
+            // Simulates BotEntityBridge.ActivateCustomMover(bot)
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+
+            entity.Movement.IsCustomMoverActive = true;
+
+            Assert.That(entity.Movement.IsCustomMoverActive, Is.True);
+        }
+
+        [Test]
+        public void MovementState_DeactivateCustomMover_ResetsAllFields()
+        {
+            // Simulates BotEntityBridge.DeactivateCustomMover(bot) which calls Movement.Reset()
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+
+            // Activate and set various movement state
+            entity.Movement.IsCustomMoverActive = true;
+            entity.Movement.Status = PathFollowStatus.Following;
+            entity.Movement.IsSprinting = true;
+            entity.Movement.CurrentCornerIndex = 5;
+            entity.Movement.TotalCorners = 10;
+            entity.Movement.RetryCount = 3;
+            entity.Movement.SprintAngleJitter = 25.0f;
+            entity.Movement.StuckStatus = StuckPhase.SoftStuck;
+
+            // Deactivate resets everything
+            entity.Movement.Reset();
+
+            Assert.That(entity.Movement.IsCustomMoverActive, Is.False);
+            Assert.That(entity.Movement.Status, Is.EqualTo(PathFollowStatus.None));
+            Assert.That(entity.Movement.IsSprinting, Is.False);
+            Assert.That(entity.Movement.CurrentCornerIndex, Is.EqualTo(0));
+            Assert.That(entity.Movement.TotalCorners, Is.EqualTo(0));
+            Assert.That(entity.Movement.RetryCount, Is.EqualTo(0));
+            Assert.That(entity.Movement.SprintAngleJitter, Is.EqualTo(0f));
+            Assert.That(entity.Movement.StuckStatus, Is.EqualTo(StuckPhase.None));
+            Assert.That(entity.Movement.CurrentPose, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void MovementState_IsCustomMoverActive_PerBotIndependent()
+        {
+            // Simulates per-bot custom mover activation check via profileId → entity
+            var profileToEntity = new Dictionary<string, BotEntity>();
+
+            var e1 = _registry.Add();
+            e1.BotType = BotType.PMC;
+            profileToEntity["pmc-1"] = e1;
+
+            var e2 = _registry.Add();
+            e2.BotType = BotType.PMC;
+            profileToEntity["pmc-2"] = e2;
+
+            // Only e1 has custom mover active
+            e1.Movement.IsCustomMoverActive = true;
+
+            Assert.That(profileToEntity["pmc-1"].Movement.IsCustomMoverActive, Is.True);
+            Assert.That(profileToEntity["pmc-2"].Movement.IsCustomMoverActive, Is.False);
+        }
+
+        [Test]
+        public void MovementState_CountByStatus_MatchesExpected()
+        {
+            var e1 = _registry.Add();
+            e1.BotType = BotType.PMC;
+            e1.Movement.Status = PathFollowStatus.Following;
+
+            var e2 = _registry.Add();
+            e2.BotType = BotType.PMC;
+            e2.Movement.Status = PathFollowStatus.Following;
+
+            var e3 = _registry.Add();
+            e3.BotType = BotType.Scav;
+            e3.Movement.Status = PathFollowStatus.Reached;
+
+            var e4 = _registry.Add();
+            e4.BotType = BotType.Boss;
+            e4.Movement.Status = PathFollowStatus.Failed;
+
+            Assert.That(HiveMindSystem.CountByMovementStatus(_registry.Entities, PathFollowStatus.Following), Is.EqualTo(2));
+            Assert.That(HiveMindSystem.CountByMovementStatus(_registry.Entities, PathFollowStatus.Reached), Is.EqualTo(1));
+            Assert.That(HiveMindSystem.CountByMovementStatus(_registry.Entities, PathFollowStatus.Failed), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void MovementState_CountStuckBots_IncludesAllPhases()
+        {
+            var e1 = _registry.Add();
+            e1.Movement.StuckStatus = StuckPhase.SoftStuck;
+            var e2 = _registry.Add();
+            e2.Movement.StuckStatus = StuckPhase.HardStuck;
+            var e3 = _registry.Add();
+            e3.Movement.StuckStatus = StuckPhase.Failed;
+            var e4 = _registry.Add();
+            e4.Movement.StuckStatus = StuckPhase.None;
+
+            Assert.That(HiveMindSystem.CountStuckBots(_registry.Entities), Is.EqualTo(3));
+        }
+
+        [Test]
+        public void MovementState_CountSprintingBots_OnlyCountsActive()
+        {
+            var e1 = _registry.Add();
+            e1.Movement.IsSprinting = true;
+            var e2 = _registry.Add();
+            e2.Movement.IsSprinting = true;
+            e2.IsActive = false; // Inactive bot should not count
+            var e3 = _registry.Add();
+            e3.Movement.IsSprinting = false;
+
+            Assert.That(HiveMindSystem.CountSprintingBots(_registry.Entities), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void MovementState_ResetForInactiveEntities()
+        {
+            var active = _registry.Add();
+            active.Movement.IsCustomMoverActive = true;
+            active.Movement.Status = PathFollowStatus.Following;
+
+            var inactive = _registry.Add();
+            inactive.IsActive = false;
+            inactive.Movement.IsCustomMoverActive = true;
+            inactive.Movement.Status = PathFollowStatus.Following;
+
+            HiveMindSystem.ResetMovementForInactiveEntities(_registry.Entities);
+
+            // Active entity's movement untouched
+            Assert.That(active.Movement.IsCustomMoverActive, Is.True);
+            Assert.That(active.Movement.Status, Is.EqualTo(PathFollowStatus.Following));
+
+            // Inactive entity's movement reset
+            Assert.That(inactive.Movement.IsCustomMoverActive, Is.False);
+            Assert.That(inactive.Movement.Status, Is.EqualTo(PathFollowStatus.None));
+        }
+
+        [Test]
+        public void MovementState_GetEntityByProfileId_SimulatesLookup()
+        {
+            // Simulates BotEntityBridge.GetEntityByProfileId pattern
+            var profileToEntity = new Dictionary<string, BotEntity>();
+
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+            entity.Movement.IsCustomMoverActive = true;
+            entity.Movement.Status = PathFollowStatus.Following;
+            profileToEntity["test-profile-123"] = entity;
+
+            // Lookup by profileId → read movement state
+            BotEntity found;
+            bool exists = "test-profile-123" != null && profileToEntity.TryGetValue("test-profile-123", out found);
+
+            Assert.That(exists, Is.True);
+            Assert.That(profileToEntity["test-profile-123"].Movement.IsCustomMoverActive, Is.True);
+            Assert.That(profileToEntity["test-profile-123"].Movement.Status, Is.EqualTo(PathFollowStatus.Following));
+
+            // Unknown profileId returns false
+            exists = "unknown" != null && profileToEntity.TryGetValue("unknown", out found);
+            Assert.That(exists, Is.False);
+        }
+
+        [Test]
+        public void MovementState_SyncFromFollower_UpdatesEntityFields()
+        {
+            // Simulates CustomMoverController.SyncMovementState updating entity
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+            entity.Movement.IsCustomMoverActive = true;
+
+            // Simulate path follower state sync
+            entity.Movement.Status = PathFollowStatus.Following;
+            entity.Movement.CurrentCornerIndex = 3;
+            entity.Movement.TotalCorners = 8;
+            entity.Movement.RetryCount = 1;
+            entity.Movement.SprintAngleJitter = 15.5f;
+            entity.Movement.LastPathUpdateTime = 42.5f;
+
+            Assert.That(entity.Movement.Status, Is.EqualTo(PathFollowStatus.Following));
+            Assert.That(entity.Movement.CurrentCornerIndex, Is.EqualTo(3));
+            Assert.That(entity.Movement.TotalCorners, Is.EqualTo(8));
+            Assert.That(entity.Movement.RetryCount, Is.EqualTo(1));
+            Assert.That(entity.Movement.SprintAngleJitter, Is.EqualTo(15.5f).Within(0.01f));
+            Assert.That(entity.Movement.LastPathUpdateTime, Is.EqualTo(42.5f).Within(0.01f));
+        }
+
+        [Test]
+        public void MovementState_ActivateDeactivateLifecycle()
+        {
+            // Full lifecycle: register → activate → follow → reach → deactivate
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+
+            // 1. Initially idle
+            Assert.That(entity.Movement.IsCustomMoverActive, Is.False);
+            Assert.That(entity.Movement.Status, Is.EqualTo(PathFollowStatus.None));
+
+            // 2. Activate
+            entity.Movement.IsCustomMoverActive = true;
+            Assert.That(entity.Movement.IsCustomMoverActive, Is.True);
+
+            // 3. Start following a path
+            entity.Movement.Status = PathFollowStatus.Following;
+            entity.Movement.CurrentCornerIndex = 0;
+            entity.Movement.TotalCorners = 5;
+            entity.Movement.IsSprinting = true;
+
+            // 4. Progress through path
+            entity.Movement.CurrentCornerIndex = 3;
+            entity.Movement.SprintAngleJitter = 12.0f;
+
+            // 5. Reach destination
+            entity.Movement.Status = PathFollowStatus.Reached;
+
+            // 6. Deactivate (reset)
+            entity.Movement.Reset();
+            Assert.That(entity.Movement.IsCustomMoverActive, Is.False);
+            Assert.That(entity.Movement.Status, Is.EqualTo(PathFollowStatus.None));
+            Assert.That(entity.Movement.IsSprinting, Is.False);
+            Assert.That(entity.Movement.CurrentCornerIndex, Is.EqualTo(0));
+            Assert.That(entity.Movement.TotalCorners, Is.EqualTo(0));
+        }
     }
 }

@@ -13,6 +13,7 @@ using SPTQuestingBots.Components;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
 using SPTQuestingBots.Models;
+using SPTQuestingBots.Models.Pathing;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -30,6 +31,18 @@ namespace SPTQuestingBots.BehaviorExtensions
         private HardStuckDetector _hardStuck;
         private Stopwatch timeSinceLastBrainLayerMessageTimer = Stopwatch.StartNew();
         private bool loggedBrainLayerError = false;
+
+        /// <summary>
+        /// Custom mover controller for Phobos-style Player.Move() movement.
+        /// Null when custom movement is disabled. Lazy-initialized on first Start().
+        /// </summary>
+        private CustomMoverController _customMover;
+
+        /// <summary>Whether the custom mover is currently active for this bot.</summary>
+        protected bool UseCustomMover => _customMover != null && _customMover.IsActive;
+
+        /// <summary>The custom mover controller (null when not using custom movement).</summary>
+        protected CustomMoverController CustomMover => _customMover;
 
         protected double TimeSinceLastBrainLayerMessage => timeSinceLastBrainLayerMessageTimer.ElapsedMilliseconds / 1000.0;
 
@@ -60,11 +73,25 @@ namespace SPTQuestingBots.BehaviorExtensions
             restartStuckTimer();
 
             BotOwner.PatrollingData.Pause();
+
+            // Activate custom mover if enabled in config
+            if (ConfigController.Config.Questing.BotPathing.UseCustomMover)
+            {
+                if (_customMover == null)
+                {
+                    _customMover = new CustomMoverController(BotOwner, CustomMoverConfig.CreateDefault());
+                }
+
+                _customMover.Activate();
+            }
         }
 
         public override void Stop()
         {
             base.Stop();
+
+            // Deactivate custom mover before unpausing patrol
+            _customMover?.Deactivate();
 
             BotOwner.PatrollingData.Unpause();
 
@@ -104,12 +131,27 @@ namespace SPTQuestingBots.BehaviorExtensions
             {
                 if (updateReason != Models.Pathing.BotPathUpdateNeededReason.None)
                 {
-                    BotOwner.FollowPath(ObjectiveManager.BotPath, true, false);
+                    if (UseCustomMover)
+                    {
+                        // Feed NavMesh corners to our custom path follower instead of BSG's mover
+                        _customMover.SetPath(ObjectiveManager.BotPath.Corners, position);
+                    }
+                    else
+                    {
+                        BotOwner.FollowPath(ObjectiveManager.BotPath, true, false);
+                    }
                 }
             }
             else
             {
-                BotOwner.Mover?.Stop();
+                if (UseCustomMover)
+                {
+                    _customMover.Follower.FailPath();
+                }
+                else
+                {
+                    BotOwner.Mover?.Stop();
+                }
             }
 
             return ObjectiveManager.BotPath.Status;
@@ -155,6 +197,19 @@ namespace SPTQuestingBots.BehaviorExtensions
                 movementContext.method_2(1f);
                 movementContext.PlayerAnimatorEnableJump(true);
             }
+        }
+
+        /// <summary>
+        /// Execute one frame of custom mover movement. Call every frame from Update()
+        /// when the custom mover is active (before the throttled path recalculation).
+        /// </summary>
+        /// <returns>The current path follower status, or Idle if custom mover is not active.</returns>
+        protected PathFollowerStatus TickCustomMover(bool isSprinting)
+        {
+            if (!UseCustomMover)
+                return PathFollowerStatus.Idle;
+
+            return _customMover.Tick(isSprinting);
         }
 
         protected void restartStuckTimer()

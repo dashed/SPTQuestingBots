@@ -7,7 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-02-08
+
 ### Added
+- **Custom movement system (Phobos-style `Player.Move()` replacement)** — enabled by default (`use_custom_mover`, default: true)
+  - `CustomPathFollower`: pure-logic path engine with corner-reaching epsilon (walk=0.35m, sprint=0.6m), path-deviation spring force, and sprint angle-jitter gating
+  - `CustomMoverController`: Unity integration layer bridging `CustomPathFollower` to `Player.Move()` with ECS state sync
+  - `CustomMoverConfig`: configurable thresholds (corner epsilon, spring strength, sprint jitter, Chaikin iterations)
+  - `PathSmoother`: Chaikin corner-cutting subdivision for smoother NavMesh paths
+  - `SprintAngleJitter`: XZ-plane angle-jitter calculator with urgency-based sprint thresholds (Low=20°, Medium=30°, High=45°)
+  - `PathDeviationForce`: XZ-plane spring force pulling bots back toward ideal path line via dot-product projection
+  - `CustomMoverHandoff`: BSG state sync helper — syncs 6 obfuscated `BotMover` fields on layer transitions
+  - `MovementState` struct on `BotEntity`: tracks path status, sprint, stuck, corner progress, IsCustomMoverActive flag
+  - 3 Harmony patches (conditionally registered when `use_custom_mover` is true):
+    - `BotMoverFixedUpdatePatch`: prefix skip of `ManualFixedUpdate` when custom mover is active (per-bot ECS check)
+    - `MovementContextIsAIPatch`: `IsAI` → false for human-like movement parameters
+    - `EnableVaultPatch`: enables vaulting for AI bots via `InitVaultingComponent`
+  - Wired into `GoToPositionAbstractAction` (lifecycle) and `GoToObjectiveAction` (per-frame tick)
+  - `BotEntityBridge`: 4 movement state access methods (`IsCustomMoverActive`, `ActivateCustomMover`, `DeactivateCustomMover`, `GetEntityByProfileId`)
+  - ~60 new tests: SprintAngleJitter (22), PathDeviationForce (15), CustomPathFollower (12), MovementState wiring (11)
+- Updated `docs/custom-movement-analysis.md` — all 4 phases marked as implemented
 - **ECS Phase 5A: dual-write gap closure** — all write operations now flow through ECS
   - `BotEntityBridge.DeactivateBot()` called on boss/follower death in `updateBosses()`/`updateBossFollowers()`
   - `BotEntityBridge.SetSleeping()` wired in `RegisterSleepingBot()`/`UnregisterSleepingBot()`
@@ -82,7 +101,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - ECS is now the sole data store — all old dictionaries and sensor classes deleted; push/pull sensors, sleep, type, boss/follower, field state, job assignments all managed via ECS only
 - `botJobAssignments` dictionary removed from `BotJobAssignmentFactory`
-- 479 client tests total (was 344), 58 server tests, 537 total
+- 595 client tests total (was 344), 58 server tests, 653 total
 
 ## [1.7.0] - 2026-02-08
 

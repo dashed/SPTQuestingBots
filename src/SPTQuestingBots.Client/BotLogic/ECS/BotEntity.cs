@@ -80,6 +80,14 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// </summary>
         public bool HasFieldState;
 
+        // ── Movement State ─────────────────────────────────────
+
+        /// <summary>
+        /// Per-bot movement tracking for the custom path-following system.
+        /// Inline value type for dense iteration and zero-allocation reads.
+        /// </summary>
+        public MovementState Movement;
+
         // ── Phase 8: Job Assignment State ─────────────────────
 
         /// <summary>

@@ -126,6 +126,72 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
             entity.Followers.Clear();
         }
 
+        // ── Movement State ─────────────────────────────────────
+
+        /// <summary>
+        /// Reset movement state for inactive entities.
+        /// Ensures dead/removed bots don't appear as "following" or "stuck".
+        /// </summary>
+        public static void ResetMovementForInactiveEntities(List<BotEntity> entities)
+        {
+            for (int i = 0; i < entities.Count; i++)
+            {
+                var entity = entities[i];
+                if (entity.IsActive)
+                    continue;
+
+                entity.Movement.Reset();
+            }
+        }
+
+        /// <summary>
+        /// Count entities by path-follow status (dense iteration).
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int CountByMovementStatus(List<BotEntity> entities, PathFollowStatus status)
+        {
+            int count = 0;
+            for (int i = 0; i < entities.Count; i++)
+            {
+                if (entities[i].IsActive && entities[i].Movement.Status == status)
+                    count++;
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// Count active entities that are currently stuck (any phase).
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int CountStuckBots(List<BotEntity> entities)
+        {
+            int count = 0;
+            for (int i = 0; i < entities.Count; i++)
+            {
+                if (entities[i].IsActive && entities[i].Movement.StuckStatus != StuckPhase.None)
+                    count++;
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// Count active entities that are currently sprinting.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int CountSprintingBots(List<BotEntity> entities)
+        {
+            int count = 0;
+            for (int i = 0; i < entities.Count; i++)
+            {
+                if (entities[i].IsActive && entities[i].Movement.IsSprinting)
+                    count++;
+            }
+
+            return count;
+        }
+
         // ── Counting Queries ────────────────────────────────────
 
         /// <summary>

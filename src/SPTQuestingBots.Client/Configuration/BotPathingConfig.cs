@@ -15,6 +15,9 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("incomplete_path_retry_interval")]
         public float IncompletePathRetryInterval { get; set; } = 5;
 
+        [JsonProperty("use_custom_mover")]
+        public bool UseCustomMover { get; set; } = true;
+
         public BotPathingConfig() { }
     }
 }

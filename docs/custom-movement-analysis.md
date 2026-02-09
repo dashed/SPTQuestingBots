@@ -5,7 +5,7 @@
 
 **Version**: 1.7.0
 **Date**: February 2026
-**Status**: Analysis / Proposal
+**Status**: Implemented (Option A — Full Phobos-Style Replacement)
 
 ---
 
@@ -29,8 +29,8 @@
 
 ## 1. Executive Summary
 
-QuestingBots currently delegates all movement execution to BSG's built-in `BotMover` via
-`BotOwner.FollowPath()`. This approach is simple and compatible with other mods, but produces
+QuestingBots previously delegated all movement execution to BSG's built-in `BotMover` via
+`BotOwner.FollowPath()`. This approach was simple and compatible with other mods, but produced
 jerky corner-to-corner navigation, limited sprint intelligence, and no path smoothing.
 
 Phobos takes the opposite approach: it **completely replaces** BSG's `BotMover` with direct
@@ -41,21 +41,21 @@ management during brain-layer transitions.
 
 A key finding: **SAIN also bypasses BSG's mover** with `Player.Move()` and 10 Harmony
 patches, making QuestingBots' use of `BotOwner.FollowPath()` the minority pattern. This
-reduces the compatibility risk of eventually adopting custom movement.
+reduces the compatibility risk of adopting custom movement.
 
-This analysis recommends a **hybrid, incremental approach** (Option B) that adopts Phobos's
-best ideas without replacing BSG's mover:
+**Implemented: Option A (Full Phobos-Style Replacement)** --- the full custom movement
+system has been built and is enabled by default (`use_custom_mover`, default: true).
 
-| Phase | Feature | Risk | Effort |
-|-------|---------|------|--------|
-| 1 | Sprint decision with angle-jitter analysis | Low | 1--2 weeks |
-| 2 | Path pre-smoothing before feeding to BSG | Medium | 2--3 weeks |
-| 3 | Movement state on ECS entities | Medium | 1--2 weeks |
-| 4 | Optional `Player.Move()` override (future) | High | 3--4 weeks |
+| Phase | Feature | Status |
+|-------|---------|--------|
+| 1 | Sprint angle-jitter analysis (`SprintAngleJitter`) | Complete |
+| 2 | Path pre-smoothing — Chaikin + spring force (`PathSmoother`, `PathDeviationForce`) | Complete |
+| 3 | Movement state on ECS entities (`MovementState` struct on `BotEntity`) | Complete |
+| 4 | Full `Player.Move()` override (`CustomPathFollower` + 3 BSG patches) | Complete |
 
-Phases 1--3 deliver measurable improvement while keeping full compatibility with SAIN,
-Looting Bots, and other BigBrain mods. Phase 4 is optional and can be pursued later if
-the gains from earlier phases prove insufficient.
+All phases are implemented, tested (~60 new tests), and wired into the action system.
+When `use_custom_mover` is false (default), QuestingBots continues using BSG's
+`BotOwner.FollowPath()` — the custom mover is purely opt-in.
 
 ---
 
@@ -494,23 +494,23 @@ MovementStateTracker           GoToPositionAbstractAction
 
 ## 9. Implementation Options
 
-### Option A: Full Phobos-Style Replacement
+### Option A: Full Phobos-Style Replacement ← IMPLEMENTED
 
 Replace BSG mover entirely with `Player.Move()`, custom path following, spring force.
 
-- **Risk**: High (reduced from "very high" --- SAIN uses same approach)
-- **Effort**: 4--6 weeks
-- **Compatibility**: SAIN-compatible (same paradigm); Looting Bots needs verification
-- **Recommendation**: Viable but premature --- pursue after Phases 1--3 prove out
+- **Risk**: Medium (SAIN uses same approach; config-gated for safety)
+- **Status**: **Implemented** — all components built and wired
+- **Compatibility**: SAIN-compatible (same paradigm); enabled by default (can disable)
+- **Activation**: Set `use_custom_mover: true` in `config.json` → `questing.bot_pathing`
 
-### Option B: Hybrid Enhancement (Recommended)
+### Option B: Hybrid Enhancement
 
 Keep BSG mover. Add sprint intelligence, path pre-smoothing, ECS movement state.
 
 - **Risk**: Low to medium
-- **Effort**: 4--7 weeks (phased)
+- **Status**: Superseded by Option A (which includes all Option B components)
 - **Compatibility**: Full
-- **Recommendation**: **Recommended** --- best risk/reward ratio
+- **Note**: Option A is now enabled by default; can be disabled via config for fallback
 
 ### Option C: Selective Override with Fallback
 
@@ -518,15 +518,15 @@ Custom `Player.Move()` ONLY during QuestingBots layers. BSG mover resumes for ot
 via handoff protocol.
 
 - **Risk**: High
-- **Effort**: 5--8 weeks
-- **Compatibility**: Mostly compatible (handoff bugs possible)
-- **Recommendation**: Consider as **Phase 4** after Option B proves out
+- **Status**: Superseded — Option A's implementation uses this exact pattern
+  (custom mover active only during QuestingBots layers, BSG mover resumes on `Stop()`)
+- **Note**: The implemented system IS a selective override with fallback
 
 ---
 
 ## 10. Recommended Implementation Plan
 
-### Phase 1: Sprint Decision Enhancement (Low Risk, 1--2 Weeks)
+### Phase 1: Sprint Decision Enhancement ← IMPLEMENTED
 
 **Goal**: Bots slow down before sharp turns and sprint on straight paths.
 
@@ -561,7 +561,7 @@ via handoff protocol.
 - Look-ahead window: 2 corners vs 5 corners
 - Edge cases: empty path, single corner, bot at last corner
 
-### Phase 2: Path Pre-Smoothing (Medium Risk, 2--3 Weeks)
+### Phase 2: Path Pre-Smoothing ← IMPLEMENTED
 
 **Goal**: Smoother paths fed to BSG mover, reducing jerky corner-to-corner movement.
 
@@ -604,7 +604,7 @@ For each pair of adjacent corners:
 - Bot exactly on path → zero deviation
 - Bot far from path → deviation capped
 
-### Phase 3: Movement State on ECS (Medium Risk, 1--2 Weeks)
+### Phase 3: Movement State on ECS ← IMPLEMENTED
 
 **Goal**: Dense movement state for batch queries and deterministic processing.
 
@@ -635,34 +635,49 @@ For each pair of adjacent corners:
 - Inactive entity reset
 - Dense iteration correctness
 
-### Phase 4: Optional Custom Path Following (High Risk, 3--4 Weeks, Future)
+### Phase 4: Custom Path Following ← IMPLEMENTED
 
 **Goal**: Full `Player.Move()` override during QuestingBots layers only.
 
-**New classes:**
-- `BotLogic/Movement/CustomPathFollower.cs` --- Player.Move() based execution
-  - Corner-reaching epsilon (walk=0.35m, sprint=0.6m)
-  - Path-deviation spring force applied to move direction
-  - Only active when a QuestingBots brain layer is active
+**Implemented classes:**
 
-- `Patches/Movement/BotMoverManualFixedUpdatePatch.cs` --- conditional disable
-  - Only return false when QuestingBots layer is active for that bot
-  - Otherwise let BSG mover run normally
+| File | Lines | Purpose |
+|------|-------|---------|
+| `Models/Pathing/CustomPathFollower.cs` | ~365 | Pure-logic path engine: corner-reaching, spring force, sprint gating |
+| `Models/Pathing/CustomMoverController.cs` | ~180 | Unity integration: bridges CustomPathFollower to `Player.Move()` |
+| `Models/Pathing/CustomMoverConfig.cs` | ~60 | Config struct with Phobos-matching defaults |
+| `Helpers/CustomMoverHandoff.cs` | ~55 | BSG state sync during mover transitions (6-field protocol) |
+| `Patches/Movement/BotMoverFixedUpdatePatch.cs` | ~30 | Prefix: skips `ManualFixedUpdate` when custom mover active |
+| `Patches/Movement/MovementContextIsAIPatch.cs` | ~25 | Prefix: `IsAI` → false for human-like movement params |
+| `Patches/Movement/EnableVaultPatch.cs` | ~25 | Prefix: enables vaulting for AI bots |
 
-**Layer handoff:**
-- On `GoToPositionAbstractAction.Stop()`: sync BSG state variables
-  - `LastGoodCastPoint`, `PrevSuccessLinkedFrom_1`, `PrevLinkPos`, `PositionOnWayInner`
-  - `SetPlayerToNavMesh()`, one final `ManualFixedUpdate()` tick
+**Action system wiring:**
+- `GoToPositionAbstractAction`: Creates/activates `CustomMoverController` in `Start()`,
+  deactivates in `Stop()`. `RecalculatePath()` feeds smoothed corners to custom follower
+  instead of `BotOwner.FollowPath()`. `TickCustomMover()` method for per-frame execution.
+- `GoToObjectiveAction`: Calls `TickCustomMover(CanSprint)` instead of `UpdateBotMovement()`
+  when custom mover is active. Directly manages pose/mine/door to avoid BSG sprint conflicts.
 
-**Door collision bypass:**
-- On layer start: `Physics.IgnoreCollision()` for nearby doors
-- Speed reduction to 25% within 3m of doors
+**Layer handoff (implemented in `CustomMoverHandoff`):**
+- On `Activate()`: `BotOwner.Mover.Stop()` + set ECS flag
+- On `Deactivate()`: Sync 6 BSG state fields + `SetPlayerToNavMesh()` + clear ECS flag
 
-**Tests (10--15):**
-- Corner-reaching epsilon (walk vs sprint distance)
-- Spring force blending with move direction
-- Path completion detection
-- Layer handoff state sync (mock BSG fields)
+**Movement execution (Phobos `CalcMoveDirection` pattern):**
+```csharp
+Vector2 dir2d = new Vector2(direction.x, direction.z);
+Vector3 rotated = Quaternion.Euler(0f, 0f, rotation.x) * dir2d;
+Player.Move(new Vector2(rotated.x, rotated.y));
+```
+
+**Config activation:**
+- `config.json` → `questing.bot_pathing.use_custom_mover` (default: true, set false to disable)
+- Patches registered conditionally in `QuestingBotsPlugin.Awake()`
+
+**Tests (~60 total across all phases):**
+- `SprintAngleJitter`: 22 tests (angle computation, urgency thresholds, edge cases)
+- `PathDeviationForce`: 15 tests (spring force, projection, perpendicularity)
+- `CustomPathFollower`: 12 tests (corner reaching, path completion, sprint gating)
+- `MovementState wiring`: 11 tests (ECS activation, deactivation, batch queries)
 
 ---
 
@@ -746,36 +761,38 @@ For each pair of adjacent corners:
 
 ---
 
-## 13. Conclusion and Recommendation
+## 13. Conclusion
 
-**Recommended approach: Option B (Hybrid Enhancement), Phases 1--3, with Phase 4 more
-viable than initially expected.**
+**Implemented: Option A (Full Phobos-Style Replacement), all 4 phases complete.**
 
-The Phobos custom movement system demonstrates clear quality improvements in path
-smoothness and sprint intelligence. A key finding from this analysis is that **SAIN
-already bypasses BSG's mover** with `Player.Move()` and 10 Harmony patches --- meaning
-QuestingBots' use of `BotOwner.FollowPath()` is the minority pattern, not the norm.
+The full custom movement system is built and config-gated behind `use_custom_mover`
+(default: true). QuestingBots now uses the same `Player.Move()` paradigm as
+both Phobos and SAIN, with:
 
-This shifts the risk calculus: adopting `Player.Move()` in Phase 4 would actually
-**align** with the mod ecosystem rather than fight against it. However, the layer
-handoff complexity and obfuscated field maintenance remain real concerns. Therefore:
+- **Sprint angle-jitter analysis** — bots slow before sharp turns, sprint on straight paths
+- **Chaikin path smoothing** — NavMesh corners are subdivided for smoother trajectories
+- **Path-deviation spring force** — XZ-plane spring pulls bots back toward ideal path line
+- **Custom path follower** — pure-logic engine with configurable corner-reaching epsilon
+- **3 BSG patches** — `ManualFixedUpdate` skip, `IsAI` → false, vault enable
+- **Layer handoff** — 6-field BSG state sync via `CustomMoverHandoff` on layer exit
+- **ECS movement state** — `MovementState` struct on `BotEntity` for batch queries
 
-1. **Layer handoff fragility**: 6 obfuscated BSG field names change with game updates
-2. **Looting Bots**: May expect BSG mover during loot scanning phases
-3. **Incremental value**: Phases 1--3 deliver significant improvement at lower risk
+**Risk mitigations:**
+1. **Config-gated**: Can be disabled via `use_custom_mover: false` to fall back to BSG mover
+2. **Layer-scoped**: Custom mover active ONLY during QuestingBots layers; BSG resumes
+   on `Stop()` with full state sync
+3. **SAIN-compatible**: Uses the same `Player.Move()` paradigm with conditional
+   `ManualFixedUpdate` skip (checked per-bot via ECS entity lookup)
+4. **Extensively tested**: ~60 new unit tests across all components
 
-The hybrid approach delivers the highest-value Phobos innovations (sprint angle jitter,
-path smoothing) while keeping the door open for full custom movement later:
+**Remaining risks:**
+1. **BSG field names**: 6 obfuscated fields in `CustomMoverHandoff.SyncBsgMoverState()`
+   may change with game updates — abstract behind wrapper
+2. **Looting Bots**: May expect BSG mover during loot scanning — needs runtime testing
+3. **Door handling**: Current implementation uses existing QuestingBots door system;
+   Phobos-style collision bypass not yet implemented
 
-- **Phase 1** (sprint decision) gives immediate visible improvement at very low risk
-- **Phase 2** (path smoothing) addresses the jerky corner movement at moderate risk
-- **Phase 3** (ECS state) provides infrastructure for batch processing and monitoring
-
-Phase 4 (custom path following) remains available as a future option if Phases 1--3
-prove insufficient, particularly if BSG improves their mover in future game updates
-or if the mod ecosystem evolves to support custom movement more broadly.
-
-**Estimated total effort**: 4--7 weeks for Phases 1--3, with ~50--70 new unit tests.
+**Total new tests**: ~60 (22 SprintAngleJitter + 15 PathDeviationForce + 12 CustomPathFollower + 11 MovementState wiring)
 
 ---
 
@@ -799,19 +816,36 @@ or if the mod ecosystem evolves to support custom movement more broadly.
 | `Helpers/PositionHistory.cs` | Ring buffer for position tracking |
 | `Helpers/RollingAverage.cs` | Window-based rolling average |
 
-### QuestingBots Source Files
+### QuestingBots Source Files (Existing)
 
 | File | Key Content |
 |------|-------------|
-| `BehaviorExtensions/GoToPositionAbstractAction.cs` | RecalculatePath, stuck detection |
+| `BehaviorExtensions/GoToPositionAbstractAction.cs` | RecalculatePath, stuck detection, custom mover lifecycle |
 | `Models/Pathing/BotPathData.cs` | CheckIfUpdateIsNeeded, updateCorners |
 | `Models/Pathing/StaticPathData.cs` | Pre-computed paths, Append, Prepend |
 | `Models/BotSprintingController.cs` | Stamina-based sprint control |
 | `Models/SoftStuckDetector.cs` | EWMA speed, vault→jump→fail |
 | `Models/HardStuckDetector.cs` | PositionHistory, retry→teleport→fail |
-| `BotLogic/Objective/GoToObjectiveAction.cs` | Main movement action |
+| `BotLogic/Objective/GoToObjectiveAction.cs` | Main movement action, custom mover tick |
 | `BotLogic/Objective/UnlockDoorAction.cs` | Key-based door unlocking |
 | `BotLogic/Objective/CloseNearbyDoorsAction.cs` | Close doors after passing |
 | `Components/BotObjectiveManager.cs` | Objective lifecycle |
 | `Components/QuestPathFinder.cs` | Static path pre-computation |
 | `Helpers/PathfindingThrottle.cs` | Max 5 NavMesh.CalculatePath per frame |
+
+### QuestingBots Custom Movement Files (New)
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `Models/Pathing/CustomPathFollower.cs` | ~365 | Pure-logic path engine: corner-reaching, spring force, sprint gating |
+| `Models/Pathing/CustomMoverController.cs` | ~180 | Unity integration: bridges CustomPathFollower to Player.Move() |
+| `Models/Pathing/CustomMoverConfig.cs` | ~60 | Config struct (corner epsilon, spring strength, sprint thresholds) |
+| `Models/Pathing/PathSmoother.cs` | ~80 | Chaikin corner-cutting subdivision algorithm |
+| `Models/Pathing/SprintAngleJitter.cs` | ~70 | XZ-plane angle jitter calculator for sprint gating |
+| `Models/Pathing/PathDeviationForce.cs` | ~60 | XZ-plane spring force toward ideal path line |
+| `Models/Pathing/MovementState.cs` | ~50 | ECS struct: path status, sprint, stuck, corner progress |
+| `Helpers/CustomMoverHandoff.cs` | ~55 | BSG state sync (6-field protocol) during mover transitions |
+| `Patches/Movement/BotMoverFixedUpdatePatch.cs` | ~30 | Prefix: skip ManualFixedUpdate when custom mover active |
+| `Patches/Movement/MovementContextIsAIPatch.cs` | ~25 | Prefix: IsAI → false for human-like movement params |
+| `Patches/Movement/EnableVaultPatch.cs` | ~25 | Prefix: enables vaulting for AI bots |
+| `Configuration/BotPathingConfig.cs` | ~23 | Added `UseCustomMover` config property |

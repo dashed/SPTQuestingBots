@@ -39,6 +39,15 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - 2D debug minimap: real-time visualization of grid cells, field vectors, bot/player positions, and zone sources
 - F12 menu toggles for enable/disable, debug overlay, and debug minimap
 
+### Custom Movement System (Optional)
+- Phobos-style `Player.Move()` replacement — enabled by default (`use_custom_mover`, default: true)
+- Custom path follower with corner-reaching epsilon, path-deviation spring force, and sprint angle-jitter gating
+- Chaikin path smoothing subdivides NavMesh corners for smoother trajectories
+- 3 BSG patches: `ManualFixedUpdate` skip, `IsAI` → false (human-like params), vault enable for AI
+- Layer handoff: 6-field BSG state sync on layer exit, `SetPlayerToNavMesh()` for clean mover resume
+- Same `Player.Move()` paradigm as SAIN and Phobos — aligns with mod ecosystem
+- When disabled, QuestingBots falls back to BSG's native `BotOwner.FollowPath()`
+
 ### ECS-Lite Data Layout
 - Dense entity storage with swap-remove and ID recycling, inspired by Phobos's EntityArray pattern
 - `BotEntity`: per-bot data container with stable recycled ID, boss/follower hierarchy, embedded sensor state, field state, and job assignment tracking
@@ -248,6 +257,7 @@ SPTQuestingBots/
 │       │   ├── Selection/           #   CellScorer, DestinationSelector
 │       │   └── Integration/         #   WorldGridManager, ZoneQuestBuilder, ZoneDebugOverlay
 │       └── Patches/                 # 25+ Harmony patches
+│           ├── Movement/            #   Custom mover BSG patches (opt-in)
 │           ├── Spawning/            #   Spawn system patches
 │           ├── Lighthouse/          #   Lighthouse-specific patches
 │           └── Debug/               #   Debug visualization patches
@@ -277,6 +287,7 @@ The mod is configured through `config/config.json` and the BepInEx F12 in-game m
 | `questing` | Objective system: brain layer priorities, quest selection, pathing, stuck detection, door unlocking, sprint limits, extraction |
 | `questing.bot_quests` | Quest-type settings: EFT quests, spawn rush, boss hunter, airdrop chaser, spawn wandering |
 | `bot_spawns` | PMC/PScav spawning: group sizes, difficulty, distances, hostility, bot caps, boss limits |
+| `questing.bot_pathing` | Path following: custom mover toggle (`use_custom_mover`), incomplete path retry, start position discrepancy |
 | `questing.zone_movement` | Zone-based movement: grid size, field weights, POI scoring, convergence interval, debug overlay |
 | `adjust_pscav_chance` | Dynamic player-Scav conversion rates when spawning system is disabled |
 

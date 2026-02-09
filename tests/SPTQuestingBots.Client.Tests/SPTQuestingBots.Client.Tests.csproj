@@ -81,11 +81,21 @@
       Include="../../src/SPTQuestingBots.Client/Models/Pathing/PathDeviationForce.cs"
       Link="LinkedSources/Pathing/PathDeviationForce.cs"
     />
+    <Compile Include="../../src/SPTQuestingBots.Client/Models/Pathing/PathSmoother.cs" Link="LinkedSources/Pathing/PathSmoother.cs" />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Models/Pathing/CustomMoverConfig.cs"
+      Link="LinkedSources/Pathing/CustomMoverConfig.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Models/Pathing/CustomPathFollower.cs"
+      Link="LinkedSources/Pathing/CustomPathFollower.cs"
+    />
     <!-- ECS: pure C# data containers (no Unity/EFT dependencies) -->
     <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/BotEntity.cs" Link="LinkedSources/ECS/BotEntity.cs" />
     <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/BotRegistry.cs" Link="LinkedSources/ECS/BotRegistry.cs" />
     <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/BotType.cs" Link="LinkedSources/ECS/BotType.cs" />
     <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/BotSensor.cs" Link="LinkedSources/ECS/BotSensor.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/MovementState.cs" Link="LinkedSources/ECS/MovementState.cs" />
     <Compile
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/HiveMindSystem.cs"
       Link="LinkedSources/ECS/Systems/HiveMindSystem.cs"
