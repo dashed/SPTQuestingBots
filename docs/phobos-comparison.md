@@ -9,16 +9,16 @@
 | **Purpose** | Procedural movement via grid/zone fields | Quest-driven objectives + zone-based fallback movement |
 | **Architecture** | Pure client (ECS-like, ~62 files) | Client + Server (ECS-Lite + MonoBehaviour, ~180 files) |
 | **BigBrain layers** | 1 (priority 19) | 4 (priorities 99, 26, 19, 18) |
-| **Navigation** | Custom movement system with own pathfinding | BSG's built-in `BotOwner.FollowPath()` + PathfindingThrottle |
+| **Navigation** | Custom movement system with own pathfinding | Custom `Player.Move()` (default) or BSG `BotOwner.FollowPath()` fallback |
 | **Squad model** | Explicit Squad entities with leader/member | HiveMind sensor-based boss/follower tracking |
 | **Decision-making** | Utility AI (scored actions/strategies) | State machine (quest action enum) + zone field fallback |
 | **Zone/field system** | Advection + convergence fields from JSON per-map configs | Advection + convergence fields, auto-detected from spawn points, per-bot momentum + noise |
 | **Bot spawning** | None (uses whatever spawns) | Custom PMC/PScav generation system (optional) |
 | **Stuck detection** | Two-tier: soft (EWMA) + hard (ring buffer + teleport) | Two-tier: soft (EWMA) + hard (ring buffer + teleport) — ported from Phobos |
 | **Performance** | Batch nav jobs, ECS data layout, AggressiveInlining | Batch nav jobs, PathfindingThrottle, sleeping system, ECS-Lite dense iteration, AggressiveInlining, static buffers |
-| **Maturity** | v0.1.11 (early) | v1.7.0 (C# port with ECS-Lite data layout) |
+| **Maturity** | v0.1.11 (early) | v1.8.0 (custom movement, ECS-Lite, zone fields) |
 
-**Key takeaway**: These mods have converged significantly. QuestingBots now incorporates Phobos-inspired features (ECS-Lite dense entity storage with swap-remove, zone-based movement fields with per-bot momentum/noise, two-tier stuck detection, batched pathfinding, AggressiveInlining on hot paths) alongside its original quest-driven objective system. The primary remaining differences are: Phobos takes full control of bot movement (custom `Player.Move()` calls), while QuestingBots delegates to BSG's mover; Phobos uses per-map JSON zone configurations, while QuestingBots auto-detects zones from spawn points; and QuestingBots has a full bot spawning system and server component that Phobos lacks.
+**Key takeaway**: These mods have converged almost completely on a technical level. QuestingBots now incorporates Phobos-inspired features (custom `Player.Move()` path following with path-deviation spring force, ECS-Lite dense entity storage with swap-remove, zone-based movement fields with per-bot momentum/noise, two-tier stuck detection, batched pathfinding, AggressiveInlining on hot paths, identical BSG mover patches) alongside its original quest-driven objective system. The primary remaining differences are architectural: Phobos uses per-map JSON zone configurations while QuestingBots auto-detects zones from spawn points; QuestingBots has a full bot spawning system, server component, and quest data system that Phobos lacks; and QuestingBots supports 20+ brain types compared to Phobos's 9.
 
 ---
 
@@ -36,10 +36,10 @@
 ### SPTQuestingBots
 
 - **Author**: DanW (`com.DanW.QuestingBots`), C# port by Alberto Leal
-- **Version**: 1.7.0
-- **Scope**: Full quest-driven behavior, zone-based fallback movement, ECS-Lite data layout, boss/follower coordination, PMC/PScav spawning (optional), AI sleeping
-- **Approach**: Bots receive actual game quest objectives (from 12 per-map JSON files) and navigate to complete them. When no quests are available, a Phobos-inspired zone movement system uses advection/convergence fields to guide bots toward interesting map areas. An ECS-Lite data layout (dense entity list with swap-remove, inspired by Phobos's EntityArray) provides centralized bot state, static system methods, and zero-allocation sensor iteration.
-- **Maturity**: Mature; 13 action types, extensive spawning system, broad bot-type support, zone movement with debug overlay, ECS-Lite entity storage with 537 tests
+- **Version**: 1.8.0
+- **Scope**: Full quest-driven behavior, custom movement system, zone-based fallback movement, ECS-Lite data layout, boss/follower coordination, PMC/PScav spawning (optional), AI sleeping
+- **Approach**: Bots receive actual game quest objectives (from 12 per-map JSON files) and navigate to complete them using a custom `Player.Move()` movement system inspired by Phobos (path-deviation spring force, Chaikin smoothing, sprint angle-jitter gating, 3 BSG patches). When no quests are available, a Phobos-inspired zone movement system uses advection/convergence fields to guide bots toward interesting map areas. An ECS-Lite data layout (dense entity list with swap-remove, inspired by Phobos's EntityArray) provides centralized bot state, static system methods, and zero-allocation sensor iteration.
+- **Maturity**: Mature; 13 action types, custom movement system, extensive spawning system, broad bot-type support, zone movement with debug overlay, ECS-Lite entity storage with 653 tests
 - **Source**: `src/SPTQuestingBots.Client/` (~180 C# files) + `src/SPTQuestingBots.Server/` (9 C# files)
 
 ---
@@ -53,7 +53,7 @@
 | **Solution** | `Phobos.sln` (1 main project + Gym benchmark) | `SPTQuestingBots.sln` (2 main + 2 test projects) |
 | **Target** | netstandard2.1 | Client: net472, Server: net9.0, Tests: net9.0 |
 | **Build** | Standard .csproj | Makefile (`make build`, `make test`, `make ci`) |
-| **Testing** | Gym project (BenchmarkDotNet) | NUnit 3.x + NSubstitute (479 client + 58 server = 537 tests) |
+| **Testing** | Gym project (BenchmarkDotNet) | NUnit 3.x + NSubstitute (595 client + 58 server = 653 tests) |
 | **CI** | None observed | GitHub Actions (`ci.yml`) |
 | **Code style** | File-scoped namespaces, primary constructors | Block-scoped namespaces, traditional constructors, CSharpier formatting |
 
@@ -82,13 +82,15 @@ BotLogic/            # Objective/, Follow/, Sleep/ - behavior per concern
 Components/          # MonoBehaviour components (BotObjectiveManager, LocationData)
 Controllers/         # Static singletons (ConfigController, LoggingController)
 Models/              # Data classes for quests, pathing, spawning
-Helpers/             # PositionHistory, RollingAverage, NavJob, PathfindingThrottle, TimePacing, FramePacing
+Helpers/             # PositionHistory, RollingAverage, NavJob, PathfindingThrottle, TimePacing, FramePacing, CustomMoverHandoff
+Models/Pathing/      # CustomPathFollower, CustomMoverController, PathSmoother, SprintAngleJitter, PathDeviationForce, MovementState
 ZoneMovement/        # Phobos-inspired grid + field system
   Core/              #   WorldGrid, GridCell, PointOfInterest, ZoneMathUtils
   Fields/            #   AdvectionField, ConvergenceField, FieldComposer
   Selection/         #   CellScorer, DestinationSelector, ZoneActionSelector
   Integration/       #   WorldGridManager, ZoneQuestBuilder, ZoneDebugOverlay, etc.
 Patches/             # Harmony patches organized by category
+  Movement/          #   BotMoverFixedUpdatePatch, MovementContextIsAIPatch, EnableVaultPatch (conditional)
 ```
 
 Reference: `src/SPTQuestingBots.Client/BotLogic/ECS/BotEntityBridge.cs` - static adapter bridging BotOwner (game) to BotEntity (ECS).
@@ -240,16 +242,24 @@ Reference: `src/.../BotLogic/Objective/BotObjectiveLayer.cs:77-149` - quest acti
 
 ## 6. Navigation & Movement
 
-### Pathfinding
+### Pathfinding & Movement Execution
+
+Both mods now use custom `Player.Move()` calls, bypassing BSG's built-in `BotMover`:
 
 | Aspect | Phobos | QuestingBots |
 |--------|--------|-----------------|
-| **Path calculation** | Custom `NavJobExecutor` with batch processing | BSG's `BotOwner.FollowPath()` + `PathfindingThrottle` + `NavJobExecutor` |
-| **Path following** | Custom `MovementSystem` with `Player.Move()` | BSG's native mover |
+| **Path calculation** | Custom `NavJobExecutor` with batch processing | `PathfindingThrottle` (max 5/frame) + `NavJobExecutor` (batched) |
+| **Path following** | Custom `MovementSystem` with `Player.Move()` | Custom `CustomPathFollower` + `CustomMoverController` with `Player.Move()` |
+| **Path smoothing** | Runtime spring force only | Chaikin corner-cutting (`PathSmoother`) + runtime spring force (`PathDeviationForce`) |
+| **Corner epsilon** | Walk: 0.35m, Sprint: 0.6m | Walk: 0.35m, Sprint: 0.6m (identical) |
+| **Spring force** | XZ-plane dot-product projection, linear strength | XZ-plane dot-product projection, linear strength (identical algorithm) |
+| **Sprint gating** | Outdoor + angle jitter < threshold + can sprint | Angle jitter < threshold by urgency (Low=20°, Medium=30°, High=45°) |
+| **BSG mover** | Skipped via `ManualFixedUpdate` prefix patch | Skipped via `ManualFixedUpdate` prefix patch (per-bot ECS check) |
+| **Move direction** | `CalcMoveDirection`: Quaternion.Euler(0,0,yaw) * XZ | `CalcMoveDirection`: Quaternion.Euler(0,0,yaw) * XZ (identical) |
+| **Door handling** | Physics.IgnoreCollision + auto-open within 3m | BSG's door handling + custom unlock/close actions |
+| **Layer handoff** | 6-field BSG state sync + SetPlayerToNavMesh | 6-field BSG state sync + SetPlayerToNavMesh (identical) |
+| **Config gating** | Always active for Phobos bots | Config: `use_custom_mover` (default: true), falls back to BSG mover if disabled |
 | **Batching** | Ramped batch size (queue/2, max 5 per frame) | `PathfindingThrottle` (max 5 NavMesh.CalculatePath/frame) + queue-based `NavJobExecutor` |
-| **BSG mover** | Paused (`bot.Mover.Pause = true`, `bot.Mover.Stop()`) | Active (BSG handles movement) |
-| **Door handling** | Custom: opens doors within 3m in current voxel | BSG's door handling + custom unlock/close actions |
-| **Sprint logic** | Custom: checks outside, smooth path, angle jitter | Config-driven with door awareness, path corner checks |
 
 **Phobos** (`Phobos/Phobos/Systems/MovementSystem.cs`) takes full control of bot movement:
 - Calculates NavMesh paths in batches via `NavJobExecutor` (`Phobos/Phobos/Navigation/NavJobExecutor.cs`)
@@ -257,13 +267,18 @@ Reference: `src/.../BotLogic/Objective/BotObjectiveLayer.cs:77-149` - quest acti
 - Applies path-deviation spring force for smoother movement
 - Sprint gated by: outdoor environment, smooth path (angle jitter < 20-45 deg based on urgency), ability to sprint
 - Direct `Player.Move()` calls with calculated move direction
+- Corner-cutting via `NavMesh.Raycast` to skip corners when next is visible
 
-**QuestingBots** (`src/.../BehaviorExtensions/GoToPositionAbstractAction.cs`) delegates to BSG:
-- Calculates path via `ObjectiveManager.BotPath.CheckIfUpdateIsNeeded()`
-- Hands path to `BotOwner.FollowPath()` for execution
-- **PathfindingThrottle** (`Helpers/PathfindingThrottle.cs`): Per-frame limiter for `NavMesh.CalculatePath` calls (max 5/frame) to prevent frame spikes with many bots
-- **NavJobExecutor** (`Helpers/NavJobExecutor.cs`): Queue-based batched pathfinding with ramped batch size — same pattern as Phobos
-- Monitors for path completion, recalculates when target changes
+**QuestingBots** (`src/.../BehaviorExtensions/GoToPositionAbstractAction.cs` + `Models/Pathing/`) now uses a custom movement system matching Phobos:
+- **`CustomPathFollower`** (`Models/Pathing/CustomPathFollower.cs`): Pure-logic path engine with corner-reaching epsilon (walk=0.35m, sprint=0.6m), path-deviation spring force, and sprint angle-jitter gating — same algorithm as Phobos's `MovementSystem`
+- **`CustomMoverController`** (`Models/Pathing/CustomMoverController.cs`): Unity integration layer bridging `CustomPathFollower` to `Player.Move()` with `CalcMoveDirection()` (identical to Phobos's implementation)
+- **`PathSmoother`** (`Models/Pathing/PathSmoother.cs`): Chaikin corner-cutting subdivision applied to NavMesh corners before path following — an addition Phobos doesn't have
+- **`PathDeviationForce`** (`Models/Pathing/PathDeviationForce.cs`): XZ-plane spring force via dot-product projection — identical algorithm to Phobos's spring
+- **`SprintAngleJitter`** (`Models/Pathing/SprintAngleJitter.cs`): Urgency-based sprint thresholds (Low=20°, Medium=30°, High=45°) — same values as Phobos
+- **`CustomMoverHandoff`** (`Helpers/CustomMoverHandoff.cs`): 6-field BSG state sync on layer transitions — identical to Phobos's `OnLayerChanged()` protocol
+- **Config-gated**: `use_custom_mover` (default: true) — when disabled, falls back to BSG's `BotOwner.FollowPath()`
+- **`PathfindingThrottle`** (`Helpers/PathfindingThrottle.cs`): Per-frame limiter for `NavMesh.CalculatePath` calls (max 5/frame)
+- **`NavJobExecutor`** (`Helpers/NavJobExecutor.cs`): Queue-based batched pathfinding — same pattern as Phobos
 
 ### Zone/Field-Based Objective Selection
 
@@ -345,13 +360,13 @@ Both mods now use a **two-tier stuck detection system**. QuestingBots ported its
 |----------|--------|--------------|
 | Lifecycle | 3 | 3 |
 | Layer bypass | 3 | 0 |
-| Movement/Nav | 4 | 1 |
+| Movement/Nav | 4 | 4 (3 conditional) |
 | Spawning | 0 | 12 |
 | Combat/AI | 0 | 4 |
 | Map-specific | 0 | 3 |
 | Debug | 0 | 2 |
 | Scav limits | 0 | 4 |
-| **Total** | **12** | **35** (29 + 6 conditional) |
+| **Total** | **12** | **38** (29 + 3 movement + 6 conditional) |
 
 ### All Phobos Patches
 
@@ -385,6 +400,9 @@ Both mods now use a **two-tier stuck detection system**. QuestingBots ported its
 | `OnBeenKilledByAggressorPatch` | Death handling | Track kills, update spawning |
 | `AirdropLandPatch` | Airdrop | Handle airdrop quest objectives |
 | `BotOwnerSprintPatch` | Sprint | Custom sprint control |
+| `BotMoverFixedUpdatePatch` | `BotMover.ManualFixedUpdate` | Skip BSG mover when custom mover active (per-bot ECS check) |
+| `MovementContextIsAIPatch` | `MovementContext.IsAI` getter | Return false — human-like movement params (same as Phobos) |
+| `EnableVaultPatch` | `Player.InitVaultingComponent` | Enable vaulting for AI bots (same as Phobos) |
 | `ServerRequestPatch` | HTTP requests | Intercept server communication |
 | `ReturnToPoolPatch` | Bot pool | Cleanup on despawn |
 | `IsFollowerSuitableForBossPatch` | Boss system | Custom follower assignment |
@@ -402,12 +420,12 @@ Both mods now use a **two-tier stuck detection system**. QuestingBots ported its
 
 | Conflict Area | Risk | Details |
 |---------------|------|---------|
-| `BotMover.ManualFixedUpdate` | **HIGH** | Phobos skips BSG mover; QuestingBots relies on it |
-| `MovementContext.IsAI` | **MEDIUM** | Phobos changes AI movement type; may affect QuestingBots pathing |
+| `BotMover.ManualFixedUpdate` | **LOW** | Both mods skip BSG mover — Phobos checks `IsPhobosActive()`, QuestingBots checks `IsCustomMoverActive()` via ECS. Per-bot checks mean they don't interfere. |
+| `MovementContext.IsAI` | **NONE** | Both mods apply identical patch (return false). Duplicate prefix patches are harmless. |
+| `Player.InitVaultingComponent` | **NONE** | Both mods apply identical patch (aiControlled=false). Duplicate prefix patches are harmless. |
 | `BotsController.Init` | **LOW** | Both hook init but do different things |
 | `GameWorld.Dispose` | **LOW** | Both clean up independently |
-| BSG layer bypass | **MEDIUM** | Phobos disables some BSG layers that QuestingBots may expect to exist |
-| `Player.InitVaultingComponent` | **LOW** | Phobos enables vaulting; QuestingBots also handles vault in stuck detection |
+| BSG layer bypass | **MEDIUM** | Phobos disables 3 BSG layers (assault-enemy-far, exfiltration, patrol-birdeye). QuestingBots' extraction system may be affected. |
 
 ---
 
@@ -464,6 +482,12 @@ Both mods now use a **two-tier stuck detection system**. QuestingBots ported its
 | `ZoneMovementEnabled` | `true` | Runtime toggle, overrides JSON config |
 | `ZoneMovementDebugOverlay` | `false` | Show debug text overlay (IsAdvanced) |
 | `ZoneMovementDebugMinimap` | `false` | Show 2D minimap with cells, arrows, dots (IsAdvanced) |
+
+**Custom movement config** (`BotPathingConfig` under `questing.bot_pathing`):
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `use_custom_mover` | `true` | Enable Phobos-style `Player.Move()` replacement; false = BSG `BotOwner.FollowPath()` fallback |
 
 **Quest data** (12 per-map JSON files + metadata):
 - `eftQuestSettings.json`: Quest requirements and settings
@@ -579,7 +603,7 @@ Phobos does not spawn bots. It only manages bots that already exist:
 | **Bot type tracking** | Agent entity only | Full type registry (Scav/PScav/PMC/Boss) |
 | **StandBy disable** | Yes (prevents far deactivation) | No (uses sleeping system instead) |
 | **Death handling** | Remove agent from systems | Track dead bots, update follower chains |
-| **BSG mover** | Fully replaces | Coexists with |
+| **BSG mover** | Fully replaces | Replaces when custom mover active (default); coexists when disabled |
 | **Default spawning** | N/A | Disabled by default since v1.2.0 |
 
 ---
@@ -680,11 +704,12 @@ Phobos does not spawn bots. It only manages bots that already exist:
 
 When both are loaded, for bots whose brain types are registered with both mods, Phobos and QuestingBots' Following layer would compete at priority 19. BigBrain resolves same-priority layers by registration order, which depends on BepInEx plugin load order.
 
-**Movement System Conflict**:
-- Phobos patches `BotMover.ManualFixedUpdate` to skip BSG's mover when Phobos is active
-- QuestingBots relies on BSG's mover via `BotOwner.FollowPath()`
-- If Phobos takes control, QuestingBots' path following will not execute
-- If QuestingBots takes control, Phobos may still intercept the mover update
+**Movement System Alignment** (previously a conflict — now resolved):
+- Both mods patch `BotMover.ManualFixedUpdate` to skip BSG's mover
+- Phobos checks `IsPhobosActive()` per bot; QuestingBots checks `IsCustomMoverActive()` via ECS entity lookup
+- Per-bot checks mean both patches are compatible — each only skips the mover for its own active bots
+- Both use identical `Player.Move()` paradigm with `CalcMoveDirection` (Quaternion.Euler yaw rotation)
+- Both apply identical `MovementContext.IsAI` and `EnableVault` patches (duplicate prefixes are harmless)
 
 **BSG Layer Bypass**:
 - Phobos disables 3 BSG layers (assault-enemy-far, exfiltration, patrol-birdeye)
@@ -743,8 +768,8 @@ Phobos declares no incompatibilities.
 | Aspect | Phobos | QuestingBots |
 |--------|--------|--------------|
 | **Unit tests** | None (Gym project is benchmarks) | NUnit + NSubstitute |
-| **Test count** | 0 | 537 (479 client + 58 server) |
-| **Client test coverage** | — | ECS data layout (BotEntity, BotRegistry, HiveMindSystem, QuestScorer, BotEntityBridge scenarios, BotFieldState, BsgBotRegistry, job assignments), stuck detection, zone movement, config deserialization |
+| **Test count** | 0 | 653 (595 client + 58 server) |
+| **Client test coverage** | — | ECS data layout (BotEntity, BotRegistry, HiveMindSystem, QuestScorer, BotEntityBridge scenarios, BotFieldState, BsgBotRegistry, job assignments, MovementState wiring), custom movement (SprintAngleJitter, PathDeviationForce, CustomPathFollower, PathSmoother), stuck detection, zone movement, config deserialization |
 | **CI** | None | GitHub Actions (format-check → lint → build → test) |
 | **Benchmarks** | BenchmarkDotNet in Gym/ | None |
 | **Formatting** | Not configured | CSharpier + `.editorconfig` |
@@ -780,13 +805,15 @@ Since the original comparison, QuestingBots has ported several Phobos innovation
 
 8. **TimePacing / FramePacing** (v1.7.0): Reusable rate-limiter utilities ported from Phobos's `Helpers/Pacing.cs` pattern. Deterministic tick order in `BotHiveMindMonitor.Update()` mirrors Phobos's `PhobosManager.Update()` orchestration.
 
+9. **Custom movement system** (v1.8.0): Full Phobos-style `Player.Move()` replacement — `CustomPathFollower` with corner-reaching epsilon (walk=0.35m, sprint=0.6m), `PathDeviationForce` spring (identical XZ-plane dot-product projection), `SprintAngleJitter` gating (same urgency thresholds), `PathSmoother` Chaikin subdivision (QuestingBots addition), `CustomMoverController` with `CalcMoveDirection()` (identical Quaternion.Euler pattern), `CustomMoverHandoff` with 6-field BSG state sync (identical to Phobos's `OnLayerChanged()`). Three BSG patches: `BotMoverFixedUpdatePatch` (ManualFixedUpdate skip), `MovementContextIsAIPatch` (IsAI→false), `EnableVaultPatch` (AI vaulting). Config-gated via `use_custom_mover` (default: true).
+
 ### What QuestingBots Could Still Learn from Phobos
 
-1. **Custom movement system**: Phobos's path-deviation spring force and custom path following via `Player.Move()` produce smoother bot movement than BSG's native mover. QuestingBots still delegates to `BotOwner.FollowPath()`.
+1. **Utility AI**: Phobos's score-based action selection with hysteresis is more extensible than QuestingBots' enum-based switch statement. New behaviors can be added without modifying existing dispatch code.
 
-2. **Utility AI**: Phobos's score-based action selection with hysteresis is more extensible than QuestingBots' enum-based switch statement. New behaviors can be added without modifying existing dispatch code.
+2. **Door collision bypass**: Phobos disables physics collision between bots and ALL doors (`Physics.IgnoreCollision`) and shrinks door NavMesh carvers to 37.5% — preventing "bot stuck at door" failures. QuestingBots still uses BSG's door interaction system.
 
-3. **BSG mover handoff**: Phobos's careful state restoration when returning control to BSG (`OnLayerChanged`) prevents the "bot standing still" bug that can occur when another layer takes over mid-path.
+3. **Corner-cutting via NavMesh.Raycast**: Phobos skips path corners when `NavMesh.Raycast` to the next corner is clear (within 1m). This creates smoother trajectories. QuestingBots uses Chaikin smoothing instead, which is a different but complementary approach.
 
 ### What Phobos Could Learn from QuestingBots
 
@@ -812,9 +839,9 @@ Since the original comparison, QuestingBots has ported several Phobos innovation
 
 ### Integration Possibilities
 
-If both mods were to coexist:
-- Phobos could provide the movement system while QuestingBots provides objectives
+If both mods were to coexist (now more viable given movement system convergence):
+- **Movement is no longer a conflict**: Both mods use `Player.Move()` with per-bot active checks. BigBrain layer priority determines which mod controls each bot — no custom coordination needed.
 - QuestingBots' sleeping system could gate which bots Phobos processes
-- Both zone field systems would need a coordination layer to avoid conflicting directions
-- A shared "bot intent" interface could allow both mods to negotiate control of individual bots based on context (e.g., Phobos handles general movement, QuestingBots takes over for specific quest actions)
+- Both zone field systems would need a coordination layer to avoid conflicting directions (though QuestingBots' zone movement is low-priority fallback)
 - QuestingBots' auto-detection approach could replace Phobos's per-map JSON configs
+- Both mods apply identical `IsAI` and vault patches — duplicate prefixes are harmless
