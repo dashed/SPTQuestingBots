@@ -834,17 +834,41 @@ Each phase should:
 | Phase 4 | QuestScorer Job Assignment Optimization | ✅ Complete |
 | ECS Wiring | BotEntityBridge Dual-Write + Read Layer | ✅ Complete |
 | ECS Migration | All External Reads Switched to ECS | ✅ Complete |
+| Phase 5A | Close Dual-Write Gaps | ✅ Complete |
+| Phase 5B | Migrate Push Sensor Writes (ECS-only) | ✅ Complete |
+| Phase 5C | Migrate Pull Sensor Writes (dense iteration) | ✅ Complete |
+| Phase 5D | Migrate Boss/Follower Lifecycle Writes | ✅ Complete |
+| Phase 5E | Migrate BotRegistrationManager Reads | ✅ Complete |
+| Phase 6 | BotFieldState on BotEntity | ⚠️ Fields added, not yet wired |
+| Phase 7A | BsgBotRegistry Sparse Array | ✅ Complete |
+| Phase 7B | TimePacing / FramePacing Utilities | ✅ Complete |
+| Phase 8 | Job Assignment State on BotEntity | ⚠️ Field added, not yet wired |
 
-**Current architecture**: Dual-write pattern — every game event writes to both
-legacy dictionaries and ECS entities, but all external reads come from dense ECS
-data instead of dictionary lookups. 14 dead read methods removed from
-`BotHiveMindMonitor`. 344 client tests, 58 server tests (402 total).
+**Current architecture**: ECS is the primary write path. Push sensors
+(`UpdateValueForBot`) write only to ECS entities — old dictionary writes
+removed. Pull sensors iterate the dense entity list with zero delegate
+allocation. Boss/follower lifecycle uses ECS `entity.IsActive` for O(1) dead
+checks instead of `deadBots.Contains()` O(n). `BotRegistrationManager` reads
+(`IsBotSleeping`, `IsBotAPMC`, `GetBotType`) route through
+`BotEntityBridge`. Old dictionaries are still present but only receive
+redundant writes in boss/follower lifecycle (Phase 5F will remove them).
+443 client tests, 58 server tests (501 total).
 
 ### What Remains: Full Option B Completion
 
-The dual-write pattern was the correct transitional strategy. To complete
-Option B (ECS as single source of truth), the remaining writes must be migrated
-from old dictionaries to ECS-only, and the old dictionaries removed.
+Phases 5A–5E migrated all writes to flow through ECS as the primary data
+store. The old dictionaries still exist and receive some redundant writes in
+the boss/follower lifecycle, but all reads come from ECS. What remains:
+
+1. **Phase 5F** (Remove old data structures) — delete `deadBots`,
+   `botBosses`, `botFollowers`, `sensors` dictionaries from
+   `BotHiveMindMonitor`; delete sensor subclasses; delete `registeredPMCs`,
+   `registeredBosses`, `sleepingBotIds` from `BotRegistrationManager`.
+2. **Phase 6 wiring** — connect `BotEntity.FieldNoiseSeed` /
+   `HasFieldState` to `WorldGridManager` (fields exist, wiring remains).
+3. **Phase 7C–7D** — deterministic tick order, allocation cleanup (optional).
+4. **Phase 8 wiring** — connect `BotEntity.ConsecutiveFailedAssignments` to
+   `BotJobAssignmentFactory` (field exists, wiring remains).
 
 ---
 
@@ -855,8 +879,10 @@ dependency.
 
 ### Phase 5A: Close Dual-Write Gaps
 
-Several write operations currently go **only** to old dictionaries, not to ECS.
-These gaps must be closed before old dictionaries can be removed.
+**Status: ✅ Complete**
+
+Several write operations were going **only** to old dictionaries, not to ECS.
+These gaps were closed to enable eventual dictionary removal.
 
 | Write Operation | File:Line | Gap |
 |-----------------|-----------|-----|
@@ -864,20 +890,22 @@ These gaps must be closed before old dictionaries can be removed.
 | Dead-bot cleanup in follower updates | `BotHiveMindMonitor.cs:293-348` | Dead bosses/followers removed from `botFollowers` but `BotEntityBridge.DeactivateBot()` is NOT called. |
 | Sleep registration | `BotRegistrationManager.cs:169-190` | `RegisterSleepingBot()`/`UnregisterSleepingBot()` write to `sleepingBotIds` but do NOT call `BotEntityBridge.SetSleeping()`. |
 
-**Changes required**:
-- In `updateBosses()`: after discovering boss from game API, call
-  `BotEntityBridge.SyncBossFollower(bot, boss)` for the bot→boss mapping
-- In `updateBossFollowers()`: call `BotEntityBridge.DeactivateBot(deadBot)`
-  when adding to `deadBots`
-- In `RegisterSleepingBot()`/`UnregisterSleepingBot()`: call
-  `BotEntityBridge.SetSleeping(bot, sleeping)`
-
-**Estimated effort**: Small (3 files, ~10 lines changed)
+**Changes implemented**:
+- In `updateBosses()`: `BotEntityBridge.DeactivateBot(bossBot)` called when
+  boss dies (line 282)
+- In `updateBossFollowers()`: `BotEntityBridge.DeactivateBot(boss)` and
+  `BotEntityBridge.DeactivateBot(follower)` called when adding to `deadBots`
+  (lines 345, 381)
+- In `RegisterSleepingBot()`/`UnregisterSleepingBot()`:
+  `BotEntityBridge.SetSleeping(botOwner, true/false)` called (lines 178, 193)
+- `BotHiveMindMonitor.Clear()` calls `BotEntityBridge.Clear()` (line 53)
 
 ### Phase 5B: Migrate Push Sensor Writes
 
+**Status: ✅ Complete**
+
 Push sensors (InCombat, IsSuspicious, WantsToLoot) are externally set via
-`BotHiveMindMonitor.UpdateValueForBot()`. Currently this dual-writes to both
+`BotHiveMindMonitor.UpdateValueForBot()`. Previously this dual-wrote to both
 old dictionary and ECS:
 
 ```
@@ -886,17 +914,15 @@ BotHiveMindMonitor.UpdateValueForBot(sensorType, bot, value)
   → BotEntityBridge.UpdateSensor(sensorType, bot, value)  // WRITE #2: ECS
 ```
 
-**Change**: Remove the old dictionary write. Keep only the ECS write.
-
-For `WantsToLoot` specifically, the `botLastLootingTime` dictionary in
-`BotHiveMindWantsToLootSensor` is redundant with `BotEntity.LastLootingTime`.
-The `BotEntityBridge.UpdateLastLootingTime()` call currently lives inside the
-sensor's `UpdateForBot()` override — it must move to `UpdateValueForBot()` or
-into `BotEntityBridge.UpdateSensor()` (when sensor type is WantsToLoot).
-
-**Estimated effort**: Small (2-3 files, ~15 lines changed)
+**Implementation**: Old dictionary write removed from `UpdateValueForBot()`.
+Now writes only to ECS via `BotEntityBridge.UpdateSensor()`. For `WantsToLoot`,
+`BotEntityBridge.UpdateLastLootingTime()` is called directly from
+`UpdateValueForBot()` when `value == true` (lines 87-90 in
+`BotHiveMindMonitor.cs`).
 
 ### Phase 5C: Migrate Pull Sensor Writes
+
+**Status: ✅ Complete**
 
 Pull sensors (CanQuest, CanSprintToObjective) self-update in the 50ms tick by
 reading `BotObjectiveManager` state:
@@ -909,62 +935,51 @@ BotHiveMindCanQuestSensor.Update()
   → BotEntityBridge.UpdateSensor(...) // WRITE #2: ECS
 ```
 
-**Problem**: These sensors use `botState.Keys` as their iteration source.
-Removing the dictionary requires a new iteration source.
-
-**Solution**: Expose iteration via `BotEntityBridge`:
+**Implementation**: Instead of `ForEachBot` with a delegate (which would
+allocate), the solution iterates `BotEntityBridge.Registry.Entities` directly
+in a private `updatePullSensors()` method inlined into the tick:
 
 ```csharp
-// New method on BotEntityBridge
-public static void ForEachBot(Action<BotOwner, BotEntity> action)
+// BotHiveMindMonitor.cs — updatePullSensors()
+var entities = ECS.BotEntityBridge.Registry.Entities;
+for (int i = 0; i < entities.Count; i++)
 {
-    foreach (var kvp in _ownerToEntity)
-    {
-        action(kvp.Key, kvp.Value);
-    }
+    var entity = entities[i];
+    if (!entity.IsActive) continue;
+    var bot = ECS.BotEntityBridge.GetBotOwner(entity);
+    if (bot == null || !bot.isActiveAndEnabled || bot.IsDead) continue;
+    var objectiveManager = bot.GetObjectiveManager();
+    entity.CanQuest = objectiveManager != null && objectiveManager.IsQuestingAllowed;
+    entity.CanSprintToObjective = objectiveManager == null || objectiveManager.CanSprintToObjective();
 }
 ```
 
-Then create a `PullSensorSystem` or inline into `BotHiveMindMonitor.Update()`:
-
-```csharp
-// Replace sensor.Update() for CanQuest/CanSprintToObjective with:
-BotEntityBridge.ForEachBot((bot, entity) =>
-{
-    if (!entity.IsActive) return;
-    var objectiveManager = bot.GetObjectiveManager();
-    entity.CanQuest = objectiveManager?.IsQuestingAllowed ?? false;
-    entity.CanSprintToObjective = objectiveManager?.CanSprintToObjective() ?? true;
-});
-```
-
-**Bonus**: Eliminates `new Action<BotOwner>` allocation per tick (current pull
-sensors allocate a delegate on every 50ms Update() call).
-
-**Estimated effort**: Medium (4-5 files, ~40 lines changed)
+**Bonus achieved**: Zero delegate allocation per tick — pure for-loop over
+dense list.
 
 ### Phase 5D: Migrate Boss/Follower Lifecycle Writes
 
-`BotHiveMindMonitor.updateBosses()` and `updateBossFollowers()` currently:
-1. Iterate `botBosses.Keys` and `botFollowers.Keys` (old dictionaries)
-2. Use `deadBots.Contains()` — O(n) linear scan
-3. Write boss/follower changes to old dictionaries
-4. Call `BotEntityBridge.SyncBossFollower()` only from `addBossFollower()`
+**Status: ✅ Complete**
 
-**Changes**:
-- Iteration source: switch from `botBosses.Keys` to `BotEntityBridge` iteration
-- Replace `deadBots.Contains(bot)` with `entity.IsActive` — O(1)
-- Write boss/follower changes directly via `HiveMindSystem.AssignBoss()` /
-  `HiveMindSystem.RemoveBoss()`
-- Call `HiveMindSystem.CleanupDeadEntities()` from the tick
+`BotHiveMindMonitor.updateBosses()` and `updateBossFollowers()` previously:
+1. Iterated `botBosses.Keys` and `botFollowers.Keys` (old dictionaries)
+2. Used `deadBots.Contains()` — O(n) linear scan
+3. Wrote boss/follower changes to old dictionaries
+4. Called `BotEntityBridge.SyncBossFollower()` only from `addBossFollower()`
 
-**Depends on**: Phase 5A (dual-write gaps closed), Phase 5C (iteration exposed)
-
-**Estimated effort**: Medium-High (3-4 files, ~60 lines changed)
+**Implementation**:
+- `updateBosses()` iterates `BotEntityBridge.Registry.Entities` (dense list)
+- `entity.IsActive` replaces `deadBots.Contains(bot)` — O(1) instead of O(n)
+- `entity.HasBoss` used for boss discovery check
+- `updateBossFollowers()` calls `HiveMindSystem.CleanupDeadEntities()` first
+  for ECS-side boss/follower reference cleanup
+- Old dictionary writes retained alongside ECS writes (Phase 5F will remove)
 
 ### Phase 5E: Migrate BotRegistrationManager Reads
 
-Several `BotRegistrationManager` methods read from collections that are
+**Status: ✅ Complete**
+
+Several `BotRegistrationManager` methods read from collections that were
 redundant with `BotEntity` fields:
 
 | Old Method | Reads From | ECS Equivalent |
@@ -984,19 +999,26 @@ redundant with `BotEntity` fields:
 - `Quest.cs:273` — `IsBotAPMC()`
 - `GoToObjectiveAction.cs:246` — `GetBotType()`
 
-**Note**: `IsBotSleeping()` takes a `string botId` (ProfileId), not a
-`BotOwner`. Need a ProfileId→BotEntity lookup on `BotEntityBridge`, or convert
-callers to pass `BotOwner` instead.
+**Implementation**: `BotEntityBridge` now exposes:
+- `IsBotSleeping(string profileId)` — O(1) via `_profileIdToEntity` dictionary
+  (replaces `sleepingBotIds.Contains()` O(n) list scan)
+- `IsBotAPMC(BotOwner)` — reads `entity.BotType == BotType.PMC`
+- `GetBotType(BotOwner)` — reads `entity.BotType` with `MapBotTypeReverse()`
+- `_profileIdToEntity` dictionary populated in `RegisterBot()` from
+  `bot.Profile.Id`, cleared in `Clear()`
 
-**Keep** in `BotRegistrationManager`: `hostileGroups` (game-side hostility,
+**Kept** in `BotRegistrationManager`: `hostileGroups` (game-side hostility,
 not per-bot), `SpawnedBotCount` and other spawn statistics, `PMCs` / `Bosses`
 collection properties (used for enumeration by spawning code).
-
-**Estimated effort**: Medium (8 files, ~20 lines changed)
+`RegisterPMC()`, `RegisterBoss()`, `RegisterSleepingBot()`,
+`UnregisterSleepingBot()` still write to old collections in parallel with ECS
+(Phase 5F will remove the old collections).
 
 ### Phase 5F: Remove Old Data Structures
 
-Once all reads and writes are migrated:
+**Status: ⬜ Not started** — blocked on in-game verification of Phases 5A–5E.
+
+Once in-game verification confirms correctness:
 
 **Remove from `BotHiveMindMonitor`**:
 - `deadBots: List<BotOwner>` — replaced by `BotEntity.IsActive`
@@ -1031,19 +1053,19 @@ Once all reads and writes are migrated:
 
 ## Phase 6: BotFieldState on BotEntity
 
+**Status: ⚠️ Fields added, wiring not yet done**
+
 Move zone movement per-bot state from `WorldGridManager.botFieldStates`
-dictionary onto `BotEntity`:
+dictionary onto `BotEntity`.
 
+**Fields added** (on `BotEntity`):
 ```csharp
-// Currently in WorldGridManager.cs:
-private readonly Dictionary<string, BotFieldState> botFieldStates;
-
-// Move to BotEntity:
-public BotFieldState FieldState;  // PreviousDestination + NoiseSeed
+public int FieldNoiseSeed;    // Per-bot noise seed (from profile ID hash)
+public bool HasFieldState;    // Whether field state is initialized
 ```
 
-**Changes**:
-- `WorldGridManager.GetOrCreateBotState()` → read from `BotEntity.FieldState`
+**Remaining wiring**:
+- `WorldGridManager.GetOrCreateBotState()` → read from `BotEntity.FieldNoiseSeed`
 - `WorldGridManager.GetRecommendedDestination()` → access via entity lookup
 - Remove `botFieldStates` dictionary
 - Eliminate implicit cleanup reliance on MonoBehaviour destruction
@@ -1054,9 +1076,11 @@ public BotFieldState FieldState;  // PreviousDestination + NoiseSeed
 
 ## Phase 7: Additional Phobos Patterns
 
-High-value patterns from Phobos not yet adopted, ordered by impact:
+High-value patterns from Phobos, ordered by impact (7A and 7B complete):
 
 ### 7A: BsgBotRegistry Sparse Array
+
+**Status: ✅ Complete**
 
 Phobos uses a **separate sparse array** (not a dictionary) for O(1)
 `BotOwner.Id → Agent` lookup, used in hot-path Harmony patches:
@@ -1075,36 +1099,31 @@ public bool IsPhobosActive(BotOwner bot)
 }
 ```
 
-**For QuestingBots**: Add a `BsgBotLookup` sparse array alongside `BotRegistry`
-for patches that need O(1) lookups by `BotOwner.Id` (integer). Current
-`BotEntityBridge._ownerToEntity` dictionary works but involves hash computation.
-
-**Estimated effort**: Small (1 new file, ~40 lines)
+**Implementation**: Integrated directly into `BotRegistry` rather than a
+separate class:
+- `BotRegistry.Add(int bsgId)` — registers entity with BSG ID in sparse array
+- `BotRegistry.GetByBsgId(int bsgId)` — O(1) lookup, `[AggressiveInlining]`
+- `BotRegistry.ClearBsgId(int bsgId)` — nullifies the sparse slot
+- `BotEntityBridge.RegisterBot()` calls `_registry.Add(bot.Id)` (line 50)
+- `BotEntityBridge.GetEntityByBsgId(int bsgId)` exposes the lookup
+- **Note**: `Remove()` does NOT auto-clear the BSG ID mapping — explicit
+  `ClearBsgId()` or `Clear()` required (documented by tests)
 
 ### 7B: TimePacing / FramePacing Utilities
 
-Phobos has reusable rate-limiter classes with `[AggressiveInlining]`:
+**Status: ✅ Complete** (classes created, wiring incremental)
 
-```csharp
-public class TimePacing(float interval)
-{
-    private float _triggerTime;
+Two reusable rate-limiter classes created in `Helpers/`:
 
-    [AggressiveInlining]
-    public bool Blocked() { ... }  // Guard-clause pattern
+- **`TimePacing`** (`Helpers/TimePacing.cs`, 50 lines) — time-based rate
+  limiter with `ShouldRun(float currentTime)` + `Reset()`, both
+  `[AggressiveInlining]`. Inspired by Phobos pattern.
+- **`FramePacing`** (`Helpers/FramePacing.cs`, 50 lines) — frame-based rate
+  limiter with `ShouldRun(int currentFrame)` + `Reset()`, both
+  `[AggressiveInlining]`.
 
-    [AggressiveInlining]
-    public bool Allowed() { ... }  // Positive-check pattern
-}
-```
-
-Used for: strategy manager (0.5s), convergence field (30s), stuck detection
-(0.1s), movement voxel updates (0.25s).
-
-**For QuestingBots**: Replace ad-hoc timer patterns with `TimePacing` /
-`FramePacing` classes.
-
-**Estimated effort**: Small (1-2 new files, ~50 lines)
+Both are pure C# with zero Unity dependencies, fully tested (9 + 10 tests).
+Wiring to replace existing ad-hoc timer patterns is incremental and optional.
 
 ### 7C: Deterministic Tick Order
 
@@ -1132,20 +1151,22 @@ MonoBehaviour update callbacks.
 
 Remaining allocation hotspots identified by the audit:
 
-| Location | Pattern | Fix |
-|----------|---------|-----|
-| `CanQuest/CanSprintSensor.Update()` | `new Action<BotOwner>()` per 50ms tick | Cache delegate as static field |
-| `BotEntityBridge.GetFollowers()` | `new List<BotOwner>()` + `new ReadOnlyCollection<>()` per call | Return `IReadOnlyList<BotEntity>` from entity directly, or cache |
-| `BotEntityBridge.GetAllGroupMembers()` | Same allocation pattern | Same fix |
-| `BotJobAssignmentFactory.NearestToBot()` | `new Dictionary<>()` + `.OrderBy().First()` | Manual min-scan with no allocation |
-| `BotObjectiveManager.SetExfiliationPointForQuesting()` | `.ToDictionary()` + `.OrderBy().Last()` | Manual max-scan |
-| `BotJobAssignmentFactory.TryArchiveRepeatableAssignments()` | `.Where().Where().ToArray()` | For-loop with in-place modification |
+| Location | Pattern | Fix | Status |
+|----------|---------|-----|--------|
+| `CanQuest/CanSprintSensor.Update()` | `new Action<BotOwner>()` per 50ms tick | Cache delegate as static field | ✅ Fixed by Phase 5C (dense iteration, no delegate) |
+| `BotEntityBridge.GetFollowers()` | `new List<BotOwner>()` + `new ReadOnlyCollection<>()` per call | Return `IReadOnlyList<BotEntity>` from entity directly, or cache | ⬜ |
+| `BotEntityBridge.GetAllGroupMembers()` | Same allocation pattern | Same fix | ⬜ |
+| `BotJobAssignmentFactory.NearestToBot()` | `new Dictionary<>()` + `.OrderBy().First()` | Manual min-scan with no allocation | ⬜ |
+| `BotObjectiveManager.SetExfiliationPointForQuesting()` | `.ToDictionary()` + `.OrderBy().Last()` | Manual max-scan | ⬜ |
+| `BotJobAssignmentFactory.TryArchiveRepeatableAssignments()` | `.Where().Where().ToArray()` | For-loop with in-place modification | ⬜ |
 
-**Estimated effort**: Medium (6-8 files, ~60 lines changed)
+**Estimated effort**: Medium (5-7 files, ~50 lines changed)
 
 ---
 
 ## Phase 8: Job Assignment Storage on BotEntity
+
+**Status: ⚠️ Field added, wiring not yet done**
 
 Move per-bot job assignment history from dictionary to entity:
 
@@ -1156,6 +1177,16 @@ private static Dictionary<string, List<BotJobAssignment>> botJobAssignments;
 // Move to BotEntity:
 public List<BotJobAssignment> JobAssignments;
 ```
+
+**Field added** (on `BotEntity`):
+```csharp
+public int ConsecutiveFailedAssignments;  // Replaces dictionary lookup
+```
+
+**Remaining wiring**:
+- `NumberOfActiveBots()` → iterate `BotRegistry.Entities` (dense)
+- `botJobAssignments` dictionary → `BotEntity.JobAssignments`
+- Connect `ConsecutiveFailedAssignments` to `BotJobAssignmentFactory`
 
 **Benefits**:
 - `NumberOfActiveBots()` iterates `BotRegistry.Entities` (dense) instead of
@@ -1186,32 +1217,40 @@ recommended** for QuestingBots:
 
 ## Updated Feasibility Assessment
 
-### Option B Status: In Progress (65% Complete)
+### Option B Status: In Progress (~85% Complete)
 
 | Component | Status | Remaining |
 |-----------|--------|-----------|
 | Dense BotRegistry | ✅ Complete | — |
-| BotEntity with embedded state | ✅ Complete | Add FieldState (Phase 6) |
+| BotEntity with embedded state | ✅ Complete | — |
 | Static system methods | ✅ Complete | — |
 | QuestScorer optimization | ✅ Complete | — |
 | Dual-write integration layer | ✅ Complete | — |
 | All reads from ECS | ✅ Complete | — |
-| Eliminate dual-write (writes) | ❌ Not started | Phase 5 (critical) |
-| Remove old dictionaries | ❌ Not started | Phase 5F |
-| BotFieldState on entity | ❌ Not started | Phase 6 |
-| BsgBotRegistry sparse lookup | ❌ Not started | Phase 7A (optional) |
-| Allocation cleanup | ❌ Not started | Phase 7D (optional) |
-| Job assignment on entity | ❌ Not started | Phase 8 (optional) |
+| Push sensor writes (ECS-only) | ✅ Complete | — |
+| Pull sensor writes (dense iteration) | ✅ Complete | — |
+| Boss/follower lifecycle writes | ✅ Complete | — |
+| BotRegistrationManager reads | ✅ Complete | — |
+| BsgBotRegistry sparse lookup | ✅ Complete | — |
+| TimePacing / FramePacing | ✅ Complete | Wiring incremental |
+| BotFieldState on entity | ⚠️ Fields added | Wire to WorldGridManager |
+| Job assignment on entity | ⚠️ Field added | Wire to BotJobAssignmentFactory |
+| Remove old dictionaries | ⬜ Not started | Phase 5F (after in-game verification) |
+| Deterministic tick order | ⬜ Not started | Phase 7C (optional) |
+| Allocation cleanup | ⬜ Not started | Phase 7D (optional) |
 
 ### Revised Verdict
 
-Option B is no longer "large effort" — the foundation is built, tested, and
-shipping. The remaining work (Phase 5) is a **medium-effort refactor** that
-removes old dictionaries now that all reads are already on ECS. Phases 6-8 are
-optional improvements that can be done incrementally.
+Option B is nearing completion. The ECS is the **primary write path** for all
+sensor, sleep, and type data. Boss/follower lifecycle uses dense ECS entity
+iteration with O(1) `IsActive` checks. The remaining critical work is
+**Phase 5F** — removing old dictionaries once in-game testing confirms
+Phases 5A–5E are correct. Phases 6 and 8 have fields on `BotEntity` but need
+wiring. Phases 7C–7D are optional improvements.
 
-**Estimated remaining effort**: Phase 5 (~15-20 files, 2-3 sessions), Phase 6
-(~3 files, 1 session), Phases 7-8 (incremental, as-needed).
+**Estimated remaining effort**: Phase 5F (~8-10 files, net deletion of
+~200 lines, 1 session), Phase 6/8 wiring (~5 files, 1 session),
+Phases 7C-7D (incremental, as-needed).
 
 ---
 

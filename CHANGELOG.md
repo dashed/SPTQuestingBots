@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **ECS Phase 5A: dual-write gap closure** — all write operations now flow through ECS
+  - `BotEntityBridge.DeactivateBot()` called on boss/follower death in `updateBosses()`/`updateBossFollowers()`
+  - `BotEntityBridge.SetSleeping()` wired in `RegisterSleepingBot()`/`UnregisterSleepingBot()`
+  - `BotHiveMindMonitor.Clear()` calls `BotEntityBridge.Clear()`
+- **ECS Phase 5B: push sensor ECS-only writes** — old dictionary writes removed from `UpdateValueForBot()`
+  - Push sensors (InCombat, IsSuspicious, WantsToLoot) write only to ECS entities via `BotEntityBridge.UpdateSensor()`
+  - `BotEntityBridge.UpdateLastLootingTime()` called directly from `UpdateValueForBot()` when WantsToLoot is set
+- **ECS Phase 5C: pull sensor dense iteration** — eliminates delegate allocation per 50ms tick
+  - New `updatePullSensors()` iterates `BotEntityBridge.Registry.Entities` directly with a for-loop
+  - Zero `Action<BotOwner>` allocation per tick (previously allocated a delegate per call)
+  - Writes CanQuest and CanSprintToObjective directly to entity fields
+- **ECS Phase 5D: boss/follower lifecycle on ECS** — O(1) dead checks replace O(n) list scan
+  - `updateBosses()` iterates dense ECS entity list instead of `botBosses.Keys` dictionary
+  - `entity.IsActive` replaces `deadBots.Contains()` — O(1) instead of O(n) per check
+  - `updateBossFollowers()` calls `HiveMindSystem.CleanupDeadEntities()` for ECS-side boss/follower reference cleanup
+  - Old dictionary writes retained alongside ECS writes for Phase 5F removal
+- **ECS Phase 5E: BotRegistrationManager reads via ECS** — O(1) ProfileId mapping
+  - `BotEntityBridge.IsBotSleeping(string profileId)` — O(1) via `_profileIdToEntity` dictionary (replaces `sleepingBotIds.Contains()` O(n) list scan)
+  - `BotEntityBridge.IsBotAPMC(BotOwner)` — reads `entity.BotType == BotType.PMC`
+  - `BotEntityBridge.GetBotType(BotOwner)` — reads `entity.BotType` with `MapBotTypeReverse()`
+  - `_profileIdToEntity` dictionary for O(1) string ProfileId→BotEntity lookup, populated in `RegisterBot()`
+- **ECS Phase 7A: BsgBotRegistry sparse array** — O(1) integer ID lookup without hash computation
+  - `BotRegistry.Add(int bsgId)`, `GetByBsgId(int)`, `ClearBsgId(int)` with `[AggressiveInlining]`
+  - `BotEntityBridge.GetEntityByBsgId(int bsgId)` for O(1) lookup by `BotOwner.Id`
+  - Wired into `BotEntityBridge.RegisterBot()` — entities registered with BSG ID at spawn
+- **ECS Phase 7B: TimePacing / FramePacing utilities** — reusable rate limiters inspired by Phobos
+  - `TimePacing` (`Helpers/TimePacing.cs`): time-based rate limiter with `ShouldRun(float)` + `Reset()`, `[AggressiveInlining]`
+  - `FramePacing` (`Helpers/FramePacing.cs`): frame-based rate limiter with `ShouldRun(int)` + `Reset()`, `[AggressiveInlining]`
+  - Pure C#, zero Unity dependencies
+- `BotEntity.FieldNoiseSeed` and `BotEntity.HasFieldState` fields for Phase 6 zone movement prep (not yet wired)
+- `BotEntity.ConsecutiveFailedAssignments` field for Phase 8 job assignment prep (not yet wired)
+- 99 new client tests: BotEntityBridge scenarios (+45), BsgBotRegistry (15), BotFieldState (12), JobAssignment (8), TimePacing (9), FramePacing (10)
+- Updated `docs/ecs-data-layout-analysis.md` with Phase 5A–5E, 7A, 7B implementation status (~85% complete)
+
+### Changed
+- ECS is now the primary write path — push sensors, pull sensors, sleep state, and bot type all write to ECS first; old dictionaries retained only for Phase 5F cleanup
+- 443 client tests total (was 344), 58 server tests, 501 total
+
 ## [1.7.0] - 2026-02-08
 
 ### Added

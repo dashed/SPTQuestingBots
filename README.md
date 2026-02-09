@@ -41,15 +41,16 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 
 ### ECS-Lite Data Layout
 - Dense entity storage with swap-remove and ID recycling, inspired by Phobos's EntityArray pattern
-- `BotEntity`: per-bot data container with stable recycled ID, boss/follower hierarchy, embedded sensor state
-- `BotRegistry`: dense list with O(1) add/remove/lookup — no gaps, iteration-friendly
+- `BotEntity`: per-bot data container with stable recycled ID, boss/follower hierarchy, embedded sensor state, field state, and job assignment tracking
+- `BotRegistry`: dense list with O(1) add/remove/lookup, plus BsgBotRegistry-style sparse array for O(1) integer ID lookups without hash computation
 - Sensor booleans (combat, suspicious, questing, sprint, loot) embedded directly on entity — replaces 5 separate dictionaries
 - Bot classification (`BotType` enum) and sleep state replace scattered HashSet/List lookups
 - Zero-allocation group query helpers for checking sensor state across boss/follower hierarchies
 - `HiveMindSystem`: static system methods for boss/follower lifecycle, sensor resets, and O(n) entity counting — replaces dictionary-based HiveMind operations
 - `QuestScorer`: pure-logic quest scoring with static buffers — replaces 5 dictionary allocations + `OrderBy` in quest selection hot path
-- `BotEntityBridge`: dual-write + read integration layer — every game event writes to both legacy dictionaries and ECS entities, and all external reads now come from dense ECS data instead of dictionary lookups
-- ECS migration complete: ~28 read call sites across 12 files switched from `BotHiveMindMonitor` to `BotEntityBridge`; 14 dead read methods removed from legacy system
+- `BotEntityBridge`: ECS-primary integration layer — push sensors write only to ECS, pull sensors iterate dense entity list with zero allocation, boss/follower lifecycle uses O(1) `IsActive` checks, ProfileId→entity mapping for O(1) string lookups
+- Write migration complete (Phases 5A–5E): all sensor, sleep, type, and boss/follower writes flow through ECS as primary data store; ~28 read call sites across 12 files use ECS; 14 dead read methods removed
+- `TimePacing` / `FramePacing`: reusable rate-limiter utilities with `[AggressiveInlining]`, inspired by Phobos
 - Pure C# with zero Unity dependencies for full testability
 
 ---
