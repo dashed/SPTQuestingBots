@@ -297,7 +297,9 @@ namespace SPTQuestingBots.Controllers
 
         public static QuestObjective NearestToBot(this IEnumerable<QuestObjective> objectives, BotOwner bot)
         {
-            Dictionary<QuestObjective, float> objectiveDistances = new Dictionary<QuestObjective, float>();
+            QuestObjective nearest = null;
+            float nearestDist = float.MaxValue;
+
             foreach (QuestObjective objective in objectives)
             {
                 Vector3? firstStepPosition = objective.GetFirstStepPosition();
@@ -306,15 +308,15 @@ namespace SPTQuestingBots.Controllers
                     continue;
                 }
 
-                objectiveDistances.Add(objective, Vector3.Distance(bot.Position, firstStepPosition.Value));
+                float dist = Vector3.Distance(bot.Position, firstStepPosition.Value);
+                if (dist < nearestDist)
+                {
+                    nearestDist = dist;
+                    nearest = objective;
+                }
             }
 
-            if (objectiveDistances.Count == 0)
-            {
-                return null;
-            }
-
-            return objectiveDistances.OrderBy(i => i.Value).First().Key;
+            return nearest;
         }
 
         public static DateTime? TimeWhenLastEndedForBot(this Quest quest, BotOwner bot)
@@ -465,14 +467,19 @@ namespace SPTQuestingBots.Controllers
 
         public static int TryArchiveRepeatableAssignments(this BotOwner bot)
         {
-            BotJobAssignment[] matchingAssignments = botJobAssignments[bot.Profile.Id]
-                .Where(a => a.QuestAssignment.IsRepeatable)
-                .Where(a => a.Status == JobAssignmentStatus.Completed)
-                .ToArray();
+            var assignments = botJobAssignments[bot.Profile.Id];
+            int count = 0;
 
-            matchingAssignments.ExecuteForEach(a => a.Archive());
+            for (int i = 0; i < assignments.Count; i++)
+            {
+                if (assignments[i].QuestAssignment.IsRepeatable && assignments[i].Status == JobAssignmentStatus.Completed)
+                {
+                    assignments[i].Archive();
+                    count++;
+                }
+            }
 
-            return matchingAssignments.Length;
+            return count;
         }
 
         public static bool CanBotRepeatQuestObjective(this QuestObjective objective, BotOwner bot)
@@ -696,7 +703,7 @@ namespace SPTQuestingBots.Controllers
 
         public static IReadOnlyList<Quest> GetAllPossibleQuests(this BotOwner bot)
         {
-            int botGroupSize = BotLogic.ECS.BotEntityBridge.GetFollowers(bot).Count + 1;
+            int botGroupSize = BotLogic.ECS.BotEntityBridge.GetFollowerCount(bot) + 1;
             _possibleQuestsBuffer.Clear();
 
             for (int i = 0; i < allQuests.Count; i++)
@@ -1024,7 +1031,7 @@ namespace SPTQuestingBots.Controllers
                 return;
             }
 
-            int botGroupSize = BotLogic.ECS.BotEntityBridge.GetFollowers(bot).Count + 1;
+            int botGroupSize = BotLogic.ECS.BotEntityBridge.GetFollowerCount(bot) + 1;
             if (botGroupSize > botJobAssignment.QuestAssignment.MaxBotsInGroup)
             {
                 BotObjectiveManager botObjectiveManager = bot.GetObjectiveManager();

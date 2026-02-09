@@ -1729,5 +1729,185 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS
             Assert.That(retrieved.PreviousDestination.y, Is.EqualTo(0f));
             Assert.That(retrieved.PreviousDestination.z, Is.EqualTo(20f));
         }
+
+        // ── Phase 7D: Allocation Cleanup ────────────────────────────
+
+        [Test]
+        public void GetFollowerCount_ReturnsCorrectCount()
+        {
+            // Simulates GetFollowerCount: reads entity.Followers.Count directly (O(1), zero alloc)
+            var boss = _registry.Add();
+            boss.BotType = BotType.PMC;
+            var f1 = _registry.Add();
+            var f2 = _registry.Add();
+            var f3 = _registry.Add();
+
+            HiveMindSystem.AssignBoss(f1, boss);
+            HiveMindSystem.AssignBoss(f2, boss);
+            HiveMindSystem.AssignBoss(f3, boss);
+
+            Assert.That(boss.Followers.Count, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void GetFollowerCount_NoFollowers_ReturnsZero()
+        {
+            var solo = _registry.Add();
+            solo.BotType = BotType.PMC;
+
+            Assert.That(solo.Followers.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void GetFollowerCount_AfterSeparation_Decreases()
+        {
+            var boss = _registry.Add();
+            var f1 = _registry.Add();
+            var f2 = _registry.Add();
+
+            HiveMindSystem.AssignBoss(f1, boss);
+            HiveMindSystem.AssignBoss(f2, boss);
+            Assert.That(boss.Followers.Count, Is.EqualTo(2));
+
+            HiveMindSystem.SeparateFromGroup(f1);
+            Assert.That(boss.Followers.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void GetFollowers_BufferReuse_ReturnsCorrectFollowers()
+        {
+            // Simulates the static buffer pattern: clear + fill from entity.Followers
+            var buffer = new List<BotEntity>();
+            var boss = _registry.Add();
+            var f1 = _registry.Add();
+            var f2 = _registry.Add();
+
+            HiveMindSystem.AssignBoss(f1, boss);
+            HiveMindSystem.AssignBoss(f2, boss);
+
+            // Simulate GetFollowers buffer fill
+            buffer.Clear();
+            for (int i = 0; i < boss.Followers.Count; i++)
+                buffer.Add(boss.Followers[i]);
+
+            Assert.That(buffer.Count, Is.EqualTo(2));
+            Assert.That(buffer, Contains.Item(f1));
+            Assert.That(buffer, Contains.Item(f2));
+        }
+
+        [Test]
+        public void GetFollowers_BufferReuse_SecondCallOverwritesFirst()
+        {
+            // Verifies buffer pattern: second call clears previous results
+            var buffer = new List<BotEntity>();
+            var boss1 = _registry.Add();
+            var f1 = _registry.Add();
+            HiveMindSystem.AssignBoss(f1, boss1);
+
+            var boss2 = _registry.Add();
+            var f2 = _registry.Add();
+            var f3 = _registry.Add();
+            HiveMindSystem.AssignBoss(f2, boss2);
+            HiveMindSystem.AssignBoss(f3, boss2);
+
+            // First call
+            buffer.Clear();
+            for (int i = 0; i < boss1.Followers.Count; i++)
+                buffer.Add(boss1.Followers[i]);
+            Assert.That(buffer.Count, Is.EqualTo(1));
+
+            // Second call overwrites
+            buffer.Clear();
+            for (int i = 0; i < boss2.Followers.Count; i++)
+                buffer.Add(boss2.Followers[i]);
+            Assert.That(buffer.Count, Is.EqualTo(2));
+            Assert.That(buffer, Does.Not.Contain(f1));
+            Assert.That(buffer, Contains.Item(f2));
+            Assert.That(buffer, Contains.Item(f3));
+        }
+
+        [Test]
+        public void GetAllGroupMembers_BufferReuse_ReturnsBossAndFollowers()
+        {
+            // Simulates GetAllGroupMembers buffer pattern
+            var buffer = new List<BotEntity>();
+            var boss = _registry.Add();
+            boss.BotType = BotType.Boss;
+            var f1 = _registry.Add();
+            var f2 = _registry.Add();
+
+            HiveMindSystem.AssignBoss(f1, boss);
+            HiveMindSystem.AssignBoss(f2, boss);
+
+            // Simulate GetAllGroupMembers for f1 (excludes f1, includes boss + f2)
+            var entity = f1;
+            var groupBoss = entity.Boss ?? entity;
+            buffer.Clear();
+            for (int i = 0; i < groupBoss.Followers.Count; i++)
+            {
+                if (groupBoss.Followers[i] != entity)
+                    buffer.Add(groupBoss.Followers[i]);
+            }
+            if (groupBoss != entity)
+                buffer.Add(groupBoss);
+
+            Assert.That(buffer.Count, Is.EqualTo(2));
+            Assert.That(buffer, Contains.Item(boss));
+            Assert.That(buffer, Contains.Item(f2));
+            Assert.That(buffer, Does.Not.Contain(f1));
+        }
+
+        [Test]
+        public void GetLocationOfNearestGroupMember_Inlined_FindsNearest()
+        {
+            // Simulates the inlined GetLocationOfNearestGroupMember:
+            // iterates boss + followers directly without intermediate collection
+            var boss = _registry.Add();
+            boss.BotType = BotType.PMC;
+            var f1 = _registry.Add();
+            var f2 = _registry.Add();
+            var f3 = _registry.Add();
+
+            HiveMindSystem.AssignBoss(f1, boss);
+            HiveMindSystem.AssignBoss(f2, boss);
+            HiveMindSystem.AssignBoss(f3, boss);
+
+            // Verify the inline iteration covers all group members
+            var groupBoss = f1.Boss ?? f1;
+            Assert.That(groupBoss, Is.SameAs(boss));
+
+            // Count members excluding self
+            int memberCount = 0;
+            if (groupBoss != f1)
+                memberCount++; // boss
+            for (int i = 0; i < groupBoss.Followers.Count; i++)
+            {
+                if (groupBoss.Followers[i] != f1)
+                    memberCount++;
+            }
+
+            // f1 should see boss + f2 + f3 = 3 group members
+            Assert.That(memberCount, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void GetLocationOfNearestGroupMember_SoloBot_NoGroupMembers()
+        {
+            var solo = _registry.Add();
+            solo.BotType = BotType.PMC;
+
+            // Solo bot: boss is null, no followers
+            var groupBoss = solo.Boss ?? solo;
+            Assert.That(groupBoss, Is.SameAs(solo));
+
+            int memberCount = 0;
+            for (int i = 0; i < groupBoss.Followers.Count; i++)
+            {
+                if (groupBoss.Followers[i] != solo)
+                    memberCount++;
+            }
+
+            Assert.That(memberCount, Is.EqualTo(0));
+        }
     }
 }

@@ -429,19 +429,26 @@ namespace SPTQuestingBots.Components
 
         public void SetExfiliationPointForQuesting()
         {
-            Dictionary<ExfiltrationPoint, float> exfiltrationPointDistances =
-                Singleton<GameWorld>.Instance.ExfiltrationController.ExfiltrationPoints.ToDictionary(
-                    p => p,
-                    p => Vector3.Distance(p.transform.position, botOwner.Position)
-                );
+            var points = Singleton<GameWorld>.Instance.ExfiltrationController.ExfiltrationPoints;
+            if (points == null || points.Length == 0)
+                return;
 
-            if (exfiltrationPointDistances.Count > 0)
+            ExfiltrationPoint furthest = null;
+            float maxDist = 0f;
+
+            for (int i = 0; i < points.Length; i++)
             {
-                KeyValuePair<ExfiltrationPoint, float> furthestPoint = exfiltrationPointDistances.OrderBy(p => p.Value).Last();
+                float dist = Vector3.Distance(points[i].transform.position, botOwner.Position);
+                if (dist > maxDist)
+                {
+                    maxDist = dist;
+                    furthest = points[i];
+                }
+            }
 
-                exfiltrationPoint = furthestPoint.Key;
-
-                //LoggingController.LogInfo(botOwner.GetText() + " has selected " + furthestPoint.Key.Settings.Name + " as its furthest exfil point (" + furthestPoint.Value + "m)");
+            if (furthest != null)
+            {
+                exfiltrationPoint = furthest;
             }
         }
 

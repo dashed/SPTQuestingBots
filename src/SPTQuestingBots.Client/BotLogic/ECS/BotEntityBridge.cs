@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using EFT;
 using SPTQuestingBots.BotLogic.ECS.Systems;
 using SPTQuestingBots.BotLogic.HiveMind;
@@ -25,6 +24,12 @@ namespace SPTQuestingBots.BotLogic.ECS
         private static readonly Dictionary<BotOwner, BotEntity> _ownerToEntity = new Dictionary<BotOwner, BotEntity>();
 
         private static readonly Dictionary<int, BotOwner> _entityToOwner = new Dictionary<int, BotOwner>();
+
+        /// <summary>Reusable buffer for GetFollowers(). Callers must not hold references across calls.</summary>
+        private static readonly List<BotOwner> _followersBuffer = new List<BotOwner>();
+
+        /// <summary>Reusable buffer for GetAllGroupMembers(). Callers must not hold references across calls.</summary>
+        private static readonly List<BotOwner> _groupMembersBuffer = new List<BotOwner>();
 
         /// <summary>
         /// Phase 5E: ProfileId → BotEntity mapping for patches that only have a string ProfileId
@@ -267,51 +272,62 @@ namespace SPTQuestingBots.BotLogic.ECS
         }
 
         /// <summary>
-        /// Get the followers of a bot as a read-only collection of BotOwners.
-        /// Replaces BotHiveMindMonitor.GetFollowers().
+        /// Get the number of followers for a bot. O(1), zero allocation.
+        /// Use this instead of GetFollowers().Count when only the count is needed.
         /// </summary>
-        public static ReadOnlyCollection<BotOwner> GetFollowers(BotOwner bot)
+        public static int GetFollowerCount(BotOwner bot)
         {
             if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
+                return entity.Followers.Count;
+            return 0;
+        }
+
+        /// <summary>
+        /// Get the followers of a bot as a read-only list of BotOwners.
+        /// Uses a static reusable buffer — callers must not hold references across calls.
+        /// </summary>
+        public static IReadOnlyList<BotOwner> GetFollowers(BotOwner bot)
+        {
+            _followersBuffer.Clear();
+
+            if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
             {
-                var result = new List<BotOwner>(entity.Followers.Count);
                 for (int i = 0; i < entity.Followers.Count; i++)
                 {
                     var owner = GetBotOwner(entity.Followers[i]);
                     if (owner != null)
-                        result.Add(owner);
+                        _followersBuffer.Add(owner);
                 }
-
-                return new ReadOnlyCollection<BotOwner>(result);
             }
 
-            return new ReadOnlyCollection<BotOwner>(Array.Empty<BotOwner>());
+            return _followersBuffer;
         }
 
         /// <summary>
         /// Get all group members (boss + followers) excluding the given bot.
-        /// Replaces BotHiveMindMonitor.GetAllGroupMembers().
+        /// Uses a static reusable buffer — callers must not hold references across calls.
         /// </summary>
-        public static ReadOnlyCollection<BotOwner> GetAllGroupMembers(BotOwner bot)
+        public static IReadOnlyList<BotOwner> GetAllGroupMembers(BotOwner bot)
         {
+            _groupMembersBuffer.Clear();
+
             if (bot == null || !_ownerToEntity.TryGetValue(bot, out var entity))
-                return new ReadOnlyCollection<BotOwner>(Array.Empty<BotOwner>());
+                return _groupMembersBuffer;
 
             var groupBoss = entity.Boss ?? entity;
             var bossOwner = GetBotOwner(groupBoss);
 
-            var result = new List<BotOwner>(groupBoss.Followers.Count + 1);
             for (int i = 0; i < groupBoss.Followers.Count; i++)
             {
                 var followerOwner = GetBotOwner(groupBoss.Followers[i]);
                 if (followerOwner != null && followerOwner != bot)
-                    result.Add(followerOwner);
+                    _groupMembersBuffer.Add(followerOwner);
             }
 
             if (bossOwner != null && bossOwner != bot)
-                result.Add(bossOwner);
+                _groupMembersBuffer.Add(bossOwner);
 
-            return new ReadOnlyCollection<BotOwner>(result);
+            return _groupMembersBuffer;
         }
 
         /// <summary>
@@ -360,28 +376,46 @@ namespace SPTQuestingBots.BotLogic.ECS
         }
 
         /// <summary>
-        /// Get the position of the nearest group member.
-        /// Replaces BotHiveMindMonitor.GetLocationOfNearestGroupMember().
+        /// Get the position of the nearest group member. Zero allocation — iterates
+        /// boss/follower references directly on the entity without intermediate collections.
         /// </summary>
         public static Vector3 GetLocationOfNearestGroupMember(BotOwner bot)
         {
-            var members = GetAllGroupMembers(bot);
-            if (members.Count == 0)
+            if (bot == null || !_ownerToEntity.TryGetValue(bot, out var entity))
                 return bot.Position;
 
-            BotOwner nearest = null;
+            var groupBoss = entity.Boss ?? entity;
             float nearestDist = float.MaxValue;
-            for (int i = 0; i < members.Count; i++)
+            Vector3 nearestPos = bot.Position;
+
+            // Check boss
+            var bossOwner = GetBotOwner(groupBoss);
+            if (bossOwner != null && bossOwner != bot)
             {
-                float dist = Vector3.Distance(bot.Position, members[i].Position);
+                float dist = Vector3.Distance(bot.Position, bossOwner.Position);
                 if (dist < nearestDist)
                 {
                     nearestDist = dist;
-                    nearest = members[i];
+                    nearestPos = bossOwner.Position;
                 }
             }
 
-            return nearest.Position;
+            // Check each follower
+            for (int i = 0; i < groupBoss.Followers.Count; i++)
+            {
+                var followerOwner = GetBotOwner(groupBoss.Followers[i]);
+                if (followerOwner != null && followerOwner != bot)
+                {
+                    float dist = Vector3.Distance(bot.Position, followerOwner.Position);
+                    if (dist < nearestDist)
+                    {
+                        nearestDist = dist;
+                        nearestPos = followerOwner.Position;
+                    }
+                }
+            }
+
+            return nearestPos;
         }
 
         /// <summary>

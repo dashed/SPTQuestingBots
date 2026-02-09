@@ -843,6 +843,8 @@ Each phase should:
 | Phase 6 | BotFieldState on BotEntity | ✅ Complete |
 | Phase 7A | BsgBotRegistry Sparse Array | ✅ Complete |
 | Phase 7B | TimePacing / FramePacing Utilities | ✅ Complete |
+| Phase 7C | Deterministic Tick Order | ✅ Complete |
+| Phase 7D | Allocation Cleanup | ✅ Complete |
 | Phase 8 | Job Assignment State on BotEntity | ⚠️ Field added, not yet wired |
 
 **Current architecture**: ECS is the sole data store. All old dictionaries
@@ -853,15 +855,14 @@ Pull sensors iterate the dense entity list with zero delegate allocation.
 Boss/follower lifecycle uses ECS `entity.IsActive` for O(1) dead checks.
 `BotRegistrationManager` retains `registeredPMCs`/`registeredBosses` only for
 `GetBotType()` classification during registration and hostility management.
-447 client tests, 58 server tests (505 total).
+463 client tests, 58 server tests (521 total).
 
 ### What Remains: Full Option B Completion
 
-Phases 5A–5F completed the full ECS migration and old data structure removal.
-What remains:
+Phases 5A–5F completed the full ECS migration, Phases 7C–7D completed
+deterministic tick order documentation and allocation cleanup. What remains:
 
-1. **Phase 7C–7D** — deterministic tick order, allocation cleanup (optional).
-2. **Phase 8 wiring** — connect `BotEntity.ConsecutiveFailedAssignments` to
+1. **Phase 8 wiring** — connect `BotEntity.ConsecutiveFailedAssignments` to
    `BotJobAssignmentFactory` (field exists, wiring remains).
 
 ---
@@ -1136,6 +1137,8 @@ Wiring to replace existing ad-hoc timer patterns is incremental and optional.
 
 ### 7C: Deterministic Tick Order
 
+**Status: ✅ Complete**
+
 Phobos centralizes all system updates in a single `PhobosManager.Update()`:
 
 ```csharp
@@ -1150,26 +1153,49 @@ public void Update()
 }
 ```
 
-**For QuestingBots**: The `BotHiveMindMonitor.Update()` tick could orchestrate
-all ECS system calls in a deterministic order instead of relying on scattered
-MonoBehaviour update callbacks.
+**For QuestingBots**: `BotHiveMindMonitor.Update()` already implements
+deterministic tick order — all ECS system calls execute in a fixed sequence
+within the 50ms tick. Documentation was added to make this explicit:
 
-**Estimated effort**: Medium (refactor, not new code)
+```csharp
+/// Deterministic tick order (50ms interval, Phobos-inspired):
+///   1. updateBosses()              — discover/validate boss relationships from BSG API
+///   2. updateBossFollowers()        — cleanup dead boss/follower references (CleanupDeadEntities)
+///   3. updatePullSensors()          — CanQuest + CanSprintToObjective via dense ECS iteration
+///   4. ResetInactiveEntitySensors() — clear sensor state on dead/despawned entities
+```
+
+Push sensors (InCombat, IsSuspicious, WantsToLoot) are event-driven via
+`UpdateValueForBot()` and do not participate in the tick.
+
+**Note**: The existing `MonoBehaviourDelayedUpdate` base class uses a
+wall-clock `Stopwatch` timer (not game-time `TimePacing`). Replacing it was
+evaluated but rejected: changing the base class would affect all subclasses,
+and wall-clock time is appropriate for the 50ms HiveMind tick.
 
 ### 7D: Allocation Cleanup
 
-Remaining allocation hotspots identified by the audit:
+**Status: ✅ Complete**
+
+All remaining allocation hotspots identified by the audit have been fixed:
 
 | Location | Pattern | Fix | Status |
 |----------|---------|-----|--------|
 | `CanQuest/CanSprintSensor.Update()` | `new Action<BotOwner>()` per 50ms tick | Cache delegate as static field | ✅ Fixed by Phase 5C (dense iteration, no delegate) |
-| `BotEntityBridge.GetFollowers()` | `new List<BotOwner>()` + `new ReadOnlyCollection<>()` per call | Return `IReadOnlyList<BotEntity>` from entity directly, or cache | ⬜ |
-| `BotEntityBridge.GetAllGroupMembers()` | Same allocation pattern | Same fix | ⬜ |
-| `BotJobAssignmentFactory.NearestToBot()` | `new Dictionary<>()` + `.OrderBy().First()` | Manual min-scan with no allocation | ⬜ |
-| `BotObjectiveManager.SetExfiliationPointForQuesting()` | `.ToDictionary()` + `.OrderBy().Last()` | Manual max-scan | ⬜ |
-| `BotJobAssignmentFactory.TryArchiveRepeatableAssignments()` | `.Where().Where().ToArray()` | For-loop with in-place modification | ⬜ |
+| `BotEntityBridge.GetFollowers()` | `new List<BotOwner>()` + `new ReadOnlyCollection<>()` per call | Static `_followersBuffer` reused per call, returns `IReadOnlyList<BotOwner>` | ✅ Complete |
+| `BotEntityBridge.GetAllGroupMembers()` | Same allocation pattern | Static `_groupMembersBuffer` reused per call, returns `IReadOnlyList<BotOwner>` | ✅ Complete |
+| `BotJobAssignmentFactory.NearestToBot()` | `new Dictionary<>()` + `.OrderBy().First()` | O(n) min-scan with local variables, zero allocation | ✅ Complete |
+| `BotObjectiveManager.SetExfiliationPointForQuesting()` | `.ToDictionary()` + `.OrderBy().Last()` | O(n) max-scan for-loop, zero allocation | ✅ Complete |
+| `BotJobAssignmentFactory.TryArchiveRepeatableAssignments()` | `.Where().Where().ToArray()` | Single for-loop with in-place `Archive()` calls | ✅ Complete |
 
-**Estimated effort**: Medium (5-7 files, ~50 lines changed)
+**Additional optimizations**:
+- `GetFollowerCount()` method added for count-only callers (2 call sites in
+  `BotJobAssignmentFactory`), avoiding static buffer fill when only the count
+  is needed
+- `GetLocationOfNearestGroupMember()` inlined to iterate boss + followers
+  directly, avoiding the intermediate `GetAllGroupMembers()` collection
+- All foreach callers of `GetFollowers()` verified safe for static buffer
+  reuse (no nested calls that would corrupt the buffer)
 
 ---
 
@@ -1226,7 +1252,7 @@ recommended** for QuestingBots:
 
 ## Updated Feasibility Assessment
 
-### Option B Status: In Progress (~93% Complete)
+### Option B Status: In Progress (~96% Complete)
 
 | Component | Status | Remaining |
 |-----------|--------|-----------|
@@ -1245,8 +1271,8 @@ recommended** for QuestingBots:
 | Remove old dictionaries | ✅ Complete | Phase 5F done |
 | BotFieldState on entity | ✅ Complete | — |
 | Job assignment on entity | ⚠️ Field added | Wire to BotJobAssignmentFactory |
-| Deterministic tick order | ⬜ Not started | Phase 7C (optional) |
-| Allocation cleanup | ⬜ Not started | Phase 7D (optional) |
+| Deterministic tick order | ✅ Complete | Phase 7C (documented) |
+| Allocation cleanup | ✅ Complete | Phase 7D (6 hotspots fixed) |
 
 ### Revised Verdict
 
@@ -1254,12 +1280,13 @@ Option B is nearing completion. The ECS is the **sole data store** for all
 sensor, sleep, type, and boss/follower data. All old dictionaries
 (`deadBots`, `botBosses`, `botFollowers`, `sensors`) and 6 sensor subclasses
 have been deleted. Boss/follower lifecycle uses dense ECS entity iteration
-with O(1) `IsActive` checks. Phase 6 field state wiring is complete (WorldGridManager dictionary removed).
-Phase 8 has a field on `BotEntity` but needs wiring. Phases 7C–7D are
-optional improvements.
+with O(1) `IsActive` checks. Phase 6 field state wiring is complete
+(WorldGridManager dictionary removed). Phase 7C documents the deterministic
+tick order. Phase 7D eliminates all remaining allocation hotspots (static
+buffers, O(n) min/max scans, for-loop replacements for LINQ chains).
+Phase 8 has a field on `BotEntity` but needs wiring.
 
-**Estimated remaining effort**: Phase 8 wiring (~3 files, 1 session),
-Phases 7C-7D (incremental, as-needed).
+**Estimated remaining effort**: Phase 8 wiring (~3 files, 1 session).
 
 ---
 

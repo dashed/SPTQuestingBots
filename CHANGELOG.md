@@ -54,13 +54,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `WorldGridManager.botFieldStates` dictionary removed
   - `WorldGridManager.GetOrCreateBotState()` method removed
   - `WorldGridManager.GetRecommendedDestination()` now uses `BotEntityBridge.GetFieldState()`
+- **ECS Phase 7C: deterministic tick order** — documents the fixed system call sequence in `BotHiveMindMonitor.Update()`
+  - 4-step tick: `updateBosses()` → `updateBossFollowers()` → `updatePullSensors()` → `ResetInactiveEntitySensors()`
+  - Push sensors (InCombat, IsSuspicious, WantsToLoot) are event-driven and do not participate in the tick
+  - XML doc comment + inline step numbers for code clarity
+- **ECS Phase 7D: allocation cleanup** — eliminates 5 remaining allocation hotspots
+  - `GetFollowers()`: static `_followersBuffer` reused per call, returns `IReadOnlyList<BotOwner>` (zero allocation)
+  - `GetFollowerCount()`: new O(1) method for count-only callers (2 call sites in `BotJobAssignmentFactory`)
+  - `GetAllGroupMembers()`: static `_groupMembersBuffer` reused per call, returns `IReadOnlyList<BotOwner>` (zero allocation)
+  - `GetLocationOfNearestGroupMember()`: inlined to iterate boss+followers directly (no intermediate collection)
+  - `NearestToBot()`: `Dictionary` + `.OrderBy().First()` → O(n) min-scan with local variables
+  - `SetExfiliationPointForQuesting()`: `.ToDictionary()` + `.OrderBy().Last()` → O(n) max-scan for-loop
+  - `TryArchiveRepeatableAssignments()`: `.Where().Where().ToArray()` → single for-loop with in-place `Archive()`
 - `BotEntity.ConsecutiveFailedAssignments` field for Phase 8 job assignment prep (not yet wired)
-- 111 new client tests: BotEntityBridge scenarios (+57), BsgBotRegistry (15), BotFieldState (12), JobAssignment (8), TimePacing (9), FramePacing (10)
-- Updated `docs/ecs-data-layout-analysis.md` with Phase 5A–5F, 6, 7A, 7B implementation status (~93% complete)
+- 119 new client tests: BotEntityBridge scenarios (+65 incl. 8 Phase 7D), BsgBotRegistry (15), BotFieldState (12), JobAssignment (8), TimePacing (9), FramePacing (10)
+- Updated `docs/ecs-data-layout-analysis.md` with Phase 5A–5F, 6, 7A–7D implementation status (~96% complete)
 
 ### Changed
 - ECS is now the sole data store — all old dictionaries and sensor classes deleted; push/pull sensors, sleep, type, boss/follower, field state all managed via ECS only
-- 455 client tests total (was 344), 58 server tests, 513 total
+- 463 client tests total (was 344), 58 server tests, 521 total
 
 ## [1.7.0] - 2026-02-08
 

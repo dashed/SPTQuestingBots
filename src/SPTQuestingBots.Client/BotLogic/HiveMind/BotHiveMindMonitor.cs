@@ -34,6 +34,16 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             ECS.BotEntityBridge.Clear();
         }
 
+        /// <summary>
+        /// Deterministic tick order (50ms interval, Phobos-inspired):
+        ///   1. updateBosses()              — discover/validate boss relationships from BSG API
+        ///   2. updateBossFollowers()        — cleanup dead boss/follower references (CleanupDeadEntities)
+        ///   3. updatePullSensors()          — CanQuest + CanSprintToObjective via dense ECS iteration
+        ///   4. ResetInactiveEntitySensors() — clear sensor state on dead/despawned entities
+        ///
+        /// Push sensors (InCombat, IsSuspicious, WantsToLoot) are event-driven via
+        /// <see cref="UpdateValueForBot"/> and do not participate in the tick.
+        /// </summary>
         protected void Update()
         {
             if (!canUpdate())
@@ -47,15 +57,16 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                 return;
             }
 
+            // 1. Discover/validate boss relationships from BSG API
             updateBosses();
+
+            // 2. Cleanup dead boss/follower references in ECS
             updateBossFollowers();
 
-            // Phase 5C: Pull sensors iterate dense ECS entity list instead of old dictionaries.
-            // Push sensors (InCombat, IsSuspicious, WantsToLoot) are set externally via
-            // UpdateValueForBot → BotEntityBridge.UpdateSensor, no tick needed.
+            // 3. Pull sensors: iterate dense ECS entity list (zero delegate allocation)
             updatePullSensors();
 
-            // Reset sensors for inactive (dead/despawned) entities
+            // 4. Reset sensors for inactive (dead/despawned) entities
             ECS.Systems.HiveMindSystem.ResetInactiveEntitySensors(ECS.BotEntityBridge.Registry.Entities);
         }
 
