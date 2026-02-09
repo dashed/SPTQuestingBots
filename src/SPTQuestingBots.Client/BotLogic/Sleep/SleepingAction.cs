@@ -23,6 +23,7 @@ namespace SPTQuestingBots.BotLogic.Sleep
             BotOwner.PatrollingData.Pause();
 
             BotRegistrationManager.RegisterSleepingBot(BotOwner);
+            ECS.BotEntityBridge.SetSleeping(BotOwner, true);
             BotOwner.gameObject.SetActive(false);
         }
 
@@ -32,6 +33,7 @@ namespace SPTQuestingBots.BotLogic.Sleep
 
             BotOwner.gameObject.SetActive(true);
             BotRegistrationManager.UnregisterSleepingBot(BotOwner);
+            ECS.BotEntityBridge.SetSleeping(BotOwner, false);
 
             BotOwner.PatrollingData.Unpause();
 

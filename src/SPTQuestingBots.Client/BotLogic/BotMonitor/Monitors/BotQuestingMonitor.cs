@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using EFT;
+using SPTQuestingBots.BotLogic.ECS;
 using SPTQuestingBots.BotLogic.ExternalMods.ModInfo;
 using SPTQuestingBots.BotLogic.Follow;
 using SPTQuestingBots.BotLogic.HiveMind;
@@ -28,7 +29,7 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
 
         private Stopwatch followersTooFarTimer = new Stopwatch();
 
-        public float DistanceToBoss => BotHiveMindMonitor.GetDistanceToBoss(BotOwner);
+        public float DistanceToBoss => BotEntityBridge.GetDistanceToBoss(BotOwner);
         public bool NeedToRegroupWithFollowers =>
             followersTooFarTimer.ElapsedMilliseconds
             > ConfigController.Config.Questing.BotQuestingRequirements.MaxFollowerDistance.MaxWaitTime * 1000;
@@ -39,8 +40,8 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
 
         public override void Update()
         {
-            HasABoss = BotHiveMindMonitor.HasBoss(BotOwner);
-            HasAQuestingBoss = HasABoss && BotHiveMindMonitor.GetValueForBossOfBot(BotHiveMindSensorType.CanQuest, BotOwner);
+            HasABoss = BotEntityBridge.HasBoss(BotOwner);
+            HasAQuestingBoss = HasABoss && BotEntityBridge.GetSensorForBossOfBot(BotOwner, BotSensor.CanQuest);
             DoesBossNeedHelp = HasABoss && doesBossNeedHelp();
 
             IsQuesting = isQuesting();
@@ -77,7 +78,7 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
         private bool shouldWaitForFollowers()
         {
             // Check if the bot has any followers
-            IReadOnlyCollection<BotOwner> followers = HiveMind.BotHiveMindMonitor.GetFollowers(BotOwner);
+            IReadOnlyCollection<BotOwner> followers = BotEntityBridge.GetFollowers(BotOwner);
             if (followers.Count == 0)
             {
                 return false;
@@ -101,17 +102,17 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
 
         private bool doesBossNeedHelp()
         {
-            if (SAINModInfo.IsSAINLayer(BotHiveMindMonitor.GetActiveBrainLayerOfBoss(BotOwner) ?? "") == true)
+            if (SAINModInfo.IsSAINLayer(BotEntityBridge.GetActiveBrainLayerOfBoss(BotOwner) ?? "") == true)
             {
                 return true;
             }
 
-            if (BotHiveMindMonitor.GetValueForGroup(BotHiveMindSensorType.InCombat, BotOwner))
+            if (BotEntityBridge.GetSensorForGroup(BotOwner, BotSensor.InCombat))
             {
                 return true;
             }
 
-            if (BotHiveMindMonitor.GetValueForGroup(BotHiveMindSensorType.IsSuspicious, BotOwner))
+            if (BotEntityBridge.GetSensorForGroup(BotOwner, BotSensor.IsSuspicious))
             {
                 return true;
             }

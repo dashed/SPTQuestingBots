@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Comfort.Common;
 using EFT;
 using SPTQuestingBots.BotLogic.BotMonitor.Monitors;
+using SPTQuestingBots.BotLogic.ECS;
 using SPTQuestingBots.BotLogic.HiveMind;
 using SPTQuestingBots.Configuration;
 using SPTQuestingBots.Controllers;
@@ -132,12 +133,12 @@ namespace SPTQuestingBots.BotLogic.BotMonitor
                 return BotQuestingDecision.HelpBoss;
             }
 
-            if (BotHiveMindMonitor.GetValueForGroup(BotHiveMindSensorType.InCombat, BotOwner))
+            if (BotEntityBridge.GetSensorForGroup(BotOwner, BotSensor.InCombat))
             {
                 return BotQuestingDecision.WaitForGroup;
             }
 
-            if (BotHiveMindMonitor.GetValueForGroup(BotHiveMindSensorType.IsSuspicious, BotOwner))
+            if (BotEntityBridge.GetSensorForGroup(BotOwner, BotSensor.IsSuspicious))
             {
                 return BotQuestingDecision.WaitForGroup;
             }
@@ -212,12 +213,12 @@ namespace SPTQuestingBots.BotLogic.BotMonitor
                 return BotQuestingDecision.StopToHeal;
             }
 
-            if (allowedToTakeABreak() && BotHiveMindMonitor.GetValueForGroup(BotHiveMindSensorType.InCombat, BotOwner))
+            if (allowedToTakeABreak() && BotEntityBridge.GetSensorForGroup(BotOwner, BotSensor.InCombat))
             {
                 return BotQuestingDecision.WaitForGroup;
             }
 
-            if (allowedToInvestigate() && BotHiveMindMonitor.GetValueForGroup(BotHiveMindSensorType.IsSuspicious, BotOwner))
+            if (allowedToInvestigate() && BotEntityBridge.GetSensorForGroup(BotOwner, BotSensor.IsSuspicious))
             {
                 return BotQuestingDecision.WaitForGroup;
             }

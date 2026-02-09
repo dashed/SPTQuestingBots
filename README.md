@@ -48,6 +48,8 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - Zero-allocation group query helpers for checking sensor state across boss/follower hierarchies
 - `HiveMindSystem`: static system methods for boss/follower lifecycle, sensor resets, and O(n) entity counting — replaces dictionary-based HiveMind operations
 - `QuestScorer`: pure-logic quest scoring with static buffers — replaces 5 dictionary allocations + `OrderBy` in quest selection hot path
+- `BotEntityBridge`: dual-write + read integration layer — every game event writes to both legacy dictionaries and ECS entities, and all external reads now come from dense ECS data instead of dictionary lookups
+- ECS migration complete: ~28 read call sites across 12 files switched from `BotHiveMindMonitor` to `BotEntityBridge`; 14 dead read methods removed from legacy system
 - Pure C# with zero Unity dependencies for full testability
 
 ---

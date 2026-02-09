@@ -35,10 +35,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `NumberOfConsecutiveFailedAssignments()`: `.Reverse().TakeWhile().Count()` → reverse for-loop
   - `FindQuestsWithZone()`: `.Where().ToArray()` → static list buffer (zero allocation)
   - 24 new unit tests for `QuestScorer` (scoring math, distance/desirability/angle factors, `SelectHighestIndex`)
+- **ECS Wiring: BotEntityBridge** — dual-write integration layer connecting game events to ECS data
+  - `BotEntityBridge`: thin static adapter bridging `BotOwner` (game type) to `BotEntity` (ECS data) with `Dictionary<BotOwner, BotEntity>` + `BotRegistry`
+  - Dual-write pattern: every game event writes to both old dictionary-based HiveMind AND new dense ECS entities (reads still from old system for safe transition)
+  - 7 hook points across 4 files: spawn registration (`BotOwnerBrainActivatePatch`), raid cleanup (`BotsControllerStopPatch`), sleep/wake (`SleepingAction`), sensor sync + boss/follower + group separation (`BotHiveMindMonitor`)
+  - Enum mapping helpers: `MapBotType` (Controllers.BotType → ECS.BotType), `MapSensorType` (BotHiveMindSensorType → BotSensor)
+  - 15 new integration-style scenario tests covering full bot lifecycle (register → sensor → boss/follower → sleep → separate → clear)
+- **ECS Migration: reads switched from dictionaries to dense ECS entities** — completes the dual-write → single-read transition
+  - Added missing dual-writes for 3 self-updating sensors: `CanQuest`, `CanSprintToObjective` (pull sensors that bypass `UpdateValueForBot`), and `LastLootingTime` (DateTime tracked in private dictionary)
+  - Added entity→BotOwner reverse lookup (`Dictionary<int, BotOwner>`) in `BotEntityBridge` for boss/follower return methods
+  - Added 13 read convenience methods on `BotEntityBridge`: `IsRegistered`, `GetSensorForBot`, `GetSensorForBossOfBot`, `GetSensorForGroup`, `HasBoss`, `GetBoss`, `GetFollowers`, `GetAllGroupMembers`, `GetDistanceToBoss`, `GetActiveBrainLayerOfBoss`, `GetLocationOfBoss`, `GetLocationOfNearestGroupMember`, `HasFollowers`, `GetLastLootingTimeForBoss`, `GetBotOwner`
+  - Switched ~28 read call sites across 12 files from `BotHiveMindMonitor` to `BotEntityBridge`
+  - Removed 14 dead read methods from `BotHiveMindMonitor` (`GetValueForBot`, `GetValueForBossOfBot`, `GetValueForFollowers`, `GetValueForGroup`, `GetLastLootingTimeForBoss`, `IsRegistered`, `HasBoss`, `HasFollowers`, `GetFollowers`, `GetAllGroupMembers`, `GetActiveBrainLayerOfBoss`, `GetDistanceToBoss`, `GetLocationOfBoss`, `GetLocationOfNearestGroupMember`) and `GetLastLootingTimeForBoss` from `BotHiveMindWantsToLootSensor`
+  - `BotHiveMindMonitor` retains only: writes (`UpdateValueForBot`, `SeparateBotFromGroup`), lifecycle (`RegisterBot`, `Clear`), internal (`GetBoss` for `AbstractSensor`), and `Update` tick
+  - 14 new tests covering ECS read paths (group sensors, boss/follower queries, LastLootingTime, HasBoss/HasFollowers lifecycle)
 - ECS data layout analysis document (`docs/ecs-data-layout-analysis.md`) — Phobos architecture deep dive, QuestingBots audit, cache coherency math, and phased implementation plan
 
 ### Changed
-- 315 client tests total (was 187), 58 server tests, 373 total
+- 344 client tests total (was 187), 58 server tests, 402 total
 
 ## [1.6.0] - 2026-02-08
 

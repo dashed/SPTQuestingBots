@@ -34,7 +34,7 @@ namespace SPTQuestingBots.BotLogic.ExternalMods.Functions.Extract
 
             LoggingController.LogDebug("Instructing " + BotOwner.GetText() + " to extract now");
 
-            foreach (BotOwner follower in HiveMind.BotHiveMindMonitor.GetFollowers(BotOwner))
+            foreach (BotOwner follower in ECS.BotEntityBridge.GetFollowers(BotOwner))
             {
                 if ((follower == null) || follower.IsDead)
                 {

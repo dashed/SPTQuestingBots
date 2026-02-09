@@ -111,7 +111,7 @@ namespace SPTQuestingBots.Components
 
         private void updateBotType()
         {
-            if (!BotLogic.HiveMind.BotHiveMindMonitor.IsRegistered(botOwner))
+            if (!BotLogic.ECS.BotEntityBridge.IsRegistered(botOwner))
             {
                 LoggingController.LogError(botOwner.GetText() + " has not been registered in BotHiveMindMonitor");
             }
@@ -202,7 +202,7 @@ namespace SPTQuestingBots.Components
             }
 
             // Don't monitor the bot's job assignment if it's a follower of a boss
-            if (BotHiveMindMonitor.HasBoss(botOwner))
+            if (BotLogic.ECS.BotEntityBridge.HasBoss(botOwner))
             {
                 return;
             }
@@ -256,7 +256,7 @@ namespace SPTQuestingBots.Components
             float duration = (float)assignment.QuestObjectiveStepAssignment.WaitTimeAfterCompleting + 5;
             UpdateLootingBehavior(assignment.QuestObjectiveAssignment.LootAfterCompletingSetting, duration);
 
-            foreach (BotOwner follower in BotLogic.HiveMind.BotHiveMindMonitor.GetFollowers(botOwner))
+            foreach (BotOwner follower in BotLogic.ECS.BotEntityBridge.GetFollowers(botOwner))
             {
                 BotObjectiveManager followerObjectiveManager = follower.GetObjectiveManager();
                 if (followerObjectiveManager == null)

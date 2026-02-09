@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Comfort.Common;
 using EFT;
-using SPTQuestingBots.BotLogic.HiveMind;
+using SPTQuestingBots.BotLogic.ECS;
 using SPTQuestingBots.Components;
 using SPTQuestingBots.Controllers;
 using UnityEngine;
@@ -192,13 +192,13 @@ namespace SPTQuestingBots.Helpers
             if (bot.GetObjectiveManager()?.IsQuestingAllowed == true)
             {
                 // Check if overlays are enabled for questing bosses (leaders)
-                if (config.Value.HasFlag(QuestingBotType.QuestingLeaders) && !BotHiveMindMonitor.HasBoss(bot))
+                if (config.Value.HasFlag(QuestingBotType.QuestingLeaders) && !BotEntityBridge.HasBoss(bot))
                 {
                     return true;
                 }
 
                 // Check if overlays are enabled for questing followers
-                if (config.Value.HasFlag(QuestingBotType.QuestingFollowers) && BotHiveMindMonitor.HasBoss(bot))
+                if (config.Value.HasFlag(QuestingBotType.QuestingFollowers) && BotEntityBridge.HasBoss(bot))
                 {
                     return true;
                 }

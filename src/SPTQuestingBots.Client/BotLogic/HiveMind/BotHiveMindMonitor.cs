@@ -1,13 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Comfort.Common;
 using EFT;
-using HarmonyLib;
 using SPTQuestingBots.BehaviorExtensions;
 using SPTQuestingBots.Components.Spawning;
 using SPTQuestingBots.Controllers;
@@ -81,38 +77,7 @@ namespace SPTQuestingBots.BotLogic.HiveMind
         {
             throwIfSensorNotRegistred(sensorType);
             sensors[sensorType].UpdateForBot(bot, value);
-        }
-
-        public static bool GetValueForBot(BotHiveMindSensorType sensorType, BotOwner bot)
-        {
-            throwIfSensorNotRegistred(sensorType);
-            return sensors[sensorType].CheckForBot(bot);
-        }
-
-        public static bool GetValueForBossOfBot(BotHiveMindSensorType sensorType, BotOwner bot)
-        {
-            throwIfSensorNotRegistred(sensorType);
-            return sensors[sensorType].CheckForBossOfBot(bot);
-        }
-
-        public static bool GetValueForFollowers(BotHiveMindSensorType sensorType, BotOwner bot)
-        {
-            throwIfSensorNotRegistred(sensorType);
-            return sensors[sensorType].CheckForFollowers(bot);
-        }
-
-        public static bool GetValueForGroup(BotHiveMindSensorType sensorType, BotOwner bot)
-        {
-            throwIfSensorNotRegistred(sensorType);
-            return sensors[sensorType].CheckForGroup(bot);
-        }
-
-        public static DateTime GetLastLootingTimeForBoss(BotOwner bot)
-        {
-            throwIfSensorNotRegistred(BotHiveMindSensorType.WantsToLoot);
-            BotHiveMindWantsToLootSensor sensor = sensors[BotHiveMindSensorType.WantsToLoot] as BotHiveMindWantsToLootSensor;
-
-            return sensor.GetLastLootingTimeForBoss(bot);
+            ECS.BotEntityBridge.UpdateSensor(sensorType, bot, value);
         }
 
         public static void RegisterBot(BotOwner bot)
@@ -138,120 +103,9 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             }
         }
 
-        public static bool IsRegistered(BotOwner bot)
-        {
-            if (bot == null)
-            {
-                return false;
-            }
-
-            return botBosses.ContainsKey(bot);
-        }
-
-        public static bool HasBoss(BotOwner bot)
-        {
-            return botBosses.ContainsKey(bot) && (botBosses[bot] != null);
-        }
-
-        public static bool HasFollowers(BotOwner bot)
-        {
-            return botFollowers.ContainsKey(bot) && (botFollowers[bot]?.Count > 0);
-        }
-
         public static BotOwner GetBoss(BotOwner bot)
         {
             return botBosses.ContainsKey(bot) ? botBosses[bot] : null;
-        }
-
-        public static ReadOnlyCollection<BotOwner> GetFollowers(BotOwner bot)
-        {
-            return botFollowers.ContainsKey(bot)
-                ? new ReadOnlyCollection<BotOwner>(botFollowers[bot])
-                : new ReadOnlyCollection<BotOwner>(new BotOwner[0]);
-        }
-
-        public static ReadOnlyCollection<BotOwner> GetAllGroupMembers(BotOwner bot)
-        {
-            BotOwner boss = GetBoss(bot) ?? bot;
-            ReadOnlyCollection<BotOwner> followers = GetFollowers(boss);
-
-            var result = new List<BotOwner>(followers.Count + 1);
-            for (int i = 0; i < followers.Count; i++)
-            {
-                if (followers[i].Id != bot.Id)
-                {
-                    result.Add(followers[i]);
-                }
-            }
-
-            if (boss.Id != bot.Id)
-            {
-                result.Add(boss);
-            }
-
-            return new ReadOnlyCollection<BotOwner>(result);
-        }
-
-        public static string GetActiveBrainLayerOfBoss(BotOwner bot)
-        {
-            if (!HasBoss(bot) || botBosses[bot].IsDead)
-            {
-                return null;
-            }
-
-            return botBosses[bot].GetActiveLayerTypeName();
-        }
-
-        public static float GetDistanceToBoss(BotOwner bot)
-        {
-            if (!HasBoss(bot))
-            {
-                return 0;
-            }
-
-            return Vector3.Distance(bot.Position, botBosses[bot].Position);
-        }
-
-        public static Vector3? GetLocationOfBoss(BotOwner bot)
-        {
-            if (!HasBoss(bot))
-            {
-                return null;
-            }
-
-            return botBosses[bot].Position;
-        }
-
-        public static Vector3 GetLocationOfNearestGroupMember(BotOwner bot)
-        {
-            IReadOnlyCollection<BotOwner> members = GetAllGroupMembers(bot);
-
-            IEnumerable<string> deadMemberNames = members.Where(m => m.IsDead).Select(m => m.GetText());
-            if (deadMemberNames.Any())
-            {
-                LoggingController.LogError(
-                    bot.GetText() + " is trying to regroup with dead followers: " + string.Join(", ", deadMemberNames)
-                );
-            }
-
-            if (members.Count == 0)
-            {
-                return bot.Position;
-            }
-
-            BotOwner nearestMember = null;
-            float nearestDistance = float.MaxValue;
-            foreach (BotOwner member in members)
-            {
-                float dist = Vector3.Distance(bot.Position, member.Position);
-                if (dist < nearestDistance)
-                {
-                    nearestDistance = dist;
-                    nearestMember = member;
-                }
-            }
-
-            return nearestMember.Position;
         }
 
         public static void SeparateBotFromGroup(BotOwner bot)
@@ -263,6 +117,9 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             }
 
             Controllers.LoggingController.LogInfo("Separating " + bot.GetText() + " from its group...");
+
+            // Sync group separation into ECS data layer
+            ECS.BotEntityBridge.SeparateFromGroup(bot);
 
             // Clear stored information about the bot's boss (if applicable)
             foreach (BotOwner follower in botBosses.Keys)
@@ -425,6 +282,7 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             {
                 Controllers.LoggingController.LogInfo("Bot " + bot.GetText() + " is now a follower for " + boss.GetText());
                 botFollowers[boss].Add(bot);
+                ECS.BotEntityBridge.SyncBossFollower(bot, boss);
 
                 BotJobAssignmentFactory.CheckBotJobAssignmentValidity(boss);
             }

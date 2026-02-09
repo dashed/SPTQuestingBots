@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Comfort.Common;
 using EFT;
+using SPTQuestingBots.BotLogic.ECS;
 using SPTQuestingBots.BotLogic.ExternalMods;
 using SPTQuestingBots.BotLogic.ExternalMods.Functions.Hearing;
 using SPTQuestingBots.BotLogic.HiveMind;
@@ -83,7 +84,7 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
 
             if (!wasSuspiciousTooLong && BotMonitor.GetMonitor<BotHearingMonitor>().shouldBeSuspicious(suspiciousTime))
             {
-                if (!BotHiveMindMonitor.GetValueForBot(BotHiveMindSensorType.IsSuspicious, BotOwner))
+                if (!BotEntityBridge.GetSensorForBot(BotOwner, BotSensor.IsSuspicious))
                 {
                     suspiciousTime = BotMonitor.GetMonitor<BotHearingMonitor>().updateSuspiciousTime();
                     //LoggingController.LogInfo("Bot " + BotOwner.GetText() + " will be suspicious for " + suspiciousTime + " seconds");

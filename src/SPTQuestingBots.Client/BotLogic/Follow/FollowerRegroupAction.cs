@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using EFT;
-using SPTQuestingBots.BotLogic.HiveMind;
+using SPTQuestingBots.BotLogic.ECS;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
 using UnityEngine;
@@ -101,7 +101,7 @@ namespace SPTQuestingBots.BotLogic.Follow
 
         private Vector3? getTargetPosition()
         {
-            BotOwner boss = BotHiveMindMonitor.GetBoss(BotOwner);
+            BotOwner boss = BotEntityBridge.GetBoss(BotOwner);
             if (boss == null)
             {
                 return null;

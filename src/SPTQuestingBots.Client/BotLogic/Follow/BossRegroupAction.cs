@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using EFT;
-using SPTQuestingBots.BotLogic.HiveMind;
+using SPTQuestingBots.BotLogic.ECS;
 using SPTQuestingBots.Controllers;
 using UnityEngine;
 
@@ -49,7 +49,7 @@ namespace SPTQuestingBots.BotLogic.Follow
                 ActionElpasedTime < ConfigController.Config.Questing.BotQuestingRequirements.MaxFollowerDistance.MinRegroupTime;
 
             // determine the location of the nearest follower and the target distance to it
-            Vector3 locationOfNearestGroupMember = BotHiveMindMonitor.GetLocationOfNearestGroupMember(BotOwner);
+            Vector3 locationOfNearestGroupMember = BotEntityBridge.GetLocationOfNearestGroupMember(BotOwner);
             float targetDistance = (float)
                 ConfigController.Config.Questing.BotQuestingRequirements.MaxFollowerDistance.TargetRangeQuesting.Min;
 
@@ -79,7 +79,7 @@ namespace SPTQuestingBots.BotLogic.Follow
             {
                 if (!wasStuck)
                 {
-                    IReadOnlyCollection<BotOwner> followers = HiveMind.BotHiveMindMonitor.GetFollowers(BotOwner);
+                    IReadOnlyCollection<BotOwner> followers = BotEntityBridge.GetFollowers(BotOwner);
                     string followersText = string.Join(", ", followers.Select(f => f.GetText()));
 
                     LoggingController.LogWarning(

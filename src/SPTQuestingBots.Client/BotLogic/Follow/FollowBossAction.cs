@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using EFT;
+using SPTQuestingBots.BotLogic.ECS;
 using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.Follow
@@ -38,9 +39,9 @@ namespace SPTQuestingBots.BotLogic.Follow
             }
 
             // Only allow the bot to sprint if its boss is allowed to sprint
-            BotOwner boss = HiveMind.BotHiveMindMonitor.GetBoss(BotOwner);
+            BotOwner boss = BotEntityBridge.GetBoss(BotOwner);
 
-            CanSprint = HiveMind.BotHiveMindMonitor.GetValueForBot(HiveMind.BotHiveMindSensorType.CanSprintToObjective, boss);
+            CanSprint = BotEntityBridge.GetSensorForBot(boss, BotSensor.CanSprintToObjective);
             CanSprint &= IsAllowedToSprint();
 
             float allowedVariation = ConfigController

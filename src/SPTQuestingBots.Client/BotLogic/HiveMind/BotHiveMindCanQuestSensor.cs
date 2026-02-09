@@ -19,14 +19,18 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                 (bot) =>
                 {
                     Components.BotObjectiveManager objectiveManager = bot.GetObjectiveManager();
+                    bool value;
                     if (objectiveManager != null)
                     {
-                        botState[bot] = objectiveManager.IsQuestingAllowed;
+                        value = objectiveManager.IsQuestingAllowed;
                     }
                     else
                     {
-                        botState[bot] = defaultValue;
+                        value = defaultValue;
                     }
+
+                    botState[bot] = value;
+                    ECS.BotEntityBridge.UpdateSensor(BotHiveMindSensorType.CanQuest, bot, value);
                 }
             );
 

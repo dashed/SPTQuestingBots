@@ -5,9 +5,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using EFT;
+using SPTQuestingBots.BotLogic.ECS;
 using SPTQuestingBots.BotLogic.ExternalMods;
 using SPTQuestingBots.BotLogic.ExternalMods.Functions.Loot;
-using SPTQuestingBots.BotLogic.HiveMind;
 using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
@@ -25,12 +25,12 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
         private bool wasLooting = false;
         private bool hasFoundLoot = false;
 
-        public TimeSpan TimeSinceBossLastLooted => DateTime.Now - BotHiveMindMonitor.GetLastLootingTimeForBoss(BotOwner);
+        public TimeSpan TimeSinceBossLastLooted => DateTime.Now - BotEntityBridge.GetLastLootingTimeForBoss(BotOwner);
         public bool BossWillAllowLootingByTime =>
             TimeSinceBossLastLooted.TotalSeconds
             > ConfigController.Config.Questing.BotQuestingRequirements.BreakForLooting.MinTimeBetweenFollowerLootingChecks;
         public bool BossWillAllowLootingByDistance =>
-            BotHiveMindMonitor.GetDistanceToBoss(BotOwner)
+            BotEntityBridge.GetDistanceToBoss(BotOwner)
             <= ConfigController.Config.Questing.BotQuestingRequirements.BreakForLooting.MaxDistanceFromBoss;
         public bool BossWillAllowLooting =>
             (BossWillAllowLootingByTime && ShouldCheckForLoot()) || (BossWillAllowLootingByDistance && IsLooting);

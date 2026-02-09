@@ -31,17 +31,8 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             if (wantsToLoot && (bot != null))
             {
                 botLastLootingTime[bot] = DateTime.Now;
+                ECS.BotEntityBridge.UpdateLastLootingTime(bot);
             }
-        }
-
-        public DateTime GetLastLootingTimeForBoss(BotOwner bot)
-        {
-            if ((bot == null) || !BotHiveMindMonitor.botBosses.ContainsKey(bot) || (BotHiveMindMonitor.botBosses[bot] == null))
-            {
-                return DateTime.MinValue;
-            }
-
-            return botLastLootingTime[bot];
         }
     }
 }

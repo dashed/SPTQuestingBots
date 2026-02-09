@@ -696,7 +696,7 @@ namespace SPTQuestingBots.Controllers
 
         public static IReadOnlyList<Quest> GetAllPossibleQuests(this BotOwner bot)
         {
-            int botGroupSize = BotLogic.HiveMind.BotHiveMindMonitor.GetFollowers(bot).Count + 1;
+            int botGroupSize = BotLogic.ECS.BotEntityBridge.GetFollowers(bot).Count + 1;
             _possibleQuestsBuffer.Clear();
 
             for (int i = 0; i < allQuests.Count; i++)
@@ -1024,7 +1024,7 @@ namespace SPTQuestingBots.Controllers
                 return;
             }
 
-            int botGroupSize = BotLogic.HiveMind.BotHiveMindMonitor.GetFollowers(bot).Count + 1;
+            int botGroupSize = BotLogic.ECS.BotEntityBridge.GetFollowers(bot).Count + 1;
             if (botGroupSize > botJobAssignment.QuestAssignment.MaxBotsInGroup)
             {
                 BotObjectiveManager botObjectiveManager = bot.GetObjectiveManager();
