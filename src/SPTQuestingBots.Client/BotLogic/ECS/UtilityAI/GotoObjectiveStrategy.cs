@@ -11,6 +11,18 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
     public delegate bool PositionValidator(float inX, float inY, float inZ, out float outX, out float outY, out float outZ);
 
     /// <summary>
+    /// Delegate for checking if a walkable NavMesh path exists between two positions
+    /// within a maximum path length budget.
+    /// </summary>
+    public delegate bool ReachabilityValidator(float fromX, float fromY, float fromZ, float toX, float toY, float toZ, float maxPathLength);
+
+    /// <summary>
+    /// Delegate for checking line-of-sight between two positions
+    /// (no physical obstacles blocking the view).
+    /// </summary>
+    public delegate bool LosValidator(float fromX, float fromY, float fromZ, float toX, float toY, float toZ);
+
+    /// <summary>
     /// Primary squad strategy: move the squad toward the leader's current quest objective.
     /// Assigns tactical roles and positions to followers based on quest action type,
     /// tracks arrivals, and adjusts hold duration.
@@ -23,18 +35,28 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
         private readonly SquadStrategyConfig _config;
         private readonly System.Random _rng;
         private readonly PositionValidator _positionValidator;
+        private readonly ReachabilityValidator _reachabilityValidator;
+        private readonly LosValidator _losValidator;
         private readonly float[] _fallbackBuffer = new float[32 * 2]; // sunflower XZ candidates
 
         // Reusable buffers (max 6 followers)
         private readonly SquadRole[] _roleBuffer = new SquadRole[SquadObjective.MaxMembers];
         private readonly float[] _positionBuffer = new float[SquadObjective.MaxMembers * 3];
 
-        public GotoObjectiveStrategy(SquadStrategyConfig config, float hysteresis = 0.25f, PositionValidator positionValidator = null)
+        public GotoObjectiveStrategy(
+            SquadStrategyConfig config,
+            float hysteresis = 0.25f,
+            PositionValidator positionValidator = null,
+            ReachabilityValidator reachabilityValidator = null,
+            LosValidator losValidator = null
+        )
             : base(hysteresis)
         {
             _config = config;
             _rng = new System.Random();
             _positionValidator = positionValidator;
+            _reachabilityValidator = reachabilityValidator;
+            _losValidator = losValidator;
         }
 
         /// <summary>
@@ -44,13 +66,17 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
             SquadStrategyConfig config,
             int seed,
             float hysteresis = 0.25f,
-            PositionValidator positionValidator = null
+            PositionValidator positionValidator = null,
+            ReachabilityValidator reachabilityValidator = null,
+            LosValidator losValidator = null
         )
             : base(hysteresis)
         {
             _config = config;
             _rng = new System.Random(seed);
             _positionValidator = positionValidator;
+            _reachabilityValidator = reachabilityValidator;
+            _losValidator = losValidator;
         }
 
         /// <summary>
@@ -276,42 +302,90 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                 float py = _positionBuffer[off + 1];
                 float pz = _positionBuffer[off + 2];
 
+                // Step 1: Snap to NavMesh
                 if (_positionValidator(px, py, pz, out float sx, out float sy, out float sz))
                 {
                     _positionBuffer[off] = sx;
                     _positionBuffer[off + 1] = sy;
                     _positionBuffer[off + 2] = sz;
+
+                    // Step 2+3: Check reachability and LOS
+                    if (IsPositionValid(sx, sy, sz, objX, objY, objZ, _roleBuffer[i]))
+                        continue; // Position is valid — keep it
+                }
+
+                // Primary position failed (snap or validation) — try fallback
+                if (
+                    TryFallbackPosition(
+                        objX,
+                        objZ,
+                        objY,
+                        _config.FallbackSearchRadius,
+                        _config.FallbackCandidateCount,
+                        _roleBuffer[i],
+                        objX,
+                        objY,
+                        objZ,
+                        out float fx,
+                        out float fy,
+                        out float fz
+                    )
+                )
+                {
+                    _positionBuffer[off] = fx;
+                    _positionBuffer[off + 1] = fy;
+                    _positionBuffer[off + 2] = fz;
                 }
                 else
                 {
-                    // Fallback: try sunflower spiral candidates around objective
-                    if (
-                        TryFallbackPosition(
-                            objX,
-                            objZ,
-                            objY,
-                            _config.FallbackSearchRadius,
-                            _config.FallbackCandidateCount,
-                            out float fx,
-                            out float fy,
-                            out float fz
-                        )
-                    )
-                    {
-                        _positionBuffer[off] = fx;
-                        _positionBuffer[off + 1] = fy;
-                        _positionBuffer[off + 2] = fz;
-                    }
-                    else
-                    {
-                        // Mark position as invalid
-                        _positionBuffer[off] = float.NaN;
-                    }
+                    // Mark position as invalid
+                    _positionBuffer[off] = float.NaN;
                 }
             }
         }
 
-        internal bool TryFallbackPosition(float cx, float cz, float y, float radius, int count, out float fx, out float fy, out float fz)
+        /// <summary>
+        /// Checks reachability and (for Overwatch) line-of-sight for a snapped position.
+        /// Pure-logic helper — uses injected delegates for actual NavMesh/Physics calls.
+        /// </summary>
+        private bool IsPositionValid(float px, float py, float pz, float objX, float objY, float objZ, SquadRole role)
+        {
+            // Reachability: verify NavMesh path exists within length budget
+            if (_reachabilityValidator != null && _config.EnableReachabilityCheck)
+            {
+                float dx = objX - px;
+                float dy = objY - py;
+                float dz = objZ - pz;
+                float directDist = (float)System.Math.Sqrt(dx * dx + dy * dy + dz * dz);
+                float maxLen = directDist * _config.MaxPathLengthMultiplier;
+                if (!_reachabilityValidator(objX, objY, objZ, px, py, pz, maxLen))
+                    return false;
+            }
+
+            // LOS: for Overwatch positions, verify line-of-sight to objective
+            if (_losValidator != null && _config.EnableLosCheck && role == SquadRole.Overwatch)
+            {
+                if (!_losValidator(px, py, pz, objX, objY, objZ))
+                    return false;
+            }
+
+            return true;
+        }
+
+        internal bool TryFallbackPosition(
+            float cx,
+            float cz,
+            float y,
+            float radius,
+            int count,
+            SquadRole role,
+            float objX,
+            float objY,
+            float objZ,
+            out float fx,
+            out float fy,
+            out float fz
+        )
         {
             fx = fy = fz = 0f;
             int clampedCount = System.Math.Min(count, _fallbackBuffer.Length / 2);
@@ -321,7 +395,11 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                 float candX = _fallbackBuffer[j * 2];
                 float candZ = _fallbackBuffer[j * 2 + 1];
                 if (_positionValidator(candX, y, candZ, out fx, out fy, out fz))
-                    return true;
+                {
+                    // Also check reachability and LOS
+                    if (IsPositionValid(fx, fy, fz, objX, objY, objZ, role))
+                        return true;
+                }
             }
             return false;
         }

@@ -218,7 +218,12 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                 _squadStrategyManager = new ECS.UtilityAI.SquadStrategyManager(
                     new ECS.UtilityAI.SquadStrategy[]
                     {
-                        new ECS.UtilityAI.GotoObjectiveStrategy(config, positionValidator: NavMeshPositionValidator.TrySnap),
+                        new ECS.UtilityAI.GotoObjectiveStrategy(
+                            config,
+                            positionValidator: NavMeshPositionValidator.TrySnap,
+                            reachabilityValidator: NavMeshPositionValidator.IsReachable,
+                            losValidator: NavMeshPositionValidator.HasLineOfSight
+                        ),
                     }
                 );
             }

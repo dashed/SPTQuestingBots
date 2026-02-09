@@ -55,6 +55,15 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("fallback_search_radius")]
         public float FallbackSearchRadius { get; set; } = 15.0f;
 
+        [JsonProperty("enable_reachability_check")]
+        public bool EnableReachabilityCheck { get; set; } = true;
+
+        [JsonProperty("max_path_length_multiplier")]
+        public float MaxPathLengthMultiplier { get; set; } = 2.5f;
+
+        [JsonProperty("enable_los_check")]
+        public bool EnableLosCheck { get; set; } = true;
+
         public SquadStrategyConfig() { }
     }
 }

@@ -38,5 +38,50 @@ namespace SPTQuestingBots.Helpers
             outX = outY = outZ = 0f;
             return false;
         }
+
+        /// <summary>
+        /// Checks if a walkable NavMesh path exists between two positions
+        /// within a maximum path length budget.
+        /// Signature matches <see cref="BotLogic.ECS.UtilityAI.ReachabilityValidator"/>.
+        /// </summary>
+        public static bool IsReachable(float fromX, float fromY, float fromZ, float toX, float toY, float toZ, float maxPathLength)
+        {
+            Vector3 from = new Vector3(fromX, fromY, fromZ);
+            Vector3 to = new Vector3(toX, toY, toZ);
+            NavMeshPath path = new NavMeshPath();
+
+            if (!NavMesh.CalculatePath(from, to, NavMesh.AllAreas, path))
+                return false;
+
+            if (path.status != NavMeshPathStatus.PathComplete)
+                return false;
+
+            // Calculate total path length
+            float totalLength = 0f;
+            Vector3[] corners = path.corners;
+            for (int i = 1; i < corners.Length; i++)
+            {
+                float dx = corners[i].x - corners[i - 1].x;
+                float dy = corners[i].y - corners[i - 1].y;
+                float dz = corners[i].z - corners[i - 1].z;
+                totalLength += (float)System.Math.Sqrt(dx * dx + dy * dy + dz * dz);
+            }
+
+            return totalLength <= maxPathLength;
+        }
+
+        /// <summary>
+        /// Checks line-of-sight between two positions using Physics.Linecast.
+        /// Returns true if there are NO obstacles blocking the view.
+        /// Signature matches <see cref="BotLogic.ECS.UtilityAI.LosValidator"/>.
+        /// </summary>
+        public static bool HasLineOfSight(float fromX, float fromY, float fromZ, float toX, float toY, float toZ)
+        {
+            Vector3 from = new Vector3(fromX, fromY + 0.5f, fromZ); // Offset up from ground
+            Vector3 to = new Vector3(toX, toY + 0.5f, toZ);
+
+            // Returns true if NO obstacle was hit (i.e., line of sight exists)
+            return !Physics.Linecast(from, to);
+        }
     }
 }

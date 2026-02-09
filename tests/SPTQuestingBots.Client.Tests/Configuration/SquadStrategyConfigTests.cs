@@ -31,6 +31,9 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(config.NavMeshSampleRadius, Is.EqualTo(2.0f));
                 Assert.That(config.FallbackCandidateCount, Is.EqualTo(16));
                 Assert.That(config.FallbackSearchRadius, Is.EqualTo(15.0f));
+                Assert.That(config.EnableReachabilityCheck, Is.True);
+                Assert.That(config.MaxPathLengthMultiplier, Is.EqualTo(2.5f));
+                Assert.That(config.EnableLosCheck, Is.True);
             });
         }
 
@@ -58,6 +61,9 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(config.NavMeshSampleRadius, Is.EqualTo(2.0f));
                 Assert.That(config.FallbackCandidateCount, Is.EqualTo(16));
                 Assert.That(config.FallbackSearchRadius, Is.EqualTo(15.0f));
+                Assert.That(config.EnableReachabilityCheck, Is.True);
+                Assert.That(config.MaxPathLengthMultiplier, Is.EqualTo(2.5f));
+                Assert.That(config.EnableLosCheck, Is.True);
             });
         }
 
@@ -116,6 +122,9 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 NavMeshSampleRadius = 3.5f,
                 FallbackCandidateCount = 24,
                 FallbackSearchRadius = 20f,
+                EnableReachabilityCheck = false,
+                MaxPathLengthMultiplier = 3.0f,
+                EnableLosCheck = false,
             };
 
             var json = JsonConvert.SerializeObject(original);
@@ -140,6 +149,9 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(deserialized.NavMeshSampleRadius, Is.EqualTo(3.5f));
                 Assert.That(deserialized.FallbackCandidateCount, Is.EqualTo(24));
                 Assert.That(deserialized.FallbackSearchRadius, Is.EqualTo(20f));
+                Assert.That(deserialized.EnableReachabilityCheck, Is.False);
+                Assert.That(deserialized.MaxPathLengthMultiplier, Is.EqualTo(3.0f));
+                Assert.That(deserialized.EnableLosCheck, Is.False);
             });
         }
 
@@ -168,6 +180,9 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(json, Does.Contain("navmesh_sample_radius"));
                 Assert.That(json, Does.Contain("fallback_candidate_count"));
                 Assert.That(json, Does.Contain("fallback_search_radius"));
+                Assert.That(json, Does.Contain("enable_reachability_check"));
+                Assert.That(json, Does.Contain("max_path_length_multiplier"));
+                Assert.That(json, Does.Contain("enable_los_check"));
             });
         }
 
@@ -197,6 +212,27 @@ namespace SPTQuestingBots.Client.Tests.Configuration
         {
             var config = new SquadStrategyConfig();
             Assert.AreEqual(15.0f, config.FallbackSearchRadius);
+        }
+
+        [Test]
+        public void EnableReachabilityCheck_DefaultTrue()
+        {
+            var config = new SquadStrategyConfig();
+            Assert.IsTrue(config.EnableReachabilityCheck);
+        }
+
+        [Test]
+        public void MaxPathLengthMultiplier_Default25()
+        {
+            var config = new SquadStrategyConfig();
+            Assert.AreEqual(2.5f, config.MaxPathLengthMultiplier, 0.01f);
+        }
+
+        [Test]
+        public void EnableLosCheck_DefaultTrue()
+        {
+            var config = new SquadStrategyConfig();
+            Assert.IsTrue(config.EnableLosCheck);
         }
     }
 }

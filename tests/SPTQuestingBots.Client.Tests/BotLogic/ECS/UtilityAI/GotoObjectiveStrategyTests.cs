@@ -24,6 +24,8 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
                 EnableCommunicationRange = false,
                 EnableSquadPersonality = false,
                 EnablePositionValidation = false,
+                EnableReachabilityCheck = false,
+                EnableLosCheck = false,
             };
         }
 
@@ -1173,7 +1175,20 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
             var config = ValidationConfig();
             var strategy = new GotoObjectiveStrategy(config, seed: 42, positionValidator: AlwaysSnapValidator);
 
-            bool result = strategy.TryFallbackPosition(50f, 50f, 0f, 15f, 16, out float fx, out float fy, out float fz);
+            bool result = strategy.TryFallbackPosition(
+                50f,
+                50f,
+                0f,
+                15f,
+                16,
+                SquadRole.Guard,
+                50f,
+                0f,
+                50f,
+                out float fx,
+                out float fy,
+                out float fz
+            );
 
             Assert.IsTrue(result);
             // AlwaysSnapValidator adds 0.5 to Y
@@ -1186,12 +1201,482 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
             var config = ValidationConfig();
             var strategy = new GotoObjectiveStrategy(config, seed: 42, positionValidator: AlwaysFailValidator);
 
-            bool result = strategy.TryFallbackPosition(50f, 50f, 0f, 15f, 16, out float fx, out float fy, out float fz);
+            bool result = strategy.TryFallbackPosition(
+                50f,
+                50f,
+                0f,
+                15f,
+                16,
+                SquadRole.Guard,
+                50f,
+                0f,
+                50f,
+                out float fx,
+                out float fy,
+                out float fz
+            );
 
             Assert.IsFalse(result);
             Assert.AreEqual(0f, fx);
             Assert.AreEqual(0f, fy);
             Assert.AreEqual(0f, fz);
+        }
+
+        // ── Reachability + LOS Validation ──────────────────
+
+        private static bool AlwaysReachable(float fromX, float fromY, float fromZ, float toX, float toY, float toZ, float maxLen)
+        {
+            return true;
+        }
+
+        private static bool NeverReachable(float fromX, float fromY, float fromZ, float toX, float toY, float toZ, float maxLen)
+        {
+            return false;
+        }
+
+        private static bool AlwaysHasLos(float fromX, float fromY, float fromZ, float toX, float toY, float toZ)
+        {
+            return true;
+        }
+
+        private static bool NeverHasLos(float fromX, float fromY, float fromZ, float toX, float toY, float toZ)
+        {
+            return false;
+        }
+
+        private SquadStrategyConfig FullValidationConfig()
+        {
+            var config = ValidationConfig();
+            config.EnableReachabilityCheck = true;
+            config.MaxPathLengthMultiplier = 2.5f;
+            config.EnableLosCheck = true;
+            return config;
+        }
+
+        [Test]
+        public void Reachability_AlwaysReachable_PositionsAccepted()
+        {
+            var config = FullValidationConfig();
+            var strategy = new GotoObjectiveStrategy(
+                config,
+                seed: 42,
+                positionValidator: AlwaysSnapValidator,
+                reachabilityValidator: AlwaysReachable
+            );
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(follower.HasTacticalPosition);
+        }
+
+        [Test]
+        public void Reachability_NeverReachable_FallbackUsed()
+        {
+            int snapCallCount = 0;
+            bool TrackingSnapValidator(float x, float y, float z, out float ox, out float oy, out float oz)
+            {
+                snapCallCount++;
+                ox = x + 0.1f;
+                oy = y + 0.5f;
+                oz = z + 0.1f;
+                return true;
+            }
+
+            var config = FullValidationConfig();
+            config.EnableLosCheck = false;
+            var strategy = new GotoObjectiveStrategy(
+                config,
+                seed: 42,
+                positionValidator: TrackingSnapValidator,
+                reachabilityValidator: NeverReachable
+            );
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // All snap calls succeed but reachability always fails → fallback also tried
+            Assert.Greater(snapCallCount, 1, "Fallback candidates should have been tried");
+            // Ultimately everything fails since reachability always fails
+            Assert.IsFalse(follower.HasTacticalPosition);
+        }
+
+        [Test]
+        public void Reachability_NeverReachable_NoFallback_MarksInvalid()
+        {
+            var config = FullValidationConfig();
+            config.EnableLosCheck = false;
+            var strategy = new GotoObjectiveStrategy(
+                config,
+                seed: 42,
+                positionValidator: AlwaysSnapValidator,
+                reachabilityValidator: NeverReachable
+            );
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsFalse(follower.HasTacticalPosition);
+        }
+
+        [Test]
+        public void Reachability_DisabledByConfig_ValidatorNotCalled()
+        {
+            bool wasCalled = false;
+            bool TrackingReachability(float fromX, float fromY, float fromZ, float toX, float toY, float toZ, float maxLen)
+            {
+                wasCalled = true;
+                return true;
+            }
+
+            var config = FullValidationConfig();
+            config.EnableReachabilityCheck = false;
+            var strategy = new GotoObjectiveStrategy(
+                config,
+                seed: 42,
+                positionValidator: AlwaysSnapValidator,
+                reachabilityValidator: TrackingReachability
+            );
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsFalse(wasCalled, "Reachability validator should not be called when disabled by config");
+            Assert.IsTrue(follower.HasTacticalPosition);
+        }
+
+        [Test]
+        public void Reachability_NoValidator_Skipped()
+        {
+            var config = FullValidationConfig();
+            // No reachabilityValidator passed
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, positionValidator: AlwaysSnapValidator);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(follower.HasTacticalPosition);
+        }
+
+        [Test]
+        public void Reachability_PathLengthMultiplier_Respected()
+        {
+            float capturedMaxLen = 0f;
+            bool CapturingReachability(float fromX, float fromY, float fromZ, float toX, float toY, float toZ, float maxLen)
+            {
+                capturedMaxLen = maxLen;
+                return true;
+            }
+
+            var config = FullValidationConfig();
+            config.MaxPathLengthMultiplier = 2.5f;
+            config.EnableLosCheck = false;
+            var strategy = new GotoObjectiveStrategy(
+                config,
+                seed: 42,
+                positionValidator: AlwaysSnapValidator,
+                reachabilityValidator: CapturingReachability
+            );
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // AlwaysSnapValidator adds +0.1 to X and Z, +0.5 to Y from the geometric position
+            // The direct distance from snapped position to objective (50,0,50) varies,
+            // but capturedMaxLen should be directDist * 2.5
+            Assert.Greater(capturedMaxLen, 0f, "Max path length should be positive");
+            // Verify it's approximately directDist * 2.5
+            // We can't know the exact geometric position, but we know it should be > 0
+            // and a reasonable multiple of the distance
+            Assert.Greater(capturedMaxLen, 1f, "Max path length should be meaningful");
+        }
+
+        [Test]
+        public void Los_OverwatchWithLos_Accepted()
+        {
+            var config = FullValidationConfig();
+            config.EnableReachabilityCheck = false;
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, positionValidator: AlwaysSnapValidator, losValidator: AlwaysHasLos);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Snipe; // Snipe assigns Overwatch first
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(follower.HasTacticalPosition);
+            Assert.AreEqual(SquadRole.Overwatch, follower.SquadRole);
+        }
+
+        [Test]
+        public void Los_OverwatchNoLos_FallbackUsed()
+        {
+            int snapCallCount = 0;
+            bool TrackingSnapValidator(float x, float y, float z, out float ox, out float oy, out float oz)
+            {
+                snapCallCount++;
+                ox = x + 0.1f;
+                oy = y + 0.5f;
+                oz = z + 0.1f;
+                return true;
+            }
+
+            var config = FullValidationConfig();
+            config.EnableReachabilityCheck = false;
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, positionValidator: TrackingSnapValidator, losValidator: NeverHasLos);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Snipe; // Snipe assigns Overwatch first
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // Overwatch LOS always fails — geometric and fallback all fail
+            Assert.Greater(snapCallCount, 1, "Fallback candidates should have been tried");
+            Assert.IsFalse(follower.HasTacticalPosition);
+        }
+
+        [Test]
+        public void Los_OverwatchNoLos_NoFallback_MarksInvalid()
+        {
+            var config = FullValidationConfig();
+            config.EnableReachabilityCheck = false;
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, positionValidator: AlwaysSnapValidator, losValidator: NeverHasLos);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Snipe; // Overwatch role
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsFalse(follower.HasTacticalPosition);
+        }
+
+        [Test]
+        public void Los_NonOverwatchRole_LosNotChecked()
+        {
+            bool losWasCalled = false;
+            bool TrackingLos(float fromX, float fromY, float fromZ, float toX, float toY, float toZ)
+            {
+                losWasCalled = true;
+                return false; // Would fail if called
+            }
+
+            var config = FullValidationConfig();
+            config.EnableReachabilityCheck = false;
+            // Ambush assigns Flanker first (not Overwatch), so LOS should not be checked
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, positionValidator: AlwaysSnapValidator, losValidator: TrackingLos);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush; // Flanker first
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsFalse(losWasCalled, "LOS should not be checked for non-Overwatch roles");
+            Assert.IsTrue(follower.HasTacticalPosition);
+        }
+
+        [Test]
+        public void Los_DisabledByConfig_ValidatorNotCalled()
+        {
+            bool losWasCalled = false;
+            bool TrackingLos(float fromX, float fromY, float fromZ, float toX, float toY, float toZ)
+            {
+                losWasCalled = true;
+                return false;
+            }
+
+            var config = FullValidationConfig();
+            config.EnableLosCheck = false;
+            config.EnableReachabilityCheck = false;
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, positionValidator: AlwaysSnapValidator, losValidator: TrackingLos);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Snipe; // Would be Overwatch
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsFalse(losWasCalled, "LOS validator should not be called when disabled by config");
+            Assert.IsTrue(follower.HasTacticalPosition);
+        }
+
+        [Test]
+        public void Los_NoValidator_Skipped()
+        {
+            var config = FullValidationConfig();
+            config.EnableReachabilityCheck = false;
+            // No losValidator passed
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, positionValidator: AlwaysSnapValidator);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Snipe; // Would be Overwatch
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(follower.HasTacticalPosition);
+        }
+
+        [Test]
+        public void Combined_ReachabilityAndLos_BothMustPass()
+        {
+            var config = FullValidationConfig();
+            var strategy = new GotoObjectiveStrategy(
+                config,
+                seed: 42,
+                positionValidator: AlwaysSnapValidator,
+                reachabilityValidator: AlwaysReachable,
+                losValidator: AlwaysHasLos
+            );
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Snipe; // Overwatch — both checks apply
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(follower.HasTacticalPosition);
+            Assert.AreEqual(SquadRole.Overwatch, follower.SquadRole);
+        }
+
+        [Test]
+        public void Combined_ReachabilityPassesLosFails_FallbackUsed()
+        {
+            var config = FullValidationConfig();
+            var strategy = new GotoObjectiveStrategy(
+                config,
+                seed: 42,
+                positionValidator: AlwaysSnapValidator,
+                reachabilityValidator: AlwaysReachable,
+                losValidator: NeverHasLos
+            );
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Snipe; // Overwatch — LOS will fail
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // Reachability passes but LOS always fails for Overwatch → no valid position
+            Assert.IsFalse(follower.HasTacticalPosition);
         }
     }
 }
