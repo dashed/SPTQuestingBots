@@ -39,6 +39,13 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - 2D debug minimap: real-time visualization of grid cells, field vectors, bot/player positions, and zone sources
 - F12 menu toggles for enable/disable, debug overlay, and debug minimap
 
+### ECS-Lite Data Layout
+- Dense entity storage with swap-remove and ID recycling, inspired by Phobos's EntityArray pattern
+- `BotEntity`: per-bot data container with stable recycled ID, boss/follower hierarchy
+- `BotRegistry`: dense list with O(1) add/remove/lookup — no gaps, iteration-friendly
+- Pure C# with zero Unity dependencies for full testability
+- Foundation for consolidating scattered bot dictionaries into a single source of truth
+
 ---
 
 ## Architecture
@@ -211,6 +218,7 @@ SPTQuestingBots/
 │       ├── QuestingBotsPlugin.cs    # Plugin entry point
 │       ├── BehaviorExtensions/      # Custom BigBrain AI layers
 │       ├── BotLogic/                # Bot AI decision making
+│       │   ├── ECS/                 #   Entity data containers (BotEntity, BotRegistry)
 │       │   ├── BotMonitor/          #   Health, combat, extraction monitors
 │       │   ├── HiveMind/            #   Group coordination sensors
 │       │   ├── Follow/              #   Boss follower behavior

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-02-08
+
+### Added
+- **ECS Phase 1: BotEntity + BotRegistry foundation** — dense entity storage inspired by Phobos EntityArray pattern
+  - `BotEntity`: pure C# data container with stable recycled ID, IsActive flag, Boss/Followers hierarchy, IEquatable support
+  - `BotRegistry`: dense `List<BotEntity>` storage with swap-remove, `List<int?>` sparse ID→index map, `Stack<int>` ID recycling
+  - Zero Unity/EFT dependencies — fully testable in net9.0
+  - 48 new unit tests: `BotEntityTests` (15) + `BotRegistryTests` (33)
+- ECS data layout analysis document (`docs/ecs-data-layout-analysis.md`) — Phobos architecture deep dive, QuestingBots audit, cache coherency math, and phased implementation plan
+
+### Changed
+- 235 client tests total (was 187), 58 server tests, 293 total
+
 ## [1.6.0] - 2026-02-08
 
 ### Added
