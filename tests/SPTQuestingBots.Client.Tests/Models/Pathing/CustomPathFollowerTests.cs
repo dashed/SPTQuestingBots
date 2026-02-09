@@ -373,6 +373,117 @@ public class CustomPathFollowerTests
         Assert.IsFalse(_follower.IsCloseEnoughForCornerCut(new Vector3(5, 0, 0)));
     }
 
+    // --- TryCornerCut ---
+
+    [Test]
+    public void TryCornerCut_CanSeeNextCorner_WithinRange_AdvancesCorner()
+    {
+        var corners = new[] { new Vector3(0, 0, 0), new Vector3(5, 0, 0), new Vector3(10, 0, 0) };
+        _follower.SetPath(corners, new Vector3(10, 0, 0));
+
+        // Position within 1m of corner 0, can see next corner
+        var pos = new Vector3(0.5f, 0, 0);
+        bool result = _follower.TryCornerCut(pos, canSeeNextCorner: true);
+
+        Assert.IsTrue(result);
+        Assert.AreEqual(1, _follower.CurrentCorner);
+    }
+
+    [Test]
+    public void TryCornerCut_CannotSeeNextCorner_DoesNotAdvance()
+    {
+        var corners = new[] { new Vector3(0, 0, 0), new Vector3(5, 0, 0), new Vector3(10, 0, 0) };
+        _follower.SetPath(corners, new Vector3(10, 0, 0));
+
+        var pos = new Vector3(0.5f, 0, 0);
+        bool result = _follower.TryCornerCut(pos, canSeeNextCorner: false);
+
+        Assert.IsFalse(result);
+        Assert.AreEqual(0, _follower.CurrentCorner);
+    }
+
+    [Test]
+    public void TryCornerCut_TooFarFromCorner_ReturnsFalse()
+    {
+        var corners = new[] { new Vector3(0, 0, 0), new Vector3(5, 0, 0), new Vector3(10, 0, 0) };
+        _follower.SetPath(corners, new Vector3(10, 0, 0));
+
+        // Position > 1m from corner 0
+        var pos = new Vector3(3, 0, 0);
+        bool result = _follower.TryCornerCut(pos, canSeeNextCorner: true);
+
+        Assert.IsFalse(result);
+        Assert.AreEqual(0, _follower.CurrentCorner);
+    }
+
+    [Test]
+    public void TryCornerCut_OnLastCorner_ReturnsFalse()
+    {
+        var corners = new[] { new Vector3(0, 0, 0), new Vector3(5, 0, 0) };
+        _follower.SetPath(corners, new Vector3(5, 0, 0));
+
+        // Advance to last corner
+        _follower.AdvanceCorner();
+        Assert.IsTrue(_follower.IsOnLastCorner);
+
+        var pos = new Vector3(4.5f, 0, 0);
+        bool result = _follower.TryCornerCut(pos, canSeeNextCorner: true);
+
+        Assert.IsFalse(result);
+    }
+
+    [Test]
+    public void TryCornerCut_NoPath_ReturnsFalse()
+    {
+        bool result = _follower.TryCornerCut(Vector3.zero, canSeeNextCorner: true);
+        Assert.IsFalse(result);
+    }
+
+    [Test]
+    public void TryCornerCut_NotFollowing_ReturnsFalse()
+    {
+        var corners = new[] { new Vector3(0, 0, 0), new Vector3(5, 0, 0), new Vector3(10, 0, 0) };
+        _follower.SetPath(corners, new Vector3(10, 0, 0));
+        _follower.FailPath();
+
+        var pos = new Vector3(0.5f, 0, 0);
+        bool result = _follower.TryCornerCut(pos, canSeeNextCorner: true);
+
+        Assert.IsFalse(result);
+    }
+
+    [Test]
+    public void TryCornerCut_MultipleCorners_SkipsCorrectly()
+    {
+        var corners = new[] { new Vector3(0, 0, 0), new Vector3(3, 0, 0), new Vector3(6, 0, 0), new Vector3(10, 0, 0) };
+        _follower.SetPath(corners, new Vector3(10, 0, 0));
+
+        // Skip corner 0
+        var pos = new Vector3(0.5f, 0, 0);
+        bool result = _follower.TryCornerCut(pos, canSeeNextCorner: true);
+
+        Assert.IsTrue(result);
+        Assert.AreEqual(1, _follower.CurrentCorner);
+    }
+
+    [Test]
+    public void TryCornerCut_AfterNormalEpsilonReach_CornerAlreadyAdvanced()
+    {
+        var corners = new[] { new Vector3(0, 0, 0), new Vector3(3, 0, 0), new Vector3(6, 0, 0), new Vector3(10, 0, 0) };
+        _follower.SetPath(corners, new Vector3(10, 0, 0));
+
+        // Tick at corner 0 (within walk epsilon 0.35m) — advances to corner 1
+        _follower.Tick(new Vector3(0.1f, 0, 0), isSprinting: false);
+        Assert.AreEqual(1, _follower.CurrentCorner);
+
+        // Now TryCornerCut at corner 1 (within 1m), should advance to corner 2
+        var pos = new Vector3(2.5f, 0, 0);
+        bool result = _follower.TryCornerCut(pos, canSeeNextCorner: true);
+
+        Assert.IsTrue(result);
+        Assert.AreEqual(2, _follower.CurrentCorner);
+    }
+
     // --- Y-axis handling ---
 
     [Test]

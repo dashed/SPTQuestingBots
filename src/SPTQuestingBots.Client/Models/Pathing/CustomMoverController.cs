@@ -3,6 +3,7 @@ using EFT;
 using SPTQuestingBots.BotLogic.ECS;
 using SPTQuestingBots.Helpers;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace SPTQuestingBots.Models.Pathing
 {
@@ -107,6 +108,7 @@ namespace SPTQuestingBots.Models.Pathing
 
             if (status == PathFollowerStatus.Following)
             {
+                TryNavMeshCornerCut(position);
                 ExecuteMovement(position);
             }
 
@@ -122,6 +124,30 @@ namespace SPTQuestingBots.Models.Pathing
         public bool CanSprint(SprintUrgency urgency)
         {
             return _follower.CanSprint(urgency);
+        }
+
+        /// <summary>
+        /// Attempt corner-cutting via NavMesh.Raycast. When the bot is close to
+        /// the current corner (within 1m) and has clear NavMesh line-of-sight to
+        /// the next corner, skip the current corner for smoother trajectories.
+        /// Ported from Phobos MovementSystem.cs:244.
+        /// </summary>
+        private void TryNavMeshCornerCut(Vector3 position)
+        {
+            if (_follower.IsOnLastCorner)
+                return;
+
+            if (!_follower.IsCloseEnoughForCornerCut(position))
+                return;
+
+            int nextIndex = _follower.CurrentCorner + 1;
+            Vector3 nextCorner = _follower.Corners[nextIndex];
+
+            bool blocked = NavMesh.Raycast(position, nextCorner, out _, NavMesh.AllAreas);
+            if (!blocked)
+            {
+                _follower.TryCornerCut(position, true);
+            }
         }
 
         /// <summary>

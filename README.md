@@ -43,6 +43,7 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - Phobos-style `Player.Move()` replacement — enabled by default (`use_custom_mover`, default: true)
 - Custom path follower with corner-reaching epsilon, path-deviation spring force, and sprint angle-jitter gating
 - Chaikin path smoothing subdivides NavMesh corners for smoother trajectories
+- NavMesh.Raycast corner-cutting: skips path corners at runtime when clear line-of-sight to the next corner exists (within 1m), complementing Chaikin smoothing
 - 3 BSG patches: `ManualFixedUpdate` skip, `IsAI` → false (human-like params), vault enable for AI
 - Layer handoff: 6-field BSG state sync on layer exit, `SetPlayerToNavMesh()` for clean mover resume
 - Same `Player.Move()` paradigm as SAIN and Phobos — aligns with mod ecosystem

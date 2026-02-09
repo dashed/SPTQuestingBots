@@ -38,11 +38,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Cleanup at raid end via `BotsControllerStopPatch`
   - Config: `bypass_door_colliders` in `BotPathingConfig` (default: true)
   - 10 new config deserialization tests for `BotPathingConfig`
+- **NavMesh.Raycast corner-cutting** — Phobos-style two-tier corner-reaching for smoother path following
+  - `CustomPathFollower.TryCornerCut()`: pure-logic method that skips the current corner when the caller confirms NavMesh line-of-sight to the next corner (within 1m proximity)
+  - `CustomMoverController.TryNavMeshCornerCut()`: Unity integration that performs `NavMesh.Raycast` and delegates to `TryCornerCut()` — called every frame before `ExecuteMovement()`
+  - Complementary to existing Chaikin smoothing: Chaikin reduces corner count offline, NavMesh.Raycast skips corners at runtime when clear line-of-sight exists
+  - 8 new tests covering all TryCornerCut edge cases
 - Updated `docs/utility-ai-analysis.md` — Phase 1 Core + Option A marked as implemented
-- Updated `docs/phobos-comparison.md` — door bypass moved from "Still Learn" to "Has Adopted"
+- Updated `docs/phobos-comparison.md` — door bypass and corner-cutting moved from "Still Learn" to "Has Adopted"
 
 ### Changed
-- 721 client tests total (was 711), 58 server tests, 779 total
+- 729 client tests total (was 711), 58 server tests, 787 total
 
 ## [1.8.0] - 2026-02-08
 

@@ -170,6 +170,33 @@ public class CustomPathFollower
     }
 
     /// <summary>
+    /// Attempt to skip the current corner via NavMesh.Raycast corner-cutting.
+    /// Called by CustomMoverController after Tick() when close to a corner.
+    /// The canSeeNextCorner parameter is the result of NavMesh.Raycast (done by the caller).
+    /// Returns true if the corner was skipped.
+    /// </summary>
+    /// <param name="position">Current bot position.</param>
+    /// <param name="canSeeNextCorner">Whether NavMesh.Raycast confirms clear line-of-sight to the next corner.</param>
+    /// <returns>True if the corner was successfully skipped.</returns>
+    public bool TryCornerCut(Vector3 position, bool canSeeNextCorner)
+    {
+        if (_status != PathFollowerStatus.Following || _corners == null)
+            return false;
+
+        if (IsOnLastCorner)
+            return false;
+
+        if (!IsCloseEnoughForCornerCut(position))
+            return false;
+
+        if (!canSeeNextCorner)
+            return false;
+
+        AdvanceCorner();
+        return true;
+    }
+
+    /// <summary>
     /// Advance to the next corner. Returns true if there are more corners to follow.
     /// </summary>
     public bool AdvanceCorner()
