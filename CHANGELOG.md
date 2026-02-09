@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-02-09
+
+### Added
+- **Utility AI: Phobos-style scored task framework for bot action selection** — enabled by default via F12 (`Use Utility AI for Action Selection`, default: true)
+  - `UtilityTask` abstract base: column-major scoring, additive hysteresis, swap-remove active entity tracking
+  - `UtilityTaskManager`: Score→Pick→Execute pipeline with per-entity `ScoreAndPick()` convenience method
+  - `UtilityTaskAssignment` readonly struct tracking current task + ordinal index
+  - `QuestUtilityTask` abstract base: extends `UtilityTask` with `BotActionTypeId` mapping and no-op `Update()` (BigBrain handles execution)
+  - `QuestActionId` / `BotActionTypeId`: int constants mirroring game enums for pure-logic scoring without game dependencies
+  - 8 concrete quest utility tasks replacing the `BotObjectiveLayer.trySetNextAction()` switch statement:
+    - `GoToObjectiveTask` (h=0.25): travel phase for MoveToPosition + two-phase actions (Ambush/Snipe/PlantItem when far)
+    - `AmbushTask` (h=0.15): scores high when close to ambush position
+    - `SnipeTask` (h=0.15): scores high when close to snipe position
+    - `HoldPositionTask` (h=0.10): always active for HoldAtPosition quest actions
+    - `PlantItemTask` (h=0.15): scores high when close to plant-item position
+    - `UnlockDoorTask` (h=0.20): high-priority when door blocks current path
+    - `ToggleSwitchTask` (h=0.10): active for ToggleSwitch quest actions
+    - `CloseDoorsTask` (h=0.10): active for CloseNearbyDoors quest actions
+  - `QuestTaskFactory`: static factory creating `UtilityTaskManager` with all 8 tasks
+  - `BotEntityBridge.SyncQuestState()`: syncs 5 quest state fields from `BotObjectiveManager` to `BotEntity` before scoring
+  - `BotObjectiveLayer.trySetNextActionUtility()`: utility AI path with config-gated branch; existing switch retained as fallback
+  - 5 new quest state fields on `BotEntity`: `CurrentQuestAction`, `DistanceToObjective`, `IsCloseToObjective`, `MustUnlockDoor`, `HasActiveObjective`
+  - F12 config entry `UseUtilityAI` (Main section, advanced, default: true)
+  - ~79 new client tests: QuestActionId (1), BotActionTypeId (1), BotEntityQuestState (2), GoToObjectiveTask (16), AmbushTask (5), SnipeTask (5), HoldPositionTask (5), PlantItemTask (5), UnlockDoorTask (5), ToggleSwitchTask (4), CloseDoorsTask (4), QuestUtilityTaskBase (2), ScoreAndPick (3), QuestActionTransitions (18), QuestTaskFactory (4)
+- Updated `docs/utility-ai-analysis.md` — Phase 1 Core + Option A marked as implemented
+
+### Changed
+- 711 client tests total (was 632), 58 server tests, 769 total
+
 ## [1.8.0] - 2026-02-08
 
 ### Added

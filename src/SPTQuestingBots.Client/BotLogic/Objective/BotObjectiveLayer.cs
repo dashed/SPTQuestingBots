@@ -7,6 +7,8 @@ using EFT;
 using SPTQuestingBots.BehaviorExtensions;
 using SPTQuestingBots.BotLogic.BotMonitor;
 using SPTQuestingBots.BotLogic.BotMonitor.Monitors;
+using SPTQuestingBots.BotLogic.ECS;
+using SPTQuestingBots.BotLogic.ECS.UtilityAI;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Models.Questing;
 
@@ -14,6 +16,8 @@ namespace SPTQuestingBots.BotLogic.Objective
 {
     internal class BotObjectiveLayer : CustomLayerForQuesting
     {
+        private static UtilityTaskManager _taskManager;
+
         public BotObjectiveLayer(BotOwner _botOwner, int _priority)
             : base(_botOwner, _priority, 25) { }
 
@@ -71,7 +75,10 @@ namespace SPTQuestingBots.BotLogic.Objective
             }
 
             // Determine what type of action is needed for the bot to complete its assignment
-            return updatePreviousState(trySetNextAction());
+            if (QuestingBotsPluginConfig.UseUtilityAI.Value)
+                return updatePreviousState(trySetNextActionUtility());
+            else
+                return updatePreviousState(trySetNextAction());
         }
 
         private bool trySetNextAction()
@@ -146,6 +153,34 @@ namespace SPTQuestingBots.BotLogic.Objective
 
             // Failsafe
             return updatePreviousState(false);
+        }
+
+        private bool trySetNextActionUtility()
+        {
+            if (_taskManager == null)
+                _taskManager = QuestTaskFactory.Create();
+
+            if (!BotEntityBridge.TryGetEntity(BotOwner, out var entity))
+                return false;
+
+            // Ensure TaskScores array is allocated and correctly sized
+            if (entity.TaskScores == null || entity.TaskScores.Length < QuestTaskFactory.TaskCount)
+                entity.TaskScores = new float[QuestTaskFactory.TaskCount];
+
+            // Sync quest state from BotObjectiveManager into entity fields for scoring
+            BotEntityBridge.SyncQuestState(BotOwner);
+
+            // Score all tasks and pick the best one
+            _taskManager.ScoreAndPick(entity);
+
+            // Read the selected task
+            var task = entity.TaskAssignment.Task as QuestUtilityTask;
+            if (task == null)
+                return false;
+
+            // Map BotActionTypeId back to BotActionType and dispatch
+            setNextAction((BotActionType)task.BotActionTypeId, task.ActionReason);
+            return true;
         }
     }
 }

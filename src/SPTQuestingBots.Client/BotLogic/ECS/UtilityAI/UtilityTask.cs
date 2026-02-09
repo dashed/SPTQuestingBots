@@ -37,12 +37,27 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
         public IReadOnlyList<BotEntity> ActiveEntities => _activeEntities;
 
         /// <summary>
+        /// Compute the utility score for a single entity and write the result
+        /// to <c>entity.TaskScores[ordinal]</c>.
+        /// </summary>
+        /// <param name="ordinal">This task's index in the task manager's array.</param>
+        /// <param name="entity">The entity to score.</param>
+        public abstract void ScoreEntity(int ordinal, BotEntity entity);
+
+        /// <summary>
         /// Column-major score update: compute the utility score for ALL entities
         /// and write the result to <c>entity.TaskScores[ordinal]</c>.
+        /// Default implementation calls <see cref="ScoreEntity"/> in a loop.
         /// </summary>
         /// <param name="ordinal">This task's index in the task manager's array.</param>
         /// <param name="entities">All registered entities.</param>
-        public abstract void UpdateScores(int ordinal, IReadOnlyList<BotEntity> entities);
+        public virtual void UpdateScores(int ordinal, IReadOnlyList<BotEntity> entities)
+        {
+            for (int i = 0; i < entities.Count; i++)
+            {
+                ScoreEntity(ordinal, entities[i]);
+            }
+        }
 
         /// <summary>
         /// Execute behavior for all entities currently assigned to this task.

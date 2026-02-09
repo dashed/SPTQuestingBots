@@ -23,17 +23,18 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
 
         public void SetScore(int entityId, float score) => _scores[entityId] = score;
 
+        public override void ScoreEntity(int ordinal, BotEntity entity)
+        {
+            if (_scores.TryGetValue(entity.Id, out float score))
+                entity.TaskScores[ordinal] = score;
+            else
+                entity.TaskScores[ordinal] = 0f;
+        }
+
         public override void UpdateScores(int ordinal, IReadOnlyList<BotEntity> entities)
         {
             UpdateScoresCalls++;
-            for (int i = 0; i < entities.Count; i++)
-            {
-                var entity = entities[i];
-                if (_scores.TryGetValue(entity.Id, out float score))
-                    entity.TaskScores[ordinal] = score;
-                else
-                    entity.TaskScores[ordinal] = 0f;
-            }
+            base.UpdateScores(ordinal, entities);
         }
 
         public override void Update()

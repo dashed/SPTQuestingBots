@@ -105,6 +105,8 @@ namespace SPTQuestingBots
         public static ConfigEntry<int> QuestOverlayMaxDistance;
         public static ConfigEntry<string> BotFilter;
 
+        public static ConfigEntry<bool> UseUtilityAI;
+
         public static ConfigEntry<bool> ZoneMovementEnabled;
         public static ConfigEntry<bool> ZoneMovementDebugOverlay;
         public static ConfigEntry<bool> ZoneMovementDebugMinimap;
@@ -143,6 +145,16 @@ namespace SPTQuestingBots
                 new ConfigDescription(
                     "Bots will not be allowed to sprint if they are within this distance from their objective",
                     new AcceptableValueRange<int>(0, 75)
+                )
+            );
+            UseUtilityAI = Config.Bind(
+                "Main",
+                "Use Utility AI for Action Selection",
+                true,
+                new ConfigDescription(
+                    "Use utility AI for action selection instead of switch-based dispatch",
+                    null,
+                    new ConfigurationManagerAttributes { IsAdvanced = true }
                 )
             );
 

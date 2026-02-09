@@ -117,6 +117,50 @@
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/UtilityTaskAssignment.cs"
       Link="LinkedSources/ECS/UtilityAI/UtilityTaskAssignment.cs"
     />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/QuestActionId.cs"
+      Link="LinkedSources/ECS/UtilityAI/QuestActionId.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/QuestUtilityTask.cs"
+      Link="LinkedSources/ECS/UtilityAI/QuestUtilityTask.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/QuestTaskFactory.cs"
+      Link="LinkedSources/ECS/UtilityAI/QuestTaskFactory.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/GoToObjectiveTask.cs"
+      Link="LinkedSources/ECS/UtilityAI/Tasks/GoToObjectiveTask.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/AmbushTask.cs"
+      Link="LinkedSources/ECS/UtilityAI/Tasks/AmbushTask.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/SnipeTask.cs"
+      Link="LinkedSources/ECS/UtilityAI/Tasks/SnipeTask.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/HoldPositionTask.cs"
+      Link="LinkedSources/ECS/UtilityAI/Tasks/HoldPositionTask.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/PlantItemTask.cs"
+      Link="LinkedSources/ECS/UtilityAI/Tasks/PlantItemTask.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/UnlockDoorTask.cs"
+      Link="LinkedSources/ECS/UtilityAI/Tasks/UnlockDoorTask.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/ToggleSwitchTask.cs"
+      Link="LinkedSources/ECS/UtilityAI/Tasks/ToggleSwitchTask.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/CloseDoorsTask.cs"
+      Link="LinkedSources/ECS/UtilityAI/Tasks/CloseDoorsTask.cs"
+    />
   </ItemGroup>
 
   <!--

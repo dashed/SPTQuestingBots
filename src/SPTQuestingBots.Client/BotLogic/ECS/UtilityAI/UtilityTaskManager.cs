@@ -141,6 +141,32 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
         }
 
         /// <summary>
+        /// Score all tasks for a single entity and pick the best one.
+        /// Convenience method for per-entity evaluation (e.g., BigBrain layer tick).
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void ScoreAndPick(BotEntity entity)
+        {
+            if (!entity.IsActive)
+            {
+                if (entity.TaskAssignment.Task != null)
+                {
+                    entity.TaskAssignment.Task.Deactivate(entity);
+                    entity.TaskAssignment = default;
+                }
+
+                return;
+            }
+
+            for (int i = 0; i < Tasks.Length; i++)
+            {
+                Tasks[i].ScoreEntity(i, entity);
+            }
+
+            PickTask(entity);
+        }
+
+        /// <summary>
         /// Remove an entity from all task tracking.
         /// </summary>
         public void RemoveEntity(BotEntity entity)

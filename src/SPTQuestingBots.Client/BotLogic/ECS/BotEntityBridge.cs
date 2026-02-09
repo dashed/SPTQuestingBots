@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using EFT;
 using SPTQuestingBots.BotLogic.ECS.Systems;
 using SPTQuestingBots.BotLogic.HiveMind;
+using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
 using SPTQuestingBots.Models.Questing;
 using SPTQuestingBots.ZoneMovement.Core;
@@ -512,6 +513,28 @@ namespace SPTQuestingBots.BotLogic.ECS
             if (profileId != null && _profileIdToEntity.TryGetValue(profileId, out var entity))
                 return _entityFieldStates.TryGetValue(entity.Id, out var state) ? state : null;
             return null;
+        }
+
+        // ── Quest State Sync (for Utility AI) ────────────────────
+
+        /// <summary>
+        /// Sync quest state from <c>BotObjectiveManager</c> into the <c>BotEntity</c> fields
+        /// used by utility task scoring. Call before <c>UtilityTaskManager.ScoreAndPick()</c>.
+        /// </summary>
+        public static void SyncQuestState(BotOwner botOwner)
+        {
+            if (botOwner == null || !_ownerToEntity.TryGetValue(botOwner, out var entity))
+                return;
+
+            var objectiveManager = botOwner.GetObjectiveManager();
+            if (objectiveManager == null)
+                return;
+
+            entity.CurrentQuestAction = (int)objectiveManager.CurrentQuestAction;
+            entity.DistanceToObjective = objectiveManager.DistanceToObjective;
+            entity.IsCloseToObjective = objectiveManager.IsCloseToObjective();
+            entity.MustUnlockDoor = objectiveManager.MustUnlockDoor;
+            entity.HasActiveObjective = objectiveManager.IsJobAssignmentActive;
         }
 
         // ── Movement State Access ────────────────────────────────

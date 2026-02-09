@@ -104,6 +104,44 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// </summary>
         public UtilityTaskAssignment TaskAssignment;
 
+        // ── Quest State for Utility AI ─────────────────────────
+
+        /// <summary>
+        /// Current quest action as an int (mirrors <c>QuestAction</c> enum ordinal).
+        /// Synced from <c>BotObjectiveManager.CurrentQuestAction</c> before scoring.
+        /// See <see cref="UtilityAI.QuestActionId"/> for constant values.
+        /// Default: 0 (Undefined).
+        /// </summary>
+        public int CurrentQuestAction;
+
+        /// <summary>
+        /// Distance from bot to its current objective position.
+        /// Synced from <c>BotObjectiveManager.DistanceToObjective</c> before scoring.
+        /// Default: <see cref="float.MaxValue"/> (no objective).
+        /// </summary>
+        public float DistanceToObjective;
+
+        /// <summary>
+        /// Whether the bot is within the "close to objective" threshold.
+        /// Synced from <c>BotObjectiveManager.IsCloseToObjective()</c> before scoring.
+        /// Default: false.
+        /// </summary>
+        public bool IsCloseToObjective;
+
+        /// <summary>
+        /// Whether the current path requires unlocking a door first.
+        /// Synced from <c>BotObjectiveManager.MustUnlockDoor</c> before scoring.
+        /// Default: false.
+        /// </summary>
+        public bool MustUnlockDoor;
+
+        /// <summary>
+        /// Whether the bot has an active quest assignment.
+        /// Synced from <c>BotObjectiveManager.IsJobAssignmentActive</c> before scoring.
+        /// Default: false.
+        /// </summary>
+        public bool HasActiveObjective;
+
         // ── Phase 8: Job Assignment State ─────────────────────
 
         /// <summary>
@@ -124,6 +162,9 @@ namespace SPTQuestingBots.BotLogic.ECS
             // Sensor defaults (match original sensor constructors)
             CanSprintToObjective = true; // BotHiveMindCanSprintToObjectiveSensor default
             LastLootingTime = DateTime.MinValue;
+
+            // Quest state defaults
+            DistanceToObjective = float.MaxValue;
         }
 
         // ── Hierarchy Queries ───────────────────────────────────

@@ -48,6 +48,15 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - Same `Player.Move()` paradigm as SAIN and Phobos — aligns with mod ecosystem
 - When disabled, QuestingBots falls back to BSG's native `BotOwner.FollowPath()`
 
+### Utility AI (Optional)
+- Phobos-style scored task framework for bot action selection — enabled by default via F12 (`Use Utility AI for Action Selection`, default: true)
+- 8 scored tasks replace the `BotObjectiveLayer.trySetNextAction()` enum switch: GoToObjective, Ambush, Snipe, HoldPosition, PlantItem, UnlockDoor, ToggleSwitch, CloseDoors
+- Column-major scoring with additive hysteresis prevents action flip-flopping (identical to Phobos `BaseTaskManager.PickTask`)
+- Two-phase action handoff: GoToObjective scores high when far, drops to 0 when close so the action-specific task takes over
+- Quest state synced from `BotObjectiveManager` to `BotEntity` before each scoring pass — keeps utility tasks pure C# with zero Unity dependencies
+- Hybrid approach: utility scoring for action SELECTION, BigBrain for action EXECUTION
+- When disabled, the existing deterministic switch statement is used as fallback
+
 ### ECS-Lite Data Layout
 - Dense entity storage with swap-remove and ID recycling, inspired by Phobos's EntityArray pattern
 - `BotEntity`: per-bot data container with stable recycled ID, boss/follower hierarchy, embedded sensor state, field state, and job assignment tracking
@@ -238,7 +247,9 @@ SPTQuestingBots/
 │       ├── BehaviorExtensions/      # Custom BigBrain AI layers
 │       ├── BotLogic/                # Bot AI decision making
 │       │   ├── ECS/                 #   Entity data containers + system methods
-│       │   │   └── Systems/         #   HiveMindSystem (static dense-list iteration)
+│       │   │   ├── Systems/         #   HiveMindSystem (static dense-list iteration)
+│       │   │   └── UtilityAI/       #   Scored task framework (Phobos-style)
+│       │   │       └── Tasks/       #   8 concrete quest utility tasks
 │       │   ├── BotMonitor/          #   Health, combat, extraction monitors
 │       │   ├── HiveMind/            #   Group coordination sensors
 │       │   ├── Follow/              #   Boss follower behavior
