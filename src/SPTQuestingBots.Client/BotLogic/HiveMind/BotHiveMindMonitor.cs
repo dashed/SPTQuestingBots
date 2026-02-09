@@ -181,8 +181,9 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                 if (botOwner == null)
                     continue;
 
-                // Sync world position for all entities
+                // Sync world position and earpiece for all entities
                 ECS.BotEntityBridge.SyncPosition(botOwner);
+                ECS.BotEntityBridge.SyncEarPiece(botOwner);
 
                 // If this is a boss with followers, ensure squad exists
                 if (entity.HasFollowers)
@@ -196,6 +197,12 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                             var follower = entity.Followers[j];
                             if (follower.IsActive && follower.Squad != squad)
                                 ECS.BotEntityBridge.AddToSquad(follower, entity);
+                        }
+
+                        // Compute squad personality if not yet determined
+                        if (squad.PersonalityType == ECS.SquadPersonalityType.None && squad.Members.Count > 0)
+                        {
+                            ECS.BotEntityBridge.ComputeSquadPersonality(squad);
                         }
 
                         // Sync boss objective into squad

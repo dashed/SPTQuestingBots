@@ -802,6 +802,50 @@ namespace SPTQuestingBots.BotLogic.ECS
             }
         }
 
+        // ── Earpiece + Personality Sync ───────────────────────────
+
+        /// <summary>
+        /// Sync earpiece equipment status from BotOwner to BotEntity.
+        /// </summary>
+        public static void SyncEarPiece(BotOwner bot)
+        {
+            if (bot == null || !_ownerToEntity.TryGetValue(bot, out var entity))
+                return;
+            try
+            {
+                var player = bot.GetPlayer;
+                if (player?.Equipment != null)
+                {
+                    var slot = player.Equipment.GetSlot(EFT.InventoryLogic.EquipmentSlot.Earpiece);
+                    entity.HasEarPiece = slot?.ContainedItem != null;
+                }
+            }
+            catch
+            {
+                entity.HasEarPiece = false;
+            }
+        }
+
+        /// <summary>Reusable buffer for personality computation.</summary>
+        private static readonly BotType[] _personalityBuffer = new BotType[6];
+
+        /// <summary>
+        /// Compute and assign squad personality from member BotType distribution.
+        /// </summary>
+        public static void ComputeSquadPersonality(SquadEntity squad)
+        {
+            if (squad == null || squad.Members.Count == 0)
+                return;
+            int count = Math.Min(squad.Members.Count, _personalityBuffer.Length);
+            for (int i = 0; i < count; i++)
+                _personalityBuffer[i] = squad.Members[i].BotType;
+
+            squad.PersonalityType = Systems.SquadPersonalityCalculator.DeterminePersonality(_personalityBuffer, count);
+            var settings = SquadPersonalitySettings.ForType(squad.PersonalityType);
+            squad.CoordinationLevel = settings.CoordinationLevel;
+            squad.AggressionLevel = settings.AggressionLevel;
+        }
+
         // ── Enum Mapping ────────────────────────────────────────
 
         /// <summary>

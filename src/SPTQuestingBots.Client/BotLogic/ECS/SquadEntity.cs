@@ -48,6 +48,17 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// </summary>
         public StrategyAssignment StrategyAssignment;
 
+        // ── Squad Personality ──────────────────────────────────────────
+
+        /// <summary>Personality type determined from member composition.</summary>
+        public SquadPersonalityType PersonalityType;
+
+        /// <summary>Coordination level (1-5) from personality settings. Affects sharing probability.</summary>
+        public float CoordinationLevel;
+
+        /// <summary>Aggression level (1-5) from personality settings.</summary>
+        public float AggressionLevel;
+
         // ── Derived ─────────────────────────────────────────────────
 
         /// <summary>Current number of squad members.</summary>

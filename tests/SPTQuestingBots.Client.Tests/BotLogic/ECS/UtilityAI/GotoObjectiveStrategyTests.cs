@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using NUnit.Framework;
 using SPTQuestingBots.BotLogic.ECS;
 using SPTQuestingBots.BotLogic.ECS.UtilityAI;
@@ -19,6 +20,9 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
                 EscortDistance = 5f,
                 ArrivalRadius = 3f,
                 UseQuestTypeRoles = true,
+                // Disable gates by default so existing tests are not affected
+                EnableCommunicationRange = false,
+                EnableSquadPersonality = false,
             };
         }
 
@@ -513,6 +517,350 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
             Assert.IsTrue(f2.HasTacticalPosition);
             Assert.IsTrue(f3.HasTacticalPosition);
             Assert.AreEqual(3, squad.Objective.MemberCount);
+        }
+
+        // ── Communication Range Gate ────────────────────────
+
+        private SquadStrategyConfig CommRangeConfig(float noEarRange = 35f, float earRange = 200f)
+        {
+            var config = DefaultConfig();
+            config.EnableCommunicationRange = true;
+            config.CommunicationRangeNoEarpiece = noEarRange;
+            config.CommunicationRangeEarpiece = earRange;
+            return config;
+        }
+
+        private (SquadEntity squad, BotEntity leader, BotEntity follower) SetupCommRangeScenario(SquadStrategyConfig config, int seed = 42)
+        {
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionY = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+            return (squad, leader, follower);
+        }
+
+        [Test]
+        public void AssignNewObjective_FollowerInRange_ReceivesTacticalPosition()
+        {
+            var config = CommRangeConfig(noEarRange: 35f);
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var (squad, leader, follower) = SetupCommRangeScenario(config);
+
+            // Follower is 10m away (within 35m range)
+            follower.CurrentPositionX = 10f;
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(follower.HasTacticalPosition);
+        }
+
+        [Test]
+        public void AssignNewObjective_FollowerOutOfRange_DoesNotReceive()
+        {
+            var config = CommRangeConfig(noEarRange: 35f);
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var (squad, leader, follower) = SetupCommRangeScenario(config);
+
+            // Follower is 50m away (beyond 35m range)
+            follower.CurrentPositionX = 50f;
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsFalse(follower.HasTacticalPosition);
+        }
+
+        [Test]
+        public void AssignNewObjective_BothEarpiece_UsesEarpieceRange()
+        {
+            var config = CommRangeConfig(noEarRange: 35f, earRange: 200f);
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var (squad, leader, follower) = SetupCommRangeScenario(config);
+
+            // Both have earpieces, follower at 100m (within 200m but beyond 35m)
+            leader.HasEarPiece = true;
+            follower.HasEarPiece = true;
+            follower.CurrentPositionX = 100f;
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(follower.HasTacticalPosition);
+        }
+
+        [Test]
+        public void AssignNewObjective_NoEarpiece_UsesNoEarpieceRange()
+        {
+            var config = CommRangeConfig(noEarRange: 35f, earRange: 200f);
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var (squad, leader, follower) = SetupCommRangeScenario(config);
+
+            // No earpieces, follower at 100m (beyond 35m)
+            leader.HasEarPiece = false;
+            follower.HasEarPiece = false;
+            follower.CurrentPositionX = 100f;
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsFalse(follower.HasTacticalPosition);
+        }
+
+        [Test]
+        public void AssignNewObjective_CommRangeDisabled_AlwaysAssigns()
+        {
+            var config = DefaultConfig();
+            config.EnableCommunicationRange = false;
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var (squad, leader, follower) = SetupCommRangeScenario(config);
+
+            // Follower is far away but comm range disabled
+            follower.CurrentPositionX = 999f;
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(follower.HasTacticalPosition);
+        }
+
+        [Test]
+        public void AssignNewObjective_MixedRange_IndividualGating()
+        {
+            var config = CommRangeConfig(noEarRange: 35f, earRange: 200f);
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var nearFollower = CreateBot(1);
+            var farFollower = CreateBot(2);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionY = 0f;
+            leader.CurrentPositionZ = 0f;
+
+            nearFollower.CurrentPositionX = 10f; // 10m — in range
+            farFollower.CurrentPositionX = 50f; // 50m — out of 35m range
+
+            squad.Members.Add(leader);
+            squad.Members.Add(nearFollower);
+            squad.Members.Add(farFollower);
+            squad.Leader = leader;
+            leader.Squad = squad;
+            nearFollower.Squad = squad;
+            farFollower.Squad = squad;
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(nearFollower.HasTacticalPosition, "Near follower should receive position");
+            Assert.IsFalse(farFollower.HasTacticalPosition, "Far follower should not receive position");
+        }
+
+        // ── Probabilistic Sharing Gate ──────────────────────
+
+        [Test]
+        public void AssignNewObjective_EliteSquad_AllReceive()
+        {
+            var config = DefaultConfig();
+            config.EnableSquadPersonality = true;
+            config.EnableCommunicationRange = false;
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            squad.Members.Add(leader);
+            squad.Leader = leader;
+            leader.Squad = squad;
+
+            // Elite personality: coordination=5, sharing chance = 25+5*15 = 100%
+            squad.PersonalityType = SquadPersonalityType.Elite;
+            squad.CoordinationLevel = 5f;
+            squad.AggressionLevel = 4f;
+
+            // Add 5 followers
+            var followers = new List<BotEntity>();
+            for (int i = 1; i <= 5; i++)
+            {
+                var f = CreateBot(i);
+                f.Squad = squad;
+                squad.Members.Add(f);
+                followers.Add(f);
+            }
+
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // With 100% sharing chance, all followers should receive positions
+            foreach (var f in followers)
+            {
+                Assert.IsTrue(f.HasTacticalPosition, $"Follower {f.Id} should have tactical position");
+            }
+        }
+
+        [Test]
+        public void AssignNewObjective_LowCoordination_SomeMayNotReceive()
+        {
+            var config = DefaultConfig();
+            config.EnableSquadPersonality = true;
+            config.EnableCommunicationRange = false;
+
+            // TimmyTeam6: coordination=1, sharing chance = 25+1*15 = 40%
+            // With a fixed seed, some followers should be filtered
+            int receivedCount = 0;
+            int totalFollowers = 20;
+
+            // Run with enough followers to statistically see filtering
+            var strategy = new GotoObjectiveStrategy(config, seed: 12345);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.MoveToPosition;
+            squad.Members.Add(leader);
+            squad.Leader = leader;
+            leader.Squad = squad;
+            squad.PersonalityType = SquadPersonalityType.TimmyTeam6;
+            squad.CoordinationLevel = 1f;
+            squad.AggressionLevel = 2f;
+
+            for (int i = 1; i <= totalFollowers; i++)
+            {
+                var f = CreateBot(i);
+                f.Squad = squad;
+                squad.Members.Add(f);
+            }
+
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            for (int i = 1; i < squad.Members.Count; i++)
+            {
+                if (squad.Members[i].HasTacticalPosition)
+                    receivedCount++;
+            }
+
+            // With 40% chance, not all should receive, and some should
+            // Clamped to MaxMembers (6), so check within that bound
+            int maxMembers = Math.Min(totalFollowers, SquadObjective.MaxMembers);
+            Assert.Less(receivedCount, maxMembers, "With 40% sharing chance, not all should receive");
+            Assert.Greater(receivedCount, 0, "With 40% sharing chance, at least one should receive");
+        }
+
+        [Test]
+        public void AssignNewObjective_PersonalityDisabled_AlwaysAssigns()
+        {
+            var config = DefaultConfig();
+            config.EnableSquadPersonality = false;
+            config.EnableCommunicationRange = false;
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var (squad, leader, follower) = SetupCommRangeScenario(config);
+
+            // Even with low coordination, should still assign when disabled
+            squad.CoordinationLevel = 1f;
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(follower.HasTacticalPosition);
+        }
+
+        // ── Combined Gates ──────────────────────────────────
+
+        [Test]
+        public void AssignNewObjective_BothGatesActive_CombinedFiltering()
+        {
+            var config = DefaultConfig();
+            config.EnableCommunicationRange = true;
+            config.CommunicationRangeNoEarpiece = 35f;
+            config.CommunicationRangeEarpiece = 200f;
+            config.EnableSquadPersonality = true;
+
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var inRangeFollower = CreateBot(1);
+            var outOfRangeFollower = CreateBot(2);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionY = 0f;
+            leader.CurrentPositionZ = 0f;
+
+            // Elite coordination = 100% sharing chance
+            squad.CoordinationLevel = 5f;
+
+            inRangeFollower.CurrentPositionX = 10f; // in range
+            outOfRangeFollower.CurrentPositionX = 50f; // out of 35m range
+
+            squad.Members.Add(leader);
+            squad.Members.Add(inRangeFollower);
+            squad.Members.Add(outOfRangeFollower);
+            squad.Leader = leader;
+            leader.Squad = squad;
+            inRangeFollower.Squad = squad;
+            outOfRangeFollower.Squad = squad;
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // In-range follower passes comm gate AND personality gate (100% chance)
+            Assert.IsTrue(inRangeFollower.HasTacticalPosition);
+            // Out-of-range follower fails comm gate
+            Assert.IsFalse(outOfRangeFollower.HasTacticalPosition);
+        }
+
+        [Test]
+        public void AssignNewObjective_BothGatesDisabled_AllReceive()
+        {
+            var config = DefaultConfig();
+            config.EnableCommunicationRange = false;
+            config.EnableSquadPersonality = false;
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var f1 = CreateBot(1);
+            var f2 = CreateBot(2);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+
+            // Far away and low coordination but both gates disabled
+            f1.CurrentPositionX = 999f;
+            f2.CurrentPositionX = 999f;
+            squad.CoordinationLevel = 1f;
+
+            squad.Members.Add(leader);
+            squad.Members.Add(f1);
+            squad.Members.Add(f2);
+            squad.Leader = leader;
+            leader.Squad = squad;
+            f1.Squad = squad;
+            f2.Squad = squad;
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(f1.HasTacticalPosition);
+            Assert.IsTrue(f2.HasTacticalPosition);
         }
     }
 }

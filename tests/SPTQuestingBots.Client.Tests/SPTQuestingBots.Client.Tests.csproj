@@ -194,6 +194,23 @@
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/TacticalPositionCalculator.cs"
       Link="LinkedSources/ECS/Systems/TacticalPositionCalculator.cs"
     />
+    <!-- Squad personality + communication range -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/SquadPersonalityType.cs"
+      Link="LinkedSources/ECS/SquadPersonalityType.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/SquadPersonalitySettings.cs"
+      Link="LinkedSources/ECS/SquadPersonalitySettings.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/SquadPersonalityCalculator.cs"
+      Link="LinkedSources/ECS/Systems/SquadPersonalityCalculator.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/CommunicationRange.cs"
+      Link="LinkedSources/ECS/Systems/CommunicationRange.cs"
+    />
     <!-- Squad strategy: follower tasks -->
     <Compile
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/GoToTacticalPositionTask.cs"

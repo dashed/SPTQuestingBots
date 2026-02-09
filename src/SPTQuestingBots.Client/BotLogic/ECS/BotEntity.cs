@@ -184,6 +184,12 @@ namespace SPTQuestingBots.BotLogic.ECS
         public bool HasTacticalPosition;
 
         /// <summary>
+        /// Whether this bot has an earpiece equipped. Used for communication range checks.
+        /// Synced from game equipment on registration.
+        /// </summary>
+        public bool HasEarPiece;
+
+        /// <summary>
         /// Last objective version this bot saw. Used to detect when the squad objective changes.
         /// </summary>
         public int LastSeenObjectiveVersion;

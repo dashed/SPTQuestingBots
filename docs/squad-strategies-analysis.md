@@ -1505,24 +1505,45 @@ fork is a single `if` check with fallback to existing behavior.
 
 **Dependencies**: Phase 3.
 
-### Phase 5: SAIN-Inspired Enhancements (~15 tests)
+### Phase 5: SAIN-Inspired Enhancements (~42 tests) ✅ Done
 
-**Scope**: Add communication-range gating and emergent squad personality.
+**Scope**: Add communication-range gating, squad personality, and probabilistic
+position sharing — inspired by SAIN's `SquadPersonalitySettings` and equipment-
+gated communication patterns.
 
-**New files**:
-- `src/SPTQuestingBots.Client/BotLogic/ECS/Systems/SquadPersonality.cs`
-- `tests/SPTQuestingBots.Client.Tests/ECS/Systems/SquadPersonalityTests.cs`
+**New files (4 src + 3 test)**:
+- `src/.../BotLogic/ECS/SquadPersonalityType.cs` — enum (None, TimmyTeam6, Rats, GigaChads, Elite)
+- `src/.../BotLogic/ECS/SquadPersonalitySettings.cs` — readonly struct with CoordinationLevel, AggressionLevel, GetSharingChance()
+- `src/.../BotLogic/ECS/Systems/SquadPersonalityCalculator.cs` — majority-vote personality from member BotTypes
+- `src/.../BotLogic/ECS/Systems/CommunicationRange.cs` — earpiece-gated range check (AggressiveInlining)
+- `tests/.../BotLogic/ECS/SquadPersonalitySettingsTests.cs`
+- `tests/.../BotLogic/ECS/Systems/SquadPersonalityCalculatorTests.cs`
+- `tests/.../BotLogic/ECS/Systems/CommunicationRangeTests.cs`
 
-**Modified files**:
-- `src/SPTQuestingBots.Client/BotLogic/ECS/Systems/SquadStrategySystem.cs` — range check, personality
-- `src/SPTQuestingBots.Client/Configuration/SquadStrategyConfig.cs` — new config fields
+**Modified files (6 src + 3 test)**:
+- `src/.../BotLogic/ECS/BotEntity.cs` — added `HasEarPiece` field
+- `src/.../BotLogic/ECS/SquadEntity.cs` — added PersonalityType, CoordinationLevel, AggressionLevel
+- `src/.../Configuration/SquadStrategyConfig.cs` — 4 new config fields
+- `src/.../BotLogic/ECS/BotEntityBridge.cs` — SyncEarPiece(), ComputeSquadPersonality()
+- `src/.../BotLogic/HiveMind/BotHiveMindMonitor.cs` — wired earpiece sync + personality computation
+- `src/.../BotLogic/ECS/UtilityAI/GotoObjectiveStrategy.cs` — comm range + probabilistic sharing gates
+- `tests/.../Configuration/SquadStrategyConfigTests.cs` — 4 new config tests
+- `tests/.../BotLogic/ECS/UtilityAI/GotoObjectiveStrategyTests.cs` — 12 integration tests
+- `tests/.../SPTQuestingBots.Client.Tests.csproj` — Compile Include links
 
 **New config fields**:
+- `enable_communication_range`: true (default)
 - `communication_range_no_earpiece`: 35 (meters)
 - `communication_range_earpiece`: 200 (meters)
-- `enable_squad_personality`: false (default)
+- `enable_squad_personality`: true (default)
 
-**Test count**: ~15 (8 range + 7 personality)
+**Key design decisions**:
+- SAIN formula for probabilistic sharing: `25% + CoordinationLevel × 15%`
+- Personality determined by majority vote of member BotTypes with higher-enum tie-breaking
+- Two gates in GotoObjectiveStrategy.AssignNewObjective(): comm range → probability roll
+- Followers failing either gate get `HasTacticalPosition = false` (skip tactical positioning)
+
+**Test count**: ~42 (10 personality settings + 10 personality calculator + 10 comm range + 4 config + 12 integration — total 42, was estimated 15)
 
 **Risk**: Low — layered on top of existing squad strategy. Both features are
 independently configurable.
@@ -1537,8 +1558,8 @@ independently configurable.
 | 2 | ECS wiring | 2 test | 4 | ~25 | Low | **Done** |
 | 3 | Gate unlocking | 1 test | 4 | ~15 | Medium | **Done** |
 | 4 | Squad utility tasks | 4 src + 2 test | 2 | ~25 | Low-Medium | **Done** |
-| 5 | SAIN enhancements | 1 src + 1 test | 2 | ~15 | Low | Planned |
-| **Total** | | **9 src + 9 test** | **12** | **~120** | | |
+| 5 | SAIN enhancements | 4 src + 3 test | 6 src + 3 test | ~42 | Low | **Done** |
+| **Total** | | **12 src + 11 test** | **16** | **~147** | | |
 
 ---
 

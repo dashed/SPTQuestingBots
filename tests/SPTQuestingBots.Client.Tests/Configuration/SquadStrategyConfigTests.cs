@@ -23,6 +23,10 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(config.MaxDistanceFromBoss, Is.EqualTo(75f));
                 Assert.That(config.StrategyPacingSeconds, Is.EqualTo(0.5f));
                 Assert.That(config.UseQuestTypeRoles, Is.True);
+                Assert.That(config.EnableCommunicationRange, Is.True);
+                Assert.That(config.CommunicationRangeNoEarpiece, Is.EqualTo(35f));
+                Assert.That(config.CommunicationRangeEarpiece, Is.EqualTo(200f));
+                Assert.That(config.EnableSquadPersonality, Is.True);
             });
         }
 
@@ -42,6 +46,10 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(config.MaxDistanceFromBoss, Is.EqualTo(75f));
                 Assert.That(config.StrategyPacingSeconds, Is.EqualTo(0.5f));
                 Assert.That(config.UseQuestTypeRoles, Is.True);
+                Assert.That(config.EnableCommunicationRange, Is.True);
+                Assert.That(config.CommunicationRangeNoEarpiece, Is.EqualTo(35f));
+                Assert.That(config.CommunicationRangeEarpiece, Is.EqualTo(200f));
+                Assert.That(config.EnableSquadPersonality, Is.True);
             });
         }
 
@@ -63,6 +71,22 @@ namespace SPTQuestingBots.Client.Tests.Configuration
         }
 
         [Test]
+        public void Deserialize_CommunicationRangeOverrides()
+        {
+            var json =
+                """{ "enable_communication_range": false, "communication_range_no_earpiece": 50, "communication_range_earpiece": 300, "enable_squad_personality": false }""";
+            var config = JsonConvert.DeserializeObject<SquadStrategyConfig>(json);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(config.EnableCommunicationRange, Is.False);
+                Assert.That(config.CommunicationRangeNoEarpiece, Is.EqualTo(50f));
+                Assert.That(config.CommunicationRangeEarpiece, Is.EqualTo(300f));
+                Assert.That(config.EnableSquadPersonality, Is.False);
+            });
+        }
+
+        [Test]
         public void RoundTrip_PreservesAllValues()
         {
             var original = new SquadStrategyConfig
@@ -76,6 +100,10 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 MaxDistanceFromBoss = 100f,
                 StrategyPacingSeconds = 1f,
                 UseQuestTypeRoles = false,
+                EnableCommunicationRange = false,
+                CommunicationRangeNoEarpiece = 50f,
+                CommunicationRangeEarpiece = 300f,
+                EnableSquadPersonality = false,
             };
 
             var json = JsonConvert.SerializeObject(original);
@@ -92,6 +120,10 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(deserialized.MaxDistanceFromBoss, Is.EqualTo(100f));
                 Assert.That(deserialized.StrategyPacingSeconds, Is.EqualTo(1f));
                 Assert.That(deserialized.UseQuestTypeRoles, Is.False);
+                Assert.That(deserialized.EnableCommunicationRange, Is.False);
+                Assert.That(deserialized.CommunicationRangeNoEarpiece, Is.EqualTo(50f));
+                Assert.That(deserialized.CommunicationRangeEarpiece, Is.EqualTo(300f));
+                Assert.That(deserialized.EnableSquadPersonality, Is.False);
             });
         }
 
@@ -112,6 +144,10 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(json, Does.Contain("max_distance_from_boss"));
                 Assert.That(json, Does.Contain("strategy_pacing_seconds"));
                 Assert.That(json, Does.Contain("use_quest_type_roles"));
+                Assert.That(json, Does.Contain("enable_communication_range"));
+                Assert.That(json, Does.Contain("communication_range_no_earpiece"));
+                Assert.That(json, Does.Contain("communication_range_earpiece"));
+                Assert.That(json, Does.Contain("enable_squad_personality"));
             });
         }
     }

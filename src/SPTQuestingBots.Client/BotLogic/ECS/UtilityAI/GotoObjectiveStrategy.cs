@@ -127,7 +127,7 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                 _config
             );
 
-            // Distribute to followers
+            // Distribute to followers (with communication range + personality gating)
             int posIdx = 0;
             for (int i = 0; i < squad.Members.Count; i++)
             {
@@ -136,6 +136,41 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                     continue;
                 if (posIdx >= clampedCount)
                     break;
+
+                // Communication range gate
+                if (_config.EnableCommunicationRange)
+                {
+                    float dx = leader.CurrentPositionX - member.CurrentPositionX;
+                    float dy = leader.CurrentPositionY - member.CurrentPositionY;
+                    float dz = leader.CurrentPositionZ - member.CurrentPositionZ;
+                    float sqrDist = dx * dx + dy * dy + dz * dz;
+                    if (
+                        !CommunicationRange.IsInRange(
+                            leader.HasEarPiece,
+                            member.HasEarPiece,
+                            sqrDist,
+                            _config.CommunicationRangeNoEarpiece,
+                            _config.CommunicationRangeEarpiece
+                        )
+                    )
+                    {
+                        member.HasTacticalPosition = false;
+                        posIdx++;
+                        continue;
+                    }
+                }
+
+                // Probabilistic sharing gate (SAIN formula)
+                if (_config.EnableSquadPersonality)
+                {
+                    float sharingChance = 25f + squad.CoordinationLevel * 15f;
+                    if ((float)_rng.NextDouble() * 100f >= sharingChance)
+                    {
+                        member.HasTacticalPosition = false;
+                        posIdx++;
+                        continue;
+                    }
+                }
 
                 member.SquadRole = _roleBuffer[posIdx];
                 member.TacticalPositionX = _positionBuffer[posIdx * 3];

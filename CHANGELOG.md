@@ -61,11 +61,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `CustomMoverController.TryNavMeshCornerCut()`: Unity integration that performs `NavMesh.Raycast` and delegates to `TryCornerCut()` — called every frame before `ExecuteMovement()`
   - Complementary to existing Chaikin smoothing: Chaikin reduces corner count offline, NavMesh.Raycast skips corners at runtime when clear line-of-sight exists
   - 8 new tests covering all TryCornerCut edge cases
+- **SAIN-inspired squad enhancements** — communication range gating, squad personality, probabilistic position sharing (enabled by default)
+  - `CommunicationRange`: earpiece equipment check gates tactical position sharing between leader and followers (35m voice range, 200m earpiece range — inspired by SAIN's `isInCommunicationRange`)
+  - `SquadPersonalityCalculator`: determines squad personality from member BotType distribution (Boss→Elite, PMC→GigaChads, Scav→Rats, PScav→TimmyTeam6)
+  - `SquadPersonalitySettings`: coordination level (1-5) affects sharing probability via SAIN formula: `25% + coordination × 15%` (Elite=100%, GigaChads=85%, Rats=55%, TimmyTeam6=40%)
+  - `SquadPersonalityType` enum: None, TimmyTeam6, Rats, GigaChads, Elite (matching SAIN's `ESquadPersonality`)
+  - `HasEarPiece` field on `BotEntity`: synced from game equipment slot, determines communication range tier
+  - Personality + coordination fields on `SquadEntity`: computed once when squad forms from member composition
+  - `GotoObjectiveStrategy.AssignNewObjective()`: followers who fail comm range check or probability roll get `HasTacticalPosition = false` and fall back to simple follow behavior
+  - Config: `enable_communication_range` (default: true), `communication_range_no_earpiece` (35m), `communication_range_earpiece` (200m), `enable_squad_personality` (default: true)
+  - ~42 new client tests: SquadPersonalitySettings (10), SquadPersonalityCalculator (10), CommunicationRange (10), GotoObjectiveStrategy comm/personality (12)
 - Updated `docs/utility-ai-analysis.md` — Phase 1 Core + Option A marked as implemented
 - Updated `docs/phobos-comparison.md` — door bypass and corner-cutting moved from "Still Learn" to "Has Adopted"
 
 ### Changed
-- 896 client tests total (was 711), 58 server tests, 954 total
+- 938 client tests total (was 896), 58 server tests, 996 total
 
 ## [1.8.0] - 2026-02-08
 

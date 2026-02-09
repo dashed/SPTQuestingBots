@@ -31,6 +31,18 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("use_quest_type_roles")]
         public bool UseQuestTypeRoles { get; set; } = true;
 
+        [JsonProperty("enable_communication_range")]
+        public bool EnableCommunicationRange { get; set; } = true;
+
+        [JsonProperty("communication_range_no_earpiece")]
+        public float CommunicationRangeNoEarpiece { get; set; } = 35f;
+
+        [JsonProperty("communication_range_earpiece")]
+        public float CommunicationRangeEarpiece { get; set; } = 200f;
+
+        [JsonProperty("enable_squad_personality")]
+        public bool EnableSquadPersonality { get; set; } = true;
+
         public SquadStrategyConfig() { }
     }
 }
