@@ -49,9 +49,10 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - `HiveMindSystem`: static system methods for boss/follower lifecycle, sensor resets, and O(n) entity counting — replaces dictionary-based HiveMind operations
 - `QuestScorer`: pure-logic quest scoring with static buffers — replaces 5 dictionary allocations + `OrderBy` in quest selection hot path
 - `BotEntityBridge`: ECS-only integration layer — push sensors write only to ECS, pull sensors iterate dense entity list with zero allocation, boss/follower lifecycle uses O(1) `IsActive` checks, ProfileId→entity mapping for O(1) string lookups
-- Full ECS migration complete (Phases 5A–5F, 6): all old dictionaries (`deadBots`, `botBosses`, `botFollowers`, `sensors`, `botFieldStates`) and 6 sensor subclasses deleted; ECS is the sole data store for all sensor, sleep, type, boss/follower, and zone movement field state
+- Full ECS migration complete (Phases 5A–5F, 6, 8): all old dictionaries (`deadBots`, `botBosses`, `botFollowers`, `sensors`, `botFieldStates`, `botJobAssignments`) and 6 sensor subclasses deleted; ECS is the sole data store for all sensor, sleep, type, boss/follower, zone movement field state, and job assignment data
 - Deterministic tick order (Phase 7C): `BotHiveMindMonitor.Update()` orchestrates all ECS system calls in a fixed 4-step sequence
 - Allocation cleanup (Phase 7D): static reusable buffers for `GetFollowers()`/`GetAllGroupMembers()`, O(n) min/max scans replacing Dictionary+LINQ chains, for-loop replacements for LINQ `.Where().ToArray()` patterns
+- Job assignment wiring (Phase 8): `botJobAssignments` dictionary migrated to `BotEntityBridge` keyed by entity ID; `ConsecutiveFailedAssignments` cached as O(1) entity field; `NumberOfActiveBots()` iterates dense entity list
 - `TimePacing` / `FramePacing`: reusable rate-limiter utilities with `[AggressiveInlining]`, inspired by Phobos
 - Pure C# with zero Unity dependencies for full testability
 

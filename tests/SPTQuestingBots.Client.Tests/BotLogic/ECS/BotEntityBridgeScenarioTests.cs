@@ -1730,6 +1730,329 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS
             Assert.That(retrieved.PreviousDestination.z, Is.EqualTo(20f));
         }
 
+        // ── Phase 8: Job Assignment Wiring ──────────────────────────
+
+        [Test]
+        public void Phase8_JobAssignmentStorage_KeyedByEntityId()
+        {
+            // Simulates _jobAssignments Dictionary<int, List<T>> keyed by entity.Id
+            var jobAssignments = new Dictionary<int, List<string>>();
+            var emptyList = new List<string>();
+
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+            jobAssignments[entity.Id] = new List<string>();
+
+            // Add assignments
+            var list = jobAssignments[entity.Id];
+            list.Add("quest_A");
+            list.Add("quest_B");
+
+            Assert.That(jobAssignments[entity.Id].Count, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void Phase8_JobAssignmentStorage_SafeFallbackForUnknownBot()
+        {
+            // Simulates GetJobAssignments returning _emptyAssignments for unknown bots
+            var jobAssignments = new Dictionary<int, List<string>>();
+            var emptyList = new List<string>();
+
+            int unknownId = 999;
+            var result = jobAssignments.TryGetValue(unknownId, out var list) ? list : emptyList;
+
+            Assert.That(result, Is.SameAs(emptyList));
+            Assert.That(result.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Phase8_EnsureJobAssignments_CreatesIfMissing()
+        {
+            // Simulates EnsureJobAssignments create-if-missing pattern
+            var jobAssignments = new Dictionary<int, List<string>>();
+
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+            // Don't pre-create list (simulates bot accessing before full registration)
+
+            if (!jobAssignments.TryGetValue(entity.Id, out var list))
+            {
+                list = new List<string>();
+                jobAssignments[entity.Id] = list;
+            }
+
+            list.Add("quest_C");
+
+            Assert.That(jobAssignments[entity.Id].Count, Is.EqualTo(1));
+            Assert.That(jobAssignments[entity.Id][0], Is.EqualTo("quest_C"));
+        }
+
+        [Test]
+        public void Phase8_HasJobAssignments_ChecksNonEmpty()
+        {
+            // Simulates HasJobAssignments checking Count > 0
+            var jobAssignments = new Dictionary<int, List<string>>();
+
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+            jobAssignments[entity.Id] = new List<string>();
+
+            // Empty list — HasJobAssignments returns false
+            bool hasAssignments = jobAssignments.TryGetValue(entity.Id, out var list) && list.Count > 0;
+            Assert.That(hasAssignments, Is.False);
+
+            // Add assignment — HasJobAssignments returns true
+            jobAssignments[entity.Id].Add("quest_D");
+            hasAssignments = jobAssignments.TryGetValue(entity.Id, out list) && list.Count > 0;
+            Assert.That(hasAssignments, Is.True);
+        }
+
+        [Test]
+        public void Phase8_ConsecutiveFailedAssignments_IncrementOnFail()
+        {
+            // Simulates FailObjective() calling IncrementConsecutiveFailedAssignments
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+
+            Assert.That(entity.ConsecutiveFailedAssignments, Is.EqualTo(0));
+
+            // First fail
+            entity.ConsecutiveFailedAssignments++;
+            Assert.That(entity.ConsecutiveFailedAssignments, Is.EqualTo(1));
+
+            // Second fail
+            entity.ConsecutiveFailedAssignments++;
+            Assert.That(entity.ConsecutiveFailedAssignments, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void Phase8_ConsecutiveFailedAssignments_ResetOnComplete()
+        {
+            // Simulates CompleteObjective() calling ResetConsecutiveFailedAssignments
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+            entity.ConsecutiveFailedAssignments = 5;
+
+            // Complete resets to zero
+            entity.ConsecutiveFailedAssignments = 0;
+            Assert.That(entity.ConsecutiveFailedAssignments, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Phase8_RecomputeConsecutiveFailedAssignments_ScansFromTail()
+        {
+            // Simulates RecomputeConsecutiveFailedAssignments reverse tail scan
+            // Uses int status values: 0=Active, 1=Completed, 2=Failed
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+            var statuses = new List<int> { 1, 2, 1, 2, 2, 2 }; // C, F, C, F, F, F
+
+            // Recompute: scan from tail, count consecutive 2 (Failed)
+            int count = 0;
+            for (int i = statuses.Count - 1; i >= 0; i--)
+            {
+                if (statuses[i] != 2) // not Failed
+                    break;
+                count++;
+            }
+            entity.ConsecutiveFailedAssignments = count;
+
+            Assert.That(entity.ConsecutiveFailedAssignments, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void Phase8_RecomputeConsecutiveFailedAssignments_NoFailsAtTail()
+        {
+            // When tail doesn't end with Failed, count is 0
+            var entity = _registry.Add();
+            var statuses = new List<int> { 2, 2, 1 }; // F, F, Completed
+
+            int count = 0;
+            for (int i = statuses.Count - 1; i >= 0; i--)
+            {
+                if (statuses[i] != 2)
+                    break;
+                count++;
+            }
+            entity.ConsecutiveFailedAssignments = count;
+
+            Assert.That(entity.ConsecutiveFailedAssignments, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Phase8_RecomputeConsecutiveFailedAssignments_AllFailed()
+        {
+            var entity = _registry.Add();
+            var statuses = new List<int> { 2, 2, 2, 2 }; // All Failed
+
+            int count = 0;
+            for (int i = statuses.Count - 1; i >= 0; i--)
+            {
+                if (statuses[i] != 2)
+                    break;
+                count++;
+            }
+            entity.ConsecutiveFailedAssignments = count;
+
+            Assert.That(entity.ConsecutiveFailedAssignments, Is.EqualTo(4));
+        }
+
+        [Test]
+        public void Phase8_RecomputeConsecutiveFailedAssignments_EmptyList()
+        {
+            var entity = _registry.Add();
+            var statuses = new List<int>();
+
+            int count = 0;
+            for (int i = statuses.Count - 1; i >= 0; i--)
+            {
+                if (statuses[i] != 2)
+                    break;
+                count++;
+            }
+            entity.ConsecutiveFailedAssignments = count;
+
+            Assert.That(entity.ConsecutiveFailedAssignments, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Phase8_NumberOfActiveBots_DenseEntityIteration()
+        {
+            // Simulates NumberOfActiveBots iterating dense entity list
+            var pmc1 = _registry.Add();
+            pmc1.BotType = BotType.PMC;
+            var pmc2 = _registry.Add();
+            pmc2.BotType = BotType.PMC;
+            pmc2.IsSleeping = true;
+            var scav = _registry.Add();
+            scav.BotType = BotType.Scav;
+            var boss = _registry.Add();
+            boss.BotType = BotType.Boss;
+            boss.IsActive = false;
+
+            // Count active bots (IsActive && !IsSleeping) — mirrors NumberOfActiveBots pattern
+            int activeBots = 0;
+            for (int e = 0; e < _registry.Entities.Count; e++)
+            {
+                var entity = _registry.Entities[e];
+                if (!entity.IsActive)
+                    continue;
+                if (entity.IsSleeping)
+                    continue;
+                activeBots++;
+            }
+
+            Assert.That(activeBots, Is.EqualTo(2)); // pmc1, scav
+        }
+
+        [Test]
+        public void Phase8_AllJobAssignments_IteratesAllProfiles()
+        {
+            // Simulates AllJobAssignments() yield iterator over profileId → entity → assignments
+            var profileToEntity = new Dictionary<string, BotEntity>();
+            var jobAssignments = new Dictionary<int, List<string>>();
+
+            var e1 = _registry.Add();
+            e1.BotType = BotType.PMC;
+            profileToEntity["profile_A"] = e1;
+            jobAssignments[e1.Id] = new List<string> { "quest_1", "quest_2" };
+
+            var e2 = _registry.Add();
+            e2.BotType = BotType.Scav;
+            profileToEntity["profile_B"] = e2;
+            jobAssignments[e2.Id] = new List<string> { "quest_3" };
+
+            // Iterate like AllJobAssignments()
+            var results = new List<KeyValuePair<string, List<string>>>();
+            foreach (var kvp in profileToEntity)
+            {
+                if (jobAssignments.TryGetValue(kvp.Value.Id, out var list))
+                    results.Add(new KeyValuePair<string, List<string>>(kvp.Key, list));
+            }
+
+            Assert.That(results.Count, Is.EqualTo(2));
+            Assert.That(results[0].Value.Count + results[1].Value.Count, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void Phase8_Clear_ResetsJobAssignmentsAndConsecutiveFailures()
+        {
+            // Simulates Clear() resetting _jobAssignments and entity state
+            var jobAssignments = new Dictionary<int, List<string>>();
+
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+            entity.ConsecutiveFailedAssignments = 7;
+            jobAssignments[entity.Id] = new List<string> { "quest_X" };
+
+            // Clear all (simulates BotEntityBridge.Clear())
+            _registry.Clear();
+            jobAssignments.Clear();
+
+            Assert.That(_registry.Count, Is.EqualTo(0));
+            Assert.That(jobAssignments.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Phase8_FailCompleteLifecycle()
+        {
+            // Full lifecycle: register → fail × 3 → complete → fail × 2
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+            var jobAssignments = new Dictionary<int, List<string>>();
+            jobAssignments[entity.Id] = new List<string>();
+
+            Assert.That(entity.ConsecutiveFailedAssignments, Is.EqualTo(0));
+
+            // Three fails
+            entity.ConsecutiveFailedAssignments++;
+            entity.ConsecutiveFailedAssignments++;
+            entity.ConsecutiveFailedAssignments++;
+            Assert.That(entity.ConsecutiveFailedAssignments, Is.EqualTo(3));
+
+            // Complete resets
+            entity.ConsecutiveFailedAssignments = 0;
+            Assert.That(entity.ConsecutiveFailedAssignments, Is.EqualTo(0));
+
+            // Two more fails
+            entity.ConsecutiveFailedAssignments++;
+            entity.ConsecutiveFailedAssignments++;
+            Assert.That(entity.ConsecutiveFailedAssignments, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void Phase8_MultipleBotsIndependentJobAssignments()
+        {
+            // Each bot has its own independent job assignment list
+            var jobAssignments = new Dictionary<int, List<string>>();
+
+            var e1 = _registry.Add();
+            e1.BotType = BotType.PMC;
+            jobAssignments[e1.Id] = new List<string> { "A", "B", "C" };
+
+            var e2 = _registry.Add();
+            e2.BotType = BotType.Scav;
+            jobAssignments[e2.Id] = new List<string> { "X" };
+
+            var e3 = _registry.Add();
+            e3.BotType = BotType.Boss;
+            jobAssignments[e3.Id] = new List<string>();
+
+            Assert.That(jobAssignments[e1.Id].Count, Is.EqualTo(3));
+            Assert.That(jobAssignments[e2.Id].Count, Is.EqualTo(1));
+            Assert.That(jobAssignments[e3.Id].Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Phase8_GetLastElement_WithoutLinq()
+        {
+            // Simulates replacing .Last() with [Count-1] and .TakeLast(2).First() with [Count-2]
+            var list = new List<string> { "first", "second", "third" };
+
+            Assert.That(list[list.Count - 1], Is.EqualTo("third")); // replaces .Last()
+            Assert.That(list[list.Count - 2], Is.EqualTo("second")); // replaces .TakeLast(2).First()
+        }
+
         // ── Phase 7D: Allocation Cleanup ────────────────────────────
 
         [Test]

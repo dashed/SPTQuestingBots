@@ -29,7 +29,9 @@ namespace SPTQuestingBots.Controllers
         private static float[] _questMinDistBuffer = new float[64];
         private static float[] _questMaxDistBuffer = new float[64];
         private static float[] _questMinAngleBuffer = new float[64];
-        private static Dictionary<string, List<BotJobAssignment>> botJobAssignments = new Dictionary<string, List<BotJobAssignment>>();
+
+        // Phase 8: Job assignment lists now stored on BotEntityBridge, keyed by entity ID.
+        // Access via BotLogic.ECS.BotEntityBridge.GetJobAssignments() / EnsureJobAssignments().
 
         public static int QuestCount => allQuests.Count;
 
@@ -60,7 +62,7 @@ namespace SPTQuestingBots.Controllers
                 quest.Clear();
             }
 
-            botJobAssignments.Clear();
+            // Phase 8: job assignment lists are cleared by BotEntityBridge.Clear() at raid end
         }
 
         public static IEnumerator ProcessAllQuests(Action<Quest> action)
@@ -198,25 +200,24 @@ namespace SPTQuestingBots.Controllers
 
         public static void FailAllJobAssignmentsForBot(string botID)
         {
-            if (!botJobAssignments.ContainsKey(botID))
+            var assignments = BotLogic.ECS.BotEntityBridge.GetJobAssignments(botID);
+            if (assignments.Count == 0)
             {
                 return;
             }
 
-            foreach (BotJobAssignment assignment in botJobAssignments[botID].Where(a => a.IsActive))
+            foreach (BotJobAssignment assignment in assignments.Where(a => a.IsActive))
             {
                 assignment.Fail();
             }
+
+            BotLogic.ECS.BotEntityBridge.RecomputeConsecutiveFailedAssignments(botID);
         }
 
         public static void InactivateAllJobAssignmentsForBot(string botID)
         {
-            if (!botJobAssignments.ContainsKey(botID))
-            {
-                return;
-            }
-
-            foreach (BotJobAssignment assignment in botJobAssignments[botID])
+            var assignments = BotLogic.ECS.BotEntityBridge.GetJobAssignments(botID);
+            foreach (BotJobAssignment assignment in assignments)
             {
                 assignment.Inactivate();
             }
@@ -224,21 +225,7 @@ namespace SPTQuestingBots.Controllers
 
         public static int NumberOfConsecutiveFailedAssignments(this BotOwner bot)
         {
-            if (!botJobAssignments.ContainsKey(bot.Profile.Id))
-            {
-                return 0;
-            }
-
-            var assignments = botJobAssignments[bot.Profile.Id];
-            int count = 0;
-            for (int i = assignments.Count - 1; i >= 0; i--)
-            {
-                if (assignments[i].Status != JobAssignmentStatus.Failed)
-                    break;
-                count++;
-            }
-
-            return count;
+            return BotLogic.ECS.BotEntityBridge.GetConsecutiveFailedAssignments(bot);
         }
 
         public static int NumberOfActiveBots(this Quest quest)
@@ -246,9 +233,18 @@ namespace SPTQuestingBots.Controllers
             float pendingTimeLimit = 0.3f;
 
             int num = 0;
-            foreach (string id in botJobAssignments.Keys)
+            var entities = BotLogic.ECS.BotEntityBridge.Registry.Entities;
+            for (int e = 0; e < entities.Count; e++)
             {
-                var assignments = botJobAssignments[id];
+                var entity = entities[e];
+                if (!entity.IsActive)
+                    continue;
+
+                var owner = BotLogic.ECS.BotEntityBridge.GetBotOwner(entity);
+                if (owner == null)
+                    continue;
+
+                var assignments = BotLogic.ECS.BotEntityBridge.GetJobAssignments(owner);
                 for (int i = 0; i < assignments.Count; i++)
                 {
                     var a = assignments[i];
@@ -266,8 +262,6 @@ namespace SPTQuestingBots.Controllers
                 }
             }
 
-            //LoggingController.LogInfo("Bots doing " + quest.ToString() + ": " + num);
-
             return num;
         }
 
@@ -283,12 +277,13 @@ namespace SPTQuestingBots.Controllers
                 throw new ArgumentNullException("Quest is null", nameof(quest));
             }
 
-            if (!botJobAssignments.ContainsKey(bot.Profile.Id))
+            var botAssignments = BotLogic.ECS.BotEntityBridge.GetJobAssignments(bot);
+            if (botAssignments.Count == 0)
             {
                 return quest.AllObjectives;
             }
 
-            IEnumerable<BotJobAssignment> matchingAssignments = botJobAssignments[bot.Profile.Id]
+            IEnumerable<BotJobAssignment> matchingAssignments = botAssignments
                 .Where(a => a.QuestAssignment == quest)
                 .Where(a => a.Status != JobAssignmentStatus.Archived);
 
@@ -321,13 +316,14 @@ namespace SPTQuestingBots.Controllers
 
         public static DateTime? TimeWhenLastEndedForBot(this Quest quest, BotOwner bot)
         {
-            if (!botJobAssignments.ContainsKey(bot.Profile.Id))
+            var botAssignments = BotLogic.ECS.BotEntityBridge.GetJobAssignments(bot);
+            if (botAssignments.Count == 0)
             {
                 return null;
             }
 
             // Find all of the bot's assignments with this quest that have not been archived yet
-            IEnumerable<BotJobAssignment> matchingAssignments = botJobAssignments[bot.Profile.Id]
+            IEnumerable<BotJobAssignment> matchingAssignments = botAssignments
                 .Where(a => a.QuestAssignment == quest)
                 .Where(a => a.Status != JobAssignmentStatus.Archived)
                 .Reverse<BotJobAssignment>()
@@ -354,13 +350,14 @@ namespace SPTQuestingBots.Controllers
 
         public static DateTime? TimeWhenBotStarted(this Quest quest, BotOwner bot)
         {
-            if (!botJobAssignments.ContainsKey(bot.Profile.Id))
+            var botAssignments = BotLogic.ECS.BotEntityBridge.GetJobAssignments(bot);
+            if (botAssignments.Count == 0)
             {
                 return null;
             }
 
             // If the bot is currently doing this quest, find the time it first started
-            IEnumerable<BotJobAssignment> matchingAssignments = botJobAssignments[bot.Profile.Id]
+            IEnumerable<BotJobAssignment> matchingAssignments = botAssignments
                 .Reverse<BotJobAssignment>()
                 .TakeWhile(a => a.QuestAssignment == quest);
 
@@ -404,7 +401,7 @@ namespace SPTQuestingBots.Controllers
 
             // If the bot has never been assigned a job, it should be able to do the quest
             // TO DO: Could this return a false positive?
-            if (!botJobAssignments.ContainsKey(bot.Profile.Id))
+            if (!BotLogic.ECS.BotEntityBridge.HasJobAssignments(bot.Profile.Id))
             {
                 return true;
             }
@@ -451,7 +448,8 @@ namespace SPTQuestingBots.Controllers
             {
                 LoggingController.LogInfo(bot.GetText() + " is now allowed to repeat quest " + quest.ToString());
 
-                IEnumerable<BotJobAssignment> matchingAssignments = botJobAssignments[bot.Profile.Id]
+                IEnumerable<BotJobAssignment> matchingAssignments = BotLogic
+                    .ECS.BotEntityBridge.GetJobAssignments(bot)
                     .Where(a => a.QuestAssignment == quest);
 
                 foreach (BotJobAssignment assignment in matchingAssignments)
@@ -467,7 +465,7 @@ namespace SPTQuestingBots.Controllers
 
         public static int TryArchiveRepeatableAssignments(this BotOwner bot)
         {
-            var assignments = botJobAssignments[bot.Profile.Id];
+            var assignments = BotLogic.ECS.BotEntityBridge.GetJobAssignments(bot);
             int count = 0;
 
             for (int i = 0; i < assignments.Count; i++)
@@ -484,7 +482,8 @@ namespace SPTQuestingBots.Controllers
 
         public static bool CanBotRepeatQuestObjective(this QuestObjective objective, BotOwner bot)
         {
-            IEnumerable<BotJobAssignment> matchingAssignments = botJobAssignments[bot.Profile.Id]
+            IEnumerable<BotJobAssignment> matchingAssignments = BotLogic
+                .ECS.BotEntityBridge.GetJobAssignments(bot)
                 .Where(a => a.QuestObjectiveAssignment == objective);
 
             if (!matchingAssignments.Any())
@@ -514,31 +513,24 @@ namespace SPTQuestingBots.Controllers
 
         public static BotJobAssignment GetCurrentJobAssignment(this BotOwner bot, bool allowUpdate = true)
         {
-            if (!botJobAssignments.ContainsKey(bot.Profile.Id))
-            {
-                botJobAssignments.Add(bot.Profile.Id, new List<BotJobAssignment>());
-            }
+            var assignments = BotLogic.ECS.BotEntityBridge.EnsureJobAssignments(bot.Profile.Id);
 
             if (allowUpdate && DoesBotHaveNewJobAssignment(bot))
             {
-                LoggingController.LogInfo("Bot " + bot.GetText() + " is now doing " + botJobAssignments[bot.Profile.Id].Last().ToString());
+                // Re-fetch after DoesBotHaveNewJobAssignment may have added a new assignment
+                assignments = BotLogic.ECS.BotEntityBridge.GetJobAssignments(bot);
+                LoggingController.LogInfo("Bot " + bot.GetText() + " is now doing " + assignments[assignments.Count - 1].ToString());
 
-                if (botJobAssignments[bot.Profile.Id].Count > 1)
+                if (assignments.Count > 1)
                 {
-                    BotJobAssignment lastAssignment = botJobAssignments[bot.Profile.Id].TakeLast(2).First();
+                    BotJobAssignment lastAssignment = assignments[assignments.Count - 2];
                     LoggingController.LogDebug("Bot " + bot.GetText() + " was previously doing " + lastAssignment.ToString());
-
-                    //double? timeSinceBotStartedQuest = lastAssignment.QuestAssignment.ElapsedTimeSinceBotStarted(bot);
-                    //double? timeSinceBotLastFinishedQuest = lastAssignment.QuestAssignment.ElapsedTimeWhenLastEndedForBot(bot);
-                    //string startedTimeText = timeSinceBotStartedQuest.HasValue ? timeSinceBotStartedQuest.Value.ToString() : "N/A";
-                    //string lastFinishedTimeText = timeSinceBotLastFinishedQuest.HasValue ? timeSinceBotLastFinishedQuest.Value.ToString() : "N/A";
-                    //LoggingController.LogInfo("Time since first objective ended: " + startedTimeText + ", Time since last objective ended: " + lastFinishedTimeText);
                 }
             }
 
-            if (botJobAssignments[bot.Profile.Id].Count > 0)
+            if (assignments.Count > 0)
             {
-                return botJobAssignments[bot.Profile.Id].Last();
+                return assignments[assignments.Count - 1];
             }
 
             if (allowUpdate)
@@ -551,14 +543,11 @@ namespace SPTQuestingBots.Controllers
 
         public static bool DoesBotHaveNewJobAssignment(this BotOwner bot)
         {
-            if (!botJobAssignments.ContainsKey(bot.Profile.Id))
-            {
-                botJobAssignments.Add(bot.Profile.Id, new List<BotJobAssignment>());
-            }
+            var assignments = BotLogic.ECS.BotEntityBridge.EnsureJobAssignments(bot.Profile.Id);
 
-            if (botJobAssignments[bot.Profile.Id].Count > 0)
+            if (assignments.Count > 0)
             {
-                BotJobAssignment currentAssignment = botJobAssignments[bot.Profile.Id].Last();
+                BotJobAssignment currentAssignment = assignments[assignments.Count - 1];
 
                 // Check if the bot is currently doing an assignment
                 if (currentAssignment.IsActive)
@@ -605,12 +594,13 @@ namespace SPTQuestingBots.Controllers
             }
 
             // Get the bot's most recent assingment if applicable
+            var botAssignments = BotLogic.ECS.BotEntityBridge.GetJobAssignments(bot);
             Quest quest = null;
             QuestObjective objective = null;
-            if (botJobAssignments[bot.Profile.Id].Count > 0)
+            if (botAssignments.Count > 0)
             {
-                quest = botJobAssignments[bot.Profile.Id].Last().QuestAssignment;
-                objective = botJobAssignments[bot.Profile.Id].Last().QuestObjectiveAssignment;
+                quest = botAssignments[botAssignments.Count - 1].QuestAssignment;
+                objective = botAssignments[botAssignments.Count - 1].QuestObjectiveAssignment;
             }
 
             // Clear the bot's assignment if it's been doing the same quest for too long
@@ -696,7 +686,7 @@ namespace SPTQuestingBots.Controllers
 
             // Once a valid assignment is selected, assign it to the bot
             BotJobAssignment assignment = new BotJobAssignment(bot, quest, objective);
-            botJobAssignments[bot.Profile.Id].Add(assignment);
+            BotLogic.ECS.BotEntityBridge.GetJobAssignments(bot).Add(assignment);
 
             return assignment;
         }
@@ -847,12 +837,13 @@ namespace SPTQuestingBots.Controllers
 
         public static IEnumerable<BotJobAssignment> GetCompletedOrAchivedQuests(this BotOwner bot)
         {
-            if (!botJobAssignments.ContainsKey(bot.Profile.Id))
+            var assignments = BotLogic.ECS.BotEntityBridge.GetJobAssignments(bot);
+            if (assignments.Count == 0)
             {
                 return Enumerable.Empty<BotJobAssignment>();
             }
 
-            return botJobAssignments[bot.Profile.Id].Where(a => a.IsCompletedOrArchived);
+            return assignments.Where(a => a.IsCompletedOrArchived);
         }
 
         public static int NumberOfCompletedOrAchivedQuests(this BotOwner bot)
@@ -924,11 +915,7 @@ namespace SPTQuestingBots.Controllers
 
             LoggingController.LogDebug("Writing bot job assignment log file...");
 
-            if (botJobAssignments.Count == 0)
-            {
-                LoggingController.LogWarning("No bot job assignments to log.");
-                return;
-            }
+            var allAssignments = BotLogic.ECS.BotEntityBridge.AllJobAssignments();
 
             // Write the header row
             StringBuilder sb = new StringBuilder();
@@ -937,9 +924,9 @@ namespace SPTQuestingBots.Controllers
             );
 
             // Write a row for every quest, objective, and step that each bot was assigned to perform
-            foreach (string botID in botJobAssignments.Keys)
+            foreach (var kvp in allAssignments)
             {
-                foreach (BotJobAssignment assignment in botJobAssignments[botID])
+                foreach (BotJobAssignment assignment in kvp.Value)
                 {
                     sb.Append(assignment.BotName + ",");
                     sb.Append("\"" + assignment.BotNickname.Replace(",", "") + "\",");
@@ -956,7 +943,7 @@ namespace SPTQuestingBots.Controllers
 
             foreach (Profile profile in Components.Spawning.BotGenerator.GetAllGeneratedBotProfiles())
             {
-                if (botJobAssignments.ContainsKey(profile.Id))
+                if (BotLogic.ECS.BotEntityBridge.HasJobAssignments(profile.Id))
                 {
                     continue;
                 }

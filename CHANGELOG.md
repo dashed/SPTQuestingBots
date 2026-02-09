@@ -66,13 +66,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `NearestToBot()`: `Dictionary` + `.OrderBy().First()` → O(n) min-scan with local variables
   - `SetExfiliationPointForQuesting()`: `.ToDictionary()` + `.OrderBy().Last()` → O(n) max-scan for-loop
   - `TryArchiveRepeatableAssignments()`: `.Where().Where().ToArray()` → single for-loop with in-place `Archive()`
-- `BotEntity.ConsecutiveFailedAssignments` field for Phase 8 job assignment prep (not yet wired)
-- 119 new client tests: BotEntityBridge scenarios (+65 incl. 8 Phase 7D), BsgBotRegistry (15), BotFieldState (12), JobAssignment (8), TimePacing (9), FramePacing (10)
-- Updated `docs/ecs-data-layout-analysis.md` with Phase 5A–5F, 6, 7A–7D implementation status (~96% complete)
+- **ECS Phase 8: job assignment wiring** — migrates `botJobAssignments` dictionary to ECS
+  - `BotEntityBridge._jobAssignments`: `Dictionary<int, List<BotJobAssignment>>` keyed by entity ID (replaces `BotJobAssignmentFactory.botJobAssignments` string-keyed dictionary)
+  - 10 new bridge methods: `GetJobAssignments(BotOwner/string)`, `EnsureJobAssignments`, `HasJobAssignments`, `GetConsecutiveFailedAssignments`, `IncrementConsecutiveFailedAssignments`, `ResetConsecutiveFailedAssignments`, `RecomputeConsecutiveFailedAssignments`, `AllJobAssignments`
+  - `NumberOfActiveBots()` iterates dense `Registry.Entities` instead of dictionary keys
+  - `ConsecutiveFailedAssignments` O(1) entity field read (was O(n) reverse list scan)
+  - `BotObjectiveManager.FailObjective()` calls `IncrementConsecutiveFailedAssignments`
+  - `BotObjectiveManager.CompleteObjective()` calls `ResetConsecutiveFailedAssignments`
+  - ~28 dictionary access points migrated in `BotJobAssignmentFactory`
+  - `.Last()` → `[Count-1]`, `.TakeLast(2).First()` → `[Count-2]` (zero-alloc)
+  - 3 unsafe dictionary accesses fixed (now safely returns empty list)
+- 135 new client tests: BotEntityBridge scenarios (+81 incl. 16 Phase 8, 8 Phase 7D), BsgBotRegistry (15), BotFieldState (12), JobAssignment (8), TimePacing (9), FramePacing (10)
+- Updated `docs/ecs-data-layout-analysis.md` — ECS-Lite Option B 100% complete
 
 ### Changed
-- ECS is now the sole data store — all old dictionaries and sensor classes deleted; push/pull sensors, sleep, type, boss/follower, field state all managed via ECS only
-- 463 client tests total (was 344), 58 server tests, 521 total
+- ECS is now the sole data store — all old dictionaries and sensor classes deleted; push/pull sensors, sleep, type, boss/follower, field state, job assignments all managed via ECS only
+- `botJobAssignments` dictionary removed from `BotJobAssignmentFactory`
+- 479 client tests total (was 344), 58 server tests, 537 total
 
 ## [1.7.0] - 2026-02-08
 

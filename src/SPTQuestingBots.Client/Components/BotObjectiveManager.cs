@@ -250,6 +250,7 @@ namespace SPTQuestingBots.Components
         public void CompleteObjective()
         {
             assignment.Complete();
+            BotLogic.ECS.BotEntityBridge.ResetConsecutiveFailedAssignments(botOwner);
 
             BotPath.ClearPath();
 
@@ -276,6 +277,7 @@ namespace SPTQuestingBots.Components
         public void FailObjective()
         {
             assignment.Fail();
+            BotLogic.ECS.BotEntityBridge.IncrementConsecutiveFailedAssignments(botOwner);
         }
 
         public bool TryChangeObjective()

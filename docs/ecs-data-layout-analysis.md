@@ -845,25 +845,23 @@ Each phase should:
 | Phase 7B | TimePacing / FramePacing Utilities | ✅ Complete |
 | Phase 7C | Deterministic Tick Order | ✅ Complete |
 | Phase 7D | Allocation Cleanup | ✅ Complete |
-| Phase 8 | Job Assignment State on BotEntity | ⚠️ Field added, not yet wired |
+| Phase 8 | Job Assignment State on BotEntity | ✅ Complete |
 
 **Current architecture**: ECS is the sole data store. All old dictionaries
-(`deadBots`, `botBosses`, `botFollowers`, `sensors`) have been deleted from
-`BotHiveMindMonitor`. All 6 sensor subclasses deleted. `sleepingBotIds`
-deleted from `BotRegistrationManager`. Push sensors write only to ECS entities.
-Pull sensors iterate the dense entity list with zero delegate allocation.
-Boss/follower lifecycle uses ECS `entity.IsActive` for O(1) dead checks.
+(`deadBots`, `botBosses`, `botFollowers`, `sensors`, `botJobAssignments`) have
+been deleted. All 6 sensor subclasses deleted. `sleepingBotIds` deleted from
+`BotRegistrationManager`. Push sensors write only to ECS entities. Pull sensors
+iterate the dense entity list with zero delegate allocation. Boss/follower
+lifecycle uses ECS `entity.IsActive` for O(1) dead checks. Job assignments
+stored in `BotEntityBridge._jobAssignments` keyed by entity ID.
 `BotRegistrationManager` retains `registeredPMCs`/`registeredBosses` only for
 `GetBotType()` classification during registration and hostility management.
-463 client tests, 58 server tests (521 total).
+479 client tests, 58 server tests (537 total).
 
-### What Remains: Full Option B Completion
+### Status: Option B Complete (100%)
 
-Phases 5A–5F completed the full ECS migration, Phases 7C–7D completed
-deterministic tick order documentation and allocation cleanup. What remains:
-
-1. **Phase 8 wiring** — connect `BotEntity.ConsecutiveFailedAssignments` to
-   `BotJobAssignmentFactory` (field exists, wiring remains).
+All phases are complete. The ECS-Lite data layout is fully implemented and
+wired. No remaining migration work.
 
 ---
 
@@ -1199,37 +1197,64 @@ All remaining allocation hotspots identified by the audit have been fixed:
 
 ---
 
-## Phase 8: Job Assignment Storage on BotEntity
+## Phase 8: Job Assignment Wiring
 
-**Status: ⚠️ Field added, wiring not yet done**
+**Status: ✅ Complete**
 
-Move per-bot job assignment history from dictionary to entity:
+Migrated per-bot job assignment storage from `BotJobAssignmentFactory` dictionary
+to `BotEntityBridge`:
 
 ```csharp
-// Currently in BotJobAssignmentFactory.cs:
+// Before: BotJobAssignmentFactory.cs
 private static Dictionary<string, List<BotJobAssignment>> botJobAssignments;
 
-// Move to BotEntity:
-public List<BotJobAssignment> JobAssignments;
+// After: BotEntityBridge.cs (keyed by entity.Id, not string profileId)
+private static Dictionary<int, List<BotJobAssignment>> _jobAssignments;
 ```
 
-**Field added** (on `BotEntity`):
-```csharp
-public int ConsecutiveFailedAssignments;  // Replaces dictionary lookup
-```
+**Design choice**: Job assignment lists stored on `BotEntityBridge` (bridge-side
+`Dictionary<int, List<BotJobAssignment>>`), not on `BotEntity` itself. This
+keeps `BotEntity` pure C# with zero Unity/game dependencies, following the
+Phase 6 pattern used for `BotFieldState`.
 
-**Remaining wiring**:
-- `NumberOfActiveBots()` → iterate `BotRegistry.Entities` (dense)
-- `botJobAssignments` dictionary → `BotEntity.JobAssignments`
-- Connect `ConsecutiveFailedAssignments` to `BotJobAssignmentFactory`
+### Changes
 
-**Benefits**:
-- `NumberOfActiveBots()` iterates `BotRegistry.Entities` (dense) instead of
-  dictionary keys
-- No dictionary hash computation per lookup
-- Assignment history lives with the entity, not in a separate system
+**BotEntityBridge** (10 new methods):
+- `GetJobAssignments(BotOwner)` / `GetJobAssignments(string)` — O(1) lookup,
+  returns `_emptyAssignments` for unknown bots (safe fallback)
+- `EnsureJobAssignments(string)` — create-if-missing for edge cases
+- `HasJobAssignments(string)` — checks `Count > 0`
+- `GetConsecutiveFailedAssignments(BotOwner)` — O(1) entity field read
+- `IncrementConsecutiveFailedAssignments(BotOwner)` — called from
+  `BotObjectiveManager.FailObjective()`
+- `ResetConsecutiveFailedAssignments(BotOwner)` — called from
+  `BotObjectiveManager.CompleteObjective()`
+- `RecomputeConsecutiveFailedAssignments(string)` — reverse tail scan, called
+  from `FailAllJobAssignmentsForBot()` (bulk operation)
+- `AllJobAssignments()` — yield iterator for debug logging
+- `RegisterBot()` creates empty `List<BotJobAssignment>` per entity
+- `Clear()` clears `_jobAssignments` dictionary
 
-**Estimated effort**: Medium (3-5 files, ~40 lines changed)
+**BotJobAssignmentFactory** (~28 access points migrated):
+- `botJobAssignments` dictionary field removed
+- All reads use `BotEntityBridge.GetJobAssignments()` (safe fallback)
+- `NumberOfConsecutiveFailedAssignments()` → O(1) entity field read (was O(n)
+  reverse scan)
+- `NumberOfActiveBots()` → dense entity iteration via `Registry.Entities`
+  (was dictionary key iteration)
+- `.Last()` → `[Count-1]`, `.TakeLast(2).First()` → `[Count-2]`
+- `WriteBotJobAssignmentLogFile()` → `AllJobAssignments()` iterator
+
+**BotObjectiveManager** (2 new calls):
+- `CompleteObjective()` → `ResetConsecutiveFailedAssignments(botOwner)`
+- `FailObjective()` → `IncrementConsecutiveFailedAssignments(botOwner)`
+
+### Benefits
+- `NumberOfActiveBots()` iterates dense entity list instead of dictionary keys
+- `ConsecutiveFailedAssignments` is O(1) read (was O(n) reverse list scan)
+- No string-keyed dictionary hash computation per lookup (entity.Id is int)
+- 3 unsafe dictionary accesses fixed (now safely returns empty list)
+- Assignment history co-located with entity lifecycle (cleared on Clear())
 
 ---
 
@@ -1252,7 +1277,7 @@ recommended** for QuestingBots:
 
 ## Updated Feasibility Assessment
 
-### Option B Status: In Progress (~96% Complete)
+### Option B Status: Complete (100%)
 
 | Component | Status | Remaining |
 |-----------|--------|-----------|
@@ -1270,23 +1295,25 @@ recommended** for QuestingBots:
 | TimePacing / FramePacing | ✅ Complete | Wiring incremental |
 | Remove old dictionaries | ✅ Complete | Phase 5F done |
 | BotFieldState on entity | ✅ Complete | — |
-| Job assignment on entity | ⚠️ Field added | Wire to BotJobAssignmentFactory |
+| Job assignment on entity | ✅ Complete | — |
 | Deterministic tick order | ✅ Complete | Phase 7C (documented) |
 | Allocation cleanup | ✅ Complete | Phase 7D (6 hotspots fixed) |
 
 ### Revised Verdict
 
-Option B is nearing completion. The ECS is the **sole data store** for all
-sensor, sleep, type, and boss/follower data. All old dictionaries
-(`deadBots`, `botBosses`, `botFollowers`, `sensors`) and 6 sensor subclasses
-have been deleted. Boss/follower lifecycle uses dense ECS entity iteration
-with O(1) `IsActive` checks. Phase 6 field state wiring is complete
-(WorldGridManager dictionary removed). Phase 7C documents the deterministic
-tick order. Phase 7D eliminates all remaining allocation hotspots (static
-buffers, O(n) min/max scans, for-loop replacements for LINQ chains).
-Phase 8 has a field on `BotEntity` but needs wiring.
+Option B is **complete** (100%). The ECS is the **sole data store** for all
+sensor, sleep, type, boss/follower, field state, and job assignment data. All
+old dictionaries (`deadBots`, `botBosses`, `botFollowers`, `sensors`,
+`botJobAssignments`) and 6 sensor subclasses have been deleted. Boss/follower
+lifecycle uses dense ECS entity iteration with O(1) `IsActive` checks. Phase 6
+field state wiring is complete (WorldGridManager dictionary removed). Phase 7C
+documents the deterministic tick order. Phase 7D eliminates all remaining
+allocation hotspots. Phase 8 migrates job assignment storage to bridge-side
+`Dictionary<int, List<BotJobAssignment>>` keyed by entity ID, with O(1)
+`ConsecutiveFailedAssignments` reads and dense entity iteration for
+`NumberOfActiveBots()`.
 
-**Estimated remaining effort**: Phase 8 wiring (~3 files, 1 session).
+**No remaining migration work.**
 
 ---
 

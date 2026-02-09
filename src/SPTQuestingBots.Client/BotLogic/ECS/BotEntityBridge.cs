@@ -4,6 +4,7 @@ using EFT;
 using SPTQuestingBots.BotLogic.ECS.Systems;
 using SPTQuestingBots.BotLogic.HiveMind;
 using SPTQuestingBots.Helpers;
+using SPTQuestingBots.Models.Questing;
 using SPTQuestingBots.ZoneMovement.Core;
 using UnityEngine;
 
@@ -43,6 +44,15 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// </summary>
         private static readonly Dictionary<int, BotFieldState> _entityFieldStates = new Dictionary<int, BotFieldState>();
 
+        /// <summary>
+        /// Phase 8: Per-entity job assignment list, keyed by entity.Id.
+        /// Replaces BotJobAssignmentFactory.botJobAssignments dictionary.
+        /// </summary>
+        private static readonly Dictionary<int, List<BotJobAssignment>> _jobAssignments = new Dictionary<int, List<BotJobAssignment>>();
+
+        /// <summary>Empty list returned when a bot has no job assignments (avoids null).</summary>
+        private static readonly List<BotJobAssignment> _emptyAssignments = new List<BotJobAssignment>();
+
         /// <summary>Dense entity registry for systems that need to iterate all bots.</summary>
         public static BotRegistry Registry => _registry;
 
@@ -77,6 +87,9 @@ namespace SPTQuestingBots.BotLogic.ECS
                 entity.HasFieldState = true;
                 _entityFieldStates[entity.Id] = new BotFieldState(noiseSeed);
             }
+
+            // Phase 8: create empty job assignment list
+            _jobAssignments[entity.Id] = new List<BotJobAssignment>();
 
             return entity;
         }
@@ -438,6 +451,7 @@ namespace SPTQuestingBots.BotLogic.ECS
             _entityToOwner.Clear();
             _profileIdToEntity.Clear();
             _entityFieldStates.Clear();
+            _jobAssignments.Clear();
             _registry.Clear();
         }
 
@@ -498,6 +512,130 @@ namespace SPTQuestingBots.BotLogic.ECS
             if (profileId != null && _profileIdToEntity.TryGetValue(profileId, out var entity))
                 return _entityFieldStates.TryGetValue(entity.Id, out var state) ? state : null;
             return null;
+        }
+
+        // ── Phase 8: Job Assignment Access ──────────────────────
+
+        /// <summary>
+        /// Get the job assignment list for a bot by BotOwner.
+        /// Returns an empty list if the bot is not registered (safe fallback).
+        /// </summary>
+        public static List<BotJobAssignment> GetJobAssignments(BotOwner bot)
+        {
+            if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
+                return _jobAssignments.TryGetValue(entity.Id, out var list) ? list : _emptyAssignments;
+            return _emptyAssignments;
+        }
+
+        /// <summary>
+        /// Get the job assignment list for a bot by profile ID string.
+        /// Returns an empty list if the bot is not registered (safe fallback).
+        /// </summary>
+        public static List<BotJobAssignment> GetJobAssignments(string profileId)
+        {
+            if (profileId != null && _profileIdToEntity.TryGetValue(profileId, out var entity))
+                return _jobAssignments.TryGetValue(entity.Id, out var list) ? list : _emptyAssignments;
+            return _emptyAssignments;
+        }
+
+        /// <summary>
+        /// Get the job assignment list for a bot by profile ID, creating it if necessary.
+        /// This handles edge cases where bots access job assignments before full ECS registration.
+        /// </summary>
+        public static List<BotJobAssignment> EnsureJobAssignments(string profileId)
+        {
+            if (profileId != null && _profileIdToEntity.TryGetValue(profileId, out var entity))
+            {
+                if (!_jobAssignments.TryGetValue(entity.Id, out var list))
+                {
+                    list = new List<BotJobAssignment>();
+                    _jobAssignments[entity.Id] = list;
+                }
+
+                return list;
+            }
+
+            return _emptyAssignments;
+        }
+
+        /// <summary>
+        /// Check whether a bot has any job assignments by profile ID.
+        /// </summary>
+        public static bool HasJobAssignments(string profileId)
+        {
+            if (profileId != null && _profileIdToEntity.TryGetValue(profileId, out var entity))
+                return _jobAssignments.TryGetValue(entity.Id, out var list) && list.Count > 0;
+            return false;
+        }
+
+        /// <summary>
+        /// Get the ConsecutiveFailedAssignments count from the entity.
+        /// O(1) read replacing O(n) reverse scan.
+        /// </summary>
+        public static int GetConsecutiveFailedAssignments(BotOwner bot)
+        {
+            if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
+                return entity.ConsecutiveFailedAssignments;
+            return 0;
+        }
+
+        /// <summary>
+        /// Increment the consecutive failed assignments counter.
+        /// Called after a single assignment fails.
+        /// </summary>
+        public static void IncrementConsecutiveFailedAssignments(BotOwner bot)
+        {
+            if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
+                entity.ConsecutiveFailedAssignments++;
+        }
+
+        /// <summary>
+        /// Reset the consecutive failed assignments counter to zero.
+        /// Called after an assignment completes successfully.
+        /// </summary>
+        public static void ResetConsecutiveFailedAssignments(BotOwner bot)
+        {
+            if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
+                entity.ConsecutiveFailedAssignments = 0;
+        }
+
+        /// <summary>
+        /// Recompute consecutive failed assignments by scanning the assignment list tail.
+        /// Called after bulk operations like FailAllJobAssignmentsForBot().
+        /// </summary>
+        public static void RecomputeConsecutiveFailedAssignments(string profileId)
+        {
+            if (profileId == null || !_profileIdToEntity.TryGetValue(profileId, out var entity))
+                return;
+
+            if (!_jobAssignments.TryGetValue(entity.Id, out var assignments))
+            {
+                entity.ConsecutiveFailedAssignments = 0;
+                return;
+            }
+
+            int count = 0;
+            for (int i = assignments.Count - 1; i >= 0; i--)
+            {
+                if (assignments[i].Status != JobAssignmentStatus.Failed)
+                    break;
+                count++;
+            }
+
+            entity.ConsecutiveFailedAssignments = count;
+        }
+
+        /// <summary>
+        /// Iterate all registered bots' job assignment lists (for debug logging).
+        /// Yields (profileId, assignments) pairs.
+        /// </summary>
+        public static IEnumerable<KeyValuePair<string, List<BotJobAssignment>>> AllJobAssignments()
+        {
+            foreach (var kvp in _profileIdToEntity)
+            {
+                if (_jobAssignments.TryGetValue(kvp.Value.Id, out var list))
+                    yield return new KeyValuePair<string, List<BotJobAssignment>>(kvp.Key, list);
+            }
         }
 
         // ── Enum Mapping ────────────────────────────────────────
