@@ -28,7 +28,7 @@ namespace SPTQuestingBots.Patches
             IPlayer player = __instance?.Person;
             if (player != null)
             {
-                if (BotRegistrationManager.IsBotSleeping(player.ProfileId))
+                if (BotLogic.ECS.BotEntityBridge.IsBotSleeping(player.ProfileId))
                 {
                     __instance.SetVisible(false);
                     return false;

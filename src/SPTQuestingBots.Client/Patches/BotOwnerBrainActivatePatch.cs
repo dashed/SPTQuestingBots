@@ -59,7 +59,7 @@ namespace SPTQuestingBots.Patches
             BotLogic.ECS.BotEntityBridge.RegisterBot(__instance, Controllers.BotRegistrationManager.GetBotType(__instance));
             Singleton<GameWorld>.Instance.GetComponent<Components.DebugData>().RegisterBot(__instance);
 
-            if (__instance.IsARegisteredPMC() || __instance.WillBeAPlayerScav())
+            if (BotLogic.ECS.BotEntityBridge.IsBotAPMC(__instance) || __instance.WillBeAPlayerScav())
             {
                 registerBotAsHumanPlayer(__instance);
             }
@@ -95,7 +95,7 @@ namespace SPTQuestingBots.Patches
 
         private static bool shouldMakeBotGroupHostileTowardAllBosses(BotOwner bot)
         {
-            BotType botType = Controllers.BotRegistrationManager.GetBotType(bot);
+            BotType botType = BotLogic.ECS.BotEntityBridge.GetBotType(bot);
 
             float chance = ConfigController.Config.ChanceOfBeingHostileTowardBosses.GetValue(botType) ?? 0;
 

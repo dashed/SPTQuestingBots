@@ -177,7 +177,7 @@ namespace SPTQuestingBots.Helpers
 
                 // Enumerate all possible equipment slots into which the key can be transferred
                 List<EquipmentSlot> possibleSlots = new List<EquipmentSlot>();
-                if (Controllers.BotRegistrationManager.IsBotAPMC(botOwner))
+                if (BotLogic.ECS.BotEntityBridge.IsBotAPMC(botOwner))
                 {
                     possibleSlots.Add(EquipmentSlot.SecuredContainer);
                 }

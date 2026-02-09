@@ -803,6 +803,80 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS
             Assert.That(follower.LastLootingTime, Is.EqualTo(lootTime));
         }
 
+        [Test]
+        public void PushSensors_InactiveEntity_SensorsResetBySystem()
+        {
+            var entity = _registry.Add();
+            entity.SetSensor(BotSensor.InCombat, true);
+            entity.SetSensor(BotSensor.IsSuspicious, true);
+            entity.SetSensor(BotSensor.WantsToLoot, true);
+
+            // Deactivate the entity (simulates bot death)
+            entity.IsActive = false;
+
+            // HiveMindSystem.ResetInactiveEntitySensors should clear sensors for inactive bots
+            HiveMindSystem.ResetInactiveEntitySensors(_registry.Entities);
+
+            Assert.That(entity.GetSensor(BotSensor.InCombat), Is.False);
+            Assert.That(entity.GetSensor(BotSensor.IsSuspicious), Is.False);
+            Assert.That(entity.GetSensor(BotSensor.WantsToLoot), Is.False);
+        }
+
+        [Test]
+        public void PushSensors_ActiveEntity_SensorsPreservedByResetSystem()
+        {
+            var entity = _registry.Add();
+            entity.SetSensor(BotSensor.InCombat, true);
+            entity.SetSensor(BotSensor.IsSuspicious, true);
+
+            // Entity is active — reset system should NOT touch its sensors
+            HiveMindSystem.ResetInactiveEntitySensors(_registry.Entities);
+
+            Assert.That(entity.GetSensor(BotSensor.InCombat), Is.True);
+            Assert.That(entity.GetSensor(BotSensor.IsSuspicious), Is.True);
+        }
+
+        [Test]
+        public void PushSensors_MultipleEntities_OnlyInactiveReset()
+        {
+            var active = _registry.Add();
+            var inactive = _registry.Add();
+            var alsoActive = _registry.Add();
+
+            active.SetSensor(BotSensor.InCombat, true);
+            inactive.SetSensor(BotSensor.InCombat, true);
+            alsoActive.SetSensor(BotSensor.InCombat, true);
+
+            inactive.IsActive = false;
+
+            HiveMindSystem.ResetInactiveEntitySensors(_registry.Entities);
+
+            Assert.That(active.GetSensor(BotSensor.InCombat), Is.True);
+            Assert.That(inactive.GetSensor(BotSensor.InCombat), Is.False);
+            Assert.That(alsoActive.GetSensor(BotSensor.InCombat), Is.True);
+        }
+
+        [Test]
+        public void PushSensors_AllSensorTypes_WriteAndReadCorrectly()
+        {
+            var entity = _registry.Add();
+
+            // Write all push sensor types
+            var pushSensors = new[] { BotSensor.InCombat, BotSensor.IsSuspicious, BotSensor.WantsToLoot };
+            foreach (var sensor in pushSensors)
+            {
+                entity.SetSensor(sensor, true);
+                Assert.That(entity.GetSensor(sensor), Is.True, $"Sensor {sensor} should be true after write");
+            }
+
+            // Clear all push sensor types
+            foreach (var sensor in pushSensors)
+            {
+                entity.SetSensor(sensor, false);
+                Assert.That(entity.GetSensor(sensor), Is.False, $"Sensor {sensor} should be false after clear");
+            }
+        }
+
         // ── Phase 5C: Pull Sensor Writes to ECS-Only ────────────
 
         [Test]
@@ -872,6 +946,54 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS
             Assert.That(active2.CanQuest, Is.True);
             // Inactive entity was skipped
             Assert.That(inactive.CanQuest, Is.False);
+        }
+
+        [Test]
+        public void PullSensors_CanSprintDefaultIsTrue()
+        {
+            var entity = _registry.Add();
+
+            // BotEntity constructor sets CanSprintToObjective = true
+            Assert.That(entity.CanSprintToObjective, Is.True);
+            Assert.That(entity.CanQuest, Is.False);
+        }
+
+        [Test]
+        public void PullSensors_InactiveEntity_ResetByHiveMindSystem()
+        {
+            var entity = _registry.Add();
+            entity.SetSensor(BotSensor.CanQuest, true);
+            entity.SetSensor(BotSensor.CanSprintToObjective, false);
+
+            entity.IsActive = false;
+            HiveMindSystem.ResetInactiveEntitySensors(_registry.Entities);
+
+            // Pull sensors should be reset to defaults (CanQuest=false, CanSprint=true)
+            Assert.That(entity.CanQuest, Is.False);
+            Assert.That(entity.CanSprintToObjective, Is.True);
+        }
+
+        [Test]
+        public void PullSensors_DenseIteration_NoGaps()
+        {
+            // Add 5 entities, remove middle one, verify iteration covers all remaining
+            var entities = new BotEntity[5];
+            for (int i = 0; i < 5; i++)
+                entities[i] = _registry.Add();
+
+            _registry.Remove(entities[2]);
+
+            // Dense list should have 4 entities, no gaps
+            Assert.That(_registry.Count, Is.EqualTo(4));
+
+            int updated = 0;
+            for (int i = 0; i < _registry.Entities.Count; i++)
+            {
+                _registry.Entities[i].CanQuest = true;
+                updated++;
+            }
+
+            Assert.That(updated, Is.EqualTo(4));
         }
 
         // ── Phase 5D: Boss/Follower Lifecycle to ECS-Only ───────
@@ -984,6 +1106,71 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS
             Assert.That(boss2.HasFollowers, Is.True);
         }
 
+        [Test]
+        public void CleanupDeadEntities_MultipleDeadBosses_AllFollowersDetached()
+        {
+            var boss1 = _registry.Add();
+            var boss2 = _registry.Add();
+            var f1 = _registry.Add();
+            var f2 = _registry.Add();
+            var f3 = _registry.Add();
+
+            HiveMindSystem.AssignBoss(f1, boss1);
+            HiveMindSystem.AssignBoss(f2, boss2);
+            HiveMindSystem.AssignBoss(f3, boss2);
+
+            // Both bosses die
+            boss1.IsActive = false;
+            boss2.IsActive = false;
+
+            HiveMindSystem.CleanupDeadEntities(_registry.Entities);
+
+            Assert.That(f1.HasBoss, Is.False);
+            Assert.That(f2.HasBoss, Is.False);
+            Assert.That(f3.HasBoss, Is.False);
+            Assert.That(boss1.Followers.Count, Is.EqualTo(0));
+            Assert.That(boss2.Followers.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void CleanupDeadEntities_DeadFollowerRemovedFromBossList()
+        {
+            var boss = _registry.Add();
+            var f1 = _registry.Add();
+            var f2 = _registry.Add();
+
+            HiveMindSystem.AssignBoss(f1, boss);
+            HiveMindSystem.AssignBoss(f2, boss);
+            Assert.That(boss.Followers.Count, Is.EqualTo(2));
+
+            // One follower dies
+            f1.IsActive = false;
+
+            HiveMindSystem.CleanupDeadEntities(_registry.Entities);
+
+            Assert.That(boss.Followers.Count, Is.EqualTo(1));
+            Assert.That(boss.Followers[0], Is.SameAs(f2));
+            Assert.That(f1.HasBoss, Is.False);
+        }
+
+        [Test]
+        public void CleanupDeadEntities_RepeatedCallsIdempotent()
+        {
+            var boss = _registry.Add();
+            var follower = _registry.Add();
+
+            HiveMindSystem.AssignBoss(follower, boss);
+            boss.IsActive = false;
+
+            // Call multiple times
+            HiveMindSystem.CleanupDeadEntities(_registry.Entities);
+            HiveMindSystem.CleanupDeadEntities(_registry.Entities);
+            HiveMindSystem.CleanupDeadEntities(_registry.Entities);
+
+            Assert.That(follower.HasBoss, Is.False);
+            Assert.That(boss.Followers.Count, Is.EqualTo(0));
+        }
+
         // ── Phase 5E: BotRegistrationManager Reads to ECS ───────
 
         [Test]
@@ -1091,6 +1278,57 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS
             Assert.That(activePMCs, Contains.Item(pmc1));
             Assert.That(activePMCs, Contains.Item(pmc2));
             Assert.That(activePMCs.Count, Is.EqualTo(HiveMindSystem.CountActiveByType(_registry.Entities, BotType.PMC)));
+        }
+
+        [Test]
+        public void IsBotSleeping_ViaBotEntity_ReflectsSetSleepingState()
+        {
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+
+            Assert.That(entity.IsSleeping, Is.False);
+
+            entity.IsSleeping = true;
+            Assert.That(entity.IsSleeping, Is.True);
+
+            entity.IsSleeping = false;
+            Assert.That(entity.IsSleeping, Is.False);
+        }
+
+        [Test]
+        public void IsBotAPMC_ViaBotEntity_OnlyPMCsReturnTrue()
+        {
+            var pmc = _registry.Add();
+            pmc.BotType = BotType.PMC;
+            var scav = _registry.Add();
+            scav.BotType = BotType.Scav;
+            var boss = _registry.Add();
+            boss.BotType = BotType.Boss;
+            var pscav = _registry.Add();
+            pscav.BotType = BotType.PScav;
+            var unknown = _registry.Add();
+            unknown.BotType = BotType.Unknown;
+
+            Assert.That(pmc.BotType == BotType.PMC, Is.True);
+            Assert.That(scav.BotType == BotType.PMC, Is.False);
+            Assert.That(boss.BotType == BotType.PMC, Is.False);
+            Assert.That(pscav.BotType == BotType.PMC, Is.False);
+            Assert.That(unknown.BotType == BotType.PMC, Is.False);
+        }
+
+        [Test]
+        public void GetBotType_ViaBotEntity_ReturnsCorrectType()
+        {
+            var pmc = _registry.Add();
+            pmc.BotType = BotType.PMC;
+            var scav = _registry.Add();
+            scav.BotType = BotType.Scav;
+            var boss = _registry.Add();
+            boss.BotType = BotType.Boss;
+
+            Assert.That(pmc.BotType, Is.EqualTo(BotType.PMC));
+            Assert.That(scav.BotType, Is.EqualTo(BotType.Scav));
+            Assert.That(boss.BotType, Is.EqualTo(BotType.Boss));
         }
 
         // ── Phase 5F: Remove Old Data Structures ────────────────

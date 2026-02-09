@@ -116,7 +116,7 @@ namespace SPTQuestingBots.Components
                 LoggingController.LogError(botOwner.GetText() + " has not been registered in BotHiveMindMonitor");
             }
 
-            BotType botType = Controllers.BotRegistrationManager.GetBotType(botOwner);
+            BotType botType = BotLogic.ECS.BotEntityBridge.GetBotType(botOwner);
 
             if ((botType == BotType.PMC) && ConfigController.Config.Questing.AllowedBotTypesForQuesting.PMC)
             {
@@ -181,7 +181,7 @@ namespace SPTQuestingBots.Components
                 return;
             }
 
-            bool isSleeping = BotRegistrationManager.IsBotSleeping(botOwner.Profile.Id);
+            bool isSleeping = BotLogic.ECS.BotEntityBridge.IsBotSleeping(botOwner.Profile.Id);
             if (isSleeping)
             {
                 timeSpentAtObjectiveTimer.Stop();

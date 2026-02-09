@@ -270,7 +270,7 @@ namespace SPTQuestingBots.Models.Questing
 
         private bool canAssignForBotType(BotOwner bot)
         {
-            if (PMCsOnly && !Controllers.BotRegistrationManager.IsBotAPMC(bot))
+            if (PMCsOnly && !BotLogic.ECS.BotEntityBridge.IsBotAPMC(bot))
             {
                 return false;
             }

@@ -243,7 +243,7 @@ namespace SPTQuestingBots.BotLogic.Objective
                 return false;
             }
 
-            BotType botType = Controllers.BotRegistrationManager.GetBotType(BotOwner);
+            BotType botType = BotLogic.ECS.BotEntityBridge.GetBotType(BotOwner);
 
             if ((botType == BotType.PMC) && ConfigController.Config.Questing.UnlockingDoors.Enabled.PMC)
             {

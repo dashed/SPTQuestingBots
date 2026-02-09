@@ -25,6 +25,12 @@ namespace SPTQuestingBots.BotLogic.ECS
 
         private static readonly Dictionary<int, BotOwner> _entityToOwner = new Dictionary<int, BotOwner>();
 
+        /// <summary>
+        /// Phase 5E: ProfileId → BotEntity mapping for patches that only have a string ProfileId
+        /// (e.g. CheckLookEnemyPatch). O(1) dictionary lookup replaces O(n) list scan.
+        /// </summary>
+        private static readonly Dictionary<string, BotEntity> _profileIdToEntity = new Dictionary<string, BotEntity>();
+
         /// <summary>Dense entity registry for systems that need to iterate all bots.</summary>
         public static BotRegistry Registry => _registry;
 
@@ -40,10 +46,17 @@ namespace SPTQuestingBots.BotLogic.ECS
             if (_ownerToEntity.TryGetValue(bot, out var existing))
                 return existing;
 
-            var entity = _registry.Add();
+            // Phase 7A: register with BSG ID for O(1) sparse-array lookup
+            var entity = _registry.Add(bot.Id);
             entity.BotType = MapBotType(controllerBotType);
             _ownerToEntity[bot] = entity;
             _entityToOwner[entity.Id] = bot;
+
+            // Phase 5E: populate ProfileId mapping for string-based lookups
+            var profileId = bot.Profile?.Id;
+            if (profileId != null)
+                _profileIdToEntity[profileId] = entity;
+
             return entity;
         }
 
@@ -57,6 +70,16 @@ namespace SPTQuestingBots.BotLogic.ECS
 
             entity = null;
             return false;
+        }
+
+        /// <summary>
+        /// Phase 7A: O(1) lookup by BSG integer ID (BotOwner.Id).
+        /// Uses sparse-array on BotRegistry — no hash computation.
+        /// Returns null if the ID is out of range or the bot was removed.
+        /// </summary>
+        public static BotEntity GetEntityByBsgId(int bsgId)
+        {
+            return _registry.GetByBsgId(bsgId);
         }
 
         /// <summary>
@@ -363,7 +386,43 @@ namespace SPTQuestingBots.BotLogic.ECS
         {
             _ownerToEntity.Clear();
             _entityToOwner.Clear();
+            _profileIdToEntity.Clear();
             _registry.Clear();
+        }
+
+        // ── Phase 5E: Read shortcuts replacing BotRegistrationManager ──
+
+        /// <summary>
+        /// Check if a bot is sleeping by ProfileId (string). O(1) dictionary lookup.
+        /// Replaces BotRegistrationManager.IsBotSleeping() O(n) list scan.
+        /// </summary>
+        public static bool IsBotSleeping(string profileId)
+        {
+            if (profileId != null && _profileIdToEntity.TryGetValue(profileId, out var entity))
+                return entity.IsSleeping;
+            return false;
+        }
+
+        /// <summary>
+        /// Check if a bot is a PMC via ECS entity type.
+        /// Replaces BotRegistrationManager.IsBotAPMC() HashSet lookup.
+        /// </summary>
+        public static bool IsBotAPMC(BotOwner bot)
+        {
+            if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
+                return entity.BotType == BotType.PMC;
+            return false;
+        }
+
+        /// <summary>
+        /// Get the bot type from ECS entity.
+        /// Replaces BotRegistrationManager.GetBotType() multi-collection lookup.
+        /// </summary>
+        public static Controllers.BotType GetBotType(BotOwner bot)
+        {
+            if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
+                return MapBotTypeReverse(entity.BotType);
+            return Controllers.BotType.Undetermined;
         }
 
         /// <summary>
@@ -383,6 +442,26 @@ namespace SPTQuestingBots.BotLogic.ECS
                     return BotType.PScav;
                 default:
                     return BotType.Unknown;
+            }
+        }
+
+        /// <summary>
+        /// Map ECS.BotType back to Controllers.BotType (reverse of MapBotType).
+        /// </summary>
+        public static Controllers.BotType MapBotTypeReverse(BotType ecsType)
+        {
+            switch (ecsType)
+            {
+                case BotType.PMC:
+                    return Controllers.BotType.PMC;
+                case BotType.Boss:
+                    return Controllers.BotType.Boss;
+                case BotType.Scav:
+                    return Controllers.BotType.Scav;
+                case BotType.PScav:
+                    return Controllers.BotType.PScav;
+                default:
+                    return Controllers.BotType.Undetermined;
             }
         }
 

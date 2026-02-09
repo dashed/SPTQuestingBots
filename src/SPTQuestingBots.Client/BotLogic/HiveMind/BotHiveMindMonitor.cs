@@ -69,17 +69,25 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             updateBosses();
             updateBossFollowers();
 
-            foreach (BotHiveMindAbstractSensor sensor in sensors.Values)
-            {
-                sensor.Update();
-            }
+            // Phase 5C: Pull sensors iterate dense ECS entity list instead of old dictionaries.
+            // Push sensors (InCombat, IsSuspicious, WantsToLoot) are set externally via
+            // UpdateValueForBot → BotEntityBridge.UpdateSensor, no tick needed.
+            updatePullSensors();
+
+            // Reset sensors for inactive (dead/despawned) entities
+            ECS.Systems.HiveMindSystem.ResetInactiveEntitySensors(ECS.BotEntityBridge.Registry.Entities);
         }
 
         public static void UpdateValueForBot(BotHiveMindSensorType sensorType, BotOwner bot, bool value)
         {
-            throwIfSensorNotRegistred(sensorType);
-            sensors[sensorType].UpdateForBot(bot, value);
+            // Phase 5B: Write only to ECS entity, skip old dictionary write.
+            // Old dictionaries are still populated for pull sensors (Phase 5C will migrate those).
             ECS.BotEntityBridge.UpdateSensor(sensorType, bot, value);
+
+            if (sensorType == BotHiveMindSensorType.WantsToLoot && value)
+            {
+                ECS.BotEntityBridge.UpdateLastLootingTime(bot);
+            }
         }
 
         public static void RegisterBot(BotOwner bot)
@@ -220,47 +228,68 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             }
         }
 
+        /// <summary>
+        /// Phase 5D: Iterate dense ECS entity list to discover and validate boss relationships.
+        /// Replaces old dictionary iteration over botBosses.Keys with O(1) entity.IsActive checks.
+        /// Old dictionary writes retained for Phase 5F removal.
+        /// </summary>
         private void updateBosses()
         {
-            foreach (BotOwner bot in botBosses.Keys)
+            var entities = ECS.BotEntityBridge.Registry.Entities;
+            for (int i = 0; i < entities.Count; i++)
             {
-                // Need to check if the reference is for a null object, meaning the bot was despawned and disposed
-                if ((bot == null) || bot.IsDead)
+                var entity = entities[i];
+                if (!entity.IsActive)
+                    continue;
+
+                var bot = ECS.BotEntityBridge.GetBotOwner(entity);
+                if (bot == null || bot.IsDead)
+                    continue;
+
+                // Discover boss from BSG API if not yet assigned
+                BotOwner bossBot = null;
+                if (!entity.HasBoss)
                 {
+                    bossBot = bot.BotFollower?.BossToFollow?.Player()?.AIData?.BotOwner;
+
+                    // Old dictionary write (Phase 5F will remove)
+                    if (botBosses.ContainsKey(bot))
+                        botBosses[bot] = bossBot;
+                }
+                else
+                {
+                    bossBot = ECS.BotEntityBridge.GetBotOwner(entity.Boss);
+                }
+
+                if (bossBot == null)
+                    continue;
+
+                // Check if boss is inactive in ECS (replaces deadBots.Contains O(n))
+                if (ECS.BotEntityBridge.TryGetEntity(bossBot, out var bossEntity) && !bossEntity.IsActive)
+                {
+                    // Old dictionary write (Phase 5F will remove)
+                    if (botBosses.ContainsKey(bot))
+                        botBosses[bot] = null;
+
                     continue;
                 }
 
-                if (botBosses[bot] == null)
+                // Check if boss just died
+                if (bossBot.IsDead)
                 {
-                    botBosses[bot] = bot.BotFollower?.BossToFollow?.Player()?.AIData?.BotOwner;
-                }
-                if (botBosses[bot] == null)
-                {
+                    Controllers.LoggingController.LogDebug("Boss " + bossBot.GetText() + " is now dead.");
+
+                    ECS.BotEntityBridge.DeactivateBot(bossBot);
+
+                    // Old dictionary writes (Phase 5F will remove)
+                    if (botFollowers.ContainsKey(bossBot))
+                        botFollowers.Remove(bossBot);
+                    deadBots.Add(bossBot);
+
                     continue;
                 }
 
-                if (deadBots.Contains(botBosses[bot]))
-                {
-                    botBosses[bot] = null;
-                    continue;
-                }
-
-                if (botBosses[bot].IsDead)
-                {
-                    Controllers.LoggingController.LogDebug("Boss " + botBosses[bot].GetText() + " is now dead.");
-
-                    ECS.BotEntityBridge.DeactivateBot(botBosses[bot]);
-
-                    if (botFollowers.ContainsKey(botBosses[bot]))
-                    {
-                        botFollowers.Remove(botBosses[bot]);
-                    }
-
-                    deadBots.Add(botBosses[bot]);
-                    continue;
-                }
-
-                addBossFollower(botBosses[bot], bot);
+                addBossFollower(bossBot, bot);
             }
         }
 
@@ -292,28 +321,31 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             }
         }
 
-        private static readonly List<BotOwner> _deadBossBuffer = new List<BotOwner>();
-
+        /// <summary>
+        /// Phase 5D: Dead follower cleanup now uses ECS entity.IsActive checks.
+        /// HiveMindSystem.CleanupDeadEntities handles boss/follower reference cleanup in ECS.
+        /// Old dictionary cleanup retained for Phase 5F removal.
+        /// </summary>
         private void updateBossFollowers()
         {
-            _deadBossBuffer.Clear();
+            // ECS cleanup: remove boss/follower references for dead entities
+            ECS.Systems.HiveMindSystem.CleanupDeadEntities(ECS.BotEntityBridge.Registry.Entities);
+
+            // Old dictionary cleanup (Phase 5F will remove this entire block)
+            var deadBossBuffer = _deadBossBuffer;
+            deadBossBuffer.Clear();
 
             foreach (BotOwner boss in botFollowers.Keys)
             {
-                // Need to check if the reference is for a null object, meaning the bot was despawned and disposed
                 if ((boss == null) || boss.IsDead)
                 {
-                    if (deadBots.Contains(boss))
+                    if (!deadBots.Contains(boss))
                     {
-                        continue;
+                        Controllers.LoggingController.LogDebug("Boss " + boss.GetText() + " is now dead.");
+                        ECS.BotEntityBridge.DeactivateBot(boss);
+                        deadBossBuffer.Add(boss);
+                        deadBots.Add(boss);
                     }
-
-                    Controllers.LoggingController.LogDebug("Boss " + boss.GetText() + " is now dead.");
-
-                    ECS.BotEntityBridge.DeactivateBot(boss);
-
-                    _deadBossBuffer.Add(boss);
-                    deadBots.Add(boss);
 
                     continue;
                 }
@@ -323,35 +355,71 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                 {
                     BotOwner follower = followers[i];
 
+                    // Use ECS entity.IsActive instead of deadBots.Contains O(n)
+                    bool isFollowerDead = false;
                     if (follower == null)
                     {
                         Controllers.LoggingController.LogWarning("Removing null follower for " + boss.GetText());
-
-                        ECS.BotEntityBridge.DeactivateBot(follower);
-                        deadBots.Add(follower);
+                        isFollowerDead = true;
+                    }
+                    else if (ECS.BotEntityBridge.TryGetEntity(follower, out var followerEntity))
+                    {
+                        isFollowerDead = !followerEntity.IsActive;
+                    }
+                    else if (follower.IsDead)
+                    {
+                        isFollowerDead = true;
                     }
 
-                    if (deadBots.Contains(follower))
+                    if (isFollowerDead)
                     {
+                        if (follower != null && !deadBots.Contains(follower))
+                        {
+                            Controllers.LoggingController.LogDebug(
+                                "Follower " + follower.GetText() + " for " + boss.GetText() + " is now dead."
+                            );
+                            ECS.BotEntityBridge.DeactivateBot(follower);
+                            deadBots.Add(follower);
+                        }
+
                         followers.RemoveAt(i);
-                        continue;
-                    }
-
-                    if (follower.IsDead)
-                    {
-                        Controllers.LoggingController.LogDebug(
-                            "Follower " + follower.GetText() + " for " + boss.GetText() + " is now dead."
-                        );
-
-                        ECS.BotEntityBridge.DeactivateBot(follower);
-                        deadBots.Add(follower);
                     }
                 }
             }
 
-            for (int i = 0; i < _deadBossBuffer.Count; i++)
+            for (int i = 0; i < deadBossBuffer.Count; i++)
             {
-                botFollowers.Remove(_deadBossBuffer[i]);
+                botFollowers.Remove(deadBossBuffer[i]);
+            }
+        }
+
+        private static readonly List<BotOwner> _deadBossBuffer = new List<BotOwner>();
+
+        /// <summary>
+        /// Phase 5C: Pull sensors iterate dense ECS entity list instead of old dictionary keys.
+        /// Reads game state from BotObjectiveManager and writes directly to BotEntity sensor fields.
+        /// No Action delegate allocation — zero GC pressure per tick.
+        /// </summary>
+        private static void updatePullSensors()
+        {
+            var entities = ECS.BotEntityBridge.Registry.Entities;
+            for (int i = 0; i < entities.Count; i++)
+            {
+                var entity = entities[i];
+                if (!entity.IsActive)
+                    continue;
+
+                var bot = ECS.BotEntityBridge.GetBotOwner(entity);
+                if (bot == null || !bot.isActiveAndEnabled || bot.IsDead)
+                    continue;
+
+                var objectiveManager = bot.GetObjectiveManager();
+
+                // CanQuest: default false
+                entity.CanQuest = objectiveManager != null && objectiveManager.IsQuestingAllowed;
+
+                // CanSprintToObjective: default true
+                entity.CanSprintToObjective = objectiveManager == null || objectiveManager.CanSprintToObjective();
             }
         }
     }
