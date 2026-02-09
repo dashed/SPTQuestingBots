@@ -9,6 +9,7 @@ using BepInEx.Bootstrap;
 using Comfort.Common;
 using EFT;
 using SPTQuestingBots.BotLogic.BotMonitor.Monitors;
+using SPTQuestingBots.BotLogic.ECS.Systems;
 using SPTQuestingBots.BotLogic.Objective;
 using SPTQuestingBots.Components;
 using SPTQuestingBots.Models.Questing;
@@ -23,11 +24,28 @@ namespace SPTQuestingBots.Controllers
             new CoroutineExtensions.EnumeratorWithTimeLimit(ConfigController.Config.MaxCalcTimePerFrame);
         private static List<Quest> allQuests = new List<Quest>();
         private static readonly List<Quest> _possibleQuestsBuffer = new List<Quest>();
+        private static readonly List<Quest> _zoneQuestsBuffer = new List<Quest>();
+        private static double[] _questScoreBuffer = new double[64];
+        private static float[] _questMinDistBuffer = new float[64];
+        private static float[] _questMaxDistBuffer = new float[64];
+        private static float[] _questMinAngleBuffer = new float[64];
         private static Dictionary<string, List<BotJobAssignment>> botJobAssignments = new Dictionary<string, List<BotJobAssignment>>();
 
         public static int QuestCount => allQuests.Count;
 
-        public static Quest[] FindQuestsWithZone(string zoneId) => allQuests.Where(q => q.GetObjectiveForZoneID(zoneId) != null).ToArray();
+        public static IReadOnlyList<Quest> FindQuestsWithZone(string zoneId)
+        {
+            _zoneQuestsBuffer.Clear();
+            for (int i = 0; i < allQuests.Count; i++)
+            {
+                if (allQuests[i].GetObjectiveForZoneID(zoneId) != null)
+                {
+                    _zoneQuestsBuffer.Add(allQuests[i]);
+                }
+            }
+
+            return _zoneQuestsBuffer;
+        }
 
         public static bool CanMoreBotsDoQuest(this Quest quest) => quest.NumberOfActiveBots() < quest.MaxBots;
 
@@ -97,13 +115,18 @@ namespace SPTQuestingBots.Controllers
 
         public static Quest FindQuest(string questID)
         {
-            IEnumerable<Quest> matchingQuests = allQuests.Where(q => q.Template.Id == questID);
-            if (matchingQuests.Count() == 1)
+            Quest found = null;
+            for (int i = 0; i < allQuests.Count; i++)
             {
-                return matchingQuests.First();
+                if (allQuests[i].Template?.Id == questID)
+                {
+                    if (found != null)
+                        return null; // More than one match — same behavior as original
+                    found = allQuests[i];
+                }
             }
 
-            return null;
+            return found;
         }
 
         public static void RemoveBlacklistedQuestObjectives(string locationId)
@@ -206,11 +229,16 @@ namespace SPTQuestingBots.Controllers
                 return 0;
             }
 
-            IEnumerable<BotJobAssignment> matchingAssignments = botJobAssignments[bot.Profile.Id]
-                .Reverse<BotJobAssignment>()
-                .TakeWhile(a => a.Status == JobAssignmentStatus.Failed);
+            var assignments = botJobAssignments[bot.Profile.Id];
+            int count = 0;
+            for (int i = assignments.Count - 1; i >= 0; i--)
+            {
+                if (assignments[i].Status != JobAssignmentStatus.Failed)
+                    break;
+                count++;
+            }
 
-            return matchingAssignments.Count();
+            return count;
         }
 
         public static int NumberOfActiveBots(this Quest quest)
@@ -691,11 +719,33 @@ namespace SPTQuestingBots.Controllers
 
         public static Quest GetRandomQuest(this BotOwner bot, IEnumerable<Quest> invalidQuests)
         {
-            Stopwatch questSelectionTimer = Stopwatch.StartNew();
+            // Filter assignable quests into a local list to avoid .ToArray() allocation
+            IReadOnlyList<Quest> possibleQuests = bot.GetAllPossibleQuests();
+            int questCount = 0;
 
-            Quest[] assignableQuests = bot.GetAllPossibleQuests().Where(q => !invalidQuests.Contains(q)).ToArray();
+            // Ensure static buffers are large enough
+            if (_questScoreBuffer.Length < possibleQuests.Count)
+            {
+                int newSize = Math.Max(possibleQuests.Count, 64);
+                _questScoreBuffer = new double[newSize];
+                _questMinDistBuffer = new float[newSize];
+                _questMaxDistBuffer = new float[newSize];
+                _questMinAngleBuffer = new float[newSize];
+            }
 
-            if (!assignableQuests.Any())
+            // We need a separate list for the filtered quests (excluding invalidQuests).
+            // Reuse _zoneQuestsBuffer temporarily for this purpose.
+            _zoneQuestsBuffer.Clear();
+            for (int i = 0; i < possibleQuests.Count; i++)
+            {
+                if (!invalidQuests.Contains(possibleQuests[i]))
+                {
+                    _zoneQuestsBuffer.Add(possibleQuests[i]);
+                }
+            }
+
+            questCount = _zoneQuestsBuffer.Count;
+            if (questCount == 0)
             {
                 return null;
             }
@@ -703,47 +753,46 @@ namespace SPTQuestingBots.Controllers
             BotObjectiveManager botObjectiveManager = bot.GetObjectiveManager();
             Vector3? vectorToExfil = botObjectiveManager?.VectorToExfiltrationPointForQuesting();
 
-            Dictionary<Quest, Configuration.MinMaxConfig> questDistanceRanges = new Dictionary<Quest, Configuration.MinMaxConfig>();
-            Dictionary<Quest, Configuration.MinMaxConfig> questExfilAngleRanges = new Dictionary<Quest, Configuration.MinMaxConfig>();
-
-            // Calculate the distances from the bot to all valid quest objectives and the angles between the vector to the bot's selected
-            // exfil (for questing) and the vector to each valid quest objective
-            foreach (Quest quest in assignableQuests)
+            // Calculate per-quest min/max distances and min exfil angles using static buffers
+            float maxOverallDistance = 0f;
+            for (int qi = 0; qi < questCount; qi++)
             {
-                IEnumerable<Vector3?> objectivePositions = quest.ValidObjectives.Select(o => o.GetFirstStepPosition());
-                IEnumerable<Vector3> validObjectivePositions = objectivePositions.Where(p => p.HasValue).Select(p => p.Value);
-                IEnumerable<float> distancesToObjectives = validObjectivePositions.Select(p => Vector3.Distance(bot.Position, p));
+                Quest quest = _zoneQuestsBuffer[qi];
+                float minDist = float.MaxValue;
+                float maxDist = 0f;
+                float minAngle = float.MaxValue;
 
-                questDistanceRanges.Add(quest, new Configuration.MinMaxConfig(distancesToObjectives.Min(), distancesToObjectives.Max()));
-
-                if (vectorToExfil.HasValue)
+                foreach (QuestObjective objective in quest.ValidObjectives)
                 {
-                    IEnumerable<Vector3> vectorsToObjectivePositions = validObjectivePositions.Select(p => p - bot.Position);
-                    IEnumerable<float> anglesToObjectives = vectorsToObjectivePositions.Select(p =>
-                        Vector3.Angle(p - bot.Position, vectorToExfil.Value)
-                    );
+                    Vector3? firstPos = objective.GetFirstStepPosition();
+                    if (!firstPos.HasValue)
+                        continue;
 
-                    questExfilAngleRanges.Add(quest, new Configuration.MinMaxConfig(anglesToObjectives.Min(), anglesToObjectives.Max()));
+                    float dist = Vector3.Distance(bot.Position, firstPos.Value);
+                    if (dist < minDist)
+                        minDist = dist;
+                    if (dist > maxDist)
+                        maxDist = dist;
+
+                    if (vectorToExfil.HasValue)
+                    {
+                        Vector3 toObjective = firstPos.Value - bot.Position;
+                        float angle = Vector3.Angle(toObjective, vectorToExfil.Value);
+                        if (angle < minAngle)
+                            minAngle = angle;
+                    }
                 }
-                else
-                {
-                    questExfilAngleRanges.Add(quest, new Configuration.MinMaxConfig(0, 0));
-                }
+
+                _questMinDistBuffer[qi] = minDist == float.MaxValue ? 0f : minDist;
+                _questMaxDistBuffer[qi] = maxDist;
+                _questMinAngleBuffer[qi] = vectorToExfil.HasValue && minAngle != float.MaxValue ? minAngle : 0f;
+
+                if (maxDist > maxOverallDistance)
+                    maxOverallDistance = maxDist;
             }
 
-            // Calculate the maximum amount of "randomness" to apply to each quest
-            //double distanceRange = questDistanceRanges.Max(q => q.Value.Max) - questDistanceRanges.Min(q => q.Value.Min);
-            double maxDistance = questDistanceRanges.Max(o => o.Value.Max);
-            int maxRandomDistance = (int)Math.Ceiling(maxDistance * ConfigController.Config.Questing.BotQuests.DistanceRandomness / 100.0);
-            float maxExfilAngle = ConfigController.Config.Questing.BotQuests.ExfilDirectionMaxAngle;
-
-            int distanceRandomness = ConfigController.Config.Questing.BotQuests.DistanceRandomness;
-            int desirabilityRandomness = ConfigController.Config.Questing.BotQuests.DesirabilityRandomness;
-
-            float distanceWeighting = ConfigController.Config.Questing.BotQuests.DistanceWeighting;
-            float desirabilityWeighting = ConfigController.Config.Questing.BotQuests.DesirabilityWeighting;
+            // Build scoring config from current configuration
             float exfilDirectionWeighting = 0;
-
             string locationId = Singleton<GameWorld>.Instance.GetComponent<Components.LocationData>().CurrentLocation.Id;
             if (ConfigController.Config.Questing.BotQuests.ExfilDirectionWeighting.ContainsKey(locationId))
             {
@@ -754,39 +803,39 @@ namespace SPTQuestingBots.Controllers
                 exfilDirectionWeighting = ConfigController.Config.Questing.BotQuests.ExfilDirectionWeighting["default"];
             }
 
+            QuestScoringConfig scoringConfig = new QuestScoringConfig(
+                distanceWeighting: ConfigController.Config.Questing.BotQuests.DistanceWeighting,
+                desirabilityWeighting: ConfigController.Config.Questing.BotQuests.DesirabilityWeighting,
+                exfilDirectionWeighting: exfilDirectionWeighting,
+                distanceRandomness: ConfigController.Config.Questing.BotQuests.DistanceRandomness,
+                desirabilityRandomness: ConfigController.Config.Questing.BotQuests.DesirabilityRandomness,
+                maxExfilAngle: ConfigController.Config.Questing.BotQuests.ExfilDirectionMaxAngle,
+                desirabilityActiveQuestMultiplier: ConfigController.Config.Questing.BotQuests.DesirabilityActiveQuestMultiplier
+            );
+
+            int maxRandomDistance = (int)
+                Math.Ceiling(maxOverallDistance * ConfigController.Config.Questing.BotQuests.DistanceRandomness / 100.0);
+
+            // Score all quests using QuestScorer (O(n) — replaces 5 dictionary allocations + OrderBy)
             System.Random random = new System.Random();
-            Dictionary<Quest, double> questDistanceFractions = questDistanceRanges.ToDictionary(
-                o => o.Key,
-                o => 1 - (o.Value.Min + random.Next(-1 * maxRandomDistance, maxRandomDistance)) / maxDistance
-            );
-            Dictionary<Quest, float> questDesirabilityFractions = questDistanceRanges.ToDictionary(
-                o => o.Key,
-                o =>
-                    (
-                        o.Key.Desirability
-                            * (o.Key.IsActiveForPlayer ? ConfigController.Config.Questing.BotQuests.DesirabilityActiveQuestMultiplier : 1)
-                        + random.Next(-1 * desirabilityRandomness, desirabilityRandomness)
-                    ) / 100
-            );
-            Dictionary<Quest, double> questExfilAngleFactor = questExfilAngleRanges.ToDictionary(
-                o => o.Key,
-                o => Math.Max(0, o.Value.Min - maxExfilAngle) / (180 - maxExfilAngle)
-            );
+            for (int qi = 0; qi < questCount; qi++)
+            {
+                _questScoreBuffer[qi] = QuestScorer.ScoreQuest(
+                    _questMinDistBuffer[qi],
+                    maxOverallDistance,
+                    maxRandomDistance,
+                    _zoneQuestsBuffer[qi].Desirability,
+                    _zoneQuestsBuffer[qi].IsActiveForPlayer,
+                    _questMinAngleBuffer[qi],
+                    scoringConfig,
+                    random
+                );
+            }
 
-            IEnumerable<Quest> sortedQuests = questDistanceRanges
-                .OrderBy(o =>
-                    (questDistanceFractions[o.Key] * distanceWeighting)
-                    + (questDesirabilityFractions[o.Key] * desirabilityWeighting)
-                    - (questExfilAngleFactor[o.Key] * exfilDirectionWeighting)
-                )
-                .Select(o => o.Key);
+            // Select highest-scoring quest (O(n) — replaces OrderBy + Last)
+            int bestIndex = QuestScorer.SelectHighestIndex(_questScoreBuffer, questCount);
 
-            Quest selectedQuest = sortedQuests.Last();
-
-            //LoggingController.LogInfo("Distance: " + questDistanceFractions[selectedQuest] + ", Desirability: " + questDesirabilityFractions[selectedQuest] + ", Exfil Angle Factor: " + questExfilAngleFactor[selectedQuest]);
-            //LoggingController.LogInfo("Time for quest selection: " + questSelectionTimer.ElapsedMilliseconds + "ms");
-
-            return selectedQuest;
+            return _zoneQuestsBuffer[bestIndex];
         }
 
         public static IEnumerable<BotJobAssignment> GetCompletedOrAchivedQuests(this BotOwner bot)

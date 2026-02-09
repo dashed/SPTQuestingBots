@@ -384,8 +384,8 @@ namespace SPTQuestingBots.Components
             }
 
             // Find all quests that have objectives using this trigger
-            Quest[] matchingQuests = BotJobAssignmentFactory.FindQuestsWithZone(trigger.Id);
-            if (matchingQuests.Length == 0)
+            IReadOnlyList<Quest> matchingQuests = BotJobAssignmentFactory.FindQuestsWithZone(trigger.Id);
+            if (matchingQuests.Count == 0)
             {
                 //LoggingController.LogInfo("No matching quests for trigger " + trigger.Id);
                 return;

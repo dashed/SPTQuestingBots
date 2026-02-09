@@ -47,6 +47,7 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - Bot classification (`BotType` enum) and sleep state replace scattered HashSet/List lookups
 - Zero-allocation group query helpers for checking sensor state across boss/follower hierarchies
 - `HiveMindSystem`: static system methods for boss/follower lifecycle, sensor resets, and O(n) entity counting — replaces dictionary-based HiveMind operations
+- `QuestScorer`: pure-logic quest scoring with static buffers — replaces 5 dictionary allocations + `OrderBy` in quest selection hot path
 - Pure C# with zero Unity dependencies for full testability
 
 ---

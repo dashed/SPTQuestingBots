@@ -28,10 +28,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Replaces O(n²) `NumberOfActiveBots()` with O(n) dense iteration via `CountActive`/`CountActiveByType`
   - Bidirectional boss/follower lifecycle management (assign, remove, separate, dead-entity cleanup)
   - 30 new unit tests covering all system methods, edge cases (null args, self-assign, chain hierarchies)
+- **ECS Phase 4: Job assignment optimization** — reduces LINQ allocations in quest selection hot path
+  - `QuestScorer`: pure-logic scoring system with `QuestScoringConfig` struct, `ScoreQuest()`, and `SelectHighestIndex()`
+  - `GetRandomQuest()` rewritten: 5 dictionary allocations + `ToDictionary` + `OrderBy` → static buffers + `QuestScorer` O(n) scan
+  - `FindQuest()`: double LINQ iteration (`.Where().Count()` + `.First()`) → single-pass for-loop
+  - `NumberOfConsecutiveFailedAssignments()`: `.Reverse().TakeWhile().Count()` → reverse for-loop
+  - `FindQuestsWithZone()`: `.Where().ToArray()` → static list buffer (zero allocation)
+  - 24 new unit tests for `QuestScorer` (scoring math, distance/desirability/angle factors, `SelectHighestIndex`)
 - ECS data layout analysis document (`docs/ecs-data-layout-analysis.md`) — Phobos architecture deep dive, QuestingBots audit, cache coherency math, and phased implementation plan
 
 ### Changed
-- 291 client tests total (was 187), 58 server tests, 349 total
+- 315 client tests total (was 187), 58 server tests, 373 total
 
 ## [1.6.0] - 2026-02-08
 

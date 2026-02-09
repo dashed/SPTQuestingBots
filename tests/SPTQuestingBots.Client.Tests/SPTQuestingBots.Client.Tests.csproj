@@ -79,6 +79,10 @@
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/HiveMindSystem.cs"
       Link="LinkedSources/ECS/Systems/HiveMindSystem.cs"
     />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/QuestScorer.cs"
+      Link="LinkedSources/ECS/Systems/QuestScorer.cs"
+    />
   </ItemGroup>
 
   <!--
