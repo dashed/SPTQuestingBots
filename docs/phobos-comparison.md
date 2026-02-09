@@ -854,7 +854,7 @@ Since the original comparison, QuestingBots has ported several Phobos innovation
 
 ### What QuestingBots Could Still Learn from Phobos
 
-1. **Squad-level strategies**: Phobos has a separate strategy layer (`GotoObjectiveStrategy`) that evaluates per-squad and assigns objectives to entire squads. QuestingBots' utility AI operates per-agent only; squad coordination is handled separately via the HiveMind boss/follower system.
+1. **Squad-level strategies**: Phobos has a separate strategy layer (`GotoObjectiveStrategy`) that evaluates per-squad and assigns objectives to entire squads. QuestingBots' utility AI operates per-agent only; squad coordination is handled separately via the HiveMind boss/follower system. See `docs/squad-strategies-analysis.md` for a detailed implementation plan (Option B: Squad Strategy Layer).
 
 ### What Phobos Could Learn from QuestingBots
 
