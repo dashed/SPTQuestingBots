@@ -5,6 +5,12 @@ using SPTQuestingBots.Configuration;
 namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
 {
     /// <summary>
+    /// Delegate for validating/snapping a position to a walkable surface.
+    /// Returns true if a valid snapped position was found.
+    /// </summary>
+    public delegate bool PositionValidator(float inX, float inY, float inZ, out float outX, out float outY, out float outZ);
+
+    /// <summary>
     /// Primary squad strategy: move the squad toward the leader's current quest objective.
     /// Assigns tactical roles and positions to followers based on quest action type,
     /// tracks arrivals, and adjusts hold duration.
@@ -16,26 +22,35 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
     {
         private readonly SquadStrategyConfig _config;
         private readonly System.Random _rng;
+        private readonly PositionValidator _positionValidator;
+        private readonly float[] _fallbackBuffer = new float[32 * 2]; // sunflower XZ candidates
 
         // Reusable buffers (max 6 followers)
         private readonly SquadRole[] _roleBuffer = new SquadRole[SquadObjective.MaxMembers];
         private readonly float[] _positionBuffer = new float[SquadObjective.MaxMembers * 3];
 
-        public GotoObjectiveStrategy(SquadStrategyConfig config, float hysteresis = 0.25f)
+        public GotoObjectiveStrategy(SquadStrategyConfig config, float hysteresis = 0.25f, PositionValidator positionValidator = null)
             : base(hysteresis)
         {
             _config = config;
             _rng = new System.Random();
+            _positionValidator = positionValidator;
         }
 
         /// <summary>
         /// Constructor with seeded RNG for deterministic testing.
         /// </summary>
-        public GotoObjectiveStrategy(SquadStrategyConfig config, int seed, float hysteresis = 0.25f)
+        public GotoObjectiveStrategy(
+            SquadStrategyConfig config,
+            int seed,
+            float hysteresis = 0.25f,
+            PositionValidator positionValidator = null
+        )
             : base(hysteresis)
         {
             _config = config;
             _rng = new System.Random(seed);
+            _positionValidator = positionValidator;
         }
 
         /// <summary>
@@ -127,6 +142,12 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                 _config
             );
 
+            // Validate/snap positions to walkable surfaces
+            if (_positionValidator != null && _config.EnablePositionValidation)
+            {
+                ValidatePositions(clampedCount, obj.ObjectiveX, obj.ObjectiveY, obj.ObjectiveZ);
+            }
+
             // Distribute to followers (with communication range + personality gating)
             int posIdx = 0;
             for (int i = 0; i < squad.Members.Count; i++)
@@ -170,6 +191,14 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                         posIdx++;
                         continue;
                     }
+                }
+
+                // Check if position validation failed
+                if (float.IsNaN(_positionBuffer[posIdx * 3]))
+                {
+                    member.HasTacticalPosition = false;
+                    posIdx++;
+                    continue;
                 }
 
                 member.SquadRole = _roleBuffer[posIdx];
@@ -236,6 +265,65 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                 obj.Duration *= factor;
                 obj.DurationAdjusted = true;
             }
+        }
+
+        private void ValidatePositions(int count, float objX, float objY, float objZ)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                int off = i * 3;
+                float px = _positionBuffer[off];
+                float py = _positionBuffer[off + 1];
+                float pz = _positionBuffer[off + 2];
+
+                if (_positionValidator(px, py, pz, out float sx, out float sy, out float sz))
+                {
+                    _positionBuffer[off] = sx;
+                    _positionBuffer[off + 1] = sy;
+                    _positionBuffer[off + 2] = sz;
+                }
+                else
+                {
+                    // Fallback: try sunflower spiral candidates around objective
+                    if (
+                        TryFallbackPosition(
+                            objX,
+                            objZ,
+                            objY,
+                            _config.FallbackSearchRadius,
+                            _config.FallbackCandidateCount,
+                            out float fx,
+                            out float fy,
+                            out float fz
+                        )
+                    )
+                    {
+                        _positionBuffer[off] = fx;
+                        _positionBuffer[off + 1] = fy;
+                        _positionBuffer[off + 2] = fz;
+                    }
+                    else
+                    {
+                        // Mark position as invalid
+                        _positionBuffer[off] = float.NaN;
+                    }
+                }
+            }
+        }
+
+        internal bool TryFallbackPosition(float cx, float cz, float y, float radius, int count, out float fx, out float fy, out float fz)
+        {
+            fx = fy = fz = 0f;
+            int clampedCount = System.Math.Min(count, _fallbackBuffer.Length / 2);
+            int generated = SunflowerSpiral.Generate(cx, cz, radius * 0.75f, clampedCount, _fallbackBuffer);
+            for (int j = 0; j < generated; j++)
+            {
+                float candX = _fallbackBuffer[j * 2];
+                float candZ = _fallbackBuffer[j * 2 + 1];
+                if (_positionValidator(candX, y, candZ, out fx, out fy, out fz))
+                    return true;
+            }
+            return false;
         }
 
         /// <summary>

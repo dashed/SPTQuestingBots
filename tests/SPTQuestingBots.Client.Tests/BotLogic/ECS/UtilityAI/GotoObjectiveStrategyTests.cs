@@ -23,6 +23,7 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
                 // Disable gates by default so existing tests are not affected
                 EnableCommunicationRange = false,
                 EnableSquadPersonality = false,
+                EnablePositionValidation = false,
             };
         }
 
@@ -861,6 +862,336 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
 
             Assert.IsTrue(f1.HasTacticalPosition);
             Assert.IsTrue(f2.HasTacticalPosition);
+        }
+
+        // ── Position Validation ───────────────────────────
+
+        private static bool AlwaysSnapValidator(float x, float y, float z, out float ox, out float oy, out float oz)
+        {
+            ox = x + 0.1f;
+            oy = y + 0.5f;
+            oz = z + 0.1f;
+            return true;
+        }
+
+        private static bool AlwaysFailValidator(float x, float y, float z, out float ox, out float oy, out float oz)
+        {
+            ox = oy = oz = 0f;
+            return false;
+        }
+
+        private SquadStrategyConfig ValidationConfig()
+        {
+            var config = DefaultConfig();
+            config.EnablePositionValidation = true;
+            config.FallbackCandidateCount = 16;
+            config.FallbackSearchRadius = 15f;
+            return config;
+        }
+
+        [Test]
+        public void AssignNewObjective_NoValidator_PositionsUnchanged()
+        {
+            var config = DefaultConfig();
+            config.EnablePositionValidation = true; // enabled but no validator
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // Should still get positions (no validator = no validation)
+            Assert.IsTrue(follower.HasTacticalPosition);
+        }
+
+        [Test]
+        public void AssignNewObjective_ValidatorAlwaysTrue_PositionsSnapped()
+        {
+            var config = ValidationConfig();
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, positionValidator: AlwaysSnapValidator);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(follower.HasTacticalPosition);
+            // Y should have the 0.5 offset from the snap validator
+            Assert.AreEqual(0.5f, follower.TacticalPositionY, 0.01f);
+        }
+
+        [Test]
+        public void AssignNewObjective_ValidatorAlwaysFalse_FallbackUsed()
+        {
+            int callCount = 0;
+            bool FallbackOnlyValidator(float x, float y, float z, out float ox, out float oy, out float oz)
+            {
+                callCount++;
+                // Fail for geometric positions (first calls), succeed for fallback (spiral candidates)
+                if (callCount > 1)
+                {
+                    ox = x;
+                    oy = y + 1f;
+                    oz = z;
+                    return true;
+                }
+                ox = oy = oz = 0f;
+                return false;
+            }
+
+            var config = ValidationConfig();
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, positionValidator: FallbackOnlyValidator);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(follower.HasTacticalPosition);
+            Assert.Greater(callCount, 1, "Fallback candidates should have been tried");
+        }
+
+        [Test]
+        public void AssignNewObjective_ValidatorAlwaysFalse_NoFallback_MarksInvalid()
+        {
+            var config = ValidationConfig();
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, positionValidator: AlwaysFailValidator);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // NaN position should result in HasTacticalPosition = false
+            Assert.IsFalse(follower.HasTacticalPosition);
+        }
+
+        [Test]
+        public void AssignNewObjective_ValidationDisabledByConfig_ValidatorNotCalled()
+        {
+            bool wasCalled = false;
+            bool TrackingValidator(float x, float y, float z, out float ox, out float oy, out float oz)
+            {
+                wasCalled = true;
+                ox = x;
+                oy = y;
+                oz = z;
+                return true;
+            }
+
+            var config = DefaultConfig();
+            config.EnablePositionValidation = false; // disabled
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, positionValidator: TrackingValidator);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsFalse(wasCalled, "Validator should not be called when disabled by config");
+            Assert.IsTrue(follower.HasTacticalPosition);
+        }
+
+        [Test]
+        public void AssignNewObjective_MixedValidation_SomePassSomeFail()
+        {
+            int geometricCallIdx = 0;
+            bool MixedValidator(float x, float y, float z, out float ox, out float oy, out float oz)
+            {
+                geometricCallIdx++;
+                // 1st geometric: pass, 2nd geometric: fail (needs fallback),
+                // 3rd geometric: fail (no fallback either)
+                // For fallback candidates of 2nd: succeed on first candidate
+                // For fallback candidates of 3rd: all fail
+                if (geometricCallIdx == 1)
+                {
+                    ox = x + 0.1f;
+                    oy = y;
+                    oz = z + 0.1f;
+                    return true;
+                }
+                if (geometricCallIdx == 2)
+                {
+                    // Fail geometric, will try fallback
+                    ox = oy = oz = 0f;
+                    return false;
+                }
+                if (geometricCallIdx == 3)
+                {
+                    // First fallback candidate for 2nd follower — succeed
+                    ox = 99f;
+                    oy = 99f;
+                    oz = 99f;
+                    return true;
+                }
+                if (geometricCallIdx == 4)
+                {
+                    // 3rd geometric fails
+                    ox = oy = oz = 0f;
+                    return false;
+                }
+                // All remaining fallback candidates for 3rd follower fail
+                ox = oy = oz = 0f;
+                return false;
+            }
+
+            var config = ValidationConfig();
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, positionValidator: MixedValidator);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var f1 = CreateBot(1);
+            var f2 = CreateBot(2);
+            var f3 = CreateBot(3);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            squad.Members.Add(leader);
+            squad.Members.Add(f1);
+            squad.Members.Add(f2);
+            squad.Members.Add(f3);
+            squad.Leader = leader;
+            leader.Squad = squad;
+            f1.Squad = squad;
+            f2.Squad = squad;
+            f3.Squad = squad;
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // f1: geometric passed
+            Assert.IsTrue(f1.HasTacticalPosition, "f1 should have position (geometric passed)");
+            // f2: geometric failed, fallback succeeded
+            Assert.IsTrue(f2.HasTacticalPosition, "f2 should have position (fallback succeeded)");
+            // f3: both failed → NaN → HasTacticalPosition = false
+            Assert.IsFalse(f3.HasTacticalPosition, "f3 should not have position (all validation failed)");
+        }
+
+        [Test]
+        public void AssignNewObjective_ValidatorSnapsY_YCoordUpdated()
+        {
+            bool YSnapValidator(float x, float y, float z, out float ox, out float oy, out float oz)
+            {
+                ox = x;
+                oy = 42.5f; // Snap Y to terrain height
+                oz = z;
+                return true;
+            }
+
+            var config = ValidationConfig();
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, positionValidator: YSnapValidator);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(follower.HasTacticalPosition);
+            Assert.AreEqual(42.5f, follower.TacticalPositionY, 0.01f);
+        }
+
+        [Test]
+        public void AssignNewObjective_NaNPosition_SkippedInDistribution()
+        {
+            var config = ValidationConfig();
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, positionValidator: AlwaysFailValidator);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // NaN positions should be skipped — follower has no tactical position
+            Assert.IsFalse(follower.HasTacticalPosition);
+            Assert.AreEqual(SquadRole.Guard, follower.SquadRole); // unchanged from setup
+        }
+
+        // ── TryFallbackPosition ───────────────────────────
+
+        [Test]
+        public void TryFallbackPosition_ValidatorSucceeds_ReturnsSpiralPosition()
+        {
+            var config = ValidationConfig();
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, positionValidator: AlwaysSnapValidator);
+
+            bool result = strategy.TryFallbackPosition(50f, 50f, 0f, 15f, 16, out float fx, out float fy, out float fz);
+
+            Assert.IsTrue(result);
+            // AlwaysSnapValidator adds 0.5 to Y
+            Assert.AreEqual(0.5f, fy, 0.01f);
+        }
+
+        [Test]
+        public void TryFallbackPosition_ValidatorAlwaysFails_ReturnsFalse()
+        {
+            var config = ValidationConfig();
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, positionValidator: AlwaysFailValidator);
+
+            bool result = strategy.TryFallbackPosition(50f, 50f, 0f, 15f, 16, out float fx, out float fy, out float fz);
+
+            Assert.IsFalse(result);
+            Assert.AreEqual(0f, fx);
+            Assert.AreEqual(0f, fy);
+            Assert.AreEqual(0f, fz);
         }
     }
 }

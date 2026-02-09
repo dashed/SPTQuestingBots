@@ -211,6 +211,11 @@
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/CommunicationRange.cs"
       Link="LinkedSources/ECS/Systems/CommunicationRange.cs"
     />
+    <!-- Cover point system: position generation -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/SunflowerSpiral.cs"
+      Link="LinkedSources/ECS/Systems/SunflowerSpiral.cs"
+    />
     <!-- Squad strategy: follower tasks -->
     <Compile
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/GoToTacticalPositionTask.cs"

@@ -27,6 +27,10 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(config.CommunicationRangeNoEarpiece, Is.EqualTo(35f));
                 Assert.That(config.CommunicationRangeEarpiece, Is.EqualTo(200f));
                 Assert.That(config.EnableSquadPersonality, Is.True);
+                Assert.That(config.EnablePositionValidation, Is.True);
+                Assert.That(config.NavMeshSampleRadius, Is.EqualTo(2.0f));
+                Assert.That(config.FallbackCandidateCount, Is.EqualTo(16));
+                Assert.That(config.FallbackSearchRadius, Is.EqualTo(15.0f));
             });
         }
 
@@ -50,6 +54,10 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(config.CommunicationRangeNoEarpiece, Is.EqualTo(35f));
                 Assert.That(config.CommunicationRangeEarpiece, Is.EqualTo(200f));
                 Assert.That(config.EnableSquadPersonality, Is.True);
+                Assert.That(config.EnablePositionValidation, Is.True);
+                Assert.That(config.NavMeshSampleRadius, Is.EqualTo(2.0f));
+                Assert.That(config.FallbackCandidateCount, Is.EqualTo(16));
+                Assert.That(config.FallbackSearchRadius, Is.EqualTo(15.0f));
             });
         }
 
@@ -104,6 +112,10 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 CommunicationRangeNoEarpiece = 50f,
                 CommunicationRangeEarpiece = 300f,
                 EnableSquadPersonality = false,
+                EnablePositionValidation = false,
+                NavMeshSampleRadius = 3.5f,
+                FallbackCandidateCount = 24,
+                FallbackSearchRadius = 20f,
             };
 
             var json = JsonConvert.SerializeObject(original);
@@ -124,6 +136,10 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(deserialized.CommunicationRangeNoEarpiece, Is.EqualTo(50f));
                 Assert.That(deserialized.CommunicationRangeEarpiece, Is.EqualTo(300f));
                 Assert.That(deserialized.EnableSquadPersonality, Is.False);
+                Assert.That(deserialized.EnablePositionValidation, Is.False);
+                Assert.That(deserialized.NavMeshSampleRadius, Is.EqualTo(3.5f));
+                Assert.That(deserialized.FallbackCandidateCount, Is.EqualTo(24));
+                Assert.That(deserialized.FallbackSearchRadius, Is.EqualTo(20f));
             });
         }
 
@@ -148,7 +164,39 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(json, Does.Contain("communication_range_no_earpiece"));
                 Assert.That(json, Does.Contain("communication_range_earpiece"));
                 Assert.That(json, Does.Contain("enable_squad_personality"));
+                Assert.That(json, Does.Contain("enable_position_validation"));
+                Assert.That(json, Does.Contain("navmesh_sample_radius"));
+                Assert.That(json, Does.Contain("fallback_candidate_count"));
+                Assert.That(json, Does.Contain("fallback_search_radius"));
             });
+        }
+
+        [Test]
+        public void EnablePositionValidation_DefaultTrue()
+        {
+            var config = new SquadStrategyConfig();
+            Assert.IsTrue(config.EnablePositionValidation);
+        }
+
+        [Test]
+        public void NavMeshSampleRadius_Default2()
+        {
+            var config = new SquadStrategyConfig();
+            Assert.AreEqual(2.0f, config.NavMeshSampleRadius);
+        }
+
+        [Test]
+        public void FallbackCandidateCount_Default16()
+        {
+            var config = new SquadStrategyConfig();
+            Assert.AreEqual(16, config.FallbackCandidateCount);
+        }
+
+        [Test]
+        public void FallbackSearchRadius_Default15()
+        {
+            var config = new SquadStrategyConfig();
+            Assert.AreEqual(15.0f, config.FallbackSearchRadius);
         }
     }
 }

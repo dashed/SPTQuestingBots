@@ -214,8 +214,12 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             // Run squad strategy manager (lazy-init)
             if (_squadStrategyManager == null)
             {
+                NavMeshPositionValidator.SampleRadius = config.NavMeshSampleRadius;
                 _squadStrategyManager = new ECS.UtilityAI.SquadStrategyManager(
-                    new ECS.UtilityAI.SquadStrategy[] { new ECS.UtilityAI.GotoObjectiveStrategy(config) }
+                    new ECS.UtilityAI.SquadStrategy[]
+                    {
+                        new ECS.UtilityAI.GotoObjectiveStrategy(config, positionValidator: NavMeshPositionValidator.TrySnap),
+                    }
                 );
             }
 

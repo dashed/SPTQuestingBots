@@ -1565,19 +1565,29 @@ independently configurable.
 
 ## 12. Future Work
 
-### 12.1 Cover Point System
+### 12.1 Cover Point System — **Implemented**
 
-The current design computes tactical positions using simple geometry (circles,
-offsets). A future enhancement would use NavMesh sampling and raycast checks to
-find actual cover positions:
+Tactical positions are now validated and snapped to walkable NavMesh surfaces,
+with a sunflower spiral fallback when the geometric position lands off-mesh:
 
-- `NavMesh.SamplePosition()` to snap tactical positions to walkable areas
+- **NavMesh.SamplePosition()** snaps tactical positions to walkable areas via
+  `NavMeshPositionValidator.TrySnap` (configurable `navmesh_sample_radius`, default 2m)
+- **SunflowerSpiral** fallback: golden-angle Vogel's formula generates candidate
+  positions around the objective when the primary snap fails (ported from Phobos
+  `CollectSyntheticCoverData`)
+- **PositionValidator delegate**: injected into pure-C# `GotoObjectiveStrategy` at
+  construction time, keeping the strategy fully testable without Unity dependencies
+- **NaN sentinel**: positions that fail both primary and fallback validation are
+  marked `float.NaN` and skipped during distribution (`HasTacticalPosition = false`)
+
+Config: `enable_position_validation` (true), `navmesh_sample_radius` (2.0),
+`fallback_candidate_count` (16), `fallback_search_radius` (15.0)
+
+**Not yet implemented** (potential future enhancements):
 - `Physics.Raycast` from position to objective to verify line-of-sight for overwatch
 - `NavMesh.Raycast` to verify path exists from follower to tactical position
 - Cover evaluation: distance to nearest wall/obstacle for guard positions
-
-This mirrors Phobos's `ShufflePickCoverPoints()` which uses the Location's
-pre-computed cover points rather than geometric offsets.
+- BSG pre-computed cover voxel integration (`botsController.CoversData`)
 
 ### 12.2 Formation Movement
 

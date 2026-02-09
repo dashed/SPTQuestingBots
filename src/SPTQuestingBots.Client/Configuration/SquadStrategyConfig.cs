@@ -43,6 +43,18 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("enable_squad_personality")]
         public bool EnableSquadPersonality { get; set; } = true;
 
+        [JsonProperty("enable_position_validation")]
+        public bool EnablePositionValidation { get; set; } = true;
+
+        [JsonProperty("navmesh_sample_radius")]
+        public float NavMeshSampleRadius { get; set; } = 2.0f;
+
+        [JsonProperty("fallback_candidate_count")]
+        public int FallbackCandidateCount { get; set; } = 16;
+
+        [JsonProperty("fallback_search_radius")]
+        public float FallbackSearchRadius { get; set; } = 15.0f;
+
         public SquadStrategyConfig() { }
     }
 }
