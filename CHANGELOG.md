@@ -31,10 +31,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 5 new quest state fields on `BotEntity`: `CurrentQuestAction`, `DistanceToObjective`, `IsCloseToObjective`, `MustUnlockDoor`, `HasActiveObjective`
   - F12 config entry `UseUtilityAI` (Main section, advanced, default: true)
   - ~79 new client tests: QuestActionId (1), BotActionTypeId (1), BotEntityQuestState (2), GoToObjectiveTask (16), AmbushTask (5), SnipeTask (5), HoldPositionTask (5), PlantItemTask (5), UnlockDoorTask (5), ToggleSwitchTask (4), CloseDoorsTask (4), QuestUtilityTaskBase (2), ScoreAndPick (3), QuestActionTransitions (18), QuestTaskFactory (4)
+- **Door collision bypass (Phobos-style)** — enabled by default (`bypass_door_colliders`, default: true)
+  - `ShrinkDoorNavMeshCarversPatch`: Harmony postfix on `GameWorld.OnGameStarted` — shrinks all door NavMesh carver sizes to 37.5% to prevent narrow hallways from being blocked by open doors on the navmesh
+  - `DoorCollisionHelper`: static helper caching door colliders at map start, then disabling `Physics.IgnoreCollision` + `EFTPhysicsClass.IgnoreCollision` between each bot's colliders and all door colliders
+  - Per-bot bypass applied in `CustomLayerForQuesting` constructor (once per bot lifetime)
+  - Cleanup at raid end via `BotsControllerStopPatch`
+  - Config: `bypass_door_colliders` in `BotPathingConfig` (default: true)
+  - 10 new config deserialization tests for `BotPathingConfig`
 - Updated `docs/utility-ai-analysis.md` — Phase 1 Core + Option A marked as implemented
+- Updated `docs/phobos-comparison.md` — door bypass moved from "Still Learn" to "Has Adopted"
 
 ### Changed
-- 711 client tests total (was 632), 58 server tests, 769 total
+- 721 client tests total (was 711), 58 server tests, 779 total
 
 ## [1.8.0] - 2026-02-08
 

@@ -57,6 +57,12 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - Hybrid approach: utility scoring for action SELECTION, BigBrain for action EXECUTION
 - When disabled, the existing deterministic switch statement is used as fallback
 
+### Door Collision Bypass (Optional)
+- Phobos-style door collision bypass — enabled by default (`bypass_door_colliders`, default: true)
+- Shrinks door NavMesh carvers to 37.5% to prevent narrow hallways from being blocked by open doors on the navmesh
+- Disables physics collision between each bot's colliders and all door colliders on the map
+- Prevents "bot stuck at door" failures that occur with BSG's default door physics
+
 ### ECS-Lite Data Layout
 - Dense entity storage with swap-remove and ID recycling, inspired by Phobos's EntityArray pattern
 - `BotEntity`: per-bot data container with stable recycled ID, boss/follower hierarchy, embedded sensor state, field state, and job assignment tracking

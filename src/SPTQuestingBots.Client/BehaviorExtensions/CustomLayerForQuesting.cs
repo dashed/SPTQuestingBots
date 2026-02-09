@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using EFT;
 using SPTQuestingBots.Controllers;
+using SPTQuestingBots.Helpers;
 
 namespace SPTQuestingBots.BehaviorExtensions
 {
@@ -17,6 +18,12 @@ namespace SPTQuestingBots.BehaviorExtensions
             : base(_botOwner, _priority, delayInterval)
         {
             objectiveManager = _botOwner.GetOrAddObjectiveManager();
+
+            // Per-bot door collision bypass (Phobos-style)
+            if (ConfigController.Config.Questing.BotPathing.BypassDoorColliders && DoorCollisionHelper.IsInitialized)
+            {
+                DoorCollisionHelper.ApplyDoorBypass(_botOwner.GetPlayer);
+            }
         }
 
         public CustomLayerForQuesting(BotOwner _botOwner, int _priority)

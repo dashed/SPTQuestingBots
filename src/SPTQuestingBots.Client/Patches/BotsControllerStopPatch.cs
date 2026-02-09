@@ -48,6 +48,9 @@ namespace SPTQuestingBots.Patches
                 BotJobAssignmentFactory.WriteBotJobAssignmentLogFile(timestamp);
             }
 
+            // Clear door collision cache
+            Helpers.DoorCollisionHelper.Clear();
+
             // Erase all bot and bot-assignment tracking data
             BotJobAssignmentFactory.Clear();
             Controllers.BotRegistrationManager.Clear();

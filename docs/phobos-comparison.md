@@ -39,7 +39,7 @@
 - **Version**: 1.9.0
 - **Scope**: Full quest-driven behavior, Phobos-style utility AI action selection, custom movement system, zone-based fallback movement, ECS-Lite data layout, boss/follower coordination, PMC/PScav spawning (optional), AI sleeping
 - **Approach**: Bots receive actual game quest objectives (from 12 per-map JSON files) and navigate to complete them using a custom `Player.Move()` movement system inspired by Phobos (path-deviation spring force, Chaikin smoothing, sprint angle-jitter gating, 3 BSG patches). A Phobos-style utility AI system (8 scored quest tasks with additive hysteresis) selects which action to execute, while BigBrain handles action execution (hybrid approach). When no quests are available, a Phobos-inspired zone movement system uses advection/convergence fields to guide bots toward interesting map areas. An ECS-Lite data layout (dense entity list with swap-remove, inspired by Phobos's EntityArray) provides centralized bot state, static system methods, and zero-allocation sensor iteration.
-- **Maturity**: Mature; 13 action types with utility AI scoring, custom movement system, extensive spawning system, broad bot-type support, zone movement with debug overlay, ECS-Lite entity storage with 769 tests
+- **Maturity**: Mature; 13 action types with utility AI scoring, custom movement system, extensive spawning system, broad bot-type support, zone movement with debug overlay, ECS-Lite entity storage with 779 tests
 - **Source**: `src/SPTQuestingBots.Client/` (~180 C# files) + `src/SPTQuestingBots.Server/` (9 C# files)
 
 ---
@@ -53,7 +53,7 @@
 | **Solution** | `Phobos.sln` (1 main project + Gym benchmark) | `SPTQuestingBots.sln` (2 main + 2 test projects) |
 | **Target** | netstandard2.1 | Client: net472, Server: net9.0, Tests: net9.0 |
 | **Build** | Standard .csproj | Makefile (`make build`, `make test`, `make ci`) |
-| **Testing** | Gym project (BenchmarkDotNet) | NUnit 3.x + NSubstitute (711 client + 58 server = 769 tests) |
+| **Testing** | Gym project (BenchmarkDotNet) | NUnit 3.x + NSubstitute (721 client + 58 server = 779 tests) |
 | **CI** | None observed | GitHub Actions (`ci.yml`) |
 | **Code style** | File-scoped namespaces, primary constructors | Block-scoped namespaces, traditional constructors, CSharpier formatting |
 
@@ -293,7 +293,7 @@ Both mods now use custom `Player.Move()` calls, bypassing BSG's built-in `BotMov
 | **Sprint gating** | Outdoor + angle jitter < threshold + can sprint | Angle jitter < threshold by urgency (Low=20°, Medium=30°, High=45°) |
 | **BSG mover** | Skipped via `ManualFixedUpdate` prefix patch | Skipped via `ManualFixedUpdate` prefix patch (per-bot ECS check) |
 | **Move direction** | `CalcMoveDirection`: Quaternion.Euler(0,0,yaw) * XZ | `CalcMoveDirection`: Quaternion.Euler(0,0,yaw) * XZ (identical) |
-| **Door handling** | Physics.IgnoreCollision + auto-open within 3m | BSG's door handling + custom unlock/close actions |
+| **Door handling** | Physics.IgnoreCollision + auto-open within 3m | Physics.IgnoreCollision + EFTPhysicsClass.IgnoreCollision per-bot + NavMesh carver shrink (37.5%) + custom unlock/close actions |
 | **Layer handoff** | 6-field BSG state sync + SetPlayerToNavMesh | 6-field BSG state sync + SetPlayerToNavMesh (identical) |
 | **Config gating** | Always active for Phobos bots | Config: `use_custom_mover` (default: true), falls back to BSG mover if disabled |
 | **Batching** | Ramped batch size (queue/2, max 5 per frame) | `PathfindingThrottle` (max 5 NavMesh.CalculatePath/frame) + queue-based `NavJobExecutor` |
@@ -424,7 +424,7 @@ Both mods now use a **two-tier stuck detection system**. QuestingBots ported its
 
 ### All QuestingBots Patches
 
-**Core (13)**:
+**Core (14)**:
 
 | Patch | Target | Purpose |
 |-------|--------|---------|
@@ -440,6 +440,7 @@ Both mods now use a **two-tier stuck detection system**. QuestingBots ported its
 | `BotMoverFixedUpdatePatch` | `BotMover.ManualFixedUpdate` | Skip BSG mover when custom mover active (per-bot ECS check) |
 | `MovementContextIsAIPatch` | `MovementContext.IsAI` getter | Return false — human-like movement params (same as Phobos) |
 | `EnableVaultPatch` | `Player.InitVaultingComponent` | Enable vaulting for AI bots (same as Phobos) |
+| `ShrinkDoorNavMeshCarversPatch` | `GameWorld.OnGameStarted` | Cache door colliders + shrink carvers to 37.5% (same as Phobos) |
 | `ServerRequestPatch` | HTTP requests | Intercept server communication |
 | `ReturnToPoolPatch` | Bot pool | Cleanup on despawn |
 | `IsFollowerSuitableForBossPatch` | Boss system | Custom follower assignment |
@@ -805,7 +806,7 @@ Phobos declares no incompatibilities.
 | Aspect | Phobos | QuestingBots |
 |--------|--------|--------------|
 | **Unit tests** | None (Gym project is benchmarks) | NUnit + NSubstitute |
-| **Test count** | 0 | 769 (711 client + 58 server) |
+| **Test count** | 0 | 779 (721 client + 58 server) |
 | **Client test coverage** | — | ECS data layout (BotEntity, BotRegistry, HiveMindSystem, QuestScorer, BotEntityBridge scenarios, BotFieldState, BsgBotRegistry, job assignments, MovementState wiring), utility AI (UtilityTask, UtilityTaskManager, 8 quest tasks, QuestTaskFactory), custom movement (SprintAngleJitter, PathDeviationForce, CustomPathFollower, PathSmoother), stuck detection, zone movement, config deserialization |
 | **CI** | None | GitHub Actions (format-check → lint → build → test) |
 | **Benchmarks** | BenchmarkDotNet in Gym/ | None |
@@ -846,13 +847,13 @@ Since the original comparison, QuestingBots has ported several Phobos innovation
 
 10. **Utility AI action selection** (v1.9.0): Full adoption of Phobos's `BaseTask`/`BaseTaskManager` scoring framework — `UtilityTask` (abstract base with swap-remove active entity tracking, hysteresis, activate/deactivate lifecycle) and `UtilityTaskManager` (Score→Pick→Execute pipeline with identical additive hysteresis algorithm). `QuestUtilityTask` extends `UtilityTask` with `BotActionTypeId` mapping for BigBrain dispatch. 8 concrete quest tasks (GoToObjective, Ambush, Snipe, HoldPosition, PlantItem, UnlockDoor, ToggleSwitch, CloseDoors) with calibrated scores and hysteresis values. Two-phase arrival pattern: `GoToObjectiveTask` scores high when far, drops to 0 when close, allowing action-specific tasks to take over via hysteresis — analogous to Phobos's GotoObjective→Guard transition. Key architectural difference: QuestingBots uses a hybrid approach where utility AI handles action selection and BigBrain handles execution, while Phobos bypasses BigBrain entirely. `QuestTaskFactory` provides static factory creation. `BotEntityBridge.SyncQuestState()` bridges game state to ECS entity fields before scoring. Config-gated via `UseUtilityAI` (default: true); legacy switch-statement fallback retained. 116 tests (37 core + 79 quest tasks).
 
+11. **Door collision bypass** (v1.9.0): Ported both Phobos door-related features — `ShrinkDoorNavMeshCarversPatch` (postfix on `GameWorld.OnGameStarted`, scales all three carver sizes to 37.5% via `BotDoorsController._navMeshDoorLinks`) and per-bot collision bypass (`DoorCollisionHelper` caches door colliders at map start, then `Physics.IgnoreCollision` + `EFTPhysicsClass.IgnoreCollision` per bot in `CustomLayerForQuesting` constructor). Config-gated via `bypass_door_colliders` (default: true). Cleanup at raid end via `BotsControllerStopPatch`.
+
 ### What QuestingBots Could Still Learn from Phobos
 
-1. **Door collision bypass**: Phobos disables physics collision between bots and ALL doors (`Physics.IgnoreCollision`) and shrinks door NavMesh carvers to 37.5% — preventing "bot stuck at door" failures. QuestingBots still uses BSG's door interaction system.
+1. **Corner-cutting via NavMesh.Raycast**: Phobos skips path corners when `NavMesh.Raycast` to the next corner is clear (within 1m). This creates smoother trajectories. QuestingBots uses Chaikin smoothing instead, which is a different but complementary approach.
 
-2. **Corner-cutting via NavMesh.Raycast**: Phobos skips path corners when `NavMesh.Raycast` to the next corner is clear (within 1m). This creates smoother trajectories. QuestingBots uses Chaikin smoothing instead, which is a different but complementary approach.
-
-3. **Squad-level strategies**: Phobos has a separate strategy layer (`GotoObjectiveStrategy`) that evaluates per-squad and assigns objectives to entire squads. QuestingBots' utility AI operates per-agent only; squad coordination is handled separately via the HiveMind boss/follower system.
+2. **Squad-level strategies**: Phobos has a separate strategy layer (`GotoObjectiveStrategy`) that evaluates per-squad and assigns objectives to entire squads. QuestingBots' utility AI operates per-agent only; squad coordination is handled separately via the HiveMind boss/follower system.
 
 ### What Phobos Could Learn from QuestingBots
 

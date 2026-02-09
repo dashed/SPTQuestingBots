@@ -18,6 +18,9 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("use_custom_mover")]
         public bool UseCustomMover { get; set; } = true;
 
+        [JsonProperty("bypass_door_colliders")]
+        public bool BypassDoorColliders { get; set; } = true;
+
         public BotPathingConfig() { }
     }
 }

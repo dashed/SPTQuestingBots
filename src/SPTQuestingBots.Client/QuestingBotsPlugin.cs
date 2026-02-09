@@ -78,6 +78,12 @@ namespace SPTQuestingBots
                     new Patches.Movement.EnableVaultPatch().Enable();
                 }
 
+                // Door collision bypass (Phobos-style NavMesh carver shrink + per-bot collision disable)
+                if (ConfigController.Config.Questing.BotPathing.BypassDoorColliders)
+                {
+                    new Patches.ShrinkDoorNavMeshCarversPatch().Enable();
+                }
+
                 new Patches.Lighthouse.MineDirectionalShouldExplodePatch().Enable();
                 new Patches.Lighthouse.LighthouseTraderZoneAwakePatch().Enable();
                 new Patches.Lighthouse.LighthouseTraderZonePlayerAttackPatch().Enable();
