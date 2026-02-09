@@ -222,7 +222,8 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                             config,
                             positionValidator: NavMeshPositionValidator.TrySnap,
                             reachabilityValidator: NavMeshPositionValidator.IsReachable,
-                            losValidator: NavMeshPositionValidator.HasLineOfSight
+                            losValidator: NavMeshPositionValidator.HasLineOfSight,
+                            coverPositionSource: BsgCoverPointCollector.CollectCoverPositions
                         ),
                     }
                 );

@@ -34,6 +34,8 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(config.EnableReachabilityCheck, Is.True);
                 Assert.That(config.MaxPathLengthMultiplier, Is.EqualTo(2.5f));
                 Assert.That(config.EnableLosCheck, Is.True);
+                Assert.That(config.EnableCoverPositionSource, Is.True);
+                Assert.That(config.CoverSearchRadius, Is.EqualTo(25f));
             });
         }
 
@@ -64,6 +66,8 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(config.EnableReachabilityCheck, Is.True);
                 Assert.That(config.MaxPathLengthMultiplier, Is.EqualTo(2.5f));
                 Assert.That(config.EnableLosCheck, Is.True);
+                Assert.That(config.EnableCoverPositionSource, Is.True);
+                Assert.That(config.CoverSearchRadius, Is.EqualTo(25f));
             });
         }
 
@@ -125,6 +129,8 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 EnableReachabilityCheck = false,
                 MaxPathLengthMultiplier = 3.0f,
                 EnableLosCheck = false,
+                EnableCoverPositionSource = false,
+                CoverSearchRadius = 30f,
             };
 
             var json = JsonConvert.SerializeObject(original);
@@ -152,6 +158,8 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(deserialized.EnableReachabilityCheck, Is.False);
                 Assert.That(deserialized.MaxPathLengthMultiplier, Is.EqualTo(3.0f));
                 Assert.That(deserialized.EnableLosCheck, Is.False);
+                Assert.That(deserialized.EnableCoverPositionSource, Is.False);
+                Assert.That(deserialized.CoverSearchRadius, Is.EqualTo(30f));
             });
         }
 
@@ -183,6 +191,8 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(json, Does.Contain("enable_reachability_check"));
                 Assert.That(json, Does.Contain("max_path_length_multiplier"));
                 Assert.That(json, Does.Contain("enable_los_check"));
+                Assert.That(json, Does.Contain("enable_cover_position_source"));
+                Assert.That(json, Does.Contain("cover_search_radius"));
             });
         }
 
@@ -233,6 +243,20 @@ namespace SPTQuestingBots.Client.Tests.Configuration
         {
             var config = new SquadStrategyConfig();
             Assert.IsTrue(config.EnableLosCheck);
+        }
+
+        [Test]
+        public void EnableCoverPositionSource_DefaultTrue()
+        {
+            var config = new SquadStrategyConfig();
+            Assert.IsTrue(config.EnableCoverPositionSource);
+        }
+
+        [Test]
+        public void CoverSearchRadius_Default25()
+        {
+            var config = new SquadStrategyConfig();
+            Assert.AreEqual(25f, config.CoverSearchRadius, 0.01f);
         }
     }
 }

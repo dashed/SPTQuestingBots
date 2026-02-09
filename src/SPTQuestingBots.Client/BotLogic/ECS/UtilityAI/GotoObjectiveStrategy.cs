@@ -23,6 +23,13 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
     public delegate bool LosValidator(float fromX, float fromY, float fromZ, float toX, float toY, float toZ);
 
     /// <summary>
+    /// Delegate for providing pre-computed cover positions near an objective.
+    /// Returns the number of positions written to outPositions (as x,y,z triples).
+    /// When enough cover positions are available, they replace geometric computation.
+    /// </summary>
+    public delegate int CoverPositionSource(float objX, float objY, float objZ, float radius, float[] outPositions, int maxCount);
+
+    /// <summary>
     /// Primary squad strategy: move the squad toward the leader's current quest objective.
     /// Assigns tactical roles and positions to followers based on quest action type,
     /// tracks arrivals, and adjusts hold duration.
@@ -37,6 +44,7 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
         private readonly PositionValidator _positionValidator;
         private readonly ReachabilityValidator _reachabilityValidator;
         private readonly LosValidator _losValidator;
+        private readonly CoverPositionSource _coverPositionSource;
         private readonly float[] _fallbackBuffer = new float[32 * 2]; // sunflower XZ candidates
 
         // Reusable buffers (max 6 followers)
@@ -48,7 +56,8 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
             float hysteresis = 0.25f,
             PositionValidator positionValidator = null,
             ReachabilityValidator reachabilityValidator = null,
-            LosValidator losValidator = null
+            LosValidator losValidator = null,
+            CoverPositionSource coverPositionSource = null
         )
             : base(hysteresis)
         {
@@ -57,6 +66,7 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
             _positionValidator = positionValidator;
             _reachabilityValidator = reachabilityValidator;
             _losValidator = losValidator;
+            _coverPositionSource = coverPositionSource;
         }
 
         /// <summary>
@@ -68,7 +78,8 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
             float hysteresis = 0.25f,
             PositionValidator positionValidator = null,
             ReachabilityValidator reachabilityValidator = null,
-            LosValidator losValidator = null
+            LosValidator losValidator = null,
+            CoverPositionSource coverPositionSource = null
         )
             : base(hysteresis)
         {
@@ -77,6 +88,7 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
             _positionValidator = positionValidator;
             _reachabilityValidator = reachabilityValidator;
             _losValidator = losValidator;
+            _coverPositionSource = coverPositionSource;
         }
 
         /// <summary>
@@ -155,23 +167,42 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
             else
                 TacticalPositionCalculator.AssignRoles(0, clampedCount, _roleBuffer);
 
-            // Compute positions
-            TacticalPositionCalculator.ComputePositions(
-                obj.ObjectiveX,
-                obj.ObjectiveY,
-                obj.ObjectiveZ,
-                approachX,
-                approachZ,
-                _roleBuffer,
-                clampedCount,
-                _positionBuffer,
-                _config
-            );
-
-            // Validate/snap positions to walkable surfaces
-            if (_positionValidator != null && _config.EnablePositionValidation)
+            // Try BSG cover positions first (if available)
+            bool usedCoverPositions = false;
+            if (_coverPositionSource != null && _config.EnableCoverPositionSource)
             {
-                ValidatePositions(clampedCount, obj.ObjectiveX, obj.ObjectiveY, obj.ObjectiveZ);
+                int coverCount = _coverPositionSource(
+                    obj.ObjectiveX,
+                    obj.ObjectiveY,
+                    obj.ObjectiveZ,
+                    _config.CoverSearchRadius,
+                    _positionBuffer,
+                    clampedCount
+                );
+                if (coverCount >= clampedCount)
+                    usedCoverPositions = true;
+            }
+
+            if (!usedCoverPositions)
+            {
+                // Compute positions geometrically
+                TacticalPositionCalculator.ComputePositions(
+                    obj.ObjectiveX,
+                    obj.ObjectiveY,
+                    obj.ObjectiveZ,
+                    approachX,
+                    approachZ,
+                    _roleBuffer,
+                    clampedCount,
+                    _positionBuffer,
+                    _config
+                );
+
+                // Validate/snap positions to walkable surfaces
+                if (_positionValidator != null && _config.EnablePositionValidation)
+                {
+                    ValidatePositions(clampedCount, obj.ObjectiveX, obj.ObjectiveY, obj.ObjectiveZ);
+                }
             }
 
             // Distribute to followers (with communication range + personality gating)

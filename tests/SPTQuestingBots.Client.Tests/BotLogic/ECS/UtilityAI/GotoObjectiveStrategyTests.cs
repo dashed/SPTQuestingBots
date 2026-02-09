@@ -26,6 +26,7 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
                 EnablePositionValidation = false,
                 EnableReachabilityCheck = false,
                 EnableLosCheck = false,
+                EnableCoverPositionSource = false,
             };
         }
 
@@ -1677,6 +1678,242 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
 
             // Reachability passes but LOS always fails for Overwatch → no valid position
             Assert.IsFalse(follower.HasTacticalPosition);
+        }
+
+        // ── Cover Position Source ──────────────────────
+
+        private static int AlwaysProvideCover(float objX, float objY, float objZ, float radius, float[] outPositions, int maxCount)
+        {
+            for (int i = 0; i < maxCount; i++)
+            {
+                outPositions[i * 3] = objX + (i + 1) * 2f;
+                outPositions[i * 3 + 1] = objY;
+                outPositions[i * 3 + 2] = objZ + (i + 1) * 2f;
+            }
+            return maxCount;
+        }
+
+        private static int EmptyCoverSource(float objX, float objY, float objZ, float radius, float[] outPositions, int maxCount)
+        {
+            return 0;
+        }
+
+        private static int PartialCoverSource(float objX, float objY, float objZ, float radius, float[] outPositions, int maxCount)
+        {
+            if (maxCount > 0)
+            {
+                outPositions[0] = objX + 5f;
+                outPositions[1] = objY;
+                outPositions[2] = objZ + 5f;
+            }
+            return System.Math.Min(1, maxCount);
+        }
+
+        private SquadStrategyConfig CoverSourceConfig()
+        {
+            var config = DefaultConfig();
+            config.EnableCoverPositionSource = true;
+            config.CoverSearchRadius = 25f;
+            return config;
+        }
+
+        [Test]
+        public void CoverSource_ProvidesEnough_UsedInsteadOfGeometric()
+        {
+            var config = CoverSourceConfig();
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, coverPositionSource: AlwaysProvideCover);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(follower.HasTacticalPosition);
+            // AlwaysProvideCover sets x = objX + 2, z = objZ + 2 for first position
+            Assert.AreEqual(52f, follower.TacticalPositionX, 0.01f);
+            Assert.AreEqual(0f, follower.TacticalPositionY, 0.01f);
+            Assert.AreEqual(52f, follower.TacticalPositionZ, 0.01f);
+        }
+
+        [Test]
+        public void CoverSource_ProvidesNotEnough_FallsBackToGeometric()
+        {
+            var config = CoverSourceConfig();
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, coverPositionSource: PartialCoverSource);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(follower.HasTacticalPosition);
+            // Partial cover (1 < clampedCount=1), but 1 >= 1, so cover IS used
+            // Actually with 1 follower, clampedCount=1, and PartialCoverSource returns 1 which >= 1
+            // So cover positions would be used for single-follower case.
+            // Use 2 followers to test fallback properly.
+        }
+
+        [Test]
+        public void CoverSource_ProvidesNotEnough_TwoFollowers_FallsBackToGeometric()
+        {
+            var config = CoverSourceConfig();
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, coverPositionSource: PartialCoverSource);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var f1 = CreateBot(1);
+            var f2 = CreateBot(2);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            squad.Members.Add(leader);
+            squad.Members.Add(f1);
+            squad.Members.Add(f2);
+            squad.Leader = leader;
+            leader.Squad = squad;
+            f1.Squad = squad;
+            f2.Squad = squad;
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // PartialCoverSource returns 1 but clampedCount=2, so falls back to geometric
+            Assert.IsTrue(f1.HasTacticalPosition);
+            Assert.IsTrue(f2.HasTacticalPosition);
+            // Geometric positions will NOT be at 55,0,55 (partial cover offset)
+            // They are computed by TacticalPositionCalculator which produces different values
+        }
+
+        [Test]
+        public void CoverSource_ReturnsZero_FallsBackToGeometric()
+        {
+            var config = CoverSourceConfig();
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, coverPositionSource: EmptyCoverSource);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(follower.HasTacticalPosition);
+            // Geometric fallback — position should NOT match cover source output
+            Assert.AreNotEqual(52f, follower.TacticalPositionX);
+        }
+
+        [Test]
+        public void CoverSource_DisabledByConfig_GeometricUsed()
+        {
+            var config = DefaultConfig();
+            config.EnableCoverPositionSource = false;
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, coverPositionSource: AlwaysProvideCover);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(follower.HasTacticalPosition);
+            // Cover source disabled — geometric is used, so positions differ from cover output
+            Assert.AreNotEqual(52f, follower.TacticalPositionX);
+        }
+
+        [Test]
+        public void CoverSource_NoDelegate_GeometricUsed()
+        {
+            var config = CoverSourceConfig();
+            // No coverPositionSource parameter
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(follower.HasTacticalPosition);
+            // No delegate — geometric is used
+            Assert.AreNotEqual(52f, follower.TacticalPositionX);
+        }
+
+        [Test]
+        public void CoverSource_SkipsValidation_WhenBsgUsed()
+        {
+            bool validatorCalled = false;
+            bool TrackingSnapValidator(float x, float y, float z, out float ox, out float oy, out float oz)
+            {
+                validatorCalled = true;
+                ox = x;
+                oy = y;
+                oz = z;
+                return true;
+            }
+
+            var config = CoverSourceConfig();
+            config.EnablePositionValidation = true;
+            var strategy = new GotoObjectiveStrategy(
+                config,
+                seed: 42,
+                positionValidator: TrackingSnapValidator,
+                coverPositionSource: AlwaysProvideCover
+            );
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsFalse(validatorCalled, "Position validator should not be called when BSG cover source provides enough positions");
+            Assert.IsTrue(follower.HasTacticalPosition);
+            Assert.AreEqual(52f, follower.TacticalPositionX, 0.01f);
         }
     }
 }

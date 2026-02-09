@@ -1588,9 +1588,19 @@ spiral fallback when positions fail any validation stage:
 - Applied only to `SquadRole.Overwatch` — other roles don't need objective visibility
 - `NavMeshPositionValidator.HasLineOfSight` — 0.5m Y offset for ground clearance
 
+**Phase 4 — BSG Cover Voxel Integration** (Phobos `CollectBuiltinCoverData` pattern):
+- **CoverPositionSource delegate**: `int(objX,objY,objZ, radius, outPositions, maxCount)`
+  injected into `GotoObjectiveStrategy` — BSG covers are tried first, geometric
+  computation is the fallback when fewer covers than followers are found
+- **BsgCoverPointCollector** (`Helpers/BsgCoverPointCollector.cs`): Unity-side static
+  class querying `BotsController.CoversData.GetVoxelesExtended()` for neighborhood
+  cover data. Two-pass: Wall covers first (hard cover), then foliage/other types.
+  Inner radius = 0.75 × search radius (matches Phobos).
+- Voxel search range = `CeilToInt(2 × radius / 10)` (BSG voxel grid is 10×5×10 units)
+
 **Architecture**:
-- Three delegate types injected into pure-C# `GotoObjectiveStrategy`:
-  `PositionValidator`, `ReachabilityValidator`, `LosValidator`
+- Four delegate types injected into pure-C# `GotoObjectiveStrategy`:
+  `PositionValidator`, `ReachabilityValidator`, `LosValidator`, `CoverPositionSource`
 - `IsPositionValid()` helper combines reachability + LOS checks, used by both
   primary validation and sunflower fallback
 - **NaN sentinel**: positions that fail all validation stages are marked `float.NaN`
@@ -1599,11 +1609,8 @@ spiral fallback when positions fail any validation stage:
 Config: `enable_position_validation` (true), `navmesh_sample_radius` (2.0),
 `fallback_candidate_count` (16), `fallback_search_radius` (15.0),
 `enable_reachability_check` (true), `max_path_length_multiplier` (2.5),
-`enable_los_check` (true)
-
-**Not yet implemented** (potential future enhancements):
-- Cover evaluation: distance to nearest wall/obstacle for guard positions
-- BSG pre-computed cover voxel integration (`botsController.CoversData`)
+`enable_los_check` (true), `enable_cover_position_source` (true),
+`cover_search_radius` (25.0)
 
 ### 12.2 Formation Movement
 

@@ -64,6 +64,12 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("enable_los_check")]
         public bool EnableLosCheck { get; set; } = true;
 
+        [JsonProperty("enable_cover_position_source")]
+        public bool EnableCoverPositionSource { get; set; } = true;
+
+        [JsonProperty("cover_search_radius")]
+        public float CoverSearchRadius { get; set; } = 25f;
+
         public SquadStrategyConfig() { }
     }
 }
