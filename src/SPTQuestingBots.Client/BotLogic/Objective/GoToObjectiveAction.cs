@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Comfort.Common;
 using EFT;
 using EFT.Interactive;
+using SPTQuestingBots.BotLogic.ECS.Systems;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
 using SPTQuestingBots.Models.Pathing;
@@ -65,6 +66,12 @@ namespace SPTQuestingBots.BotLogic.Objective
 
             // This doesn't really need to be updated every frame
             CanSprint = IsAllowedToSprint();
+
+            // Formation speed override: followers in en-route formation use formation speed logic
+            if (ECS.BotEntityBridge.TryGetEntity(BotOwner, out var fmtEntity) && fmtEntity.IsEnRouteFormation)
+            {
+                CanSprint = FormationSpeedController.ShouldSprint(fmtEntity.FormationSpeed, fmtEntity.BossIsSprinting);
+            }
 
             if (ObjectiveManager.MustUnlockDoor)
             {

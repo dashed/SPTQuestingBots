@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using SPTQuestingBots.BotLogic.ECS.Systems;
 using SPTQuestingBots.BotLogic.ECS.UtilityAI;
 
 namespace SPTQuestingBots.BotLogic.ECS
@@ -208,6 +209,28 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// Current world position Z, synced from BotOwner.Position for pure-logic access.
         /// </summary>
         public float CurrentPositionZ;
+
+        // ── Formation Movement State ─────────────────────────────
+
+        /// <summary>
+        /// Current formation speed decision for this follower bot.
+        /// </summary>
+        public FormationSpeedDecision FormationSpeed;
+
+        /// <summary>
+        /// Whether this bot's boss is currently sprinting. Synced from boss state.
+        /// </summary>
+        public bool BossIsSprinting;
+
+        /// <summary>
+        /// Squared distance from this bot to its boss. Used for formation speed decisions.
+        /// </summary>
+        public float DistanceToBossSqr;
+
+        /// <summary>
+        /// Whether this bot is currently en route to its tactical formation position.
+        /// </summary>
+        public bool IsEnRouteFormation;
 
         // ── Constructor ─────────────────────────────────────────
 

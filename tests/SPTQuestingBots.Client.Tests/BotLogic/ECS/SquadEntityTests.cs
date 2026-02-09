@@ -176,5 +176,28 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS
             var str = squad.ToString();
             Assert.That(str, Does.Contain("Leader=10"));
         }
+
+        // ── Formation Heading Tracking ────────────────────────────
+
+        [Test]
+        public void PreviousLeaderPosition_DefaultsToZero()
+        {
+            var squad = new SquadEntity(0, 2, 4);
+
+            Assert.AreEqual(0f, squad.PreviousLeaderX);
+            Assert.AreEqual(0f, squad.PreviousLeaderZ);
+        }
+
+        [Test]
+        public void PreviousLeaderPosition_CanBeSetAndRead()
+        {
+            var squad = new SquadEntity(0, 2, 4);
+
+            squad.PreviousLeaderX = 100f;
+            squad.PreviousLeaderZ = 200f;
+
+            Assert.AreEqual(100f, squad.PreviousLeaderX);
+            Assert.AreEqual(200f, squad.PreviousLeaderZ);
+        }
     }
 }

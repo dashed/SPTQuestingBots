@@ -36,6 +36,13 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(config.EnableLosCheck, Is.True);
                 Assert.That(config.EnableCoverPositionSource, Is.True);
                 Assert.That(config.CoverSearchRadius, Is.EqualTo(25f));
+                Assert.That(config.EnableFormationMovement, Is.True);
+                Assert.That(config.CatchUpDistance, Is.EqualTo(30f));
+                Assert.That(config.MatchSpeedDistance, Is.EqualTo(15f));
+                Assert.That(config.SlowApproachDistance, Is.EqualTo(5f));
+                Assert.That(config.ColumnSpacing, Is.EqualTo(4f));
+                Assert.That(config.SpreadSpacing, Is.EqualTo(3f));
+                Assert.That(config.FormationSwitchWidth, Is.EqualTo(8f));
             });
         }
 
@@ -68,6 +75,13 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(config.EnableLosCheck, Is.True);
                 Assert.That(config.EnableCoverPositionSource, Is.True);
                 Assert.That(config.CoverSearchRadius, Is.EqualTo(25f));
+                Assert.That(config.EnableFormationMovement, Is.True);
+                Assert.That(config.CatchUpDistance, Is.EqualTo(30f));
+                Assert.That(config.MatchSpeedDistance, Is.EqualTo(15f));
+                Assert.That(config.SlowApproachDistance, Is.EqualTo(5f));
+                Assert.That(config.ColumnSpacing, Is.EqualTo(4f));
+                Assert.That(config.SpreadSpacing, Is.EqualTo(3f));
+                Assert.That(config.FormationSwitchWidth, Is.EqualTo(8f));
             });
         }
 
@@ -131,6 +145,13 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 EnableLosCheck = false,
                 EnableCoverPositionSource = false,
                 CoverSearchRadius = 30f,
+                EnableFormationMovement = false,
+                CatchUpDistance = 40f,
+                MatchSpeedDistance = 20f,
+                SlowApproachDistance = 8f,
+                ColumnSpacing = 5f,
+                SpreadSpacing = 4f,
+                FormationSwitchWidth = 10f,
             };
 
             var json = JsonConvert.SerializeObject(original);
@@ -160,6 +181,13 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(deserialized.EnableLosCheck, Is.False);
                 Assert.That(deserialized.EnableCoverPositionSource, Is.False);
                 Assert.That(deserialized.CoverSearchRadius, Is.EqualTo(30f));
+                Assert.That(deserialized.EnableFormationMovement, Is.False);
+                Assert.That(deserialized.CatchUpDistance, Is.EqualTo(40f));
+                Assert.That(deserialized.MatchSpeedDistance, Is.EqualTo(20f));
+                Assert.That(deserialized.SlowApproachDistance, Is.EqualTo(8f));
+                Assert.That(deserialized.ColumnSpacing, Is.EqualTo(5f));
+                Assert.That(deserialized.SpreadSpacing, Is.EqualTo(4f));
+                Assert.That(deserialized.FormationSwitchWidth, Is.EqualTo(10f));
             });
         }
 
@@ -193,6 +221,13 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(json, Does.Contain("enable_los_check"));
                 Assert.That(json, Does.Contain("enable_cover_position_source"));
                 Assert.That(json, Does.Contain("cover_search_radius"));
+                Assert.That(json, Does.Contain("enable_formation_movement"));
+                Assert.That(json, Does.Contain("catch_up_distance"));
+                Assert.That(json, Does.Contain("match_speed_distance"));
+                Assert.That(json, Does.Contain("slow_approach_distance"));
+                Assert.That(json, Does.Contain("column_spacing"));
+                Assert.That(json, Does.Contain("spread_spacing"));
+                Assert.That(json, Does.Contain("formation_switch_width"));
             });
         }
 
@@ -257,6 +292,46 @@ namespace SPTQuestingBots.Client.Tests.Configuration
         {
             var config = new SquadStrategyConfig();
             Assert.AreEqual(25f, config.CoverSearchRadius, 0.01f);
+        }
+
+        [Test]
+        public void EnableFormationMovement_DefaultTrue()
+        {
+            var config = new SquadStrategyConfig();
+            Assert.IsTrue(config.EnableFormationMovement);
+        }
+
+        [Test]
+        public void CatchUpDistance_Default30()
+        {
+            var config = new SquadStrategyConfig();
+            Assert.AreEqual(30f, config.CatchUpDistance, 0.01f);
+        }
+
+        [Test]
+        public void ColumnSpacing_Default4()
+        {
+            var config = new SquadStrategyConfig();
+            Assert.AreEqual(4f, config.ColumnSpacing, 0.01f);
+        }
+
+        [Test]
+        public void Deserialize_FormationOverrides()
+        {
+            var json =
+                """{ "enable_formation_movement": false, "catch_up_distance": 40, "match_speed_distance": 20, "slow_approach_distance": 8, "column_spacing": 5, "spread_spacing": 4, "formation_switch_width": 10 }""";
+            var config = JsonConvert.DeserializeObject<SquadStrategyConfig>(json);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(config.EnableFormationMovement, Is.False);
+                Assert.That(config.CatchUpDistance, Is.EqualTo(40f));
+                Assert.That(config.MatchSpeedDistance, Is.EqualTo(20f));
+                Assert.That(config.SlowApproachDistance, Is.EqualTo(8f));
+                Assert.That(config.ColumnSpacing, Is.EqualTo(5f));
+                Assert.That(config.SpreadSpacing, Is.EqualTo(4f));
+                Assert.That(config.FormationSwitchWidth, Is.EqualTo(10f));
+            });
         }
     }
 }

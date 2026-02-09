@@ -216,6 +216,15 @@
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/SunflowerSpiral.cs"
       Link="LinkedSources/ECS/Systems/SunflowerSpiral.cs"
     />
+    <!-- Formation: speed control + position updater -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/FormationSpeedController.cs"
+      Link="LinkedSources/ECS/Systems/FormationSpeedController.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/FormationPositionUpdater.cs"
+      Link="LinkedSources/ECS/Systems/FormationPositionUpdater.cs"
+    />
     <!-- Squad strategy: follower tasks -->
     <Compile
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/GoToTacticalPositionTask.cs"

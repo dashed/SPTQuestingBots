@@ -59,6 +59,14 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// <summary>Aggression level (1-5) from personality settings.</summary>
         public float AggressionLevel;
 
+        // ── Formation Heading Tracking ──────────────────────────────
+
+        /// <summary>Previous leader X position for heading computation.</summary>
+        public float PreviousLeaderX;
+
+        /// <summary>Previous leader Z position for heading computation.</summary>
+        public float PreviousLeaderZ;
+
         // ── Derived ─────────────────────────────────────────────────
 
         /// <summary>Current number of squad members.</summary>

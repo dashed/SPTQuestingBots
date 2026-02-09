@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Comfort.Common;
 using EFT;
 using SPTQuestingBots.BehaviorExtensions;
+using SPTQuestingBots.BotLogic.ECS.Systems;
 using SPTQuestingBots.Components.Spawning;
 using SPTQuestingBots.Configuration;
 using SPTQuestingBots.Controllers;
@@ -230,6 +231,12 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             }
 
             _squadStrategyManager.Update(ECS.BotEntityBridge.SquadRegistry.ActiveSquads);
+
+            // 6. Update formation positions and speed decisions for followers
+            if (config.EnableFormationMovement)
+            {
+                updateFormationMovement(config);
+            }
         }
 
         /// <summary>
@@ -317,6 +324,144 @@ namespace SPTQuestingBots.BotLogic.HiveMind
         private void updateBossFollowers()
         {
             ECS.Systems.HiveMindSystem.CleanupDeadEntities(ECS.BotEntityBridge.Registry.Entities);
+        }
+
+        /// <summary>Reusable buffer for formation positions (max 6 followers × 3 floats).</summary>
+        private static readonly float[] _formationPositionBuffer = new float[ECS.SquadObjective.MaxMembers * 3];
+
+        /// <summary>
+        /// Update en-route formation positions and per-follower speed decisions.
+        /// Runs after squad strategy manager assigns tactical positions.
+        /// </summary>
+        private void updateFormationMovement(SquadStrategyConfig config)
+        {
+            var formationConfig = new FormationConfig(config.CatchUpDistance, config.MatchSpeedDistance, config.SlowApproachDistance, true);
+
+            var squads = ECS.BotEntityBridge.SquadRegistry.ActiveSquads;
+            for (int s = 0; s < squads.Count; s++)
+            {
+                var squad = squads[s];
+                if (squad.Leader == null || !squad.Leader.IsActive)
+                    continue;
+
+                var leader = squad.Leader;
+
+                // Compute heading from previous → current leader position
+                bool hasHeading = FormationPositionUpdater.ComputeHeading(
+                    squad.PreviousLeaderX,
+                    squad.PreviousLeaderZ,
+                    leader.CurrentPositionX,
+                    leader.CurrentPositionZ,
+                    out float hx,
+                    out float hz
+                );
+
+                // Save current position for next tick
+                squad.PreviousLeaderX = leader.CurrentPositionX;
+                squad.PreviousLeaderZ = leader.CurrentPositionZ;
+
+                // Check if leader is still moving toward objective (not close)
+                bool leaderIsEnRoute = hasHeading && !leader.IsCloseToObjective && leader.HasActiveObjective;
+
+                // Count active followers with tactical positions
+                int followerCount = 0;
+                for (int i = 0; i < squad.Members.Count; i++)
+                {
+                    var m = squad.Members[i];
+                    if (m != leader && m.IsActive && m.HasTacticalPosition)
+                        followerCount++;
+                }
+
+                if (leaderIsEnRoute && followerCount > 0)
+                {
+                    // Compute en-route formation positions
+                    int clampedCount = Math.Min(followerCount, ECS.SquadObjective.MaxMembers);
+                    FormationPositionUpdater.ComputeFormationPositions(
+                        FormationType.Column,
+                        leader.CurrentPositionX,
+                        leader.CurrentPositionY,
+                        leader.CurrentPositionZ,
+                        hx,
+                        hz,
+                        clampedCount,
+                        config.ColumnSpacing,
+                        _formationPositionBuffer
+                    );
+
+                    // Override follower tactical positions with formation positions
+                    int posIdx = 0;
+                    for (int i = 0; i < squad.Members.Count; i++)
+                    {
+                        var member = squad.Members[i];
+                        if (member == leader || !member.IsActive || !member.HasTacticalPosition)
+                            continue;
+                        if (posIdx >= clampedCount)
+                            break;
+
+                        member.TacticalPositionX = _formationPositionBuffer[posIdx * 3];
+                        member.TacticalPositionY = _formationPositionBuffer[posIdx * 3 + 1];
+                        member.TacticalPositionZ = _formationPositionBuffer[posIdx * 3 + 2];
+                        member.IsEnRouteFormation = true;
+                        posIdx++;
+                    }
+                }
+                else
+                {
+                    // Leader is stationary or close to objective — clear en-route flag
+                    for (int i = 0; i < squad.Members.Count; i++)
+                    {
+                        squad.Members[i].IsEnRouteFormation = false;
+                    }
+                }
+
+                // Update per-follower formation speed decisions
+                updateFollowerSpeedDecisions(squad, leader, formationConfig);
+            }
+        }
+
+        private static void updateFollowerSpeedDecisions(ECS.SquadEntity squad, ECS.BotEntity leader, FormationConfig formationConfig)
+        {
+            // Detect if boss is sprinting via movement state or BotOwner
+            bool bossIsSprinting = leader.Movement.IsSprinting;
+            if (!bossIsSprinting)
+            {
+                var bossOwner = ECS.BotEntityBridge.GetBotOwner(leader);
+                if (bossOwner != null)
+                {
+                    var objectiveManager = bossOwner.GetObjectiveManager();
+                    bossIsSprinting = objectiveManager?.BotSprintingController?.IsSprinting == true;
+                }
+            }
+
+            for (int i = 0; i < squad.Members.Count; i++)
+            {
+                var member = squad.Members[i];
+                if (member == leader || !member.IsActive)
+                    continue;
+
+                // Distance to boss (squared)
+                float dx = member.CurrentPositionX - leader.CurrentPositionX;
+                float dy = member.CurrentPositionY - leader.CurrentPositionY;
+                float dz = member.CurrentPositionZ - leader.CurrentPositionZ;
+                member.DistanceToBossSqr = dx * dx + dy * dy + dz * dz;
+                member.BossIsSprinting = bossIsSprinting;
+
+                if (!member.IsEnRouteFormation)
+                    continue;
+
+                // Distance to tactical position (squared)
+                float tdx = member.CurrentPositionX - member.TacticalPositionX;
+                float tdy = member.CurrentPositionY - member.TacticalPositionY;
+                float tdz = member.CurrentPositionZ - member.TacticalPositionZ;
+                float distToTacticalSqr = tdx * tdx + tdy * tdy + tdz * tdz;
+
+                member.FormationSpeed = FormationSpeedController.ComputeSpeedDecision(
+                    bossIsSprinting,
+                    member.DistanceToBossSqr,
+                    distToTacticalSqr,
+                    formationConfig
+                );
+            }
         }
 
         /// <summary>

@@ -1612,15 +1612,40 @@ Config: `enable_position_validation` (true), `navmesh_sample_radius` (2.0),
 `enable_los_check` (true), `enable_cover_position_source` (true),
 `cover_search_radius` (25.0)
 
-### 12.2 Formation Movement
+### 12.2 Formation Movement (**Implemented**)
 
-Instead of each follower independently navigating to their tactical position,
-formation movement would coordinate the group's movement:
+Formation movement coordinates the group's en-route movement when the boss
+is traveling toward an objective. Instead of each follower independently
+navigating to their tactical position, they maintain formation relative
+to the boss's current position and heading.
 
-- Followers match boss's movement speed
-- Column formation on narrow paths
-- Spread formation in open areas
-- Dynamic reforming when followers are separated
+**Implementation:**
+- **FormationSpeedController** (`BotLogic/ECS/Systems/FormationSpeedController.cs`):
+  Pure-logic speed decisions based on distance to boss: Sprint (>30m),
+  Walk (15-30m), MatchBoss (<15m), SlowApproach (<5m from tactical position).
+  `ShouldSprint()` and `SpeedMultiplier()` helpers for callers.
+- **FormationPositionUpdater** (`BotLogic/ECS/Systems/FormationPositionUpdater.cs`):
+  Pure-logic position computation. Column (trail behind boss) and Spread
+  (fan perpendicular to heading) formations. Heading computed from
+  previous→current leader position delta.
+- **BotEntity**: 4 new fields: `FormationSpeed`, `BossIsSprinting`,
+  `DistanceToBossSqr`, `IsEnRouteFormation`.
+- **SquadEntity**: 2 new fields: `PreviousLeaderX`, `PreviousLeaderZ`
+  for heading computation across ticks.
+- **Integration**: `BotHiveMindMonitor.updateFormationMovement()` computes
+  column positions and speed decisions after squad strategy manager runs.
+  `GoToObjectiveAction.Update()` overrides `CanSprint` for followers in
+  en-route formation using `FormationSpeedController.ShouldSprint()`.
+- **Config**: 7 new properties under `questing.squad_strategy`:
+  `enable_formation_movement` (true), `catch_up_distance` (30),
+  `match_speed_distance` (15), `slow_approach_distance` (5),
+  `column_spacing` (4), `spread_spacing` (3), `formation_switch_width` (8)
+- **Tests**: 22 FormationSpeedController + 21 FormationPositionUpdater +
+  6 config/wiring = 49 new tests
+
+**Future enhancements:**
+- Spread formation (currently Column only; needs path-width sensor)
+- NavMesh-based path-width detection for automatic Column/Spread switching
 
 ### 12.3 Squad Voice Commands
 

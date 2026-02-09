@@ -70,6 +70,29 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("cover_search_radius")]
         public float CoverSearchRadius { get; set; } = 25f;
 
+        // ── Formation Movement ───────────────────────────────────────
+
+        [JsonProperty("enable_formation_movement")]
+        public bool EnableFormationMovement { get; set; } = true;
+
+        [JsonProperty("catch_up_distance")]
+        public float CatchUpDistance { get; set; } = 30f;
+
+        [JsonProperty("match_speed_distance")]
+        public float MatchSpeedDistance { get; set; } = 15f;
+
+        [JsonProperty("slow_approach_distance")]
+        public float SlowApproachDistance { get; set; } = 5f;
+
+        [JsonProperty("column_spacing")]
+        public float ColumnSpacing { get; set; } = 4f;
+
+        [JsonProperty("spread_spacing")]
+        public float SpreadSpacing { get; set; } = 3f;
+
+        [JsonProperty("formation_switch_width")]
+        public float FormationSwitchWidth { get; set; } = 8f;
+
         public SquadStrategyConfig() { }
     }
 }
