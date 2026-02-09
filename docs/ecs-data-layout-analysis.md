@@ -840,7 +840,7 @@ Each phase should:
 | Phase 5D | Migrate Boss/Follower Lifecycle Writes | ✅ Complete |
 | Phase 5E | Migrate BotRegistrationManager Reads | ✅ Complete |
 | Phase 5F | Remove Old Data Structures | ✅ Complete |
-| Phase 6 | BotFieldState on BotEntity | ⚠️ Fields added, not yet wired |
+| Phase 6 | BotFieldState on BotEntity | ✅ Complete |
 | Phase 7A | BsgBotRegistry Sparse Array | ✅ Complete |
 | Phase 7B | TimePacing / FramePacing Utilities | ✅ Complete |
 | Phase 8 | Job Assignment State on BotEntity | ⚠️ Field added, not yet wired |
@@ -860,10 +860,8 @@ Boss/follower lifecycle uses ECS `entity.IsActive` for O(1) dead checks.
 Phases 5A–5F completed the full ECS migration and old data structure removal.
 What remains:
 
-1. **Phase 6 wiring** — connect `BotEntity.FieldNoiseSeed` /
-   `HasFieldState` to `WorldGridManager` (fields exist, wiring remains).
-2. **Phase 7C–7D** — deterministic tick order, allocation cleanup (optional).
-3. **Phase 8 wiring** — connect `BotEntity.ConsecutiveFailedAssignments` to
+1. **Phase 7C–7D** — deterministic tick order, allocation cleanup (optional).
+2. **Phase 8 wiring** — connect `BotEntity.ConsecutiveFailedAssignments` to
    `BotJobAssignmentFactory` (field exists, wiring remains).
 
 ---
@@ -1059,24 +1057,29 @@ Deleted all old data structures now replaced by ECS:
 
 ## Phase 6: BotFieldState on BotEntity
 
-**Status: ⚠️ Fields added, wiring not yet done**
+**Status: ✅ Complete**
 
-Move zone movement per-bot state from `WorldGridManager.botFieldStates`
-dictionary onto `BotEntity`.
+Moved zone movement per-bot state from `WorldGridManager.botFieldStates`
+dictionary onto ECS entities via `BotEntityBridge`.
 
-**Fields added** (on `BotEntity`):
+**Fields on `BotEntity`**:
 ```csharp
 public int FieldNoiseSeed;    // Per-bot noise seed (from profile ID hash)
 public bool HasFieldState;    // Whether field state is initialized
 ```
 
-**Remaining wiring**:
-- `WorldGridManager.GetOrCreateBotState()` → read from `BotEntity.FieldNoiseSeed`
-- `WorldGridManager.GetRecommendedDestination()` → access via entity lookup
-- Remove `botFieldStates` dictionary
-- Eliminate implicit cleanup reliance on MonoBehaviour destruction
-
-**Estimated effort**: Small (2-3 files, ~20 lines changed)
+**Implementation**:
+- `BotEntityBridge` stores `Dictionary<int, BotFieldState>` keyed by entity ID
+- `RegisterBot()` creates `BotFieldState(profileId.GetHashCode())`, sets
+  `entity.FieldNoiseSeed` and `entity.HasFieldState = true`
+- `GetFieldState(BotOwner)` and `GetFieldState(string profileId)` provide
+  O(1) lookups replacing `WorldGridManager.GetOrCreateBotState()`
+- `Clear()` clears the field state dictionary
+- `WorldGridManager.botFieldStates` dictionary removed
+- `WorldGridManager.GetOrCreateBotState()` method removed
+- `WorldGridManager.GetRecommendedDestination()` now calls
+  `BotEntityBridge.GetFieldState(botProfileId)` — returns null if bot not
+  registered (safe: `ZoneObjectiveCycler` already handles null destinations)
 
 ---
 
@@ -1223,7 +1226,7 @@ recommended** for QuestingBots:
 
 ## Updated Feasibility Assessment
 
-### Option B Status: In Progress (~90% Complete)
+### Option B Status: In Progress (~93% Complete)
 
 | Component | Status | Remaining |
 |-----------|--------|-----------|
@@ -1240,7 +1243,7 @@ recommended** for QuestingBots:
 | BsgBotRegistry sparse lookup | ✅ Complete | — |
 | TimePacing / FramePacing | ✅ Complete | Wiring incremental |
 | Remove old dictionaries | ✅ Complete | Phase 5F done |
-| BotFieldState on entity | ⚠️ Fields added | Wire to WorldGridManager |
+| BotFieldState on entity | ✅ Complete | — |
 | Job assignment on entity | ⚠️ Field added | Wire to BotJobAssignmentFactory |
 | Deterministic tick order | ⬜ Not started | Phase 7C (optional) |
 | Allocation cleanup | ⬜ Not started | Phase 7D (optional) |
@@ -1251,10 +1254,11 @@ Option B is nearing completion. The ECS is the **sole data store** for all
 sensor, sleep, type, and boss/follower data. All old dictionaries
 (`deadBots`, `botBosses`, `botFollowers`, `sensors`) and 6 sensor subclasses
 have been deleted. Boss/follower lifecycle uses dense ECS entity iteration
-with O(1) `IsActive` checks. Phases 6 and 8 have fields on `BotEntity` but
-need wiring. Phases 7C–7D are optional improvements.
+with O(1) `IsActive` checks. Phase 6 field state wiring is complete (WorldGridManager dictionary removed).
+Phase 8 has a field on `BotEntity` but needs wiring. Phases 7C–7D are
+optional improvements.
 
-**Estimated remaining effort**: Phase 6/8 wiring (~5 files, 1 session),
+**Estimated remaining effort**: Phase 8 wiring (~3 files, 1 session),
 Phases 7C-7D (incremental, as-needed).
 
 ---

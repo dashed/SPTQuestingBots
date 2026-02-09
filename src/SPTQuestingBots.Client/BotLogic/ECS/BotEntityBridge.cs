@@ -5,6 +5,7 @@ using EFT;
 using SPTQuestingBots.BotLogic.ECS.Systems;
 using SPTQuestingBots.BotLogic.HiveMind;
 using SPTQuestingBots.Helpers;
+using SPTQuestingBots.ZoneMovement.Core;
 using UnityEngine;
 
 namespace SPTQuestingBots.BotLogic.ECS
@@ -31,6 +32,12 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// </summary>
         private static readonly Dictionary<string, BotEntity> _profileIdToEntity = new Dictionary<string, BotEntity>();
 
+        /// <summary>
+        /// Phase 6: Per-entity BotFieldState for zone movement, keyed by entity.Id.
+        /// Replaces WorldGridManager.botFieldStates dictionary.
+        /// </summary>
+        private static readonly Dictionary<int, BotFieldState> _entityFieldStates = new Dictionary<int, BotFieldState>();
+
         /// <summary>Dense entity registry for systems that need to iterate all bots.</summary>
         public static BotRegistry Registry => _registry;
 
@@ -56,6 +63,15 @@ namespace SPTQuestingBots.BotLogic.ECS
             var profileId = bot.Profile?.Id;
             if (profileId != null)
                 _profileIdToEntity[profileId] = entity;
+
+            // Phase 6: create per-bot field state for zone movement
+            if (profileId != null)
+            {
+                int noiseSeed = profileId.GetHashCode();
+                entity.FieldNoiseSeed = noiseSeed;
+                entity.HasFieldState = true;
+                _entityFieldStates[entity.Id] = new BotFieldState(noiseSeed);
+            }
 
             return entity;
         }
@@ -387,6 +403,7 @@ namespace SPTQuestingBots.BotLogic.ECS
             _ownerToEntity.Clear();
             _entityToOwner.Clear();
             _profileIdToEntity.Clear();
+            _entityFieldStates.Clear();
             _registry.Clear();
         }
 
@@ -424,6 +441,32 @@ namespace SPTQuestingBots.BotLogic.ECS
                 return MapBotTypeReverse(entity.BotType);
             return Controllers.BotType.Undetermined;
         }
+
+        // ── Phase 6: Field State Access ──────────────────────────
+
+        /// <summary>
+        /// Get the BotFieldState for a given BotOwner.
+        /// Replaces WorldGridManager.GetOrCreateBotState() dictionary lookup.
+        /// </summary>
+        public static BotFieldState GetFieldState(BotOwner bot)
+        {
+            if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
+                return _entityFieldStates.TryGetValue(entity.Id, out var state) ? state : null;
+            return null;
+        }
+
+        /// <summary>
+        /// Get the BotFieldState for a given profile ID string.
+        /// Replaces WorldGridManager.GetOrCreateBotState(profileId) dictionary lookup.
+        /// </summary>
+        public static BotFieldState GetFieldState(string profileId)
+        {
+            if (profileId != null && _profileIdToEntity.TryGetValue(profileId, out var entity))
+                return _entityFieldStates.TryGetValue(entity.Id, out var state) ? state : null;
+            return null;
+        }
+
+        // ── Enum Mapping ────────────────────────────────────────
 
         /// <summary>
         /// Map Controllers.BotType (game enum) to ECS.BotType (pure data enum).

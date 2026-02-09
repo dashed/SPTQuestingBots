@@ -47,14 +47,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `updateBossFollowers()` reduced to single `HiveMindSystem.CleanupDeadEntities()` call
   - Removed `BotHiveMindMonitor.RegisterBot()` call from `BotOwnerBrainActivatePatch`
   - `BotInfoGizmo` switched to `BotEntityBridge.IsBotSleeping()` / `.GetBoss()`
-- `BotEntity.FieldNoiseSeed` and `BotEntity.HasFieldState` fields for Phase 6 zone movement prep (not yet wired)
+- **ECS Phase 6: BotFieldState wiring** — zone movement per-bot state on ECS entities
+  - `BotEntityBridge` stores `Dictionary<int, BotFieldState>` keyed by entity ID
+  - `RegisterBot()` creates `BotFieldState(profileId.GetHashCode())`, sets `entity.FieldNoiseSeed` and `entity.HasFieldState`
+  - `GetFieldState(BotOwner)` and `GetFieldState(string profileId)` for O(1) lookups
+  - `WorldGridManager.botFieldStates` dictionary removed
+  - `WorldGridManager.GetOrCreateBotState()` method removed
+  - `WorldGridManager.GetRecommendedDestination()` now uses `BotEntityBridge.GetFieldState()`
 - `BotEntity.ConsecutiveFailedAssignments` field for Phase 8 job assignment prep (not yet wired)
-- 103 new client tests: BotEntityBridge scenarios (+49), BsgBotRegistry (15), BotFieldState (12), JobAssignment (8), TimePacing (9), FramePacing (10)
-- Updated `docs/ecs-data-layout-analysis.md` with Phase 5A–5F, 7A, 7B implementation status (~90% complete)
+- 111 new client tests: BotEntityBridge scenarios (+57), BsgBotRegistry (15), BotFieldState (12), JobAssignment (8), TimePacing (9), FramePacing (10)
+- Updated `docs/ecs-data-layout-analysis.md` with Phase 5A–5F, 6, 7A, 7B implementation status (~93% complete)
 
 ### Changed
-- ECS is now the sole data store — all old dictionaries and sensor classes deleted; push/pull sensors, sleep, type, boss/follower all managed via ECS only
-- 447 client tests total (was 344), 58 server tests, 505 total
+- ECS is now the sole data store — all old dictionaries and sensor classes deleted; push/pull sensors, sleep, type, boss/follower, field state all managed via ECS only
+- 455 client tests total (was 344), 58 server tests, 513 total
 
 ## [1.7.0] - 2026-02-08
 

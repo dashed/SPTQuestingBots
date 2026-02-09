@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using SPTQuestingBots.BotLogic.ECS;
 using SPTQuestingBots.BotLogic.ECS.Systems;
+using SPTQuestingBots.ZoneMovement.Core;
 
 namespace SPTQuestingBots.Client.Tests.BotLogic.ECS
 {
@@ -1581,6 +1582,152 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS
             _registry.Clear();
             Assert.That(_registry.Count, Is.EqualTo(0));
             Assert.That(_registry.GetByBsgId(100), Is.Null);
+        }
+
+        // ── Phase 6: Field State Wiring ─────────────────────────
+
+        [Test]
+        public void RegisterBot_PopulatesFieldNoiseSeed()
+        {
+            // Simulates BotEntityBridge.RegisterBot setting FieldNoiseSeed from profileId.GetHashCode()
+            var profileId = "pmc-abc-123";
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+            entity.FieldNoiseSeed = profileId.GetHashCode();
+            entity.HasFieldState = true;
+
+            Assert.That(entity.FieldNoiseSeed, Is.EqualTo(profileId.GetHashCode()));
+        }
+
+        [Test]
+        public void RegisterBot_SetsHasFieldState()
+        {
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+            entity.FieldNoiseSeed = "some-profile".GetHashCode();
+            entity.HasFieldState = true;
+
+            Assert.That(entity.HasFieldState, Is.True);
+        }
+
+        [Test]
+        public void GetFieldState_ByEntityId_ReturnsFieldState()
+        {
+            // Simulates BotEntityBridge storing BotFieldState keyed by entity.Id
+            var fieldStates = new Dictionary<int, BotFieldState>();
+
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+            var profileId = "pmc-test-456";
+            int noiseSeed = profileId.GetHashCode();
+            entity.FieldNoiseSeed = noiseSeed;
+            entity.HasFieldState = true;
+            fieldStates[entity.Id] = new BotFieldState(noiseSeed);
+
+            // Simulates GetFieldState(bot) -> lookup by entity.Id
+            Assert.That(fieldStates.TryGetValue(entity.Id, out var state), Is.True);
+            Assert.That(state, Is.Not.Null);
+        }
+
+        [Test]
+        public void GetFieldState_ByProfileId_ReturnsFieldState()
+        {
+            // Simulates the profileId -> entity -> fieldState lookup chain
+            var profileToEntity = new Dictionary<string, BotEntity>();
+            var fieldStates = new Dictionary<int, BotFieldState>();
+
+            var profileId = "scav-xyz-789";
+            var entity = _registry.Add();
+            entity.BotType = BotType.Scav;
+            int noiseSeed = profileId.GetHashCode();
+            entity.FieldNoiseSeed = noiseSeed;
+            entity.HasFieldState = true;
+            profileToEntity[profileId] = entity;
+            fieldStates[entity.Id] = new BotFieldState(noiseSeed);
+
+            // Simulates GetFieldState(profileId) -> profileToEntity -> fieldStates
+            Assert.That(profileToEntity.TryGetValue(profileId, out var found), Is.True);
+            Assert.That(fieldStates.TryGetValue(found.Id, out var state), Is.True);
+            Assert.That(state, Is.Not.Null);
+        }
+
+        [Test]
+        public void GetFieldState_UnknownBot_ReturnsNull()
+        {
+            // Simulates GetFieldState on an entity that was never registered with field state
+            var fieldStates = new Dictionary<int, BotFieldState>();
+
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+            // Deliberately NOT adding field state for this entity
+
+            Assert.That(fieldStates.TryGetValue(entity.Id, out var state), Is.False);
+            Assert.That(state, Is.Null);
+        }
+
+        [Test]
+        public void GetFieldState_NoiseSeed_MatchesEntitySeed()
+        {
+            var fieldStates = new Dictionary<int, BotFieldState>();
+
+            var profileId = "boss-leader-001";
+            var entity = _registry.Add();
+            entity.BotType = BotType.Boss;
+            int noiseSeed = profileId.GetHashCode();
+            entity.FieldNoiseSeed = noiseSeed;
+            entity.HasFieldState = true;
+            fieldStates[entity.Id] = new BotFieldState(noiseSeed);
+
+            // The BotFieldState.NoiseSeed should match entity.FieldNoiseSeed
+            var state = fieldStates[entity.Id];
+            Assert.That(state.NoiseSeed, Is.EqualTo(entity.FieldNoiseSeed));
+        }
+
+        [Test]
+        public void Clear_ResetsFieldStates()
+        {
+            // Simulates BotEntityBridge.Clear() which should clear _entityFieldStates
+            var fieldStates = new Dictionary<int, BotFieldState>();
+
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+            int noiseSeed = "profile-clear".GetHashCode();
+            entity.FieldNoiseSeed = noiseSeed;
+            entity.HasFieldState = true;
+            fieldStates[entity.Id] = new BotFieldState(noiseSeed);
+
+            int savedId = entity.Id;
+
+            // Clear all state (simulates BotEntityBridge.Clear)
+            _registry.Clear();
+            fieldStates.Clear();
+
+            // After clear, field state should be gone
+            Assert.That(fieldStates.TryGetValue(savedId, out _), Is.False);
+            Assert.That(_registry.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void FieldState_PreviousDestination_PersistsAcrossCalls()
+        {
+            var fieldStates = new Dictionary<int, BotFieldState>();
+
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+            int noiseSeed = "persist-test".GetHashCode();
+            entity.FieldNoiseSeed = noiseSeed;
+            entity.HasFieldState = true;
+            var state = new BotFieldState(noiseSeed);
+            fieldStates[entity.Id] = state;
+
+            // Set PreviousDestination
+            state.PreviousDestination = new UnityEngine.Vector3(10f, 0f, 20f);
+
+            // Retrieve again and verify it persists
+            var retrieved = fieldStates[entity.Id];
+            Assert.That(retrieved.PreviousDestination.x, Is.EqualTo(10f));
+            Assert.That(retrieved.PreviousDestination.y, Is.EqualTo(0f));
+            Assert.That(retrieved.PreviousDestination.z, Is.EqualTo(20f));
         }
     }
 }

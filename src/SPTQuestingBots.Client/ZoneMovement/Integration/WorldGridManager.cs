@@ -4,6 +4,7 @@ using System.Linq;
 using Comfort.Common;
 using EFT;
 using EFT.Game.Spawning;
+using SPTQuestingBots.BotLogic.ECS;
 using SPTQuestingBots.Components;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.ZoneMovement.Core;
@@ -44,9 +45,6 @@ public class WorldGridManager : MonoBehaviour
 
     /// <summary>Cached bot positions, refreshed each convergence update.</summary>
     private readonly List<Vector3> cachedBotPositions = new List<Vector3>();
-
-    /// <summary>Per-bot field state for unique momentum and noise vectors.</summary>
-    private readonly Dictionary<string, BotFieldState> botFieldStates = new Dictionary<string, BotFieldState>();
 
     /// <summary>Zone source positions discovered during initialization (for debug visualization).</summary>
     private readonly List<(Vector3 position, float strength)> discoveredZoneSources = new List<(Vector3, float)>();
@@ -201,21 +199,6 @@ public class WorldGridManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Gets or creates per-bot field state for the given bot profile ID.
-    /// </summary>
-    /// <param name="botProfileId">The bot's unique profile ID.</param>
-    /// <returns>The bot's field state instance.</returns>
-    public BotFieldState GetOrCreateBotState(string botProfileId)
-    {
-        if (!botFieldStates.TryGetValue(botProfileId, out var state))
-        {
-            state = new BotFieldState(botProfileId.GetHashCode());
-            botFieldStates[botProfileId] = state;
-        }
-        return state;
-    }
-
-    /// <summary>
     /// Computes the best next destination for a bot using live field state.
     /// Uses cached player/bot positions from the most recent <see cref="Update"/> tick.
     /// </summary>
@@ -255,7 +238,10 @@ public class WorldGridManager : MonoBehaviour
         if (currentCell == null)
             return null;
 
-        var state = GetOrCreateBotState(botProfileId);
+        // Phase 6: field state stored on ECS entity, accessed via BotEntityBridge
+        var state = BotEntityBridge.GetFieldState(botProfileId);
+        if (state == null)
+            return null;
         var (momX, momZ) = state.ComputeMomentum(botPosition);
 
         // Get advection (zone attraction + crowd repulsion)
