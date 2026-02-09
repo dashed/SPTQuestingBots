@@ -104,6 +104,19 @@
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/QuestScorer.cs"
       Link="LinkedSources/ECS/Systems/QuestScorer.cs"
     />
+    <!-- Utility AI: pure C# task scoring infrastructure -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/UtilityTask.cs"
+      Link="LinkedSources/ECS/UtilityAI/UtilityTask.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/UtilityTaskManager.cs"
+      Link="LinkedSources/ECS/UtilityAI/UtilityTaskManager.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/UtilityTaskAssignment.cs"
+      Link="LinkedSources/ECS/UtilityAI/UtilityTaskAssignment.cs"
+    />
   </ItemGroup>
 
   <!--

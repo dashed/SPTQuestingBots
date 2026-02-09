@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using SPTQuestingBots.BotLogic.ECS.UtilityAI;
 
 namespace SPTQuestingBots.BotLogic.ECS
 {
@@ -87,6 +88,21 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// Inline value type for dense iteration and zero-allocation reads.
         /// </summary>
         public MovementState Movement;
+
+        // ── Utility AI: Task Scores ──────────────────────────
+
+        /// <summary>
+        /// Per-task utility scores. Sized to the number of registered utility tasks.
+        /// Written by each task's UpdateScores (column-major), read by UtilityTaskManager.PickTask.
+        /// Null when utility AI is not active for this entity.
+        /// </summary>
+        public float[] TaskScores;
+
+        /// <summary>
+        /// The currently assigned utility task and its ordinal index.
+        /// Default: no task assigned.
+        /// </summary>
+        public UtilityTaskAssignment TaskAssignment;
 
         // ── Phase 8: Job Assignment State ─────────────────────
 
