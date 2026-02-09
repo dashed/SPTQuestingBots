@@ -111,6 +111,8 @@ namespace SPTQuestingBots
         public static ConfigEntry<bool> ZoneMovementDebugOverlay;
         public static ConfigEntry<bool> ZoneMovementDebugMinimap;
 
+        public static ConfigEntry<bool> SquadStrategyEnabled;
+
         public static ConfigEntry<bool> CreateQuestLocations;
         public static ConfigEntry<bool> ShowCurrentLocation;
         public static ConfigEntry<string> QuestLocationName;
@@ -462,6 +464,17 @@ namespace SPTQuestingBots
                 false,
                 new ConfigDescription(
                     "Show a 2D minimap overlay visualizing grid cells, field vectors, bot positions, and zone sources",
+                    null,
+                    new ConfigurationManagerAttributes { IsAdvanced = true }
+                )
+            );
+
+            SquadStrategyEnabled = Config.Bind(
+                "Main",
+                "Enable Squad Strategies",
+                true,
+                new ConfigDescription(
+                    "Enable Phobos-style squad tactical strategies for follower bots",
                     null,
                     new ConfigurationManagerAttributes { IsAdvanced = true }
                 )

@@ -10,6 +10,7 @@ using EFT.Interactive;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
 using SPTQuestingBots.Models.Pathing;
+using UnityEngine;
 using UnityEngine.AI;
 
 namespace SPTQuestingBots.BotLogic.Objective
@@ -126,7 +127,14 @@ namespace SPTQuestingBots.BotLogic.Objective
 
         private bool tryMoveToObjective()
         {
-            NavMeshPathStatus? pathStatus = RecalculatePath(ObjectiveManager.Position.Value);
+            // Squad followers navigate to their tactical position instead of the objective
+            Vector3 targetPosition = ObjectiveManager.Position.Value;
+            if (BotLogic.ECS.BotEntityBridge.TryGetEntity(BotOwner, out var entity) && entity.HasTacticalPosition && entity.HasBoss)
+            {
+                targetPosition = new Vector3(entity.TacticalPositionX, entity.TacticalPositionY, entity.TacticalPositionZ);
+            }
+
+            NavMeshPathStatus? pathStatus = RecalculatePath(targetPosition);
 
             // Don't complete or fail the objective step except for the action type "MoveToPosition"
             if (ObjectiveManager.CurrentQuestAction != Models.Questing.QuestAction.MoveToPosition)

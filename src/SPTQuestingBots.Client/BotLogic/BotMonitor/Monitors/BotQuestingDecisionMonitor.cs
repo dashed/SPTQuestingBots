@@ -33,6 +33,7 @@ namespace SPTQuestingBots.BotLogic.BotMonitor
         GetLost,
         Quest,
         WaitForAssignment,
+        SquadQuest,
     }
 
     public class BotQuestingDecisionMonitor : AbstractBotMonitor
@@ -101,6 +102,31 @@ namespace SPTQuestingBots.BotLogic.BotMonitor
 
         private BotQuestingDecision getFollowerDecision()
         {
+            // Squad strategy: if follower has a tactical position, allow them to quest
+            if (QuestingBotsPluginConfig.SquadStrategyEnabled.Value && BotEntityBridge.HasTacticalPosition(BotOwner))
+            {
+                // Still check combat/heal priorities
+                if (BotMonitor.GetMonitor<BotCombatMonitor>().IsInCombat)
+                    return BotQuestingDecision.Fight;
+                if (BotMonitor.GetMonitor<BotHearingMonitor>().IsSuspicious)
+                    return BotQuestingDecision.Investigtate;
+                if (BotMonitor.GetMonitor<BotCombatMonitor>().IsSAINLayerActive())
+                    return BotQuestingDecision.Hunt;
+                if (BotMonitor.GetMonitor<BotHealthMonitor>().NeedsToHeal)
+                    return BotQuestingDecision.StopToHeal;
+                if (BotMonitor.GetMonitor<BotQuestingMonitor>().StuckTooManyTimes)
+                    return BotQuestingDecision.GetLost;
+                if (BotMonitor.GetMonitor<BotQuestingMonitor>().DoesBossNeedHelp && isFollowerTooFarFromBossForCombat())
+                    return BotQuestingDecision.HelpBoss;
+                if (BotEntityBridge.GetSensorForGroup(BotOwner, BotSensor.InCombat))
+                    return BotQuestingDecision.WaitForGroup;
+                if (BotEntityBridge.GetSensorForGroup(BotOwner, BotSensor.IsSuspicious))
+                    return BotQuestingDecision.WaitForGroup;
+
+                return BotQuestingDecision.SquadQuest;
+            }
+
+            // Original follower decision path
             Controllers.BotJobAssignmentFactory.InactivateAllJobAssignmentsForBot(BotOwner.Profile.Id);
 
             if (BotMonitor.GetMonitor<BotCombatMonitor>().IsInCombat)

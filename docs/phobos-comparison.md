@@ -10,7 +10,7 @@
 | **Architecture** | Pure client (ECS-like, ~62 files) | Client + Server (ECS-Lite + MonoBehaviour, ~180 files) |
 | **BigBrain layers** | 1 (priority 19) | 4 (priorities 99, 26, 19, 18) |
 | **Navigation** | Custom movement system with own pathfinding | Custom `Player.Move()` (default) or BSG `BotOwner.FollowPath()` fallback |
-| **Squad model** | Explicit Squad entities with leader/member | HiveMind sensor-based boss/follower tracking |
+| **Squad model** | Explicit Squad entities with leader/member | SquadEntity/SquadRegistry (dense storage) + HiveMind boss/follower tracking |
 | **Decision-making** | Utility AI (scored actions/strategies) | Utility AI (scored quest tasks with hysteresis) + zone field fallback |
 | **Zone/field system** | Advection + convergence fields from JSON per-map configs | Advection + convergence fields, auto-detected from spawn points, per-bot momentum + noise |
 | **Bot spawning** | None (uses whatever spawns) | Custom PMC/PScav generation system (optional) |
@@ -18,7 +18,7 @@
 | **Performance** | Batch nav jobs, ECS data layout, AggressiveInlining | Batch nav jobs, PathfindingThrottle, sleeping system, ECS-Lite dense iteration, AggressiveInlining, static buffers |
 | **Maturity** | v0.1.11 (early) | v1.9.0 (utility AI, custom movement, NavMesh corner-cutting, ECS-Lite, zone fields) |
 
-**Key takeaway**: These mods have converged almost completely on a technical level. QuestingBots now incorporates Phobos-inspired features (Phobos-style utility AI with scored tasks and additive hysteresis for action selection, custom `Player.Move()` path following with path-deviation spring force, ECS-Lite dense entity storage with swap-remove, zone-based movement fields with per-bot momentum/noise, two-tier stuck detection, batched pathfinding, AggressiveInlining on hot paths, identical BSG mover patches) alongside its original quest-driven objective system. The primary remaining differences are architectural: Phobos uses utility AI for everything (movement, guarding) with a `DummyAction` bypassing BigBrain dispatch, while QuestingBots uses utility AI for action selection only with BigBrain handling execution (hybrid approach); Phobos uses per-map JSON zone configurations while QuestingBots auto-detects zones from spawn points; QuestingBots has a full bot spawning system, server component, and quest data system that Phobos lacks; and QuestingBots supports 20+ brain types compared to Phobos's 9.
+**Key takeaway**: These mods have converged almost completely on a technical level. QuestingBots now incorporates Phobos-inspired features (Phobos-style utility AI with scored tasks and additive hysteresis for action selection, custom `Player.Move()` path following with path-deviation spring force, ECS-Lite dense entity storage with swap-remove, zone-based movement fields with per-bot momentum/noise, squad-level strategies with tactical positioning, two-tier stuck detection, batched pathfinding, AggressiveInlining on hot paths, identical BSG mover patches) alongside its original quest-driven objective system. The primary remaining differences are architectural: Phobos uses utility AI for everything (movement, guarding) with a `DummyAction` bypassing BigBrain dispatch, while QuestingBots uses utility AI for action selection only with BigBrain handling execution (hybrid approach); Phobos uses per-map JSON zone configurations while QuestingBots auto-detects zones from spawn points; Phobos uses cover points for tactical positioning while QuestingBots uses quest-type-aware geometric formations; QuestingBots has a full bot spawning system, server component, and quest data system that Phobos lacks; and QuestingBots supports 20+ brain types compared to Phobos's 9.
 
 ---
 
@@ -37,9 +37,9 @@
 
 - **Author**: DanW (`com.DanW.QuestingBots`), C# port by Alberto Leal
 - **Version**: 1.9.0
-- **Scope**: Full quest-driven behavior, Phobos-style utility AI action selection, custom movement system, zone-based fallback movement, ECS-Lite data layout, boss/follower coordination, PMC/PScav spawning (optional), AI sleeping
+- **Scope**: Full quest-driven behavior, Phobos-style utility AI action selection, custom movement system, zone-based fallback movement, squad strategies with tactical positioning, ECS-Lite data layout, boss/follower coordination, PMC/PScav spawning (optional), AI sleeping
 - **Approach**: Bots receive actual game quest objectives (from 12 per-map JSON files) and navigate to complete them using a custom `Player.Move()` movement system inspired by Phobos (path-deviation spring force, Chaikin smoothing, sprint angle-jitter gating, 3 BSG patches). A Phobos-style utility AI system (8 scored quest tasks with additive hysteresis) selects which action to execute, while BigBrain handles action execution (hybrid approach). When no quests are available, a Phobos-inspired zone movement system uses advection/convergence fields to guide bots toward interesting map areas. An ECS-Lite data layout (dense entity list with swap-remove, inspired by Phobos's EntityArray) provides centralized bot state, static system methods, and zero-allocation sensor iteration.
-- **Maturity**: Mature; 13 action types with utility AI scoring, custom movement system with NavMesh corner-cutting, extensive spawning system, broad bot-type support, zone movement with debug overlay, ECS-Lite entity storage with 787 tests
+- **Maturity**: Mature; 13 action types with utility AI scoring, custom movement system with NavMesh corner-cutting, squad strategies with tactical positioning, extensive spawning system, broad bot-type support, zone movement with debug overlay, ECS-Lite entity storage with 954 tests
 - **Source**: `src/SPTQuestingBots.Client/` (~180 C# files) + `src/SPTQuestingBots.Server/` (9 C# files)
 
 ---
@@ -53,7 +53,7 @@
 | **Solution** | `Phobos.sln` (1 main project + Gym benchmark) | `SPTQuestingBots.sln` (2 main + 2 test projects) |
 | **Target** | netstandard2.1 | Client: net472, Server: net9.0, Tests: net9.0 |
 | **Build** | Standard .csproj | Makefile (`make build`, `make test`, `make ci`) |
-| **Testing** | Gym project (BenchmarkDotNet) | NUnit 3.x + NSubstitute (729 client + 58 server = 787 tests) |
+| **Testing** | Gym project (BenchmarkDotNet) | NUnit 3.x + NSubstitute (896 client + 58 server = 954 tests) |
 | **CI** | None observed | GitHub Actions (`ci.yml`) |
 | **Code style** | File-scoped namespaces, primary constructors | Block-scoped namespaces, traditional constructors, CSharpier formatting |
 
@@ -852,9 +852,13 @@ Since the original comparison, QuestingBots has ported several Phobos innovation
 
 12. **NavMesh.Raycast corner-cutting** (v1.9.0): Ported Phobos's two-tier corner-reaching optimization from `MovementSystem.cs:244`. When a bot is within 1m of the current path corner (but outside normal epsilon), `NavMesh.Raycast` checks line-of-sight to the next corner. If clear, the current corner is skipped for smoother trajectories. Implemented as a pure-logic `CustomPathFollower.TryCornerCut(position, canSeeNextCorner)` method (keeps the path follower Unity-free) called from `CustomMoverController.TryNavMeshCornerCut()` which performs the actual `NavMesh.Raycast`. Complementary to Chaikin smoothing: Chaikin reduces corners offline, NavMesh.Raycast skips them at runtime. 8 new tests. SAIN uses the identical pattern in `BotPathData.cs:131-147`.
 
+13. **Squad-level strategies** (v1.9.0): Ported Phobos's `GotoObjectiveStrategy` + `SquadRegistry` + `Squad` entity pattern — `SquadEntity` (per-squad data container with leader/member tracking, shared objective, strategy scoring), `SquadRegistry` (dense storage with swap-remove, BSG group ID mapping), `SquadStrategyManager` (scored strategy framework with additive hysteresis, identical to Phobos's `StrategyManager.PickStrategy`), `GotoObjectiveStrategy` (observes boss objective, computes quest-type-aware tactical positions via `TacticalPositionCalculator`, tracks arrivals, adjusts hold duration). `GoToTacticalPositionTask` (score=0.70) and `HoldTacticalPositionTask` (score=0.65) score followers toward/at tactical positions. Three follower gates partially unlocked: `BotObjectiveLayer.IsActive`, `getFollowerDecision`, `BotObjectiveManager.Update`. Squad lifecycle wired into `BotHiveMindMonitor.Update()` as step 5. Config-gated via `squad_strategy.enabled` (default: true) + F12 toggle. Key differences from Phobos: QuestingBots computes tactical positions from quest type (Ambush→flanking, Snipe→overwatch, etc.) while Phobos uses cover points; QuestingBots uses utility tasks for follower action selection while Phobos uses GotoObjective+Guard; followers still respect combat/heal/investigate priorities. See `docs/squad-strategies-analysis.md` for the full analysis. ~167 new tests.
+
 ### What QuestingBots Could Still Learn from Phobos
 
-1. **Squad-level strategies**: Phobos has a separate strategy layer (`GotoObjectiveStrategy`) that evaluates per-squad and assigns objectives to entire squads. QuestingBots' utility AI operates per-agent only; squad coordination is handled separately via the HiveMind boss/follower system. See `docs/squad-strategies-analysis.md` for a detailed implementation plan (Option B: Squad Strategy Layer).
+1. **Cover point system**: Phobos uses `ShufflePickCoverPoints()` to find actual cover positions from the location's pre-computed cover data. QuestingBots computes tactical positions using geometric offsets (circles, spreads). Future work could use `NavMesh.SamplePosition()` + `Physics.Raycast` for cover-aware tactical positioning.
+
+2. **Formation movement**: Phobos followers match boss movement speed and maintain formations during travel. QuestingBots followers navigate independently to their tactical positions.
 
 ### What Phobos Could Learn from QuestingBots
 
@@ -870,7 +874,7 @@ Since the original comparison, QuestingBots has ported several Phobos innovation
 
 6. **Server component**: Having quest data and bot generation on the server allows QuestingBots to leverage the full game database. Phobos is limited to client-side data.
 
-7. **Testing infrastructure**: QuestingBots has 787 unit tests and CI. Phobos has none, relying on manual testing and benchmarks.
+7. **Testing infrastructure**: QuestingBots has 954 unit tests and CI. Phobos has none, relying on manual testing and benchmarks.
 
 8. **Mod conflict detection**: QuestingBots actively detects and warns about conflicting mods both via BepInEx attributes and server-side checks. Phobos has no conflict detection.
 

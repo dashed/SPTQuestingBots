@@ -151,6 +151,58 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// </summary>
         public int ConsecutiveFailedAssignments;
 
+        // ── Squad State ─────────────────────────────────────────
+
+        /// <summary>
+        /// Reference to the squad this bot belongs to. Null if not in a squad.
+        /// </summary>
+        public SquadEntity Squad;
+
+        /// <summary>
+        /// This bot's role within its squad. Default: None.
+        /// </summary>
+        public SquadRole SquadRole;
+
+        /// <summary>
+        /// Tactical position X coordinate assigned by the squad strategy.
+        /// </summary>
+        public float TacticalPositionX;
+
+        /// <summary>
+        /// Tactical position Y coordinate assigned by the squad strategy.
+        /// </summary>
+        public float TacticalPositionY;
+
+        /// <summary>
+        /// Tactical position Z coordinate assigned by the squad strategy.
+        /// </summary>
+        public float TacticalPositionZ;
+
+        /// <summary>
+        /// Whether this bot has been assigned a tactical position by the squad strategy.
+        /// </summary>
+        public bool HasTacticalPosition;
+
+        /// <summary>
+        /// Last objective version this bot saw. Used to detect when the squad objective changes.
+        /// </summary>
+        public int LastSeenObjectiveVersion;
+
+        /// <summary>
+        /// Current world position X, synced from BotOwner.Position for pure-logic access.
+        /// </summary>
+        public float CurrentPositionX;
+
+        /// <summary>
+        /// Current world position Y, synced from BotOwner.Position for pure-logic access.
+        /// </summary>
+        public float CurrentPositionY;
+
+        /// <summary>
+        /// Current world position Z, synced from BotOwner.Position for pure-logic access.
+        /// </summary>
+        public float CurrentPositionZ;
+
         // ── Constructor ─────────────────────────────────────────
 
         public BotEntity(int id)

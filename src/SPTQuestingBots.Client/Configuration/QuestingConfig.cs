@@ -69,6 +69,9 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("zone_movement")]
         public ZoneMovementConfig ZoneMovement { get; set; } = new ZoneMovementConfig();
 
+        [JsonProperty("squad_strategy")]
+        public SquadStrategyConfig SquadStrategy { get; set; } = new SquadStrategyConfig();
+
         public QuestingConfig() { }
     }
 }

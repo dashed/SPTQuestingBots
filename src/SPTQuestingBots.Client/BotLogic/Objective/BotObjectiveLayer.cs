@@ -17,6 +17,7 @@ namespace SPTQuestingBots.BotLogic.Objective
     internal class BotObjectiveLayer : CustomLayerForQuesting
     {
         private static UtilityTaskManager _taskManager;
+        private static UtilityTaskManager _followerTaskManager;
 
         public BotObjectiveLayer(BotOwner _botOwner, int _priority)
             : base(_botOwner, _priority, 25) { }
@@ -52,6 +53,15 @@ namespace SPTQuestingBots.BotLogic.Objective
 
             if (decisionMonitor.HasAQuestingBoss)
             {
+                // Gate 1: allow followers with squad tactical positions
+                if (
+                    QuestingBotsPluginConfig.SquadStrategyEnabled.Value
+                    && decisionMonitor.CurrentDecision == BotQuestingDecision.SquadQuest
+                )
+                {
+                    return updatePreviousState(trySetNextActionForFollower());
+                }
+
                 return updatePreviousState(false);
             }
 
@@ -153,6 +163,32 @@ namespace SPTQuestingBots.BotLogic.Objective
 
             // Failsafe
             return updatePreviousState(false);
+        }
+
+        private bool trySetNextActionForFollower()
+        {
+            if (_followerTaskManager == null)
+                _followerTaskManager = SquadTaskFactory.Create();
+
+            if (!BotEntityBridge.TryGetEntity(BotOwner, out var entity))
+                return false;
+
+            // Ensure TaskScores array is allocated for follower tasks
+            if (entity.TaskScores == null || entity.TaskScores.Length < SquadTaskFactory.TaskCount)
+                entity.TaskScores = new float[SquadTaskFactory.TaskCount];
+
+            // Sync position for distance calculations
+            BotEntityBridge.SyncPosition(BotOwner);
+
+            // Score and pick
+            _followerTaskManager.ScoreAndPick(entity);
+
+            var task = entity.TaskAssignment.Task as QuestUtilityTask;
+            if (task == null)
+                return false;
+
+            setNextAction((BotActionType)task.BotActionTypeId, task.ActionReason);
+            return true;
         }
 
         private bool trySetNextActionUtility()

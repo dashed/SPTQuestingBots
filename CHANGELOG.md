@@ -31,6 +31,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 5 new quest state fields on `BotEntity`: `CurrentQuestAction`, `DistanceToObjective`, `IsCloseToObjective`, `MustUnlockDoor`, `HasActiveObjective`
   - F12 config entry `UseUtilityAI` (Main section, advanced, default: true)
   - ~79 new client tests: QuestActionId (1), BotActionTypeId (1), BotEntityQuestState (2), GoToObjectiveTask (16), AmbushTask (5), SnipeTask (5), HoldPositionTask (5), PlantItemTask (5), UnlockDoorTask (5), ToggleSwitchTask (4), CloseDoorsTask (4), QuestUtilityTaskBase (2), ScoreAndPick (3), QuestActionTransitions (18), QuestTaskFactory (4)
+- **Squad strategies (Phobos-style coordinated group questing)** — enabled by default (`squad_strategy.enabled`, default: true; F12 toggle `Enable Squad Strategies`, default: true)
+  - Followers receive tactical positions computed from their boss's quest objective instead of standing idle
+  - `SquadEntity`: per-squad data container with stable recycled ID, leader/member tracking, shared objective, and strategy scoring state
+  - `SquadRegistry`: dense squad storage with swap-remove, ID recycling, and BSG group ID mapping for O(1) external-ID-to-squad lookup
+  - `SquadObjective`: shared objective state (position, tactical positions, arrival tracking, duration with Gaussian sampling)
+  - `SquadRole` enum: None, Leader, Guard, Flanker, Overwatch, Escort
+  - `SquadStrategy` / `SquadStrategyManager`: Phobos-style scored strategy framework with additive hysteresis and swap-remove active squad tracking
+  - `GotoObjectiveStrategy`: primary squad strategy — observes boss objective, computes tactical positions via `TacticalPositionCalculator`, tracks member arrivals, adjusts hold duration with Gaussian sampling
+  - `TacticalPositionCalculator`: quest-type-aware position computation (Ambush→flanking at 120° spread, Snipe→overwatch at 150° spread, PlantItem→perimeter guard, HoldAtPosition→circular spread, MoveToPosition→trail formation)
+  - `SquadStrategyConfig`: 10-property config under `questing.squad_strategy` (enabled, arrival radius, formation spacing, spread angles, use quest type roles)
+  - `GoToTacticalPositionTask` (score=0.70, h=0.20): utility task scoring high when follower is far from tactical position (>3m)
+  - `HoldTacticalPositionTask` (score=0.65, h=0.10): utility task scoring high when follower is close to tactical position (<=3m)
+  - `SquadTaskFactory`: static factory creating `UtilityTaskManager` with 2 follower-specific tasks
+  - Three follower gates partially unlocked: Gate 1 (`BotObjectiveLayer.IsActive`) allows `SquadQuest` followers through, Gate 2 (`getFollowerDecision`) returns `SquadQuest` instead of killing assignments, Gate 3 implicitly handled by BotObjectiveLayer entry
+  - Squad lifecycle wired into `BotHiveMindMonitor.Update()` as step 5: position sync, squad creation/wiring, objective sync, strategy scoring
+  - `GoToObjectiveAction.tryMoveToObjective()` forks to tactical position when follower has one assigned
+  - `BotEntityBridge`: 6 new squad methods (RegisterSquad, AddToSquad, RemoveFromSquad, HasTacticalPosition, SyncPosition, SyncSquadObjective)
+  - ~167 new client tests: SquadEntity (16), SquadRegistry (35), SquadObjective (10), SquadStrategy (18), SquadStrategyManager (20), GotoObjectiveStrategy (19), TacticalPositionCalculator (24), GoToTacticalPositionTask (9), HoldTacticalPositionTask (10), SquadTaskFactory (5), SquadStrategyConfig (1)
 - **Door collision bypass (Phobos-style)** — enabled by default (`bypass_door_colliders`, default: true)
   - `ShrinkDoorNavMeshCarversPatch`: Harmony postfix on `GameWorld.OnGameStarted` — shrinks all door NavMesh carver sizes to 37.5% to prevent narrow hallways from being blocked by open doors on the navmesh
   - `DoorCollisionHelper`: static helper caching door colliders at map start, then disabling `Physics.IgnoreCollision` + `EFTPhysicsClass.IgnoreCollision` between each bot's colliders and all door colliders
@@ -47,7 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated `docs/phobos-comparison.md` — door bypass and corner-cutting moved from "Still Learn" to "Has Adopted"
 
 ### Changed
-- 729 client tests total (was 711), 58 server tests, 787 total
+- 896 client tests total (was 711), 58 server tests, 954 total
 
 ## [1.8.0] - 2026-02-08
 

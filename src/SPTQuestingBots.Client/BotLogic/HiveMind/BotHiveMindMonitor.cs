@@ -6,6 +6,7 @@ using Comfort.Common;
 using EFT;
 using SPTQuestingBots.BehaviorExtensions;
 using SPTQuestingBots.Components.Spawning;
+using SPTQuestingBots.Configuration;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
 using UnityEngine;
@@ -24,6 +25,8 @@ namespace SPTQuestingBots.BotLogic.HiveMind
 
     public class BotHiveMindMonitor : MonoBehaviourDelayedUpdate
     {
+        private ECS.UtilityAI.SquadStrategyManager _squadStrategyManager;
+
         public BotHiveMindMonitor()
         {
             UpdateInterval = 50;
@@ -68,6 +71,9 @@ namespace SPTQuestingBots.BotLogic.HiveMind
 
             // 4. Reset sensors for inactive (dead/despawned) entities
             ECS.Systems.HiveMindSystem.ResetInactiveEntitySensors(ECS.BotEntityBridge.Registry.Entities);
+
+            // 5. Update squad strategies (position sync, objective sync, tactical positions)
+            updateSquadStrategies();
         }
 
         public static void UpdateValueForBot(BotHiveMindSensorType sensorType, BotOwner bot, bool value)
@@ -152,6 +158,61 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             {
                 newGroup.AddAlly(oldGroupMember.GetPlayer);
             }
+        }
+
+        private void updateSquadStrategies()
+        {
+            if (!QuestingBotsPluginConfig.SquadStrategyEnabled.Value)
+                return;
+
+            var config = ConfigController.Config?.Questing?.SquadStrategy;
+            if (config == null || !config.Enabled)
+                return;
+
+            // Sync boss-follower into squads and sync positions
+            var entities = ECS.BotEntityBridge.Registry.Entities;
+            for (int i = 0; i < entities.Count; i++)
+            {
+                var entity = entities[i];
+                if (!entity.IsActive)
+                    continue;
+
+                var botOwner = ECS.BotEntityBridge.GetBotOwner(entity);
+                if (botOwner == null)
+                    continue;
+
+                // Sync world position for all entities
+                ECS.BotEntityBridge.SyncPosition(botOwner);
+
+                // If this is a boss with followers, ensure squad exists
+                if (entity.HasFollowers)
+                {
+                    var squad = ECS.BotEntityBridge.RegisterSquad(entity, botOwner.Id);
+                    if (squad != null)
+                    {
+                        // Add any followers not yet in the squad
+                        for (int j = 0; j < entity.Followers.Count; j++)
+                        {
+                            var follower = entity.Followers[j];
+                            if (follower.IsActive && follower.Squad != squad)
+                                ECS.BotEntityBridge.AddToSquad(follower, entity);
+                        }
+
+                        // Sync boss objective into squad
+                        ECS.BotEntityBridge.SyncSquadObjective(botOwner);
+                    }
+                }
+            }
+
+            // Run squad strategy manager (lazy-init)
+            if (_squadStrategyManager == null)
+            {
+                _squadStrategyManager = new ECS.UtilityAI.SquadStrategyManager(
+                    new ECS.UtilityAI.SquadStrategy[] { new ECS.UtilityAI.GotoObjectiveStrategy(config) }
+                );
+            }
+
+            _squadStrategyManager.Update(ECS.BotEntityBridge.SquadRegistry.ActiveSquads);
         }
 
         /// <summary>

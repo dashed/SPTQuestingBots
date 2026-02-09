@@ -167,6 +167,46 @@
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/CloseDoorsTask.cs"
       Link="LinkedSources/ECS/UtilityAI/Tasks/CloseDoorsTask.cs"
     />
+    <!-- Squad strategy: pure C# entities and config -->
+    <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/SquadRole.cs" Link="LinkedSources/ECS/SquadRole.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/SquadObjective.cs" Link="LinkedSources/ECS/SquadObjective.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/SquadEntity.cs" Link="LinkedSources/ECS/SquadEntity.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/SquadRegistry.cs" Link="LinkedSources/ECS/SquadRegistry.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/StrategyAssignment.cs" Link="LinkedSources/ECS/StrategyAssignment.cs" />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Configuration/SquadStrategyConfig.cs"
+      Link="LinkedSources/Configuration/SquadStrategyConfig.cs"
+    />
+    <!-- Squad strategy: strategy framework and tactical positions -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/SquadStrategy.cs"
+      Link="LinkedSources/ECS/UtilityAI/SquadStrategy.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/SquadStrategyManager.cs"
+      Link="LinkedSources/ECS/UtilityAI/SquadStrategyManager.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/GotoObjectiveStrategy.cs"
+      Link="LinkedSources/ECS/UtilityAI/GotoObjectiveStrategy.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/TacticalPositionCalculator.cs"
+      Link="LinkedSources/ECS/Systems/TacticalPositionCalculator.cs"
+    />
+    <!-- Squad strategy: follower tasks -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/GoToTacticalPositionTask.cs"
+      Link="LinkedSources/ECS/UtilityAI/Tasks/GoToTacticalPositionTask.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/HoldTacticalPositionTask.cs"
+      Link="LinkedSources/ECS/UtilityAI/Tasks/HoldTacticalPositionTask.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/SquadTaskFactory.cs"
+      Link="LinkedSources/ECS/UtilityAI/SquadTaskFactory.cs"
+    />
   </ItemGroup>
 
   <!--

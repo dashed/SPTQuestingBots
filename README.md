@@ -58,6 +58,16 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - Hybrid approach: utility scoring for action SELECTION, BigBrain for action EXECUTION
 - When disabled, the existing deterministic switch statement is used as fallback
 
+### Squad Strategies (Optional)
+- Phobos-style coordinated group questing — disabled by default (`squad_strategy.enabled`, default: false; F12 toggle `Enable Squad Strategies`)
+- Followers receive tactical positions computed from their boss's quest objective instead of standing idle
+- Quest-type-aware formations: Ambush quests use flanking positions (120° spread), Snipe quests use overwatch (150° spread), PlantItem quests use perimeter guard, HoldAtPosition uses circular spread, MoveToPosition uses trail formation
+- Two follower utility tasks: GoToTacticalPosition (score=0.70, travel phase) and HoldTacticalPosition (score=0.65, hold phase) with hysteresis to prevent flip-flopping
+- Squad strategy framework with GotoObjectiveStrategy: observes boss objective, computes tactical positions, tracks arrivals, adjusts hold duration with Gaussian sampling
+- Three follower gates conditionally unlocked for bots with tactical positions — combat, healing, and investigation decisions still take priority
+- Squad lifecycle wired into HiveMind tick loop: position sync, squad creation, objective sync, strategy scoring
+- Pure C# squad entities (SquadEntity, SquadRegistry) with dense storage, swap-remove, and BSG group ID mapping
+
 ### Door Collision Bypass (Optional)
 - Phobos-style door collision bypass — enabled by default (`bypass_door_colliders`, default: true)
 - Shrinks door NavMesh carvers to 37.5% to prevent narrow hallways from being blocked by open doors on the navmesh

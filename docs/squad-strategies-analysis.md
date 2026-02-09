@@ -2,7 +2,7 @@
 
 **Date**: 2026-02-09
 **Version**: QuestingBots v1.9.0
-**Status**: Analysis / Pre-Implementation
+**Status**: Implemented (Phases 1-4 of Option B complete)
 
 ---
 
@@ -1531,14 +1531,14 @@ independently configurable.
 
 ### Phase Summary
 
-| Phase | Scope | New Files | Modified Files | Tests | Risk |
-|-------|-------|-----------|---------------|-------|------|
-| 1 | Pure logic | 4 src + 3 test | 0 | ~40 | Low |
-| 2 | ECS wiring | 2 test | 4 | ~25 | Low |
-| 3 | Gate unlocking | 1 test | 4 | ~15 | Medium |
-| 4 | Squad utility tasks | 4 src + 2 test | 2 | ~25 | Low-Medium |
-| 5 | SAIN enhancements | 1 src + 1 test | 2 | ~15 | Low |
-| **Total** | | **9 src + 9 test** | **12** | **~120** | |
+| Phase | Scope | New Files | Modified Files | Tests | Risk | Status |
+|-------|-------|-----------|---------------|-------|------|--------|
+| 1 | Pure logic | 4 src + 3 test | 0 | ~40 | Low | **Done** |
+| 2 | ECS wiring | 2 test | 4 | ~25 | Low | **Done** |
+| 3 | Gate unlocking | 1 test | 4 | ~15 | Medium | **Done** |
+| 4 | Squad utility tasks | 4 src + 2 test | 2 | ~25 | Low-Medium | **Done** |
+| 5 | SAIN enhancements | 1 src + 1 test | 2 | ~15 | Low | Planned |
+| **Total** | | **9 src + 9 test** | **12** | **~120** | | |
 
 ---
 

@@ -54,6 +54,12 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// <summary>Empty list returned when a bot has no job assignments (avoids null).</summary>
         private static readonly List<BotJobAssignment> _emptyAssignments = new List<BotJobAssignment>();
 
+        /// <summary>Squad registry mapping BSG group IDs to squad entities.</summary>
+        private static readonly SquadRegistry _squadRegistry = new SquadRegistry();
+
+        /// <summary>Public accessor for squad registry (used by strategy manager).</summary>
+        public static SquadRegistry SquadRegistry => _squadRegistry;
+
         /// <summary>Dense entity registry for systems that need to iterate all bots.</summary>
         public static BotRegistry Registry => _registry;
 
@@ -443,6 +449,92 @@ namespace SPTQuestingBots.BotLogic.ECS
             return false;
         }
 
+        // ── Squad Methods ────────────────────────────────────────
+
+        /// <summary>
+        /// Get or create a squad for a BSG group, adding the boss as leader.
+        /// </summary>
+        public static SquadEntity RegisterSquad(BotEntity boss, int bsgGroupId)
+        {
+            if (boss == null)
+                return null;
+            var squad = _squadRegistry.GetOrCreate(bsgGroupId, 1, 6); // 1 strategy for now
+            if (squad.Leader == null)
+                _squadRegistry.AddMember(squad, boss);
+            return squad;
+        }
+
+        /// <summary>
+        /// Add a follower bot to its boss's squad.
+        /// </summary>
+        public static void AddToSquad(BotEntity follower, BotEntity boss)
+        {
+            if (follower == null || boss == null || boss.Squad == null)
+                return;
+            _squadRegistry.AddMember(boss.Squad, follower);
+        }
+
+        /// <summary>
+        /// Remove a bot from its squad.
+        /// </summary>
+        public static void RemoveFromSquad(BotEntity member)
+        {
+            if (member == null || member.Squad == null)
+                return;
+            _squadRegistry.RemoveMember(member.Squad, member);
+        }
+
+        /// <summary>
+        /// Check if a bot has a tactical position assigned.
+        /// </summary>
+        public static bool HasTacticalPosition(BotOwner bot)
+        {
+            if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
+                return entity.HasTacticalPosition;
+            return false;
+        }
+
+        /// <summary>
+        /// Sync bot's current world position into entity fields for pure-logic access.
+        /// </summary>
+        public static void SyncPosition(BotOwner bot)
+        {
+            if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
+            {
+                var pos = bot.Position;
+                entity.CurrentPositionX = pos.x;
+                entity.CurrentPositionY = pos.y;
+                entity.CurrentPositionZ = pos.z;
+            }
+        }
+
+        /// <summary>
+        /// Sync the boss's current quest objective position into the squad's shared objective.
+        /// Call before SquadStrategyManager.Update().
+        /// </summary>
+        public static void SyncSquadObjective(BotOwner boss)
+        {
+            if (boss == null || !_ownerToEntity.TryGetValue(boss, out var entity))
+                return;
+            if (entity.Squad == null || entity.Squad.Leader != entity)
+                return;
+
+            var objectiveManager = boss.GetObjectiveManager();
+            if (objectiveManager == null || !objectiveManager.IsJobAssignmentActive)
+                return;
+
+            var obj = entity.Squad.Objective;
+            var targetPos = objectiveManager.Position;
+            if (targetPos.HasValue)
+            {
+                var pos = targetPos.Value;
+                if (!obj.HasObjective || obj.ObjectiveX != pos.x || obj.ObjectiveY != pos.y || obj.ObjectiveZ != pos.z)
+                {
+                    obj.SetObjective(pos.x, pos.y, pos.z);
+                }
+            }
+        }
+
         /// <summary>
         /// Clear all entity data. Called at raid end from BotsControllerStopPatch.
         /// </summary>
@@ -453,6 +545,7 @@ namespace SPTQuestingBots.BotLogic.ECS
             _profileIdToEntity.Clear();
             _entityFieldStates.Clear();
             _jobAssignments.Clear();
+            _squadRegistry.Clear();
             _registry.Clear();
         }
 
