@@ -72,6 +72,15 @@
       Include="../../src/SPTQuestingBots.Client/ZoneMovement/Diag/MinimapProjection.cs"
       Link="LinkedSources/ZoneMovement/MinimapProjection.cs"
     />
+    <!-- Movement: pure-logic path analysis (no Unity/EFT dependencies beyond Vector3 shim) -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Models/Pathing/SprintAngleJitter.cs"
+      Link="LinkedSources/Pathing/SprintAngleJitter.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Models/Pathing/PathDeviationForce.cs"
+      Link="LinkedSources/Pathing/PathDeviationForce.cs"
+    />
     <!-- ECS: pure C# data containers (no Unity/EFT dependencies) -->
     <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/BotEntity.cs" Link="LinkedSources/ECS/BotEntity.cs" />
     <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/BotRegistry.cs" Link="LinkedSources/ECS/BotRegistry.cs" />
