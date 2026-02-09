@@ -70,9 +70,11 @@
       Include="../../src/SPTQuestingBots.Client/ZoneMovement/Diag/MinimapProjection.cs"
       Link="LinkedSources/ZoneMovement/MinimapProjection.cs"
     />
-    <!-- ECS Phase 1: pure C# data containers (no Unity/EFT dependencies) -->
+    <!-- ECS: pure C# data containers (no Unity/EFT dependencies) -->
     <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/BotEntity.cs" Link="LinkedSources/ECS/BotEntity.cs" />
     <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/BotRegistry.cs" Link="LinkedSources/ECS/BotRegistry.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/BotType.cs" Link="LinkedSources/ECS/BotType.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/BotSensor.cs" Link="LinkedSources/ECS/BotSensor.cs" />
   </ItemGroup>
 
   <!--

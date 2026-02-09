@@ -15,10 +15,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `BotRegistry`: dense `List<BotEntity>` storage with swap-remove, `List<int?>` sparse ID→index map, `Stack<int>` ID recycling
   - Zero Unity/EFT dependencies — fully testable in net9.0
   - 48 new unit tests: `BotEntityTests` (15) + `BotRegistryTests` (33)
+- **ECS Phase 2: Sensor state + embedded classification** — moves HiveMind sensor data onto BotEntity
+  - 5 sensor booleans embedded on BotEntity: `IsInCombat`, `IsSuspicious`, `CanQuest`, `CanSprintToObjective`, `WantsToLoot` (replaces 5 `Dictionary<BotOwner, bool>`)
+  - `LastLootingTime` (replaces `botLastLootingTime` dictionary)
+  - `BotType` enum (Unknown, PMC, Scav, PScav, Boss) — replaces `registeredPMCs`/`registeredBosses` HashSet lookups
+  - `IsSleeping` flag — replaces `sleepingBotIds` list lookup
+  - `BotSensor` enum with `GetSensor`/`SetSensor` for generic access
+  - Zero-allocation group query helpers: `CheckSensorForBoss`, `CheckSensorForAnyFollower`, `CheckSensorForGroup`
+  - 26 new unit tests for all Phase 2 fields, methods, and group query scenarios
 - ECS data layout analysis document (`docs/ecs-data-layout-analysis.md`) — Phobos architecture deep dive, QuestingBots audit, cache coherency math, and phased implementation plan
 
 ### Changed
-- 235 client tests total (was 187), 58 server tests, 293 total
+- 261 client tests total (was 187), 58 server tests, 319 total
 
 ## [1.6.0] - 2026-02-08
 

@@ -41,10 +41,12 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 
 ### ECS-Lite Data Layout
 - Dense entity storage with swap-remove and ID recycling, inspired by Phobos's EntityArray pattern
-- `BotEntity`: per-bot data container with stable recycled ID, boss/follower hierarchy
+- `BotEntity`: per-bot data container with stable recycled ID, boss/follower hierarchy, embedded sensor state
 - `BotRegistry`: dense list with O(1) add/remove/lookup — no gaps, iteration-friendly
+- Sensor booleans (combat, suspicious, questing, sprint, loot) embedded directly on entity — replaces 5 separate dictionaries
+- Bot classification (`BotType` enum) and sleep state replace scattered HashSet/List lookups
+- Zero-allocation group query helpers for checking sensor state across boss/follower hierarchies
 - Pure C# with zero Unity dependencies for full testability
-- Foundation for consolidating scattered bot dictionaries into a single source of truth
 
 ---
 
