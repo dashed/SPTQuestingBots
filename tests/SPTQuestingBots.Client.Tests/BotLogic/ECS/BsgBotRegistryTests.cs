@@ -152,5 +152,55 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS
                 Assert.That(found.BotType, Is.EqualTo(BotType.Scav));
             }
         }
+
+        [Test]
+        public void GetByBsgId_AfterDenseRemove_StillReturnsSameEntity()
+        {
+            // Remove from dense list does NOT auto-clear the BsgId sparse array.
+            // The BsgId mapping persists until explicitly cleared via ClearBsgId.
+            var entity = _registry.Add(42);
+            entity.BotType = BotType.PMC;
+
+            _registry.Remove(entity);
+
+            // Entity removed from dense list
+            Assert.That(_registry.Count, Is.EqualTo(0));
+            // But BsgId mapping still points to the object
+            Assert.That(_registry.GetByBsgId(42), Is.SameAs(entity));
+        }
+
+        [Test]
+        public void ReRegisterSameBsgId_AfterClear_Works()
+        {
+            var original = _registry.Add(42);
+            original.BotType = BotType.PMC;
+
+            _registry.Clear();
+            Assert.That(_registry.GetByBsgId(42), Is.Null);
+
+            // Re-register with the same BsgId after clear
+            var reregistered = _registry.Add(42);
+            reregistered.BotType = BotType.Scav;
+
+            Assert.That(_registry.GetByBsgId(42), Is.SameAs(reregistered));
+            Assert.That(reregistered.BotType, Is.EqualTo(BotType.Scav));
+        }
+
+        [Test]
+        public void ClearBsgId_ThenReRegister_NewEntityReturned()
+        {
+            var old = _registry.Add(10);
+            old.BotType = BotType.PMC;
+
+            _registry.ClearBsgId(10);
+            Assert.That(_registry.GetByBsgId(10), Is.Null);
+
+            // Register a new entity with the same BsgId
+            var replacement = _registry.Add(10);
+            replacement.BotType = BotType.Boss;
+
+            Assert.That(_registry.GetByBsgId(10), Is.SameAs(replacement));
+            Assert.That(replacement.BotType, Is.EqualTo(BotType.Boss));
+        }
     }
 }

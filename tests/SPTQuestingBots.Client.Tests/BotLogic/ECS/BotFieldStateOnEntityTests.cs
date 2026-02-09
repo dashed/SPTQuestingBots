@@ -128,5 +128,59 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS
             Assert.That(boss.FieldNoiseSeed, Is.EqualTo(10));
             Assert.That(follower.FieldNoiseSeed, Is.EqualTo(20));
         }
+
+        [Test]
+        public void FieldState_NotResetByInactiveSensorReset_ActiveEntity()
+        {
+            // ResetInactiveEntitySensors resets sensor bools but must NOT
+            // touch field state on active entities.
+            var entity = _registry.Add();
+            entity.FieldNoiseSeed = 999;
+            entity.HasFieldState = true;
+            entity.SetSensor(BotSensor.InCombat, true);
+
+            HiveMindSystem.ResetInactiveEntitySensors(_registry.Entities);
+
+            // Active entity: sensors untouched, field state untouched
+            Assert.That(entity.IsInCombat, Is.True);
+            Assert.That(entity.FieldNoiseSeed, Is.EqualTo(999));
+            Assert.That(entity.HasFieldState, Is.True);
+        }
+
+        [Test]
+        public void FieldState_UntouchedByInactiveSensorReset_InactiveEntity()
+        {
+            // When inactive, ResetInactiveEntitySensors resets sensors to defaults
+            // but FieldNoiseSeed and HasFieldState are NOT sensor fields — they
+            // should remain untouched by the sensor reset system.
+            var entity = _registry.Add();
+            entity.FieldNoiseSeed = 42;
+            entity.HasFieldState = true;
+            entity.SetSensor(BotSensor.InCombat, true);
+
+            entity.IsActive = false;
+            HiveMindSystem.ResetInactiveEntitySensors(_registry.Entities);
+
+            // Sensors reset to defaults
+            Assert.That(entity.IsInCombat, Is.False);
+            // Field state NOT reset by sensor system
+            Assert.That(entity.FieldNoiseSeed, Is.EqualTo(42));
+            Assert.That(entity.HasFieldState, Is.True);
+        }
+
+        [Test]
+        public void FieldState_AfterClearAndReAdd_FreshDefaults()
+        {
+            var entity = _registry.Add();
+            entity.FieldNoiseSeed = 77;
+            entity.HasFieldState = true;
+
+            _registry.Clear();
+
+            // New entity after clear gets fresh defaults
+            var fresh = _registry.Add();
+            Assert.That(fresh.FieldNoiseSeed, Is.EqualTo(0));
+            Assert.That(fresh.HasFieldState, Is.False);
+        }
     }
 }

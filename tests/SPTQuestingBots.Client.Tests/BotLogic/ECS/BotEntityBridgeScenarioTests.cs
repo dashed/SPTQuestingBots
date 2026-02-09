@@ -1398,5 +1398,81 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS
             Assert.That(savedRef.IsInCombat, Is.True);
             Assert.That(savedRef.LastLootingTime, Is.EqualTo(new DateTime(2025, 10, 1)));
         }
+
+        [Test]
+        public void SwapRemove_PreservesBossFollowerRelationships()
+        {
+            // Verifies that removing an entity from the dense list doesn't
+            // corrupt boss/follower relationships on remaining entities.
+            var boss = _registry.Add();
+            boss.BotType = BotType.Boss;
+            var unrelated = _registry.Add();
+            unrelated.BotType = BotType.Scav;
+            var f1 = _registry.Add();
+            f1.BotType = BotType.PMC;
+            var f2 = _registry.Add();
+            f2.BotType = BotType.PMC;
+
+            HiveMindSystem.AssignBoss(f1, boss);
+            HiveMindSystem.AssignBoss(f2, boss);
+
+            // Remove unrelated bot (triggers swap-remove in dense list)
+            _registry.Remove(unrelated);
+
+            // Boss-follower relationships must survive the swap
+            Assert.That(boss.Followers.Count, Is.EqualTo(2));
+            Assert.That(f1.Boss, Is.SameAs(boss));
+            Assert.That(f2.Boss, Is.SameAs(boss));
+            Assert.That(f1.CheckSensorForBoss(BotSensor.InCombat), Is.False);
+
+            // Set sensor on boss after swap — follower still sees it
+            boss.SetSensor(BotSensor.InCombat, true);
+            Assert.That(f1.CheckSensorForGroup(BotSensor.InCombat), Is.True);
+        }
+
+        [Test]
+        public void SwapRemove_PreservesSensorStateOnRemainingEntities()
+        {
+            var e1 = _registry.Add();
+            e1.BotType = BotType.PMC;
+            e1.SetSensor(BotSensor.InCombat, true);
+            e1.SetSensor(BotSensor.CanQuest, true);
+
+            var e2 = _registry.Add();
+            e2.BotType = BotType.Scav;
+            e2.SetSensor(BotSensor.WantsToLoot, true);
+            e2.LastLootingTime = new DateTime(2025, 11, 1);
+
+            var toRemove = _registry.Add();
+            toRemove.BotType = BotType.Boss;
+
+            _registry.Remove(toRemove);
+
+            // Remaining entities' sensor state must be intact
+            Assert.That(e1.IsInCombat, Is.True);
+            Assert.That(e1.CanQuest, Is.True);
+            Assert.That(e2.WantsToLoot, Is.True);
+            Assert.That(e2.LastLootingTime, Is.EqualTo(new DateTime(2025, 11, 1)));
+            Assert.That(_registry.Count, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void SwapRemove_CountActiveByTypeStillCorrect()
+        {
+            var pmc1 = _registry.Add();
+            pmc1.BotType = BotType.PMC;
+            var scav = _registry.Add();
+            scav.BotType = BotType.Scav;
+            var pmc2 = _registry.Add();
+            pmc2.BotType = BotType.PMC;
+
+            Assert.That(HiveMindSystem.CountActiveByType(_registry.Entities, BotType.PMC), Is.EqualTo(2));
+
+            _registry.Remove(scav);
+
+            Assert.That(HiveMindSystem.CountActiveByType(_registry.Entities, BotType.PMC), Is.EqualTo(2));
+            Assert.That(HiveMindSystem.CountActiveByType(_registry.Entities, BotType.Scav), Is.EqualTo(0));
+            Assert.That(HiveMindSystem.CountActive(_registry.Entities), Is.EqualTo(2));
+        }
     }
 }
