@@ -33,7 +33,6 @@ namespace SPTQuestingBots.Controllers
         private static HashSet<BotOwner> registeredPMCs = new HashSet<BotOwner>();
         private static HashSet<BotOwner> registeredBosses = new HashSet<BotOwner>();
         private static List<BotsGroup> hostileGroups = new List<BotsGroup>();
-        private static List<string> sleepingBotIds = new List<string>();
 
         private static List<WildSpawnType> neverForceHostilityRoles = new List<WildSpawnType>()
         {
@@ -42,13 +41,6 @@ namespace SPTQuestingBots.Controllers
             WildSpawnType.gifter,
             WildSpawnType.shooterBTR,
         };
-
-        public static IReadOnlyCollection<BotOwner> PMCs => registeredPMCs;
-        public static IReadOnlyCollection<BotOwner> Bosses => registeredBosses;
-
-        public static bool IsARegisteredPMC(this BotOwner bot) => registeredPMCs.Contains(bot);
-
-        public static bool IsARegisteredBoss(this BotOwner bot) => registeredBosses.Contains(bot);
 
         public static void Clear()
         {
@@ -63,7 +55,6 @@ namespace SPTQuestingBots.Controllers
             registeredPMCs.Clear();
             registeredBosses.Clear();
             hostileGroups.Clear();
-            sleepingBotIds.Clear();
         }
 
         public static BotType GetBotType(BotOwner botOwner)
@@ -166,14 +157,12 @@ namespace SPTQuestingBots.Controllers
 
         public static void RegisterSleepingBot(BotOwner botOwner)
         {
-            if (!sleepingBotIds.Contains(botOwner.ProfileId))
+            if (!BotLogic.ECS.BotEntityBridge.IsBotSleeping(botOwner.Profile.Id))
             {
                 botOwner
                     .GetOrAddObjectiveManager()
                     .BotMonitor.GetMonitor<BotQuestingDecisionMonitor>()
                     .ForceDecision(BotQuestingDecision.Sleep);
-
-                sleepingBotIds.Add(botOwner.ProfileId);
 
                 BotLogic.ECS.BotEntityBridge.SetSleeping(botOwner, true);
             }
@@ -181,22 +170,15 @@ namespace SPTQuestingBots.Controllers
 
         public static void UnregisterSleepingBot(BotOwner botOwner)
         {
-            if (sleepingBotIds.Contains(botOwner.ProfileId))
+            if (BotLogic.ECS.BotEntityBridge.IsBotSleeping(botOwner.Profile.Id))
             {
                 botOwner
                     .GetOrAddObjectiveManager()
                     .BotMonitor.GetMonitor<BotQuestingDecisionMonitor>()
                     .ForceDecision(BotQuestingDecision.None);
 
-                sleepingBotIds.Remove(botOwner.ProfileId);
-
                 BotLogic.ECS.BotEntityBridge.SetSleeping(botOwner, false);
             }
-        }
-
-        public static bool IsBotSleeping(string botId)
-        {
-            return sleepingBotIds.Contains(botId);
         }
 
         public static void MakeBotGroupHostileTowardAllBosses(BotOwner bot)

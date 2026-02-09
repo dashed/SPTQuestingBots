@@ -37,14 +37,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `TimePacing` (`Helpers/TimePacing.cs`): time-based rate limiter with `ShouldRun(float)` + `Reset()`, `[AggressiveInlining]`
   - `FramePacing` (`Helpers/FramePacing.cs`): frame-based rate limiter with `ShouldRun(int)` + `Reset()`, `[AggressiveInlining]`
   - Pure C#, zero Unity dependencies
+- **ECS Phase 5F: remove old data structures** — ECS is now the sole data store
+  - Deleted 6 sensor files: `BotHiveMindAbstractSensor`, `BotHiveMindIsInCombatSensor`, `BotHiveMindIsSuspiciousSensor`, `BotHiveMindWantsToLootSensor`, `BotHiveMindCanQuestSensor`, `BotHiveMindCanSprintToObjectiveSensor` (~310 lines total)
+  - Deleted `deadBots`, `botBosses`, `botFollowers`, `sensors` dictionaries from `BotHiveMindMonitor`
+  - Deleted `_deadBossBuffer`, `RegisterBot()`, `GetBoss()`, `throwIfSensorNotRegistred()` from `BotHiveMindMonitor`
+  - Deleted `sleepingBotIds` list, `IsBotSleeping()`, `PMCs`/`Bosses` properties, `IsARegisteredPMC`/`IsARegisteredBoss` extensions from `BotRegistrationManager`
+  - `RegisterSleepingBot()`/`UnregisterSleepingBot()` now use `BotEntityBridge.IsBotSleeping()` as guard
+  - `addBossFollower()` checks ECS `followerEntity.Boss == bossEntity` instead of `botFollowers[boss].Contains(bot)`
+  - `updateBossFollowers()` reduced to single `HiveMindSystem.CleanupDeadEntities()` call
+  - Removed `BotHiveMindMonitor.RegisterBot()` call from `BotOwnerBrainActivatePatch`
+  - `BotInfoGizmo` switched to `BotEntityBridge.IsBotSleeping()` / `.GetBoss()`
 - `BotEntity.FieldNoiseSeed` and `BotEntity.HasFieldState` fields for Phase 6 zone movement prep (not yet wired)
 - `BotEntity.ConsecutiveFailedAssignments` field for Phase 8 job assignment prep (not yet wired)
-- 99 new client tests: BotEntityBridge scenarios (+45), BsgBotRegistry (15), BotFieldState (12), JobAssignment (8), TimePacing (9), FramePacing (10)
-- Updated `docs/ecs-data-layout-analysis.md` with Phase 5A–5E, 7A, 7B implementation status (~85% complete)
+- 103 new client tests: BotEntityBridge scenarios (+49), BsgBotRegistry (15), BotFieldState (12), JobAssignment (8), TimePacing (9), FramePacing (10)
+- Updated `docs/ecs-data-layout-analysis.md` with Phase 5A–5F, 7A, 7B implementation status (~90% complete)
 
 ### Changed
-- ECS is now the primary write path — push sensors, pull sensors, sleep state, and bot type all write to ECS first; old dictionaries retained only for Phase 5F cleanup
-- 443 client tests total (was 344), 58 server tests, 501 total
+- ECS is now the sole data store — all old dictionaries and sensor classes deleted; push/pull sensors, sleep, type, boss/follower all managed via ECS only
+- 447 client tests total (was 344), 58 server tests, 505 total
 
 ## [1.7.0] - 2026-02-08
 

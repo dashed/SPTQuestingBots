@@ -48,8 +48,8 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - Zero-allocation group query helpers for checking sensor state across boss/follower hierarchies
 - `HiveMindSystem`: static system methods for boss/follower lifecycle, sensor resets, and O(n) entity counting — replaces dictionary-based HiveMind operations
 - `QuestScorer`: pure-logic quest scoring with static buffers — replaces 5 dictionary allocations + `OrderBy` in quest selection hot path
-- `BotEntityBridge`: ECS-primary integration layer — push sensors write only to ECS, pull sensors iterate dense entity list with zero allocation, boss/follower lifecycle uses O(1) `IsActive` checks, ProfileId→entity mapping for O(1) string lookups
-- Write migration complete (Phases 5A–5E): all sensor, sleep, type, and boss/follower writes flow through ECS as primary data store; ~28 read call sites across 12 files use ECS; 14 dead read methods removed
+- `BotEntityBridge`: ECS-only integration layer — push sensors write only to ECS, pull sensors iterate dense entity list with zero allocation, boss/follower lifecycle uses O(1) `IsActive` checks, ProfileId→entity mapping for O(1) string lookups
+- Full ECS migration complete (Phases 5A–5F): all old dictionaries (`deadBots`, `botBosses`, `botFollowers`, `sensors`) and 6 sensor subclasses deleted; ECS is the sole data store for all sensor, sleep, type, and boss/follower state
 - `TimePacing` / `FramePacing`: reusable rate-limiter utilities with `[AggressiveInlining]`, inspired by Phobos
 - Pure C# with zero Unity dependencies for full testability
 

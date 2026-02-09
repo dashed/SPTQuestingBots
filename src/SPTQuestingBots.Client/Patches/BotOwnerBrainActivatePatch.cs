@@ -55,7 +55,6 @@ namespace SPTQuestingBots.Patches
 
             Controllers.BotRegistrationManager.WriteMessageForNewBotSpawn(__instance);
 
-            BotLogic.HiveMind.BotHiveMindMonitor.RegisterBot(__instance);
             BotLogic.ECS.BotEntityBridge.RegisterBot(__instance, Controllers.BotRegistrationManager.GetBotType(__instance));
             Singleton<GameWorld>.Instance.GetComponent<Components.DebugData>().RegisterBot(__instance);
 

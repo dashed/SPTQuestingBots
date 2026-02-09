@@ -839,35 +839,31 @@ Each phase should:
 | Phase 5C | Migrate Pull Sensor Writes (dense iteration) | ✅ Complete |
 | Phase 5D | Migrate Boss/Follower Lifecycle Writes | ✅ Complete |
 | Phase 5E | Migrate BotRegistrationManager Reads | ✅ Complete |
+| Phase 5F | Remove Old Data Structures | ✅ Complete |
 | Phase 6 | BotFieldState on BotEntity | ⚠️ Fields added, not yet wired |
 | Phase 7A | BsgBotRegistry Sparse Array | ✅ Complete |
 | Phase 7B | TimePacing / FramePacing Utilities | ✅ Complete |
 | Phase 8 | Job Assignment State on BotEntity | ⚠️ Field added, not yet wired |
 
-**Current architecture**: ECS is the primary write path. Push sensors
-(`UpdateValueForBot`) write only to ECS entities — old dictionary writes
-removed. Pull sensors iterate the dense entity list with zero delegate
-allocation. Boss/follower lifecycle uses ECS `entity.IsActive` for O(1) dead
-checks instead of `deadBots.Contains()` O(n). `BotRegistrationManager` reads
-(`IsBotSleeping`, `IsBotAPMC`, `GetBotType`) route through
-`BotEntityBridge`. Old dictionaries are still present but only receive
-redundant writes in boss/follower lifecycle (Phase 5F will remove them).
-443 client tests, 58 server tests (501 total).
+**Current architecture**: ECS is the sole data store. All old dictionaries
+(`deadBots`, `botBosses`, `botFollowers`, `sensors`) have been deleted from
+`BotHiveMindMonitor`. All 6 sensor subclasses deleted. `sleepingBotIds`
+deleted from `BotRegistrationManager`. Push sensors write only to ECS entities.
+Pull sensors iterate the dense entity list with zero delegate allocation.
+Boss/follower lifecycle uses ECS `entity.IsActive` for O(1) dead checks.
+`BotRegistrationManager` retains `registeredPMCs`/`registeredBosses` only for
+`GetBotType()` classification during registration and hostility management.
+447 client tests, 58 server tests (505 total).
 
 ### What Remains: Full Option B Completion
 
-Phases 5A–5E migrated all writes to flow through ECS as the primary data
-store. The old dictionaries still exist and receive some redundant writes in
-the boss/follower lifecycle, but all reads come from ECS. What remains:
+Phases 5A–5F completed the full ECS migration and old data structure removal.
+What remains:
 
-1. **Phase 5F** (Remove old data structures) — delete `deadBots`,
-   `botBosses`, `botFollowers`, `sensors` dictionaries from
-   `BotHiveMindMonitor`; delete sensor subclasses; delete `registeredPMCs`,
-   `registeredBosses`, `sleepingBotIds` from `BotRegistrationManager`.
-2. **Phase 6 wiring** — connect `BotEntity.FieldNoiseSeed` /
+1. **Phase 6 wiring** — connect `BotEntity.FieldNoiseSeed` /
    `HasFieldState` to `WorldGridManager` (fields exist, wiring remains).
-3. **Phase 7C–7D** — deterministic tick order, allocation cleanup (optional).
-4. **Phase 8 wiring** — connect `BotEntity.ConsecutiveFailedAssignments` to
+2. **Phase 7C–7D** — deterministic tick order, allocation cleanup (optional).
+3. **Phase 8 wiring** — connect `BotEntity.ConsecutiveFailedAssignments` to
    `BotJobAssignmentFactory` (field exists, wiring remains).
 
 ---
@@ -1016,38 +1012,48 @@ collection properties (used for enumeration by spawning code).
 
 ### Phase 5F: Remove Old Data Structures
 
-**Status: ⬜ Not started** — blocked on in-game verification of Phases 5A–5E.
+**Status: ✅ Complete**
 
-Once in-game verification confirms correctness:
+Deleted all old data structures now replaced by ECS:
 
-**Remove from `BotHiveMindMonitor`**:
-- `deadBots: List<BotOwner>` — replaced by `BotEntity.IsActive`
-- `botBosses: Dictionary<BotOwner, BotOwner>` — replaced by `BotEntity.Boss`
-- `botFollowers: Dictionary<BotOwner, List<BotOwner>>` — replaced by
-  `BotEntity.Followers`
+**Deleted from `BotHiveMindMonitor`** (net ~200 lines removed):
+- `deadBots: List<BotOwner>` → `BotEntity.IsActive`
+- `botBosses: Dictionary<BotOwner, BotOwner>` → `BotEntity.Boss`
+- `botFollowers: Dictionary<BotOwner, List<BotOwner>>` → `BotEntity.Followers`
 - `sensors: Dictionary<BotHiveMindSensorType, BotHiveMindAbstractSensor>`
+- `_deadBossBuffer: List<BotOwner>` (old-dict cleanup helper)
+- `RegisterBot()` method (only registered into old dicts/sensors)
+- `GetBoss()` method (only called by deleted sensor classes)
+- `throwIfSensorNotRegistred()` method
+- All old-dict writes in `updateBosses()`, `updateBossFollowers()`,
+  `addBossFollower()`, `SeparateBotFromGroup()`, `Clear()`
+- `addBossFollower()` now checks ECS `followerEntity.Boss == bossEntity`
+  instead of `botFollowers[boss].Contains(bot)`
+- `updateBossFollowers()` reduced to single `CleanupDeadEntities()` call
 
-**Remove from `BotHiveMindAbstractSensor`**:
-- `botState: Dictionary<BotOwner, bool>` — replaced by `BotEntity` sensor bools
-- `CheckForBot()`, `CheckForBossOfBot()`, `CheckForFollowers()`,
-  `CheckForGroup()` — zero external callers
-- `checkBotState()`, `checkStateForAnyFollowers()`,
-  `checkStateForAnyGroupMembers()` — internal to deleted methods
+**Deleted 6 sensor files**:
+- `BotHiveMindAbstractSensor.cs` (161 lines) — base class with dict + queries
+- `BotHiveMindIsInCombatSensor.cs` (15 lines) — empty subclass
+- `BotHiveMindIsSuspiciousSensor.cs` (15 lines) — empty subclass
+- `BotHiveMindWantsToLootSensor.cs` (39 lines) — `botLastLootingTime` dict
+- `BotHiveMindCanQuestSensor.cs` (41 lines) — `Action<>` delegate alloc
+- `BotHiveMindCanSprintToObjectiveSensor.cs` (41 lines) — same pattern
 
-**Remove sensor subclasses** (or collapse to minimal):
-- `BotHiveMindIsInCombatSensor` — empty subclass, no overrides
-- `BotHiveMindIsSuspiciousSensor` — empty subclass, no overrides
-- `BotHiveMindWantsToLootSensor` — remove `botLastLootingTime` dictionary
+**Deleted from `BotRegistrationManager`**:
+- `sleepingBotIds: List<string>` → `BotEntity.IsSleeping`
+- `IsBotSleeping(string)` → `BotEntityBridge.IsBotSleeping()`
+- `PMCs` / `Bosses` properties (no external callers)
+- `IsARegisteredPMC` / `IsARegisteredBoss` extension methods (no callers)
+- `RegisterSleepingBot` / `UnregisterSleepingBot` now use ECS guard
 
-**Remove from `BotRegistrationManager`**:
-- `registeredPMCs: HashSet<BotOwner>` — replaced by `BotEntity.BotType`
-- `registeredBosses: HashSet<BotOwner>` — replaced by `BotEntity.BotType`
-- `sleepingBotIds: List<string>` — replaced by `BotEntity.IsSleeping`
+**Kept in `BotRegistrationManager`** (still needed):
+- `registeredPMCs` / `registeredBosses` — used by `GetBotType()` during
+  registration and by `updateHostileGroupEnemies()` for hostility management
+- `hostileGroups` — game-side hostility, not per-bot state
 
-**Remove from `BotHiveMindMonitor`**:
-- `GetBoss()` — only used by deleted sensor methods
-
-**Estimated effort**: Medium (8-10 files, net deletion of ~200 lines)
+**Other changes**:
+- `BotOwnerBrainActivatePatch`: removed `BotHiveMindMonitor.RegisterBot()` call
+- `BotInfoGizmo`: switched to `BotEntityBridge.IsBotSleeping()` / `.GetBoss()`
 
 ---
 
@@ -1217,7 +1223,7 @@ recommended** for QuestingBots:
 
 ## Updated Feasibility Assessment
 
-### Option B Status: In Progress (~85% Complete)
+### Option B Status: In Progress (~90% Complete)
 
 | Component | Status | Remaining |
 |-----------|--------|-----------|
@@ -1233,23 +1239,22 @@ recommended** for QuestingBots:
 | BotRegistrationManager reads | ✅ Complete | — |
 | BsgBotRegistry sparse lookup | ✅ Complete | — |
 | TimePacing / FramePacing | ✅ Complete | Wiring incremental |
+| Remove old dictionaries | ✅ Complete | Phase 5F done |
 | BotFieldState on entity | ⚠️ Fields added | Wire to WorldGridManager |
 | Job assignment on entity | ⚠️ Field added | Wire to BotJobAssignmentFactory |
-| Remove old dictionaries | ⬜ Not started | Phase 5F (after in-game verification) |
 | Deterministic tick order | ⬜ Not started | Phase 7C (optional) |
 | Allocation cleanup | ⬜ Not started | Phase 7D (optional) |
 
 ### Revised Verdict
 
-Option B is nearing completion. The ECS is the **primary write path** for all
-sensor, sleep, and type data. Boss/follower lifecycle uses dense ECS entity
-iteration with O(1) `IsActive` checks. The remaining critical work is
-**Phase 5F** — removing old dictionaries once in-game testing confirms
-Phases 5A–5E are correct. Phases 6 and 8 have fields on `BotEntity` but need
-wiring. Phases 7C–7D are optional improvements.
+Option B is nearing completion. The ECS is the **sole data store** for all
+sensor, sleep, type, and boss/follower data. All old dictionaries
+(`deadBots`, `botBosses`, `botFollowers`, `sensors`) and 6 sensor subclasses
+have been deleted. Boss/follower lifecycle uses dense ECS entity iteration
+with O(1) `IsActive` checks. Phases 6 and 8 have fields on `BotEntity` but
+need wiring. Phases 7C–7D are optional improvements.
 
-**Estimated remaining effort**: Phase 5F (~8-10 files, net deletion of
-~200 lines, 1 session), Phase 6/8 wiring (~5 files, 1 session),
+**Estimated remaining effort**: Phase 6/8 wiring (~5 files, 1 session),
 Phases 7C-7D (incremental, as-needed).
 
 ---

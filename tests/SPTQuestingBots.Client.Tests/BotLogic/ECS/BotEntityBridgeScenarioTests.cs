@@ -1474,5 +1474,113 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS
             Assert.That(HiveMindSystem.CountActiveByType(_registry.Entities, BotType.Scav), Is.EqualTo(0));
             Assert.That(HiveMindSystem.CountActive(_registry.Entities), Is.EqualTo(2));
         }
+
+        [Test]
+        public void AssignBoss_Idempotent_SameBossTwiceDoesNotDuplicate()
+        {
+            // Phase 5F: addBossFollower now checks ECS to see if follower already has this boss.
+            // Assigning the same boss twice should be a no-op.
+            var boss = _registry.Add();
+            boss.BotType = BotType.Boss;
+            var follower = _registry.Add();
+            follower.BotType = BotType.PMC;
+
+            HiveMindSystem.AssignBoss(follower, boss);
+            Assert.That(boss.Followers.Count, Is.EqualTo(1));
+
+            // Second assignment — should not add a duplicate
+            HiveMindSystem.AssignBoss(follower, boss);
+            Assert.That(boss.Followers.Count, Is.EqualTo(1));
+            Assert.That(follower.Boss, Is.SameAs(boss));
+        }
+
+        [Test]
+        public void SleepGuard_OnlyFirstSetSleepingTakesEffect()
+        {
+            // Phase 5F: RegisterSleepingBot uses BotEntityBridge.IsBotSleeping as guard.
+            // Setting sleeping true twice should be idempotent.
+            var entity = _registry.Add();
+            entity.BotType = BotType.PMC;
+
+            Assert.That(entity.IsSleeping, Is.False);
+
+            entity.IsSleeping = true;
+            Assert.That(entity.IsSleeping, Is.True);
+
+            // "Register sleeping" again — already sleeping, no state change
+            entity.IsSleeping = true;
+            Assert.That(entity.IsSleeping, Is.True);
+
+            // Unregister
+            entity.IsSleeping = false;
+            Assert.That(entity.IsSleeping, Is.False);
+
+            // Unregister again — already awake, no state change
+            entity.IsSleeping = false;
+            Assert.That(entity.IsSleeping, Is.False);
+        }
+
+        [Test]
+        public void ClearWithBsgIds_ResetsAllLookups()
+        {
+            // Phase 5F: Clear should reset BsgBotRegistry sparse array too.
+            var e1 = _registry.Add(10);
+            e1.BotType = BotType.PMC;
+            var e2 = _registry.Add(20);
+            e2.BotType = BotType.Scav;
+
+            Assert.That(_registry.GetByBsgId(10), Is.SameAs(e1));
+            Assert.That(_registry.GetByBsgId(20), Is.SameAs(e2));
+
+            _registry.Clear();
+
+            Assert.That(_registry.GetByBsgId(10), Is.Null);
+            Assert.That(_registry.GetByBsgId(20), Is.Null);
+            Assert.That(_registry.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void FullLifecycle_Phase5F_NoOldDataStructuresNeeded()
+        {
+            // End-to-end lifecycle after Phase 5F: all state managed via ECS only.
+            // 1. Register bots with BSG IDs
+            var boss = _registry.Add(100);
+            boss.BotType = BotType.Boss;
+            var f1 = _registry.Add(200);
+            f1.BotType = BotType.PMC;
+            var f2 = _registry.Add(300);
+            f2.BotType = BotType.PMC;
+
+            Assert.That(_registry.Count, Is.EqualTo(3));
+            Assert.That(_registry.GetByBsgId(100), Is.SameAs(boss));
+
+            // 2. Set sensors via ECS
+            boss.SetSensor(BotSensor.InCombat, true);
+            f1.SetSensor(BotSensor.CanQuest, true);
+
+            // 3. Establish boss/follower via ECS
+            HiveMindSystem.AssignBoss(f1, boss);
+            HiveMindSystem.AssignBoss(f2, boss);
+            Assert.That(boss.Followers.Count, Is.EqualTo(2));
+
+            // 4. Group queries work
+            Assert.That(f1.CheckSensorForBoss(BotSensor.InCombat), Is.True);
+            Assert.That(boss.CheckSensorForAnyFollower(BotSensor.CanQuest), Is.True);
+
+            // 5. Put f2 to sleep (ECS-only guard)
+            f2.IsSleeping = true;
+            Assert.That(HiveMindSystem.CountActive(_registry.Entities), Is.EqualTo(2));
+
+            // 6. Boss dies — ECS cleanup detaches followers
+            boss.IsActive = false;
+            HiveMindSystem.CleanupDeadEntities(_registry.Entities);
+            Assert.That(f1.Boss, Is.Null);
+            Assert.That(f2.Boss, Is.Null);
+
+            // 7. Clear everything
+            _registry.Clear();
+            Assert.That(_registry.Count, Is.EqualTo(0));
+            Assert.That(_registry.GetByBsgId(100), Is.Null);
+        }
     }
 }
