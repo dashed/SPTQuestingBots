@@ -174,6 +174,8 @@ namespace SPTQuestingBots.Controllers
                     .ForceDecision(BotQuestingDecision.Sleep);
 
                 sleepingBotIds.Add(botOwner.ProfileId);
+
+                BotLogic.ECS.BotEntityBridge.SetSleeping(botOwner, true);
             }
         }
 
@@ -187,6 +189,8 @@ namespace SPTQuestingBots.Controllers
                     .ForceDecision(BotQuestingDecision.None);
 
                 sleepingBotIds.Remove(botOwner.ProfileId);
+
+                BotLogic.ECS.BotEntityBridge.SetSleeping(botOwner, false);
             }
         }
 

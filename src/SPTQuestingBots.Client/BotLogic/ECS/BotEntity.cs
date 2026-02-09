@@ -67,6 +67,28 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// </summary>
         public bool IsSleeping;
 
+        // ── Phase 6: Zone Movement Field State ─────────────────
+
+        /// <summary>
+        /// Per-bot noise seed for zone movement field composition.
+        /// Set once from bot profile ID hash. Default: 0 (uninitialized).
+        /// </summary>
+        public int FieldNoiseSeed;
+
+        /// <summary>
+        /// Whether this bot has an active field state for zone movement.
+        /// </summary>
+        public bool HasFieldState;
+
+        // ── Phase 8: Job Assignment State ─────────────────────
+
+        /// <summary>
+        /// Number of consecutive failed quest assignments for this bot.
+        /// Replaces BotJobAssignmentFactory dictionary lookup.
+        /// Default: 0.
+        /// </summary>
+        public int ConsecutiveFailedAssignments;
+
         // ── Constructor ─────────────────────────────────────────
 
         public BotEntity(int id)

@@ -20,6 +20,8 @@
   <ItemGroup>
     <Compile Include="../../src/SPTQuestingBots.Client/Helpers/PositionHistory.cs" Link="LinkedSources/PositionHistory.cs" />
     <Compile Include="../../src/SPTQuestingBots.Client/Helpers/RollingAverage.cs" Link="LinkedSources/RollingAverage.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/Helpers/TimePacing.cs" Link="LinkedSources/TimePacing.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/Helpers/FramePacing.cs" Link="LinkedSources/FramePacing.cs" />
     <Compile Include="../../src/SPTQuestingBots.Client/Models/SoftStuckDetector.cs" Link="LinkedSources/SoftStuckDetector.cs" />
     <Compile Include="../../src/SPTQuestingBots.Client/Models/HardStuckDetector.cs" Link="LinkedSources/HardStuckDetector.cs" />
     <!-- Zone movement pure-logic classes (no Unity/EFT dependencies) -->

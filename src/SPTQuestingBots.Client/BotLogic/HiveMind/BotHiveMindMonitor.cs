@@ -49,6 +49,8 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             botFollowers.Clear();
 
             sensors.Clear();
+
+            ECS.BotEntityBridge.Clear();
         }
 
         protected void Update()
@@ -247,6 +249,8 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                 {
                     Controllers.LoggingController.LogDebug("Boss " + botBosses[bot].GetText() + " is now dead.");
 
+                    ECS.BotEntityBridge.DeactivateBot(botBosses[bot]);
+
                     if (botFollowers.ContainsKey(botBosses[bot]))
                     {
                         botFollowers.Remove(botBosses[bot]);
@@ -306,6 +310,8 @@ namespace SPTQuestingBots.BotLogic.HiveMind
 
                     Controllers.LoggingController.LogDebug("Boss " + boss.GetText() + " is now dead.");
 
+                    ECS.BotEntityBridge.DeactivateBot(boss);
+
                     _deadBossBuffer.Add(boss);
                     deadBots.Add(boss);
 
@@ -321,6 +327,7 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                     {
                         Controllers.LoggingController.LogWarning("Removing null follower for " + boss.GetText());
 
+                        ECS.BotEntityBridge.DeactivateBot(follower);
                         deadBots.Add(follower);
                     }
 
@@ -336,6 +343,7 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                             "Follower " + follower.GetText() + " for " + boss.GetText() + " is now dead."
                         );
 
+                        ECS.BotEntityBridge.DeactivateBot(follower);
                         deadBots.Add(follower);
                     }
                 }

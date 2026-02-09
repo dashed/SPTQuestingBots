@@ -7,6 +7,7 @@ namespace SPTQuestingBots.BotLogic.ECS
     /// <summary>
     /// Dense entity storage with swap-remove and ID recycling.
     /// Follows Phobos EntityArray pattern: dense List + sparse ID→index map + free ID stack.
+    /// Includes BsgBotRegistry-style sparse array for O(1) external-ID → entity lookup.
     /// Pure C# — no Unity or EFT dependencies — fully testable in net9.0.
     /// </summary>
     public sealed class BotRegistry
@@ -23,11 +24,19 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// <summary>Stack of recycled IDs available for reuse.</summary>
         private readonly Stack<int> _freeIds;
 
+        /// <summary>
+        /// Sparse array for O(1) external-ID (e.g. BotOwner.Id) → BotEntity lookup.
+        /// Null-padded: slots for removed bots are set to null.
+        /// Inspired by Phobos BsgBotRegistry pattern.
+        /// </summary>
+        private readonly List<BotEntity> _bsgIdToEntity;
+
         public BotRegistry(int capacity = 32)
         {
             Entities = new List<BotEntity>(capacity);
             _idToIndex = new List<int?>(capacity);
             _freeIds = new Stack<int>(capacity);
+            _bsgIdToEntity = new List<BotEntity>(capacity);
         }
 
         /// <summary>Number of active entities.</summary>
@@ -52,6 +61,46 @@ namespace SPTQuestingBots.BotLogic.ECS
                 var index = _idToIndex[id];
                 return index.HasValue ? Entities[index.Value] : throw new KeyNotFoundException($"Entity ID {id} not found");
             }
+        }
+
+        /// <summary>
+        /// Create and register a new entity with an external BSG ID for O(1) reverse lookup.
+        /// </summary>
+        /// <param name="bsgId">External ID (e.g. BotOwner.Id) for sparse-array lookup.</param>
+        /// <returns>The newly created <see cref="BotEntity"/>.</returns>
+        public BotEntity Add(int bsgId)
+        {
+            var entity = Add();
+
+            // Grow sparse array if needed
+            while (_bsgIdToEntity.Count <= bsgId)
+                _bsgIdToEntity.Add(null);
+
+            _bsgIdToEntity[bsgId] = entity;
+            return entity;
+        }
+
+        /// <summary>
+        /// O(1) lookup by external BSG ID (e.g. BotOwner.Id).
+        /// Returns null if the ID is out of range or the bot was removed.
+        /// Inspired by Phobos BsgBotRegistry pattern.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public BotEntity GetByBsgId(int bsgId)
+        {
+            if (bsgId >= 0 && bsgId < _bsgIdToEntity.Count)
+                return _bsgIdToEntity[bsgId];
+            return null;
+        }
+
+        /// <summary>
+        /// Clear the external BSG ID mapping for a given ID (e.g. when a bot is removed).
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void ClearBsgId(int bsgId)
+        {
+            if (bsgId >= 0 && bsgId < _bsgIdToEntity.Count)
+                _bsgIdToEntity[bsgId] = null;
         }
 
         /// <summary>
@@ -171,6 +220,7 @@ namespace SPTQuestingBots.BotLogic.ECS
             Entities.Clear();
             _idToIndex.Clear();
             _freeIds.Clear();
+            _bsgIdToEntity.Clear();
         }
     }
 }
