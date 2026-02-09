@@ -37,9 +37,12 @@ real benefits of adopting Phobos-style patterns are:
 3. **Pattern alignment** — easier to port behaviors from Phobos
 4. **Debuggability** — single place to inspect all bot state
 
-**Recommendation**: Adopt a phased "ECS-Lite" approach — a dense bot registry
-with embedded components and static system methods — without attempting a full
-ECS rewrite. This gives 80% of the benefits at 20% of the effort.
+**Outcome**: QuestingBots adopted a phased "ECS-Lite" approach (18 sub-phases)
+— a dense bot registry with embedded state, static system methods, and a bridge
+adapter for BSG interop. All old dictionaries (`deadBots`, `botBosses`,
+`botFollowers`, `sensors`, `botJobAssignments`) and 6 sensor subclasses have
+been deleted. ECS is the sole data store. 479 client tests verify the
+implementation.
 
 ---
 
@@ -410,46 +413,51 @@ public static void SwapRemoveAt<T>(this List<T> list, int index)
 
 ---
 
-## QuestingBots Current Data Layout
+## QuestingBots Previous Data Layout (Pre-ECS)
 
-### Data Structure Inventory
+> **Note**: This section documents the **original** dictionary-based architecture
+> that was replaced by the ECS-Lite implementation (Phases 1–8). It is preserved
+> as a reference for understanding what was migrated and why. For the current
+> architecture, see the [Implementation Status](#implementation-status) section.
+
+### Data Structure Inventory (Before Migration)
 
 #### HiveMind (50ms tick)
 
 ```
-BotHiveMindMonitor.cs:
-├── deadBots: List<BotOwner>              — dead bot tracking
-├── botBosses: Dictionary<BotOwner, BotOwner>    — bot → boss mapping
-├── botFollowers: Dictionary<BotOwner, List<BotOwner>>  — boss → followers
+BotHiveMindMonitor.cs (BEFORE — all dictionaries now DELETED):
+├── deadBots: List<BotOwner>              — dead bot tracking       → BotEntity.IsActive
+├── botBosses: Dictionary<BotOwner, BotOwner>    — bot → boss      → BotEntity.Boss
+├── botFollowers: Dictionary<BotOwner, List<BotOwner>>  — boss → followers → BotEntity.Followers
 └── sensors: Dictionary<BotHiveMindSensorType, BotHiveMindAbstractSensor>
-    └── each sensor holds: Dictionary<BotOwner, bool>  — per-bot state
+    └── each sensor holds: Dictionary<BotOwner, bool>               → BotEntity.IsInCombat, etc.
 ```
 
-- 5 sensors × 1 dictionary each = 5 dictionaries of `<BotOwner, bool>`
-- Update iterates `botBosses.Keys` and `botFollowers.Keys` (dictionary key enumeration)
-- Each sensor's `Update()` iterates `botState.Keys` (another dictionary enumeration)
-- **Hot path**: 7 dictionary enumerations per 50ms tick
+- 5 sensors × 1 dictionary each = 5 dictionaries of `<BotOwner, bool>` *(now 5 bools on BotEntity)*
+- Update iterates `botBosses.Keys` and `botFollowers.Keys` *(now dense entity list iteration)*
+- Each sensor's `Update()` iterates `botState.Keys` *(now eliminated — push sensors write directly, pull sensors iterate dense list)*
+- **Hot path**: 7 dictionary enumerations per 50ms tick *(now zero — all replaced by dense iteration)*
 
 #### Bot Registration
 
 ```
-BotRegistrationManager.cs:
-├── registeredPMCs: HashSet<BotOwner>     — O(1) PMC lookup
-├── registeredBosses: HashSet<BotOwner>   — O(1) boss lookup
-├── hostileGroups: List<BotsGroup>        — hostile group tracking
-└── sleepingBotIds: List<string>          — sleeping bot IDs
+BotRegistrationManager.cs (BEFORE — sleepingBotIds DELETED, PMCs/Bosses retained for registration):
+├── registeredPMCs: HashSet<BotOwner>     — O(1) PMC lookup (retained for GetBotType + hostility)
+├── registeredBosses: HashSet<BotOwner>   — O(1) boss lookup (retained for GetBotType + hostility)
+├── hostileGroups: List<BotsGroup>        — hostile group tracking (retained)
+└── sleepingBotIds: List<string>          — sleeping bot IDs   → BotEntity.IsSleeping
 ```
 
-- `sleepingBotIds` uses `List<string>.Contains()` — O(n) linear scan
+- `sleepingBotIds` used `List<string>.Contains()` — O(n) linear scan *(now O(1) via BotEntity.IsSleeping)*
 - Registration is event-driven (cold path)
 
 #### Job Assignment
 
 ```
-BotJobAssignmentFactory.cs:
-├── allQuests: List<Quest>                — all quest definitions
-├── _possibleQuestsBuffer: List<Quest>    — reusable buffer (Phase 1 optimization)
-└── botJobAssignments: Dictionary<string, List<BotJobAssignment>>  — per-bot history
+BotJobAssignmentFactory.cs (BEFORE — botJobAssignments DELETED):
+├── allQuests: List<Quest>                — all quest definitions (retained)
+├── _possibleQuestsBuffer: List<Quest>    — reusable buffer (retained)
+└── botJobAssignments: Dictionary<string, List<BotJobAssignment>>  → BotEntityBridge._jobAssignments
 ```
 
 - `GetAllPossibleQuests()`: uses `_possibleQuestsBuffer` with for-loop (optimized)
@@ -468,17 +476,17 @@ BotJobAssignmentFactory.cs:
 #### Zone Movement
 
 ```
-WorldGridManager.cs:
-├── Grid: WorldGrid                       — 2D cell array
-├── advectionField: AdvectionField        — zone attraction
-├── convergenceField: ConvergenceField    — player attraction
-├── botFieldStates: Dictionary<string, BotFieldState>  — per-bot momentum/noise
-├── cachedPlayerPositions: List<Vector3>  — refreshed periodically
-└── cachedBotPositions: List<Vector3>     — refreshed periodically
+WorldGridManager.cs (BEFORE — botFieldStates DELETED):
+├── Grid: WorldGrid                       — 2D cell array (retained)
+├── advectionField: AdvectionField        — zone attraction (retained)
+├── convergenceField: ConvergenceField    — player attraction (retained)
+├── botFieldStates: Dictionary<string, BotFieldState>  → BotEntityBridge._fieldStates
+├── cachedPlayerPositions: List<Vector3>  — refreshed periodically (retained)
+└── cachedBotPositions: List<Vector3>     — refreshed periodically (retained)
 ```
 
 - Field computation iterates zone sources and bot/player positions
-- Per-bot state looked up via `Dictionary<string, BotFieldState>`
+- Per-bot state now looked up via `BotEntityBridge.GetFieldState()` — O(1) by entity ID
 - **Moderate path**: convergence refresh every 30s, destination computation on demand
 
 #### Per-Bot State (Scattered)
@@ -496,153 +504,157 @@ BotOwner (BSG object)
     └── Timer state                — stuck timers, sprint timers
 ```
 
-### Iteration Pattern Summary
+### Iteration Pattern Summary (Before → After)
 
-| System | Data Access | Iteration Pattern |
-|--------|-------------|-------------------|
-| HiveMind sensors | `Dictionary<BotOwner, bool>` | `foreach` over `.Keys` |
-| HiveMind bosses | `Dictionary<BotOwner, BotOwner>` | `foreach` over `.Keys` |
-| HiveMind followers | `Dictionary<BotOwner, List<BotOwner>>` | `foreach` over `.Keys` + inner list |
-| Bot registration | `HashSet<BotOwner>` | `.Contains()` (O(1)) |
-| Quest selection | `List<Quest>` + `_possibleQuestsBuffer` | for-loop (optimized) |
-| Active bot count | `Dictionary<string, List<BotJobAssignment>>` | nested foreach + for |
-| Zone field state | `Dictionary<string, BotFieldState>` | single lookup per bot |
-| Per-bot objective | `BotOwner.GetOrAddObjectiveManager()` | MonoBehaviour on GameObject |
+| System | Before (Dictionaries) | After (ECS-Lite) |
+|--------|----------------------|-------------------|
+| HiveMind sensors | `Dictionary<BotOwner, bool>` foreach over `.Keys` | `BotEntity.IsInCombat` etc. — dense for-loop |
+| HiveMind bosses | `Dictionary<BotOwner, BotOwner>` foreach over `.Keys` | `BotEntity.Boss` — dense entity iteration |
+| HiveMind followers | `Dictionary<BotOwner, List<BotOwner>>` foreach + inner list | `BotEntity.Followers` — direct field access |
+| Bot registration | `HashSet<BotOwner>` `.Contains()` (O(1)) | `BotEntity.BotType` — O(1) field read |
+| Quest selection | `List<Quest>` + `_possibleQuestsBuffer` for-loop | Same (retained, already optimized) |
+| Active bot count | `Dictionary<string, List<BotJobAssignment>>` nested foreach | Dense `Registry.Entities` for-loop |
+| Zone field state | `Dictionary<string, BotFieldState>` single lookup | `BotEntityBridge.GetFieldState()` — O(1) by entity ID |
+| Per-bot objective | `BotOwner.GetOrAddObjectiveManager()` MonoBehaviour | Same (MonoBehaviour retained for BigBrain compat) |
 
-### Allocation Hotspots
+### Allocation Hotspots (All Fixed)
 
-| Location | Allocation | Frequency |
-|----------|-----------|-----------|
-| `GetRandomQuest()` | Multiple `ToDictionary`, `OrderBy`, `.ToArray()` | Per quest selection |
-| `GetAllGroupMembers()` | `new List<BotOwner>` + `new ReadOnlyCollection` | Per call |
-| `GetFollowers()` | `new ReadOnlyCollection<BotOwner>` | Per call |
-| `SeparateBotFromGroup()` | `new List<BotOwner>` for old group members | Per separation |
-| `RemainingObjectivesForBot()` | LINQ iterator allocations | Per quest check |
-| `NearestToBot()` | `new Dictionary<QuestObjective, float>` | Per objective search |
-| `BotFieldState.GetNoiseAngle()` | `new System.Random(seed)` | Per zone destination |
+| Location | Before | After (ECS-Lite) |
+|----------|--------|-------------------|
+| `GetRandomQuest()` | Multiple `ToDictionary`, `OrderBy`, `.ToArray()` | `QuestScorer` with static buffers, O(n) scan |
+| `GetAllGroupMembers()` | `new List<BotOwner>` + `new ReadOnlyCollection` | Static `_groupMembersBuffer`, zero allocation |
+| `GetFollowers()` | `new ReadOnlyCollection<BotOwner>` | Static `_followersBuffer`, zero allocation |
+| `NearestToBot()` | `new Dictionary<QuestObjective, float>` | O(n) min-scan with local variables |
+| `NumberOfActiveBots()` | Nested foreach over dictionary keys | Dense entity list for-loop |
+| `SetExfiliationPointForQuesting()` | `.ToDictionary()` + `.OrderBy().Last()` | O(n) max-scan for-loop |
+| `deadBots.Contains()` | O(n) `List<BotOwner>.Contains()` | O(1) `BotEntity.IsActive` |
+| `sleepingBotIds.Contains()` | O(n) `List<string>.Contains()` | O(1) `BotEntity.IsSleeping` |
 
-### Hot Path Frequency Map
+### Hot Path Frequency Map (Current)
 
 | Frequency | System | Per-Tick Cost (N bots) |
 |-----------|--------|----------------------|
-| Every 50 ms | HiveMind sensors | 5 sensors × N dictionary reads + N boss/follower iterations |
-| Every 100 ms | BotMonitorController | 8 monitors × N bots (Dictionary\<Type\> lookups) |
-| Every 200 ms | BotObjectiveManager | N bots (includes O(N) `sleepingBotIds` scan) |
-| On assignment | BotJobAssignmentFactory | **O(Q × N × A)** — quadratic in bot count |
+| Every 50 ms | HiveMind sensors | Dense for-loop over N entities (zero allocation) |
+| Every 100 ms | BotMonitorController | 8 monitors × N bots |
+| Every 200 ms | BotObjectiveManager | N bots (O(1) sleep check via `BotEntity.IsSleeping`) |
+| On assignment | BotJobAssignmentFactory | O(Q × N) with `QuestScorer` static buffers |
 | Every 30 s | WorldGridManager | AllAlivePlayersList scan |
 
-### Worst Offenders (Ranked)
+### Original Worst Offenders — All Resolved
 
-1. **`NumberOfActiveBots()` quadratic blowup** — O(bots × assignments) per quest,
-   called Q times during assignment search
-2. **`GetRandomQuest()` allocations** — 3 dictionaries + Random + LINQ per call
-3. **`deadBots` as `List<BotOwner>`** — O(N) `Contains()` called inside 50ms
-   hot loop (`updateBosses`, `updateBossFollowers`)
-4. **`GetFollowers()` / `GetAllGroupMembers()`** — allocate ReadOnlyCollection
-   every call (called frequently from BigBrain layers)
-5. **`sleepingBotIds` as `List<string>`** — O(N) `Contains()` per bot per 200ms
-6. **`BotFieldState.GetNoiseAngle()`** — `new System.Random()` per call
+1. ~~**`NumberOfActiveBots()` quadratic blowup**~~ → Dense entity iteration O(N)
+2. ~~**`GetRandomQuest()` allocations**~~ → `QuestScorer` with static buffers
+3. ~~**`deadBots` as `List<BotOwner>`**~~ → `BotEntity.IsActive` O(1)
+4. ~~**`GetFollowers()` / `GetAllGroupMembers()`**~~ → Static reusable buffers
+5. ~~**`sleepingBotIds` as `List<string>`**~~ → `BotEntity.IsSleeping` O(1)
+6. ~~**`BotFieldState.GetNoiseAngle()`**~~ → `BotEntity.FieldNoiseSeed` (pre-computed)
 
 ---
 
 ## Side-by-Side Comparison
 
-| Aspect | Phobos | QuestingBots | Pure ECS |
-|--------|--------|-------------|----------|
-| **Entity storage** | Dense `List<Agent>` | Scattered dictionaries keyed by `BotOwner` | Dense typed arrays |
-| **Component storage** | Embedded on Agent | MonoBehaviour + dictionaries | Separate contiguous arrays |
-| **Component access** | `agent.Movement.Target` | `bot.GetOrAddObjectiveManager()` | `movements[entityId]` |
-| **System iteration** | `for` over dense list | `foreach` over dictionary keys | `for` over component arrays |
-| **ID management** | EntityArray with free stack | Profile.Id strings in dictionaries | Integer IDs, slot arrays |
-| **BSG interop** | Agent.Bot / Agent.Player | BotOwner directly | Wrapper required |
-| **MonoBehaviours** | 1 (PhobosManager) | Many (per-bot + global) | 0–1 (orchestrator only) |
-| **Memory layout** | AoS (coherent per entity) | Scattered (dictionary + heap) | SoA (coherent per component) |
-| **GC pressure** | Low (pre-allocated, recycled) | Medium (LINQ, collections) | Lowest (fixed arrays) |
-| **Testability** | High (static systems) | Medium (MonoBehaviour coupling) | Highest (pure functions) |
+> **Updated**: The QuestingBots column reflects the current ECS-Lite architecture
+> (v1.7.0), not the pre-migration dictionary-based layout.
+
+| Aspect | Phobos | QuestingBots (v1.7.0) | Pure ECS |
+|--------|--------|----------------------|----------|
+| **Entity storage** | Dense `List<Agent>` | Dense `List<BotEntity>` with swap-remove | Dense typed arrays |
+| **Component storage** | Embedded on Agent | Embedded on BotEntity + bridge-side for game types | Separate contiguous arrays |
+| **Component access** | `agent.Movement.Target` | `entity.IsInCombat`, `BotEntityBridge.GetSensor()` | `movements[entityId]` |
+| **System iteration** | `for` over dense list | `for` over dense entity list (same pattern) | `for` over component arrays |
+| **ID management** | EntityArray with free stack | BotRegistry with free stack + BsgBotRegistry sparse array | Integer IDs, slot arrays |
+| **BSG interop** | Agent.Bot / Agent.Player | BotEntityBridge static adapter (BotOwner ↔ BotEntity) | Wrapper required |
+| **MonoBehaviours** | 1 (PhobosManager) | BotObjectiveManager (per-bot) + global orchestrators; ECS state outside MonoBehaviours | 0–1 (orchestrator only) |
+| **Memory layout** | AoS (coherent per entity) | AoS (coherent per entity, same pattern) | SoA (coherent per component) |
+| **GC pressure** | Low (pre-allocated, recycled) | Low (static buffers, zero-alloc sensors, dense iteration) | Lowest (fixed arrays) |
+| **Testability** | High (static systems) | High (BotEntity + BotRegistry are pure C#, 479 client tests) | Highest (pure functions) |
 
 ---
 
-## Pros and Cons for QuestingBots
+## Pros and Cons of the ECS-Lite Migration
 
-### Pros of Adopting ECS-Lite Patterns
+> **Updated**: This section has been revised to reflect actual outcomes now that
+> the migration is complete (v1.7.0).
+
+### Achieved Benefits
 
 #### 1. Centralized Bot State
-**Current**: Bot state scattered across 5+ dictionaries (HiveMind), a
+**Before**: Bot state scattered across 5+ dictionaries (HiveMind), a
 MonoBehaviour (BotObjectiveManager), and a separate dictionary
-(WorldGridManager.botFieldStates). Finding "what is bot X doing?" requires
+(WorldGridManager.botFieldStates). Finding "what is bot X doing?" required
 checking multiple systems.
 
-**With ECS-Lite**: All bot state on a single `BotEntity` object. Debugging and
-logging become trivial: `entity.Movement`, `entity.Stuck`, `entity.Assignment`.
+**After**: All sensor, sleep, type, boss/follower, field state, and job
+assignment data on `BotEntity` or keyed by entity ID in `BotEntityBridge`.
+Single source of truth per bot.
 
-#### 2. Dense Iteration Eliminates Dictionary Overhead
-**Current**: HiveMind iterates `Dictionary<BotOwner, bool>.Keys` — this involves
-enumerator allocation, hash bucket traversal, and unpredictable memory access.
+#### 2. Dense Iteration Replaced Dictionary Overhead
+**Before**: HiveMind iterated `Dictionary<BotOwner, bool>.Keys` — enumerator
+allocation, hash bucket traversal, and unpredictable memory access.
 
-**With ECS-Lite**: A `for` loop over `List<BotEntity>` — sequential access,
-hardware prefetcher engaged, zero allocations.
+**After**: A `for` loop over `List<BotEntity>` — sequential access, hardware
+prefetcher engaged, zero allocations. Pull sensors iterate dense list directly.
 
-#### 3. Elimination of Dictionary Key Problems
-**Current**: Several dictionaries use `BotOwner` as key. `BotOwner` is a Unity
-object that can become null when despawned, requiring null checks on every
-access. Dead bot cleanup requires iterating dictionaries and deferring removal.
+#### 3. Eliminated Dictionary Key Problems
+**Before**: Several dictionaries used `BotOwner` as key. `BotOwner` is a Unity
+object that can become null when despawned, requiring null checks and deferred
+removal.
 
-**With ECS-Lite**: Swap-remove from dense list on bot death. No null keys, no
-deferred removal, no stale references.
+**After**: `BotEntity.IsActive` provides O(1) dead checks.
+`HiveMindSystem.CleanupDeadEntities()` handles cleanup via dense list iteration.
 
 #### 4. Pattern Alignment with Phobos
-Porting systems from Phobos (e.g., improved look behavior, squad tactics, door
-interaction) becomes straightforward when the data layout matches. Currently,
-adapting Phobos code requires translating between its `Agent`-centric model and
-QuestingBots' dictionary-based model.
+The data layout now closely mirrors Phobos's `EntityArray<T>` + `Agent` pattern.
+Porting Phobos systems would require minimal translation. The `BsgBotRegistry`
+sparse array follows Phobos's exact pattern for O(1) bot lookup.
 
-#### 5. Better Testability
-**Current**: `BotHiveMindMonitor` is a `MonoBehaviour` — cannot be instantiated
+#### 5. Dramatically Better Testability
+**Before**: `BotHiveMindMonitor` is a `MonoBehaviour` — cannot be instantiated
 in unit tests without Unity runtime.
 
-**With ECS-Lite**: Systems are static methods taking `List<BotEntity>` — trivially
-testable with no Unity dependency.
+**After**: `BotEntity`, `BotRegistry`, `HiveMindSystem`, and `QuestScorer` are
+pure C# with zero Unity dependencies. 479 client tests verify ECS behavior.
 
 #### 6. Reduced GC Pressure
-Replace per-call allocations in `GetAllGroupMembers()`, `GetFollowers()`,
-`RemainingObjectivesForBot()` etc. with pre-allocated buffers or direct entity
-access.
+Static reusable buffers for `GetFollowers()`, `GetAllGroupMembers()`. Zero-alloc
+sensor iteration. `QuestScorer` uses static buffers instead of 5 dictionary
+allocations + `OrderBy`. `NumberOfActiveBots()` iterates dense list instead of
+dictionary keys.
 
-### Cons of Adopting ECS-Lite Patterns
+### Costs Encountered
 
-#### 1. Large Refactoring Effort
-Touching HiveMind, BotRegistrationManager, BotJobAssignmentFactory,
-BotObjectiveManager, and all Harmony patches that access bot state. Estimated
-20+ files affected.
+#### 1. Large Refactoring Effort — Confirmed
+The migration touched 20+ files across 8 phases, as predicted. However, the
+phased approach (each phase independently shippable) kept risk manageable.
 
-#### 2. Negligible Performance Gain at Current Scale
-At 20–40 bots, the working set fits in L1 cache regardless of layout. Dense
-iteration over a list vs. dictionary enumeration saves microseconds per tick —
-unmeasurable in practice.
+#### 2. Negligible Performance Gain at Current Scale — Confirmed
+At 20–40 bots, the layout change itself is unmeasurable. The real performance
+gains came from allocation elimination and O(1) lookups replacing O(n) scans.
 
-#### 3. BSG API Coupling Cannot Be Eliminated
-We must keep `BotOwner` and `Player` references because BigBrain layers,
-Harmony patches, and BSG's own systems use them. The `BotEntity` would hold
-these references (like Phobos's `Agent.Bot`), not replace them.
+#### 3. BSG API Coupling Handled via Bridge Pattern
+`BotEntityBridge` provides a static adapter between `BotOwner` (BSG) and
+`BotEntity` (ECS). Game-dependent types (`BotJobAssignment`, `BotFieldState`)
+stored bridge-side, keeping `BotEntity` pure C#.
 
-#### 4. BigBrain Layer Compatibility
-BigBrain's `CustomLayer` and `CustomLogic` are MonoBehaviour-based. The
-objective manager must remain accessible from these layers. An ECS-Lite approach
-would need a thin MonoBehaviour adapter.
+#### 4. BigBrain Layer Compatibility — Non-Issue
+`BotObjectiveManager` (MonoBehaviour) continues to work unchanged. BigBrain
+layers read state via `BotEntityBridge` static methods. No adapter needed.
 
-#### 5. Risk of Introducing Regressions
-The current system is stable, tested, and working. A data layout refactor
-touches the core of bot management. Even with comprehensive tests, subtle
-ordering bugs or null reference issues could emerge.
+#### 5. Regressions — Mitigated by Tests
+479 client tests including 110 bridge scenario tests. The phased approach
+caught issues incrementally.
 
-#### 6. Two Systems During Migration
-During the transition period, some code would use the old dictionary-based
-approach while other code uses the new entity-based approach, creating confusion
-and potential inconsistencies.
+#### 6. Dual-Write Migration Period — Managed
+Phases 5A–5F systematically closed dual-write gaps, then deleted old data
+structures. The transition was orderly and complete.
 
 ---
 
 ## Feasibility Assessment
+
+> **Outcome**: Option B was selected and completed in full (Phases 1–8). The
+> original assessment underestimated the net benefit — the phased approach
+> delivered close to 100% of the value at manageable incremental cost.
 
 ### Option A: Full Pure ECS — Not Feasible
 
@@ -650,30 +662,34 @@ Requires replacing BSG's `BotOwner` with custom entity references throughout,
 rewriting BigBrain layer integration, and maintaining separate component arrays.
 The effort vastly exceeds the benefit at SPT's scale.
 
-**Verdict**: ❌ Reject
+**Verdict**: ❌ Rejected
 
-### Option B: Phobos-Style "ECS-Lite" — Feasible but Large
+### Option B: Phobos-Style "ECS-Lite" — Selected and Completed ✅
 
-Adopt Phobos's exact pattern: `BotEntity` with embedded components, dense list,
-static systems. This is a proven pattern (Phobos ships and runs) but requires
-significant refactoring.
+Adopted Phobos's exact pattern: `BotEntity` with embedded state, dense list with
+swap-remove, static systems. The phased implementation (18 sub-phases) allowed
+incremental migration with comprehensive test coverage at each step. All old
+dictionaries deleted. ECS is the sole data store.
 
-**Verdict**: ⚠️ Feasible, large effort, moderate benefit
+**Verdict**: ✅ **Completed** — full implementation across 8 major phases
 
-### Option C: Targeted Extraction — Best ROI
+### Option C: Targeted Extraction — Superseded
 
-Extract only the highest-value patterns from Phobos without a full rewrite:
-1. Dense bot registry (replace multiple dictionaries)
-2. Centralized per-bot state object (reduce scatter)
-3. Static system methods where testability matters most
+Originally recommended as "80% of benefit at 20% of effort." In practice,
+Option B was implemented incrementally via the same targeted approach (Phase 1
+started with just BotEntity + BotRegistry). Each phase extracted specific value,
+and the cumulative result achieved the full Option B scope.
 
-**Verdict**: ✅ Recommended — 80% of benefit at 20% of effort
+**Verdict**: Superseded by Option B's phased approach
 
 ---
 
-## Recommended Implementation Plan
+## Implementation Plan (All Phases Complete)
 
-### Phase 1: BotEntity + BotRegistry (Foundation)
+> **Note**: All phases below have been implemented. This section is preserved as
+> a record of the original design and migration strategy.
+
+### Phase 1: BotEntity + BotRegistry (Foundation) ✅
 
 **Goal**: Single source of truth for all registered bots, dense iteration.
 
@@ -721,7 +737,7 @@ dense iteration correctness.
 
 **Estimated effort**: Medium (8–12 files touched)
 
-### Phase 2: Sensor Migration + Embedded State
+### Phase 2: Sensor Migration + Embedded State ✅
 
 **Goal**: Move HiveMind sensor data onto BotEntity, eliminate per-sensor dictionaries.
 
@@ -753,7 +769,7 @@ public class BotEntity
 
 **Estimated effort**: Medium (6–8 files touched)
 
-### Phase 3: System Extraction
+### Phase 3: System Extraction ✅
 
 **Goal**: Extract hot-path logic into static system methods for testability.
 
@@ -785,7 +801,7 @@ public static class StuckSystem
 
 **Estimated effort**: Medium-High (10–15 files touched)
 
-### Phase 4: Optional — Job Assignment Optimization
+### Phase 4: Job Assignment Optimization ✅
 
 **Goal**: Reduce LINQ allocations in quest selection hot path.
 
@@ -801,24 +817,26 @@ public static class StuckSystem
 
 ---
 
-## Risk Assessment
+## Risk Assessment (Post-Mortem)
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| Regression in bot behavior | Medium | High | Comprehensive test suite before/after, A/B testing in raids |
-| BigBrain layer compatibility | Low | Medium | Thin adapter MonoBehaviour that delegates to BotEntity |
-| Null BotOwner during despawn | Medium | Medium | Swap-remove on death event eliminates stale references |
-| Performance regression | Low | Low | Profile before/after; at 40 bots, layout doesn't matter |
-| Extended migration period | Medium | Medium | Phase the migration; each phase is independently shippable |
-| Harmony patch breakage | Medium | High | Patches need updating to find BotEntity via BotRegistry |
+> **Updated**: Risks assessed before migration, with actual outcomes noted.
 
-### Migration Strategy
+| Risk | Pre-Assessment | Actual Outcome |
+|------|---------------|----------------|
+| Regression in bot behavior | Medium likelihood, High impact | **Mitigated** — 479 client tests caught issues incrementally. Phased approach limited blast radius. |
+| BigBrain layer compatibility | Low likelihood, Medium impact | **Non-issue** — BotObjectiveManager unchanged; BigBrain layers read via BotEntityBridge static methods. |
+| Null BotOwner during despawn | Medium likelihood, Medium impact | **Resolved** — `BotEntity.IsActive` O(1) check replaces `deadBots.Contains()` O(n). Swap-remove on death. |
+| Performance regression | Low likelihood, Low impact | **Not observed** — allocation elimination provided net improvement. |
+| Extended migration period | Medium likelihood, Medium impact | **Managed** — 18 sub-phases over multiple sessions. Each phase independently shippable and testable. |
+| Harmony patch breakage | Medium likelihood, High impact | **Minimal** — only `BotOwnerBrainActivatePatch` and `BotsControllerStopPatch` needed updates. |
 
-Each phase should:
-1. Be completed in a single branch
-2. Maintain backward compatibility during transition (old + new paths)
-3. Include comprehensive tests before removing old code paths
-4. Be verified with full `make ci` + in-game testing
+### Migration Strategy (What Worked)
+
+The phased approach proved effective:
+1. Each phase completed as a single commit with comprehensive tests
+2. Dual-write during transition (Phases 1–5A), then systematic old-code deletion (Phase 5F)
+3. Tests verified behavior before and after each phase
+4. `make ci` validated at every step (537 tests total)
 
 ---
 
@@ -1324,20 +1342,27 @@ lists and static systems for clean iteration, but keeps components embedded on
 entity objects rather than in separate contiguous arrays. This is the right
 trade-off for SPT's scale.
 
-QuestingBots should adopt the same pragmatic approach:
+QuestingBots has adopted the same pragmatic approach:
 
-1. **Dense BotRegistry** replaces scattered dictionaries → cleaner iteration,
+1. **Dense BotRegistry** replaced scattered dictionaries → cleaner iteration,
    no null-key problems
-2. **BotEntity with embedded state** replaces per-sensor dictionaries → single
+2. **BotEntity with embedded state** replaced per-sensor dictionaries → single
    source of truth per bot
-3. **Static system methods** replace MonoBehaviour update loops → testable,
-   deterministic, Phobos-compatible
+3. **Static system methods** (HiveMindSystem, QuestScorer) replaced
+   MonoBehaviour update loops → testable, deterministic, Phobos-compatible
+4. **BotEntityBridge** bridges the BSG game API to the pure-C# ECS layer →
+   game-dependent types stored bridge-side, keeping BotEntity pure
+5. **BsgBotRegistry** sparse array provides O(1) integer lookups → mirrors
+   Phobos's exact pattern
 
 The primary value is **code quality and maintainability**, not performance. At
 20–40 bots, cache layout is irrelevant — but having a single `BotEntity` object
 that holds all of a bot's state makes debugging, logging, testing, and feature
-development significantly easier.
+development significantly easier. The migration from scattered dictionaries to
+dense ECS entities also eliminated real allocation hotspots (zero-alloc sensor
+iteration, static reusable buffers, O(1) lookups replacing O(n) scans).
 
-**Do not pursue pure ECS or SoA layouts** — they add complexity without
-measurable benefit at SPT's scale. Phobos proves that AoS with dense iteration
-is the right pattern for game AI mods.
+**Pure ECS and SoA layouts were correctly avoided** — they would add complexity
+without measurable benefit at SPT's scale. Phobos proves that AoS with dense
+iteration is the right pattern for game AI mods, and QuestingBots now follows
+the same proven approach.

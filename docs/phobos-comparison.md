@@ -7,7 +7,7 @@
 | Aspect | Phobos | SPTQuestingBots |
 |--------|--------|-----------------|
 | **Purpose** | Procedural movement via grid/zone fields | Quest-driven objectives + zone-based fallback movement |
-| **Architecture** | Pure client (ECS-like, ~62 files) | Client + Server (MonoBehaviour, ~180 files) |
+| **Architecture** | Pure client (ECS-like, ~62 files) | Client + Server (ECS-Lite + MonoBehaviour, ~180 files) |
 | **BigBrain layers** | 1 (priority 19) | 4 (priorities 99, 26, 19, 18) |
 | **Navigation** | Custom movement system with own pathfinding | BSG's built-in `BotOwner.FollowPath()` + PathfindingThrottle |
 | **Squad model** | Explicit Squad entities with leader/member | HiveMind sensor-based boss/follower tracking |
@@ -15,10 +15,10 @@
 | **Zone/field system** | Advection + convergence fields from JSON per-map configs | Advection + convergence fields, auto-detected from spawn points, per-bot momentum + noise |
 | **Bot spawning** | None (uses whatever spawns) | Custom PMC/PScav generation system (optional) |
 | **Stuck detection** | Two-tier: soft (EWMA) + hard (ring buffer + teleport) | Two-tier: soft (EWMA) + hard (ring buffer + teleport) — ported from Phobos |
-| **Performance** | Batch nav jobs, ECS data layout, AggressiveInlining | Batch nav jobs, PathfindingThrottle, sleeping system, for-loops, HashSet |
-| **Maturity** | v0.1.11 (early) | v1.6.0 (C# port with major enhancements) |
+| **Performance** | Batch nav jobs, ECS data layout, AggressiveInlining | Batch nav jobs, PathfindingThrottle, sleeping system, ECS-Lite dense iteration, AggressiveInlining, static buffers |
+| **Maturity** | v0.1.11 (early) | v1.7.0 (C# port with ECS-Lite data layout) |
 
-**Key takeaway**: These mods have converged significantly. QuestingBots now incorporates Phobos-inspired features (zone-based movement fields with per-bot momentum/noise, two-tier stuck detection, batched pathfinding) alongside its original quest-driven objective system. The primary remaining differences are: Phobos takes full control of bot movement (custom `Player.Move()` calls), while QuestingBots delegates to BSG's mover; Phobos uses per-map JSON zone configurations, while QuestingBots auto-detects zones from spawn points; and QuestingBots has a full bot spawning system and server component that Phobos lacks.
+**Key takeaway**: These mods have converged significantly. QuestingBots now incorporates Phobos-inspired features (ECS-Lite dense entity storage with swap-remove, zone-based movement fields with per-bot momentum/noise, two-tier stuck detection, batched pathfinding, AggressiveInlining on hot paths) alongside its original quest-driven objective system. The primary remaining differences are: Phobos takes full control of bot movement (custom `Player.Move()` calls), while QuestingBots delegates to BSG's mover; Phobos uses per-map JSON zone configurations, while QuestingBots auto-detects zones from spawn points; and QuestingBots has a full bot spawning system and server component that Phobos lacks.
 
 ---
 
@@ -36,10 +36,10 @@
 ### SPTQuestingBots
 
 - **Author**: DanW (`com.DanW.QuestingBots`), C# port by Alberto Leal
-- **Version**: 1.6.0
-- **Scope**: Full quest-driven behavior, zone-based fallback movement, boss/follower coordination, PMC/PScav spawning (optional), AI sleeping
-- **Approach**: Bots receive actual game quest objectives (from 12 per-map JSON files) and navigate to complete them. When no quests are available, a Phobos-inspired zone movement system uses advection/convergence fields to guide bots toward interesting map areas.
-- **Maturity**: Mature; 13 action types, extensive spawning system, broad bot-type support, zone movement with debug overlay
+- **Version**: 1.7.0
+- **Scope**: Full quest-driven behavior, zone-based fallback movement, ECS-Lite data layout, boss/follower coordination, PMC/PScav spawning (optional), AI sleeping
+- **Approach**: Bots receive actual game quest objectives (from 12 per-map JSON files) and navigate to complete them. When no quests are available, a Phobos-inspired zone movement system uses advection/convergence fields to guide bots toward interesting map areas. An ECS-Lite data layout (dense entity list with swap-remove, inspired by Phobos's EntityArray) provides centralized bot state, static system methods, and zero-allocation sensor iteration.
+- **Maturity**: Mature; 13 action types, extensive spawning system, broad bot-type support, zone movement with debug overlay, ECS-Lite entity storage with 537 tests
 - **Source**: `src/SPTQuestingBots.Client/` (~180 C# files) + `src/SPTQuestingBots.Server/` (9 C# files)
 
 ---
@@ -53,7 +53,7 @@
 | **Solution** | `Phobos.sln` (1 main project + Gym benchmark) | `SPTQuestingBots.sln` (2 main + 2 test projects) |
 | **Target** | netstandard2.1 | Client: net472, Server: net9.0, Tests: net9.0 |
 | **Build** | Standard .csproj | Makefile (`make build`, `make test`, `make ci`) |
-| **Testing** | Gym project (BenchmarkDotNet) | NUnit 3.x + NSubstitute (187 client + 58 server = 245 tests) |
+| **Testing** | Gym project (BenchmarkDotNet) | NUnit 3.x + NSubstitute (479 client + 58 server = 537 tests) |
 | **CI** | None observed | GitHub Actions (`ci.yml`) |
 | **Code style** | File-scoped namespaces, primary constructors | Block-scoped namespaces, traditional constructors, CSharpier formatting |
 
@@ -71,15 +71,18 @@ Data/         # Dataset, ComponentArray, EntityArray - ECS data containers
 
 Reference: `Phobos/Phobos/Orchestration/PhobosManager.cs` - central orchestrator that ticks all systems in sequence.
 
-**QuestingBots** uses a **MonoBehaviour + static controller pattern** with a **pure-logic zone movement layer**:
+**QuestingBots** uses an **ECS-Lite data layout + MonoBehaviour integration pattern** with a **pure-logic zone movement layer**:
 
 ```
+BotLogic/ECS/        # BotEntity, BotRegistry — dense entity storage with swap-remove
+  Systems/           #   HiveMindSystem, QuestScorer — static methods on dense lists
+BotLogic/HiveMind/   # BotHiveMindMonitor — orchestrates ECS tick, BSG API bridge
 BehaviorExtensions/  # CustomLayer/CustomLogic base classes, action type enum
-BotLogic/            # Objective/, Follow/, Sleep/, HiveMind/ - behavior per concern
+BotLogic/            # Objective/, Follow/, Sleep/ - behavior per concern
 Components/          # MonoBehaviour components (BotObjectiveManager, LocationData)
 Controllers/         # Static singletons (ConfigController, LoggingController)
 Models/              # Data classes for quests, pathing, spawning
-Helpers/             # PositionHistory, RollingAverage, NavJob, PathfindingThrottle
+Helpers/             # PositionHistory, RollingAverage, NavJob, PathfindingThrottle, TimePacing, FramePacing
 ZoneMovement/        # Phobos-inspired grid + field system
   Core/              #   WorldGrid, GridCell, PointOfInterest, ZoneMathUtils
   Fields/            #   AdvectionField, ConvergenceField, FieldComposer
@@ -88,13 +91,13 @@ ZoneMovement/        # Phobos-inspired grid + field system
 Patches/             # Harmony patches organized by category
 ```
 
-Reference: `src/SPTQuestingBots.Client/BehaviorExtensions/CustomLayerDelayedUpdate.cs` - base class for all custom layers.
+Reference: `src/SPTQuestingBots.Client/BotLogic/ECS/BotEntityBridge.cs` - static adapter bridging BotOwner (game) to BotEntity (ECS).
 
 ### Key Architectural Differences
 
 | Concern | Phobos | SPTQuestingBots |
 |---------|--------|-----------------|
-| **State management** | Structured component arrays on entities | MonoBehaviour components on GameObjects |
+| **State management** | Structured component arrays on entities | ECS-Lite: dense `BotEntity` list + `BotEntityBridge` adapter for BSG interop |
 | **Update loop** | PhobosManager.Update() ticks all systems | BigBrain calls IsActive()/Update() per layer/logic |
 | **Zone movement** | Core architecture (everything flows through fields) | Fallback system (zone quests when no higher-priority quest) |
 | **Pure logic separation** | Systems operate on component data | ZoneMovement/Core + Fields + Selection are pure logic (unit tested) |
@@ -212,12 +215,12 @@ Reference: `src/.../BotLogic/Objective/BotObjectiveLayer.cs:77-149` - quest acti
 
 | Aspect | Phobos | QuestingBots |
 |--------|--------|--------------|
-| **Model** | Explicit `Squad` entity with `Leader` + `Members` list | `BotHiveMindMonitor` tracking boss/follower dictionaries |
+| **Model** | Explicit `Squad` entity with `Leader` + `Members` list | `BotEntity` with `Boss`/`Followers` fields + `BotEntityBridge` adapter |
 | **Formation** | BSG squad detection + optional scav squads | BSG boss/follower + custom PMC group spawning |
-| **Leader selection** | First member, reassigned on death | BSG's native boss system |
-| **Shared state** | `SquadObjective` with guard timers | HiveMind sensors (5 types) |
-| **Death handling** | `RemoveAgent()` on death event | Dead bot tracking, follower reassignment |
-| **Separation** | Not supported | `SeparateBotFromGroup()` with full group restructuring |
+| **Leader selection** | First member, reassigned on death (`squad.Members[^1]`) | BSG's native boss system |
+| **Shared state** | `SquadObjective` with guard timers | 5 sensor bools embedded on `BotEntity` + group query helpers |
+| **Death handling** | `RemoveAgent()` on death event | `HiveMindSystem.CleanupDeadEntities()` with O(1) `IsActive` checks |
+| **Separation** | Not supported | `HiveMindSystem.SeparateFromGroup()` with full group restructuring |
 
 **Phobos squad mechanics** (`Phobos/Phobos/Entities/Squad.cs`):
 - Squads are first-class entities with their own strategy scoring
@@ -225,12 +228,13 @@ Reference: `src/.../BotLogic/Objective/BotObjectiveLayer.cs:77-149` - quest acti
 - Leader manages guard timers, objective selection
 - Guard duration is configurable with Gaussian sampling for natural variation
 
-**QuestingBots HiveMind** (`src/.../BotLogic/HiveMind/BotHiveMindMonitor.cs`):
-- 5 sensor types: InCombat, IsSuspicious, CanQuest, CanSprintToObjective, WantsToLoot
-- Sensors track state per-bot and aggregate for boss/followers/group
-- Boss follower relationships maintained via `botBosses` and `botFollowers` dictionaries
-- Full group separation logic for spawned PMCs
-- **Optimized**: deferred removal pattern (no `.ToArray()` in hot loops), `HashSet<BotOwner>` for O(1) Contains()
+**QuestingBots HiveMind** (`src/.../BotLogic/HiveMind/BotHiveMindMonitor.cs` + `BotLogic/ECS/`):
+- 5 sensor bools embedded directly on `BotEntity`: `IsInCombat`, `IsSuspicious`, `CanQuest`, `CanSprintToObjective`, `WantsToLoot`
+- Push sensors (InCombat, IsSuspicious, WantsToLoot) write only to ECS entities; pull sensors (CanQuest, CanSprintToObjective) iterate dense entity list with zero allocation
+- Boss/follower hierarchy on `BotEntity.Boss` / `BotEntity.Followers` — O(1) dead checks via `IsActive`
+- `HiveMindSystem`: static system methods for boss/follower cleanup, sensor resets, entity counting
+- `BotEntityBridge`: static adapter bridging `BotOwner` (BSG) to `BotEntity` (ECS) with group query helpers
+- Full group separation logic for spawned PMCs via `HiveMindSystem.SeparateFromGroup()`
 
 ---
 
@@ -604,51 +608,63 @@ Phobos does not spawn bots. It only manages bots that already exist:
 
 ### QuestingBots Performance Patterns
 
-1. **Sleeping System** (`src/.../BotLogic/Sleep/SleepingLayer.cs`):
+1. **ECS-Lite Data Layout** (v1.7.0, `BotLogic/ECS/`):
+   - Dense `BotEntity` list with swap-remove (mirrors Phobos's `EntityArray<T>`)
+   - All sensor, sleep, type, boss/follower, field state, and job assignment data on entities
+   - Static system methods (`HiveMindSystem`, `QuestScorer`) iterate dense lists — no dictionary traversal
+   - `BsgBotRegistry`-style sparse array for O(1) integer ID lookups without hash computation
+   - `BotEntityBridge`: zero-allocation sensor iteration, static reusable buffers for `GetFollowers()`/`GetAllGroupMembers()`
+   - `[AggressiveInlining]` on hot-path methods (pacing utilities, registry lookups)
+
+2. **Sleeping System** (`src/.../BotLogic/Sleep/SleepingLayer.cs`):
    - Priority 99 (highest) - takes precedence over all other behavior
    - Disables bots far from human players (configurable per-map distances)
    - Minimum bot count threshold before sleeping activates
    - Exemptions for certain bot types and questing bots
    - Effectively reduces active bot count to those near the player
 
-2. **Allocation Optimizations** (Phase 1, v1.1.0):
-   - Eliminated `.Keys.ToArray()` allocations in HiveMind hot loops (7+ arrays/tick)
-   - Replaced `Dictionary + OrderBy().First()` with simple min-tracking loop
-   - Replaced LINQ chains in `GetAllGroupMembers()` with explicit for-loops
-   - Replaced `List<BotOwner>.Contains()` (O(n)) with `HashSet<BotOwner>` (O(1)) in `BotRegistrationManager`
-   - Replaced nested `.Where().Where().Where().Count()` LINQ with counting for-loop in `NumberOfActiveBots()`
-   - Replaced `.Where()` x5 chain with reusable static buffer + for-loop in `GetAllPossibleQuests()`
-   - Deferred removal pattern in `updateBossFollowers()` instead of `.ToArray()` for safe dictionary mutation
+3. **Allocation Optimizations** (v1.1.0–v1.7.0):
+   - Eliminated all dictionary-based sensor storage (5 `Dictionary<BotOwner, bool>` → embedded bools on `BotEntity`)
+   - Eliminated `deadBots` list (`List<BotOwner>.Contains()` O(n) → `BotEntity.IsActive` O(1))
+   - Static reusable buffers for `GetFollowers()`, `GetAllGroupMembers()` (zero allocation per call)
+   - O(n) min/max scans replacing `Dictionary + OrderBy().First()` chains
+   - `QuestScorer`: static buffers replacing 5 dictionary allocations + `OrderBy` in quest selection
+   - `NumberOfActiveBots()`: dense entity iteration (was O(bots × assignments) dictionary scan)
+   - `ConsecutiveFailedAssignments`: O(1) entity field read (was O(n) reverse list scan)
+   - LINQ eliminated from all hot paths — for-loops throughout
 
-3. **Pathfinding Throttle** (`Helpers/PathfindingThrottle.cs`):
+4. **Pathfinding Throttle** (`Helpers/PathfindingThrottle.cs`):
    - Per-frame limiter: max 5 `NavMesh.CalculatePath` calls per frame
    - Prevents frame spikes when many bots recalculate simultaneously
 
-4. **Batch Nav Jobs** (`Helpers/NavJobExecutor.cs`):
+5. **Batch Nav Jobs** (`Helpers/NavJobExecutor.cs`):
    - Queue-based batched pathfinding with ramped batch size
    - Same pattern as Phobos's NavJobExecutor
 
-5. **Delayed Update Base Classes**:
+6. **Rate Limiting** (`Helpers/TimePacing.cs`, `FramePacing.cs`):
+   - Reusable rate-limiter utilities with `[AggressiveInlining]`, inspired by Phobos
+   - HiveMind tick: 50ms interval with deterministic 4-step sequence
+   - Convergence field: 30s refresh interval
+   - Delayed update base classes: configurable intervals (25ms–250ms)
+
+7. **Delayed Update Base Classes**:
    - `CustomLayerDelayedUpdate`: configurable update intervals (25ms, 100ms, 250ms)
    - `MonoBehaviourDelayedUpdate`: similar throttling for MonoBehaviour components
    - `SleepingLayer` uses 250ms interval (only checks 4 times/second)
    - `BotObjectiveLayer` uses 25ms interval (40 times/second)
-
-6. **HiveMind Update Throttling** (`BotHiveMindMonitor.cs:38`):
-   - 50ms update interval for sensor aggregation
-   - Batch-updates all sensors per cycle
 
 ### Comparison
 
 | Technique | Phobos | QuestingBots |
 |-----------|--------|--------------|
 | **Bot culling** | Disables StandBy (keeps all active) | Sleeping system disables far bots |
-| **Update throttling** | Per-system update rates | Per-layer/component intervals |
+| **Update throttling** | Per-system update rates (TimePacing) | Per-layer/component intervals + TimePacing/FramePacing utilities |
 | **Pathfinding** | Batched across frames | PathfindingThrottle (5/frame) + NavJobExecutor (batched) |
-| **Data access** | Contiguous arrays (cache-friendly) | Dictionary lookups (optimized with HashSet where hot) |
+| **Data access** | Dense entity list (cache-friendly) | Dense entity list (ECS-Lite, same pattern as Phobos) |
 | **Distance calcs** | Squared distances throughout | Mix of Distance() and sqrMagnitude |
-| **Memory** | Pre-allocated arrays, pooling | Reusable static buffers, deferred removal, ring buffers |
+| **Memory** | Pre-allocated arrays, pooling | Static buffers, zero-alloc sensor iteration, ring buffers |
 | **LINQ** | Minimal | Eliminated from hot paths (replaced with for-loops) |
+| **AggressiveInlining** | ~25+ methods | TimePacing/FramePacing, BsgBotRegistry lookup |
 | **Zone field updates** | Every tick (hot-reloadable) | Timer-based (30s interval for convergence) |
 
 ---
@@ -727,8 +743,8 @@ Phobos declares no incompatibilities.
 | Aspect | Phobos | QuestingBots |
 |--------|--------|--------------|
 | **Unit tests** | None (Gym project is benchmarks) | NUnit + NSubstitute |
-| **Test count** | 0 | 245 (187 client + 58 server) |
-| **Client test coverage** | — | Stuck detection (4 files), zone movement Phases 1-3 (9 files), Phase 4A per-bot state (2 files), Phase 4B contract tests (1 file), config deserialization |
+| **Test count** | 0 | 537 (479 client + 58 server) |
+| **Client test coverage** | — | ECS data layout (BotEntity, BotRegistry, HiveMindSystem, QuestScorer, BotEntityBridge scenarios, BotFieldState, BsgBotRegistry, job assignments), stuck detection, zone movement, config deserialization |
 | **CI** | None | GitHub Actions (format-check → lint → build → test) |
 | **Benchmarks** | BenchmarkDotNet in Gym/ | None |
 | **Formatting** | Not configured | CSharpier + `.editorconfig` |
@@ -758,17 +774,19 @@ Since the original comparison, QuestingBots has ported several Phobos innovation
 
 5. **Ring buffers and EWMA** (v1.1.0): `PositionHistory` and `RollingAverage` helpers ported from Phobos's stuck detection.
 
+6. **ECS-Lite data layout** (v1.7.0): Full adoption of Phobos's `EntityArray<T>` pattern — dense `BotEntity` list with swap-remove, ID recycling via free stack, `BsgBotRegistry`-style sparse array for O(1) integer lookups. All sensor, sleep, type, boss/follower, field state, and job assignment data centralized on entities. Static system methods (`HiveMindSystem`, `QuestScorer`) iterate dense lists. `BotEntityBridge` provides the BSG interop layer. All old dictionaries (`deadBots`, `botBosses`, `botFollowers`, `sensors`, `botJobAssignments`) deleted — ECS is the sole data store.
+
+7. **AggressiveInlining** (v1.7.0): `[MethodImpl(MethodImplOptions.AggressiveInlining)]` applied to `TimePacing`/`FramePacing` rate limiters and `BsgBotRegistry` sparse lookups, matching Phobos's use on hot-path methods.
+
+8. **TimePacing / FramePacing** (v1.7.0): Reusable rate-limiter utilities ported from Phobos's `Helpers/Pacing.cs` pattern. Deterministic tick order in `BotHiveMindMonitor.Update()` mirrors Phobos's `PhobosManager.Update()` orchestration.
+
 ### What QuestingBots Could Still Learn from Phobos
 
 1. **Custom movement system**: Phobos's path-deviation spring force and custom path following via `Player.Move()` produce smoother bot movement than BSG's native mover. QuestingBots still delegates to `BotOwner.FollowPath()`.
 
-2. **ECS data layout**: Phobos's contiguous `ComponentArray<T>` / `EntityArray<T>` are more cache-friendly than QuestingBots' MonoBehaviour component access patterns and dictionary lookups.
+2. **Utility AI**: Phobos's score-based action selection with hysteresis is more extensible than QuestingBots' enum-based switch statement. New behaviors can be added without modifying existing dispatch code.
 
-3. **Utility AI**: Phobos's score-based action selection with hysteresis is more extensible than QuestingBots' enum-based switch statement. New behaviors can be added without modifying existing dispatch code.
-
-4. **BSG mover handoff**: Phobos's careful state restoration when returning control to BSG (`OnLayerChanged`) prevents the "bot standing still" bug that can occur when another layer takes over mid-path.
-
-5. **AggressiveInlining**: Phobos uses `[MethodImpl(MethodImplOptions.AggressiveInlining)]` on hot path methods. QuestingBots could benefit from this on its most frequently called methods (field computation, cell scoring).
+3. **BSG mover handoff**: Phobos's careful state restoration when returning control to BSG (`OnLayerChanged`) prevents the "bot standing still" bug that can occur when another layer takes over mid-path.
 
 ### What Phobos Could Learn from QuestingBots
 
@@ -784,7 +802,7 @@ Since the original comparison, QuestingBots has ported several Phobos innovation
 
 6. **Server component**: Having quest data and bot generation on the server allows QuestingBots to leverage the full game database. Phobos is limited to client-side data.
 
-7. **Testing infrastructure**: QuestingBots has 230 unit tests and CI. Phobos has none, relying on manual testing and benchmarks.
+7. **Testing infrastructure**: QuestingBots has 537 unit tests and CI. Phobos has none, relying on manual testing and benchmarks.
 
 8. **Mod conflict detection**: QuestingBots actively detects and warns about conflicting mods both via BepInEx attributes and server-side checks. Phobos has no conflict detection.
 
