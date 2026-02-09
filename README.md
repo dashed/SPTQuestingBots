@@ -46,6 +46,7 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - Sensor booleans (combat, suspicious, questing, sprint, loot) embedded directly on entity — replaces 5 separate dictionaries
 - Bot classification (`BotType` enum) and sleep state replace scattered HashSet/List lookups
 - Zero-allocation group query helpers for checking sensor state across boss/follower hierarchies
+- `HiveMindSystem`: static system methods for boss/follower lifecycle, sensor resets, and O(n) entity counting — replaces dictionary-based HiveMind operations
 - Pure C# with zero Unity dependencies for full testability
 
 ---
@@ -220,7 +221,8 @@ SPTQuestingBots/
 │       ├── QuestingBotsPlugin.cs    # Plugin entry point
 │       ├── BehaviorExtensions/      # Custom BigBrain AI layers
 │       ├── BotLogic/                # Bot AI decision making
-│       │   ├── ECS/                 #   Entity data containers (BotEntity, BotRegistry)
+│       │   ├── ECS/                 #   Entity data containers + system methods
+│       │   │   └── Systems/         #   HiveMindSystem (static dense-list iteration)
 │       │   ├── BotMonitor/          #   Health, combat, extraction monitors
 │       │   ├── HiveMind/            #   Group coordination sensors
 │       │   ├── Follow/              #   Boss follower behavior

@@ -23,10 +23,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `BotSensor` enum with `GetSensor`/`SetSensor` for generic access
   - Zero-allocation group query helpers: `CheckSensorForBoss`, `CheckSensorForAnyFollower`, `CheckSensorForGroup`
   - 26 new unit tests for all Phase 2 fields, methods, and group query scenarios
+- **ECS Phase 3: System extraction** — static system methods operating on dense entity lists (Phobos pattern)
+  - `HiveMindSystem`: 7 static methods for HiveMind logic — `ResetInactiveEntitySensors`, `CleanupDeadEntities`, `AssignBoss`, `RemoveBoss`, `SeparateFromGroup`, `CountActive`, `CountActiveByType`
+  - Replaces O(n²) `NumberOfActiveBots()` with O(n) dense iteration via `CountActive`/`CountActiveByType`
+  - Bidirectional boss/follower lifecycle management (assign, remove, separate, dead-entity cleanup)
+  - 30 new unit tests covering all system methods, edge cases (null args, self-assign, chain hierarchies)
 - ECS data layout analysis document (`docs/ecs-data-layout-analysis.md`) — Phobos architecture deep dive, QuestingBots audit, cache coherency math, and phased implementation plan
 
 ### Changed
-- 261 client tests total (was 187), 58 server tests, 319 total
+- 291 client tests total (was 187), 58 server tests, 349 total
 
 ## [1.6.0] - 2026-02-08
 

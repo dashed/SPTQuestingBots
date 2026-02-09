@@ -75,6 +75,10 @@
     <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/BotRegistry.cs" Link="LinkedSources/ECS/BotRegistry.cs" />
     <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/BotType.cs" Link="LinkedSources/ECS/BotType.cs" />
     <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/BotSensor.cs" Link="LinkedSources/ECS/BotSensor.cs" />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/HiveMindSystem.cs"
+      Link="LinkedSources/ECS/Systems/HiveMindSystem.cs"
+    />
   </ItemGroup>
 
   <!--
