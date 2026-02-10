@@ -60,7 +60,7 @@ namespace SAIN.Plugin
             {
                 _SAINInteropInited = true;
 
-                _SAINExternalType = Type.GetType("SAIN.Plugin.External, SAIN");
+                _SAINExternalType = Type.GetType("SAIN.Interop.SAINExternal, SAIN");
 
                 // Only try to get the methods if we have the type
                 if (_SAINExternalType != null)

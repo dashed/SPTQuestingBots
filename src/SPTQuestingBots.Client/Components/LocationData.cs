@@ -44,6 +44,7 @@ namespace SPTQuestingBots.Components
             if (CurrentRaidSettings == null)
             {
                 LoggingController.LogError("Could not retrieve current raid settings");
+                return;
             }
 
             PathRenderer pathRender = Singleton<GameWorld>.Instance.gameObject.GetOrAddComponent<PathRenderer>();

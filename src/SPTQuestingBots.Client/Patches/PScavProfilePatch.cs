@@ -16,9 +16,9 @@ namespace SPTQuestingBots.Patches
         protected override MethodBase GetTargetMethod()
         {
             targetType = typeof(BotsPresets).BaseType;
-            profileListField = AccessTools.Field(targetType, "list_0");
+            profileListField = AccessTools.Field(targetType, "List_0");
 
-            Controllers.LoggingController.LogInfo("Found type for ServerRequestPatch: " + targetType.FullName);
+            Controllers.LoggingController.LogInfo("Found type for PScavProfilePatch: " + targetType.FullName);
 
             return targetType.GetMethod("GetNewProfile", new Type[] { typeof(BotCreationDataClass), typeof(bool) });
         }
