@@ -120,7 +120,7 @@ namespace SPTQuestingBots.Components
                 }
 
                 // Check which quests are currently active for the player
-                ISession session = FindObjectOfType<QuestingBotsPlugin>().GetComponent<TarkovData>().GetSession();
+                ISession session = QuestingBotsPlugin.Instance?.GetComponent<TarkovData>()?.GetSession();
                 if (session == null)
                 {
                     LoggingController.LogError("Could not retrieve session data");

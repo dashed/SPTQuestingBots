@@ -160,15 +160,46 @@ public class BugFixRegressionTests
 
     #endregion
 
-    #region LocationData.Awake null-safety regression tests
+    #region QuestingBotsPlugin static singleton regression tests
+
+    [Test]
+    public void QuestingBotsPlugin_HasStaticInstanceProperty()
+    {
+        // Bug fix: FindObjectOfType<QuestingBotsPlugin>() returned null in raid because
+        // BepInEx plugin GameObjects live in DontDestroyOnLoad and may not be found.
+        // The static singleton pattern is the standard BepInEx approach.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/QuestingBotsPlugin.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("public static QuestingBotsPlugin Instance"),
+            "QuestingBotsPlugin should have a static Instance property"
+        );
+        Assert.That(source, Does.Contain("Instance = this"), "QuestingBotsPlugin.Awake should set Instance = this");
+    }
+
+    [Test]
+    public void LocationData_Awake_UsesStaticInstance_NotFindObjectOfType()
+    {
+        // Bug fix: FindObjectOfType<QuestingBotsPlugin>() returned null, breaking LocationData
+        // initialization. Now uses QuestingBotsPlugin.Instance static singleton.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Components/LocationData.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("QuestingBotsPlugin.Instance"),
+            "LocationData.Awake should use QuestingBotsPlugin.Instance instead of FindObjectOfType"
+        );
+        Assert.That(
+            source,
+            Does.Not.Contain("FindObjectOfType<QuestingBotsPlugin>"),
+            "LocationData should not use FindObjectOfType<QuestingBotsPlugin>()"
+        );
+    }
 
     [Test]
     public void LocationData_Awake_HasNullCheckForPlugin()
     {
-        // Bug fix: FindObjectOfType<QuestingBotsPlugin>() can return null.
-        // The old code chained .GetComponent<TarkovData>().GetCurrentRaidSettings()
-        // directly, causing a NullReferenceException in Awake that prevented
-        // LocationData from initializing (cascading to BotHearingMonitor and extraction failures).
         var source = ReadSourceFile("src/SPTQuestingBots.Client/Components/LocationData.cs");
 
         Assert.That(source, Does.Contain("if (plugin == null)"), "LocationData.Awake should null-check the plugin instance");
@@ -177,11 +208,48 @@ public class BugFixRegressionTests
     [Test]
     public void LocationData_Awake_HasNullCheckForTarkovData()
     {
-        // Bug fix: GetComponent<TarkovData>() can return null if the component
-        // hasn't been added to the plugin GameObject.
         var source = ReadSourceFile("src/SPTQuestingBots.Client/Components/LocationData.cs");
 
         Assert.That(source, Does.Contain("if (tarkovData == null)"), "LocationData.Awake should null-check the TarkovData component");
+    }
+
+    [Test]
+    public void BotQuestBuilder_LoadAllQuests_UsesStaticInstance_NotFindObjectOfType()
+    {
+        // Bug fix: Same FindObjectOfType issue as LocationData. BotQuestBuilder.LoadAllQuests
+        // also used FindObjectOfType<QuestingBotsPlugin>() to get TarkovData/session.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Components/BotQuestBuilder.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("QuestingBotsPlugin.Instance"),
+            "BotQuestBuilder should use QuestingBotsPlugin.Instance instead of FindObjectOfType"
+        );
+        Assert.That(
+            source,
+            Does.Not.Contain("FindObjectOfType<QuestingBotsPlugin>"),
+            "BotQuestBuilder should not use FindObjectOfType<QuestingBotsPlugin>()"
+        );
+    }
+
+    #endregion
+
+    #region SleepingLayer null-safety regression test
+
+    [Test]
+    public void SleepingLayer_IsActive_HasNullCheckForLocationData()
+    {
+        // Bug fix: SleepingLayer.IsActive() (priority 99, checked first) accessed
+        // LocationData.CurrentLocation.Id without null checks. When LocationData.Awake
+        // failed, this NullRef crashed BigBrain's brain update for every bot,
+        // leaving all bots braindead with no combat/movement/aggro.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/BotLogic/Sleep/SleepingLayer.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("locationData?.CurrentLocation == null"),
+            "SleepingLayer.IsActive should null-check LocationData and CurrentLocation"
+        );
     }
 
     #endregion

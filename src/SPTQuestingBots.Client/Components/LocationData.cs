@@ -40,7 +40,7 @@ namespace SPTQuestingBots.Components
         {
             gamePlayerOwner = FindObjectOfType<GamePlayerOwner>();
 
-            var plugin = FindObjectOfType<QuestingBotsPlugin>();
+            var plugin = QuestingBotsPlugin.Instance;
             if (plugin == null)
             {
                 LoggingController.LogError("Could not find QuestingBotsPlugin instance");
@@ -64,6 +64,7 @@ namespace SPTQuestingBots.Components
             PathRenderer pathRender = Singleton<GameWorld>.Instance.gameObject.GetOrAddComponent<PathRenderer>();
 
             CurrentLocation = CurrentRaidSettings.SelectedLocation;
+            LoggingController.LogInfo("LocationData initialized for map: " + CurrentLocation.Id);
             if (CurrentLocation.Id == "Lighthouse")
             {
                 lightkeeperIslandMonitor = Singleton<GameWorld>.Instance.gameObject.GetOrAddComponent<LightkeeperIslandMonitor>();

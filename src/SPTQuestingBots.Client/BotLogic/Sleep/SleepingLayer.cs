@@ -61,13 +61,15 @@ namespace SPTQuestingBots.BotLogic.Sleep
             }
 
             // Determine the distance from human players beyond which bots will be disabled
+            var locationData = Singleton<GameWorld>.Instance?.GetComponent<Components.LocationData>();
+            if (locationData?.CurrentLocation == null)
+            {
+                return updatePreviousState(false);
+            }
+
+            TarkovMaps currentMap = default;
             int mapSpecificHumanDistance = 1000;
-            if (
-                QuestingBotsPluginConfig.TarkovMapIDToEnum.TryGetValue(
-                    Singleton<GameWorld>.Instance.GetComponent<Components.LocationData>().CurrentLocation.Id,
-                    out TarkovMaps currentMap
-                )
-            )
+            if (QuestingBotsPluginConfig.TarkovMapIDToEnum.TryGetValue(locationData.CurrentLocation.Id, out currentMap))
             {
                 mapSpecificHumanDistance = getMapSpecificHumanDistance(currentMap);
             }
