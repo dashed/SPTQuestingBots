@@ -13,7 +13,7 @@ namespace SPTQuestingBots.Helpers
 {
     public static class BotPathingHelpers
     {
-        private static FieldInfo pathPointsField = AccessTools.Field(typeof(BotCurrentPathAbstractClass), "Vector3_0");
+        private static FieldInfo pathPointsField = AccessTools.Field(typeof(BotCurrentPathAbstractClass), "vector3_0");
 
         public static void FollowPath(this BotOwner bot, Models.Pathing.BotPathData botPath, bool slowAtTheEnd, bool getUpWithCheck)
         {

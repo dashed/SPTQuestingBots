@@ -263,7 +263,7 @@ namespace SPTQuestingBots.BotLogic
             }
 
             CustomLayer customLayer = (CustomLayer)customLayerField.GetValue(layer);
-            if (layer == null)
+            if (customLayer == null)
             {
                 LoggingController.LogError("Could not get CustomLayer");
                 return null;

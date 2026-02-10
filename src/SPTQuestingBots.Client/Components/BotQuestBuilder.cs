@@ -32,7 +32,14 @@ namespace SPTQuestingBots.Components
 
         protected void Awake()
         {
-            Singleton<GameWorld>.Instance.GetComponent<LocationData>().FindAllInteractiveObjects();
+            LocationData locationData = Singleton<GameWorld>.Instance.GetComponent<LocationData>();
+            if (locationData == null)
+            {
+                LoggingController.LogError("LocationData component not found");
+                return;
+            }
+
+            locationData.FindAllInteractiveObjects();
             StartCoroutine(LoadAllQuests());
         }
 
@@ -114,6 +121,12 @@ namespace SPTQuestingBots.Components
 
                 // Check which quests are currently active for the player
                 ISession session = FindObjectOfType<QuestingBotsPlugin>().GetComponent<TarkovData>().GetSession();
+                if (session == null)
+                {
+                    LoggingController.LogError("Could not retrieve session data");
+                    yield break;
+                }
+
                 QuestDataClass[] activeQuestsForPlayer = session
                     .Profile.QuestsData.Where(q =>
                         q.Status == EFT.Quests.EQuestStatus.Started

@@ -33,7 +33,7 @@ namespace SPTQuestingBots.Patches.Spawning.ScavLimits
 
         protected override MethodBase GetTargetMethod()
         {
-            nextRetryTimeDelayField = AccessTools.Field(typeof(NonWavesSpawnScenario), "float_2");
+            nextRetryTimeDelayField = AccessTools.Field(typeof(NonWavesSpawnScenario), "Float_2");
 
             return typeof(BotSpawner).GetMethod(nameof(BotSpawner.TrySpawnFreeAndDelay), BindingFlags.Public | BindingFlags.Instance);
         }
