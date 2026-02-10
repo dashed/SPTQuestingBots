@@ -74,6 +74,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `VulturePhase` byte constants: None=0, Approach=1, SilentApproach=2, HoldAmbush=3, Rush=4, Paranoia=5, Complete=6
   - `updateCombatEvents()` added to `BotHiveMindMonitor` as step 6 in tick order
   - ~91 new tests (28 CombatEventRegistry + 12 CombatEventScanner + 28 VultureTask + 15 VultureSquadStrategy + 8 VultureConfig)
+- **Linger system** — post-objective idle behavior with linear decay scoring
+  - `LingerTask`: utility task (`BotActionTypeId=Linger(15)`, BaseScore=0.45, hysteresis=0.10)
+    - Gates: `ObjectiveCompletedTime > 0`, `!IsInCombat`, `LingerDuration > 0`, elapsed < duration
+    - Score: `baseScore * (1 - elapsed / duration)` — linear decay from 0.45 to 0 over linger duration
+  - `LingerAction`: BigBrain action extending `CustomLogicDelayedUpdate`
+    - Pauses patrol, slight crouch (pose=0.7), random head scans every 3–8s
+    - Clears linger state on stop (ObjectiveCompletedTime=0, LingerDuration=0)
+  - `LingerConfig`: 10 JSON properties under `questing.linger` (enabled, base_score, duration_min/max, head_scan_interval_min/max, pose, enable_for_pmcs/scavs/pscavs)
+  - `BotEntityBridge.SyncQuestState()`: tracks `HasActiveObjective` true→false transitions to set `ObjectiveCompletedTime` and sample `LingerDuration` (10–30s)
+  - 4 new fields on `BotEntity`: `ObjectiveCompletedTime`, `LingerDuration`, `IsLingering`, `CurrentGameTime`
+  - ~27 new tests (20 LingerTask scoring + 7 LingerConfig deserialization)
+- **Continuous GoToObjective scoring** — exponential distance-based decay replacing binary score
+  - `GoToObjectiveTask.ScoreEntity()`: `BaseScore * (1 - exp(-distance / 75))` — 0m→0, 50m→0.31, 75m→0.41, 200m→0.61, asymptotic to 0.65
+  - Eliminates abrupt score jumps when bot distance changes
+  - 7 new distance gradient tests (zero, medium, long, monotonicity, upper bound, formula verification)
+- **Context-aware speed and posture** — indoor/combat/approach-aware pose and sprint control
+  - `GoToObjectiveAction.Update()`: replaces hardcoded `SetPose(1f)` with layered conditions:
+    - Indoor (`EnvironmentId == 0`): pose 0.8, no sprint
+    - Combat/suspicious: pose 0.6, no sprint
+    - Near objective (<30m): pose 0.75; within 15m: no sprint
+  - Uses `Math.Min` to apply the most restrictive condition
+- **Zone movement as default fallback** — activates when no quest is available
+  - `BotObjectiveLayer.IsActive()`: tries `tryZoneMovementFallback()` when `trySetNextActionUtility()` returns false
+  - `tryZoneMovementFallback()`: dispatches `GoToObjective` with "ZoneWander" reason if zone movement is enabled
+  - `spawn_point_wander.desirability` bumped from 0 to 3 so zone wander quests compete in quest selection
+- **Variable wait times** — random sampling replaces flat 5s wait between objectives
+  - `QuestObjectiveStep.SampleWaitTime()`: samples wait time from `[WaitTimeMin, WaitTimeMax]` range (default: 5–15s)
+  - `default_wait_time_after_objective_completion` reduced from 5s to 3s (linger adds 10–30s idle on top)
+  - Config: `wait_time_min` (5s) and `wait_time_max` (15s) in `questing` section
+  - 5 new config validation tests
 - Vulture port analysis document (`docs/vulture-port-analysis.md`)
 - Bot looting analysis document (`docs/looting-analysis.md`)
 - **Dedicated log file** — per-session log at `BepInEx/plugins/DanW-SPTQuestingBots/log/QuestingBots.log`
@@ -101,14 +131,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `SquadCalloutId`, `SquadCalloutDecider`, `FormationSpeedController`: class and method docstrings
 
 ### Changed
-- Utility AI now has 10 scored tasks (was 8): added Loot and Vulture
-- `QuestTaskFactory.TaskCount` updated from 8 to 10
+- Utility AI now has 11 scored tasks (was 8): added Loot, Vulture, and Linger
+- `QuestTaskFactory.TaskCount` updated from 8 to 11
+- GoToObjective scoring changed from binary (0 or BaseScore) to continuous exponential decay based on distance
+- `default_wait_time_after_objective_completion` reduced from 5s to 3s
 - `BotHiveMindMonitor.Update()` tick order expanded to 9 steps (was 5 in v1.9.0):
   1. updateBosses, 2. updateBossFollowers, 3. updatePullSensors, 4. ResetInactiveEntitySensors,
   5. updateSquadStrategies (+ formations, combat positioning, zone follower spread, voice commands),
   6. updateCombatEvents (CombatEventRegistry cleanup + CombatEventScanner),
   7. updateLootScanning, 8. refreshHumanPlayerCache, 9. updateLodTiers
-- 1499 client tests total (was 938), 58 server tests, 1557 total
+- 1558 client tests total (was 938), 58 server tests, 1616 total
 
 ## [1.9.0] - 2026-02-09
 

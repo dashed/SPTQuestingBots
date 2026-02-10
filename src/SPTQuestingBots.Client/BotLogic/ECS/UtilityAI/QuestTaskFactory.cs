@@ -9,7 +9,7 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
     public static class QuestTaskFactory
     {
         /// <summary>Number of quest utility tasks. Used to size <c>BotEntity.TaskScores</c>.</summary>
-        public const int TaskCount = 10;
+        public const int TaskCount = 11;
 
         /// <summary>
         /// Create a new <see cref="UtilityTaskManager"/> pre-populated with all quest tasks.
@@ -30,6 +30,7 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                     new Tasks.CloseDoorsTask(),
                     new Tasks.LootTask(),
                     new Tasks.VultureTask(),
+                    new Tasks.LingerTask(),
                 }
             );
         }

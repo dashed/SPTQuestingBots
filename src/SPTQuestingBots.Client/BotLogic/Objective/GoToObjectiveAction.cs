@@ -43,9 +43,37 @@ namespace SPTQuestingBots.BotLogic.Objective
             {
                 PathFollowerStatus status = TickCustomMover(CanSprint);
 
-                // When using custom mover, skip BSG movement helpers that conflict
-                // (UpdateBotMovement calls BotSprintingController which touches BSG mover)
-                BotOwner.SetPose(1f);
+                // Context-aware pose for custom mover
+                float pose = 1.0f;
+
+                if (ECS.BotEntityBridge.TryGetEntity(BotOwner, out var poseEntity))
+                {
+                    // Indoor detection: EnvironmentId == 0 means indoor
+                    if (BotOwner.AIData?.EnvironmentId == 0)
+                    {
+                        pose = Math.Min(pose, 0.8f);
+                        CanSprint = false;
+                    }
+
+                    // Recent combat: cautious posture
+                    if (poseEntity.IsInCombat || poseEntity.IsSuspicious)
+                    {
+                        pose = Math.Min(pose, 0.6f);
+                        CanSprint = false;
+                    }
+
+                    // Approach behavior: slow down near objective
+                    if (poseEntity.DistanceToObjective < 30f && poseEntity.HasActiveObjective)
+                    {
+                        pose = Math.Min(pose, 0.75f);
+                        if (poseEntity.DistanceToObjective < 15f)
+                        {
+                            CanSprint = false;
+                        }
+                    }
+                }
+
+                BotOwner.SetPose(pose);
                 BotOwner.BotLay.GetUp(true);
                 BotOwner.BewarePlantedMine.Update();
                 BotOwner.DoorOpener.ManualUpdate();

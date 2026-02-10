@@ -712,11 +712,32 @@ namespace SPTQuestingBots.BotLogic.ECS
                 return;
 
             int previousAction = entity.CurrentQuestAction;
+            bool previousHasActiveObjective = entity.HasActiveObjective;
             entity.CurrentQuestAction = (int)objectiveManager.CurrentQuestAction;
             entity.DistanceToObjective = objectiveManager.DistanceToObjective;
             entity.IsCloseToObjective = objectiveManager.IsCloseToObjective();
             entity.MustUnlockDoor = objectiveManager.MustUnlockDoor;
             entity.HasActiveObjective = objectiveManager.IsJobAssignmentActive;
+
+            // Sync game time for linger scoring
+            entity.CurrentGameTime = UnityEngine.Time.time;
+
+            // Track objective completion: true→false transition triggers linger
+            if (previousHasActiveObjective && !entity.HasActiveObjective && !entity.IsLingering)
+            {
+                entity.ObjectiveCompletedTime = UnityEngine.Time.time;
+                var lingerConfig = Controllers.ConfigController.Config?.Questing?.Linger;
+                float durationMin = lingerConfig?.DurationMin ?? 10f;
+                float durationMax = lingerConfig?.DurationMax ?? 30f;
+                entity.LingerDuration = durationMin + (float)(new System.Random().NextDouble() * (durationMax - durationMin));
+                LoggingController.LogDebug(
+                    "[BotEntityBridge] Entity "
+                        + entity.Id
+                        + " objective completed, linger duration="
+                        + entity.LingerDuration.ToString("F1")
+                        + "s"
+                );
+            }
 
             if (previousAction != entity.CurrentQuestAction)
             {

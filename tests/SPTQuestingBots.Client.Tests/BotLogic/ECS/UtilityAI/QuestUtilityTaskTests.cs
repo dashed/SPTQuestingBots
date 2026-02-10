@@ -1,3 +1,4 @@
+using System;
 using NUnit.Framework;
 using SPTQuestingBots.BotLogic.ECS;
 using SPTQuestingBots.BotLogic.ECS.UtilityAI;
@@ -114,6 +115,8 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
     [TestFixture]
     public class GoToObjectiveTaskTests
     {
+        // ── Gate checks (still return 0) ────────────────────
+
         [Test]
         public void Score_NoActiveObjective_ReturnsZero()
         {
@@ -126,13 +129,6 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
         {
             var entity = QuestEntityHelper.Create(0, QuestActionId.MoveToPosition, mustUnlockDoor: true);
             Assert.AreEqual(0f, GoToObjectiveTask.Score(entity));
-        }
-
-        [Test]
-        public void Score_MoveToPosition_ReturnsBaseScore()
-        {
-            var entity = QuestEntityHelper.Create(0, QuestActionId.MoveToPosition);
-            Assert.AreEqual(GoToObjectiveTask.BaseScore, GoToObjectiveTask.Score(entity));
         }
 
         [Test]
@@ -171,24 +167,10 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
         }
 
         [Test]
-        public void Score_AmbushFarFromObjective_ReturnsBaseScore()
-        {
-            var entity = QuestEntityHelper.Create(0, QuestActionId.Ambush, isCloseToObjective: false);
-            Assert.AreEqual(GoToObjectiveTask.BaseScore, GoToObjectiveTask.Score(entity));
-        }
-
-        [Test]
         public void Score_AmbushCloseToObjective_ReturnsZero()
         {
             var entity = QuestEntityHelper.Create(0, QuestActionId.Ambush, isCloseToObjective: true);
             Assert.AreEqual(0f, GoToObjectiveTask.Score(entity));
-        }
-
-        [Test]
-        public void Score_SnipeFarFromObjective_ReturnsBaseScore()
-        {
-            var entity = QuestEntityHelper.Create(0, QuestActionId.Snipe, isCloseToObjective: false);
-            Assert.AreEqual(GoToObjectiveTask.BaseScore, GoToObjectiveTask.Score(entity));
         }
 
         [Test]
@@ -199,18 +181,135 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
         }
 
         [Test]
-        public void Score_PlantItemFarFromObjective_ReturnsBaseScore()
-        {
-            var entity = QuestEntityHelper.Create(0, QuestActionId.PlantItem, isCloseToObjective: false);
-            Assert.AreEqual(GoToObjectiveTask.BaseScore, GoToObjectiveTask.Score(entity));
-        }
-
-        [Test]
         public void Score_PlantItemCloseToObjective_ReturnsZero()
         {
             var entity = QuestEntityHelper.Create(0, QuestActionId.PlantItem, isCloseToObjective: true);
             Assert.AreEqual(0f, GoToObjectiveTask.Score(entity));
         }
+
+        // ── Continuous scoring (distance-based) ─────────────
+
+        [Test]
+        public void Score_MoveToPosition_ReturnsPositive()
+        {
+            // Default helper distance is 100m
+            var entity = QuestEntityHelper.Create(0, QuestActionId.MoveToPosition);
+            float score = GoToObjectiveTask.Score(entity);
+            Assert.That(score, Is.GreaterThan(0f));
+            Assert.That(score, Is.LessThanOrEqualTo(GoToObjectiveTask.BaseScore));
+        }
+
+        [Test]
+        public void Score_AmbushFarFromObjective_ReturnsPositive()
+        {
+            var entity = QuestEntityHelper.Create(0, QuestActionId.Ambush, isCloseToObjective: false);
+            float score = GoToObjectiveTask.Score(entity);
+            Assert.That(score, Is.GreaterThan(0f));
+            Assert.That(score, Is.LessThanOrEqualTo(GoToObjectiveTask.BaseScore));
+        }
+
+        [Test]
+        public void Score_SnipeFarFromObjective_ReturnsPositive()
+        {
+            var entity = QuestEntityHelper.Create(0, QuestActionId.Snipe, isCloseToObjective: false);
+            float score = GoToObjectiveTask.Score(entity);
+            Assert.That(score, Is.GreaterThan(0f));
+            Assert.That(score, Is.LessThanOrEqualTo(GoToObjectiveTask.BaseScore));
+        }
+
+        [Test]
+        public void Score_PlantItemFarFromObjective_ReturnsPositive()
+        {
+            var entity = QuestEntityHelper.Create(0, QuestActionId.PlantItem, isCloseToObjective: false);
+            float score = GoToObjectiveTask.Score(entity);
+            Assert.That(score, Is.GreaterThan(0f));
+            Assert.That(score, Is.LessThanOrEqualTo(GoToObjectiveTask.BaseScore));
+        }
+
+        // ── Distance gradient tests ─────────────────────────
+
+        [Test]
+        public void Score_AtZeroDistance_ReturnsZero()
+        {
+            var entity = QuestEntityHelper.Create(0, QuestActionId.MoveToPosition, distanceToObjective: 0f);
+            float score = GoToObjectiveTask.Score(entity);
+            Assert.AreEqual(0f, score, 0.001f);
+        }
+
+        [Test]
+        public void Score_At50m_GreaterThan03()
+        {
+            var entity = QuestEntityHelper.Create(0, QuestActionId.MoveToPosition, distanceToObjective: 50f);
+            float score = GoToObjectiveTask.Score(entity);
+            Assert.That(score, Is.GreaterThan(0.3f));
+        }
+
+        [Test]
+        public void Score_At200m_ApproachesBaseScore()
+        {
+            var entity = QuestEntityHelper.Create(0, QuestActionId.MoveToPosition, distanceToObjective: 200f);
+            float score = GoToObjectiveTask.Score(entity);
+            Assert.That(score, Is.GreaterThan(0.6f));
+            Assert.That(score, Is.LessThanOrEqualTo(GoToObjectiveTask.BaseScore));
+        }
+
+        [Test]
+        public void Score_AtVeryLargeDistance_ApproachesBaseScore()
+        {
+            var entity = QuestEntityHelper.Create(0, QuestActionId.MoveToPosition, distanceToObjective: 1000f);
+            float score = GoToObjectiveTask.Score(entity);
+            Assert.AreEqual(GoToObjectiveTask.BaseScore, score, 0.01f);
+        }
+
+        [Test]
+        public void Score_MonotonicallyIncreasingWithDistance()
+        {
+            float[] distances = { 0f, 10f, 25f, 50f, 75f, 100f, 150f, 200f, 500f };
+            float prev = -1f;
+
+            for (int i = 0; i < distances.Length; i++)
+            {
+                var entity = QuestEntityHelper.Create(0, QuestActionId.MoveToPosition, distanceToObjective: distances[i]);
+                float score = GoToObjectiveTask.Score(entity);
+                Assert.That(
+                    score,
+                    Is.GreaterThanOrEqualTo(prev),
+                    $"Score at {distances[i]}m ({score}) should be >= score at previous distance ({prev})"
+                );
+                prev = score;
+            }
+        }
+
+        [Test]
+        public void Score_NeverExceedsBaseScore()
+        {
+            float[] distances = { 0f, 50f, 100f, 500f, 10000f };
+
+            for (int i = 0; i < distances.Length; i++)
+            {
+                var entity = QuestEntityHelper.Create(0, QuestActionId.MoveToPosition, distanceToObjective: distances[i]);
+                float score = GoToObjectiveTask.Score(entity);
+                Assert.That(
+                    score,
+                    Is.LessThanOrEqualTo(GoToObjectiveTask.BaseScore),
+                    $"Score at {distances[i]}m ({score}) should not exceed BaseScore"
+                );
+            }
+        }
+
+        [Test]
+        public void Score_MatchesExpectedExponentialFormula()
+        {
+            float distance = 75f;
+            float falloff = 75f;
+            float expected = GoToObjectiveTask.BaseScore * (1f - (float)Math.Exp(-distance / falloff));
+
+            var entity = QuestEntityHelper.Create(0, QuestActionId.MoveToPosition, distanceToObjective: distance);
+            float score = GoToObjectiveTask.Score(entity);
+            Assert.AreEqual(expected, score, 0.001f);
+        }
+
+        // ── Properties and ScoreEntity ──────────────────────
 
         [Test]
         public void Properties_CorrectValues()
@@ -225,11 +324,12 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
         public void ScoreEntity_WritesToTaskScores()
         {
             var task = new GoToObjectiveTask();
-            var entity = QuestEntityHelper.Create(0, QuestActionId.MoveToPosition);
+            var entity = QuestEntityHelper.Create(0, QuestActionId.MoveToPosition, distanceToObjective: 100f);
 
             task.ScoreEntity(0, entity);
 
-            Assert.AreEqual(GoToObjectiveTask.BaseScore, entity.TaskScores[0], 0.001f);
+            Assert.That(entity.TaskScores[0], Is.GreaterThan(0f));
+            Assert.That(entity.TaskScores[0], Is.LessThanOrEqualTo(GoToObjectiveTask.BaseScore));
         }
     }
 
@@ -546,7 +646,8 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
 
             task.UpdateScores(0, new[] { entity });
 
-            Assert.AreEqual(GoToObjectiveTask.BaseScore, entity.TaskScores[0], 0.001f);
+            Assert.That(entity.TaskScores[0], Is.GreaterThan(0f));
+            Assert.That(entity.TaskScores[0], Is.LessThanOrEqualTo(GoToObjectiveTask.BaseScore));
         }
     }
 
@@ -832,8 +933,8 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
             bot.MustUnlockDoor = false;
             manager.ScoreAndPick(bot);
 
-            // UnlockDoor scores 0, GoToObjective scores 0.65
-            // 0.65 > 0 + 0.20 = 0.20 → switches back
+            // UnlockDoor scores 0, GoToObjective scores ~0.48 (at 100m)
+            // ~0.48 > 0 + 0.20 = 0.20 → switches back
             Assert.IsInstanceOf<GoToObjectiveTask>(bot.TaskAssignment.Task);
         }
 
@@ -861,16 +962,16 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
     public class QuestTaskFactoryTests
     {
         [Test]
-        public void TaskCount_Is10()
+        public void TaskCount_Is11()
         {
-            Assert.AreEqual(10, QuestTaskFactory.TaskCount);
+            Assert.AreEqual(11, QuestTaskFactory.TaskCount);
         }
 
         [Test]
-        public void Create_Returns10Tasks()
+        public void Create_Returns11Tasks()
         {
             var manager = QuestTaskFactory.Create();
-            Assert.AreEqual(10, manager.Tasks.Length);
+            Assert.AreEqual(11, manager.Tasks.Length);
         }
 
         [Test]

@@ -81,6 +81,15 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("vulture")]
         public VultureConfig Vulture { get; set; } = new VultureConfig();
 
+        [JsonProperty("linger")]
+        public LingerConfig Linger { get; set; } = new LingerConfig();
+
+        [JsonProperty("wait_time_min")]
+        public float WaitTimeMin { get; set; } = 5f;
+
+        [JsonProperty("wait_time_max")]
+        public float WaitTimeMax { get; set; } = 15f;
+
         public QuestingConfig() { }
     }
 }

@@ -72,7 +72,9 @@
 			"default_chance_of_bots_having_keys": 25
 		},
 		"min_time_between_switching_objectives": 5,
-		"default_wait_time_after_objective_completion": 5,
+		"default_wait_time_after_objective_completion": 3,
+		"wait_time_min": 5,
+		"wait_time_max": 15,
 		"update_bot_zone_after_stopping": true,
 		"wait_time_before_planting": 1,
 		"quest_generation": {
@@ -249,7 +251,7 @@
 				"max_raid_ET": 30
 			},
 			"spawn_point_wander": {
-				"desirability": 0,
+				"desirability": 3,
 				"min_distance": 75,
 				"max_bots_per_quest": 30
 			},
@@ -326,6 +328,18 @@
 			"event_buffer_size": 128,
 			"cooldown_on_reject": 180.0,
 			"movement_timeout": 90.0
+		},
+		"linger": {
+			"enabled": true,
+			"base_score": 0.45,
+			"duration_min": 10.0,
+			"duration_max": 30.0,
+			"head_scan_interval_min": 3.0,
+			"head_scan_interval_max": 8.0,
+			"pose": 0.7,
+			"enable_for_pmcs": true,
+			"enable_for_scavs": true,
+			"enable_for_pscavs": true
 		}
 	},
 	"bot_spawns": {

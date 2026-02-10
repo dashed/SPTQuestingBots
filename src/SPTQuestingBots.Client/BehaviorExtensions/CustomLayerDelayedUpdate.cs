@@ -26,6 +26,7 @@ namespace SPTQuestingBots.BehaviorExtensions
         CloseNearbyDoors,
         Loot,
         Vulture,
+        Linger,
     }
 
     internal abstract class CustomLayerDelayedUpdate : CustomLayer
@@ -90,6 +91,8 @@ namespace SPTQuestingBots.BehaviorExtensions
                     return new Action(typeof(BotLogic.Objective.LootAction), actionReason);
                 case BotActionType.Vulture:
                     return new Action(typeof(BotLogic.Objective.VultureAction), actionReason);
+                case BotActionType.Linger:
+                    return new Action(typeof(BotLogic.Objective.LingerAction), actionReason);
             }
 
             throw new InvalidOperationException("Invalid action selected for layer");

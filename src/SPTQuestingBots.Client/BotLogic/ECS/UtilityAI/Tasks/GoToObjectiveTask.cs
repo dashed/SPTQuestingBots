@@ -1,3 +1,4 @@
+using System;
 using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks
@@ -57,8 +58,13 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks
                     return 0f;
             }
 
-            // MoveToPosition or travel phase of two-phase actions
-            return BaseScore;
+            // Distance-based continuous scoring: close → low, far → high
+            // score = BaseScore * (1 - exp(-distance / falloff))
+            // At 0m → 0, at 50m → ~0.31, at 75m → ~0.41, at 200m → ~0.61
+            float distance = entity.DistanceToObjective;
+            float falloff = 75f;
+            float score = BaseScore * (1f - (float)Math.Exp(-distance / falloff));
+            return score;
         }
     }
 }

@@ -29,7 +29,26 @@ namespace SPTQuestingBots.Models.Questing
     public class QuestObjectiveStep
     {
         [JsonProperty("waitTimeAfterCompleting")]
-        public double WaitTimeAfterCompleting { get; set; } = ConfigController.Config.Questing.DefaultWaitTimeAfterObjectiveCompletion;
+        public double WaitTimeAfterCompleting { get; set; } = SampleWaitTime();
+
+        /// <summary>
+        /// Sample a random wait time between WaitTimeMin and WaitTimeMax from config.
+        /// Falls back to DefaultWaitTimeAfterObjectiveCompletion if min/max are equal.
+        /// </summary>
+        private static double SampleWaitTime()
+        {
+            var config = ConfigController.Config?.Questing;
+            if (config == null)
+                return 5.0;
+
+            float min = config.WaitTimeMin;
+            float max = config.WaitTimeMax;
+
+            if (max <= min)
+                return config.DefaultWaitTimeAfterObjectiveCompletion;
+
+            return min + new System.Random().NextDouble() * (max - min);
+        }
 
         [JsonProperty("position")]
         public SerializableVector3 SerializablePosition { get; set; } = null;

@@ -105,7 +105,14 @@ namespace SPTQuestingBots.BotLogic.Objective
 
             // Determine what type of action is needed for the bot to complete its assignment
             if (QuestingBotsPluginConfig.UseUtilityAI.Value)
-                return updatePreviousState(trySetNextActionUtility());
+            {
+                bool utilityResult = trySetNextActionUtility();
+                if (!utilityResult)
+                {
+                    utilityResult = tryZoneMovementFallback();
+                }
+                return updatePreviousState(utilityResult);
+            }
             else
                 return updatePreviousState(trySetNextAction());
         }
@@ -207,6 +214,17 @@ namespace SPTQuestingBots.BotLogic.Objective
                 return false;
 
             setNextAction((BotActionType)task.BotActionTypeId, task.ActionReason);
+            return true;
+        }
+
+        private bool tryZoneMovementFallback()
+        {
+            var zoneConfig = Controllers.ConfigController.Config?.Questing?.ZoneMovement;
+            if (zoneConfig == null || !zoneConfig.Enabled)
+                return false;
+
+            setNextAction(BotActionType.GoToObjective, "ZoneWander");
+            LoggingController.LogDebug(BotOwner.GetText() + " falling back to zone wander");
             return true;
         }
 

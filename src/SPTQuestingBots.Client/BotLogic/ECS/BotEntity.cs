@@ -322,6 +322,20 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// <summary>Current vulture behavior phase. 0=None, see <see cref="Systems.VulturePhase"/>.</summary>
         public byte VulturePhase;
 
+        // ── Linger State ──────────────────────────────────────────────
+
+        /// <summary>Game time when the bot's last objective was completed. 0 = no recent completion.</summary>
+        public float ObjectiveCompletedTime;
+
+        /// <summary>How long this bot should linger after completing an objective (seconds).</summary>
+        public float LingerDuration;
+
+        /// <summary>Whether this bot is currently in a lingering idle state.</summary>
+        public bool IsLingering;
+
+        /// <summary>Current game time, synced from Time.time for pure-logic scoring.</summary>
+        public float CurrentGameTime;
+
         // ── Constructor ─────────────────────────────────────────
 
         public BotEntity(int id)

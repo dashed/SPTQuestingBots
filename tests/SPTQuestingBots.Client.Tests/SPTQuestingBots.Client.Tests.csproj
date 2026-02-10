@@ -355,6 +355,12 @@
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/LootTask.cs"
       Link="LinkedSources/ECS/UtilityAI/Tasks/LootTask.cs"
     />
+    <!-- Linger: utility AI task and configuration -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/LingerTask.cs"
+      Link="LinkedSources/ECS/UtilityAI/Tasks/LingerTask.cs"
+    />
+    <Compile Include="../../src/SPTQuestingBots.Client/Configuration/LingerConfig.cs" Link="LinkedSources/Configuration/LingerConfig.cs" />
   </ItemGroup>
 
   <!--

@@ -41,7 +41,7 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - Per-bot momentum and noise ensure each bot picks a unique direction, eliminating herd movement
 - Dynamic objective cycling: bots select next destination via live field state instead of nearest-to-bot
 - POI-aware: bots choose contextual actions (ambush, snipe, hold position) based on nearby containers, exfils, and quest triggers
-- Serves as fallback when no higher-priority quests are available
+- Serves as automatic fallback when no quest is available — bots zone-wander instead of standing idle
 - 2D debug minimap: real-time visualization of grid cells, field vectors, bot/player positions, and zone sources
 - F12 menu toggles for enable/disable, debug overlay, and debug minimap
 
@@ -57,8 +57,9 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 
 ### Utility AI (Optional)
 - Phobos-style scored task framework for bot action selection — enabled by default via F12 (`Use Utility AI for Action Selection`, default: true)
-- 10 scored tasks replace the `BotObjectiveLayer.trySetNextAction()` enum switch: GoToObjective, Ambush, Snipe, HoldPosition, PlantItem, UnlockDoor, ToggleSwitch, CloseDoors, Loot, Vulture
+- 11 scored tasks replace the `BotObjectiveLayer.trySetNextAction()` enum switch: GoToObjective, Ambush, Snipe, HoldPosition, PlantItem, UnlockDoor, ToggleSwitch, CloseDoors, Loot, Vulture, Linger
 - Column-major scoring with additive hysteresis prevents action flip-flopping (identical to Phobos `BaseTaskManager.PickTask`)
+- Continuous GoToObjective scoring: exponential distance-based decay (`BaseScore * (1 - e^(-d/75))`) instead of binary on/off — eliminates abrupt score jumps
 - Two-phase action handoff: GoToObjective scores high when far, drops to 0 when close so the action-specific task takes over
 - Quest state synced from `BotObjectiveManager` to `BotEntity` before each scoring pass — keeps utility tasks pure C# with zero Unity dependencies
 - Hybrid approach: utility scoring for action SELECTION, BigBrain for action EXECUTION
@@ -89,6 +90,14 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - `LootAction`: BigBrain action with Approach → Interact → Complete state machine
 - LootingBots compatibility: auto-detects when LootingBots is installed and defers to it
 - All scoring thresholds and timing configurable via `questing.looting` in config.json
+
+### Linger System (Post-Objective Idle)
+- After completing an objective, bots pause briefly before rushing to the next one — configurable via `questing.linger` in config.json
+- Linear score decay: starts at 0.45, fades to 0 over a random duration (10–30s by default)
+- During linger: slight crouch (pose=0.7), periodic random head scans (every 3–8s), patrol paused
+- Combat interrupts lingering immediately
+- Context-aware speed/posture approaching objectives: indoor areas (crouch, no sprint), combat/suspicious (deep crouch), near objective (<30m slow approach, <15m no sprint)
+- Variable wait times between objectives: random sampling from configurable range (5–15s) instead of flat 5s
 
 ### Vulture System (Combat Scavenging)
 - Bots hear gunfire and explosions, then investigate combat zones to ambush weakened survivors — ported from the [Vulture](https://hub.sp-tarkov.com/files/file/2283-vulture/) mod
@@ -305,7 +314,7 @@ SPTQuestingBots/
 │       │   ├── ECS/                 #   Entity data containers + system methods
 │       │   │   ├── Systems/         #   HiveMindSystem (static dense-list iteration)
 │       │   │   └── UtilityAI/       #   Scored task framework (Phobos-style)
-│       │   │       └── Tasks/       #   10 concrete quest utility tasks
+│       │   │       └── Tasks/       #   11 concrete quest utility tasks
 │       │   ├── BotMonitor/          #   Health, combat, extraction monitors
 │       │   ├── HiveMind/            #   Group coordination sensors
 │       │   ├── Follow/              #   Boss follower behavior
@@ -359,6 +368,7 @@ The mod is configured through `config/config.json` and the BepInEx F12 in-game m
 | `questing.zone_movement` | Zone-based movement: grid size, field weights, POI scoring, convergence interval, debug overlay |
 | `questing.looting` | Looting system: enable/disable, scan radius, scoring weights, cooldowns, squad coordination settings |
 | `questing.vulture` | Vulture system: enable/disable, detection range, courage threshold, ambush duration, time-of-day modifiers |
+| `questing.linger` | Linger system: enable/disable, base score, duration range, head scan intervals, pose, per-bot-type toggles |
 | `adjust_pscav_chance` | Dynamic player-Scav conversion rates when spawning system is disabled |
 
 ### Custom Quests
