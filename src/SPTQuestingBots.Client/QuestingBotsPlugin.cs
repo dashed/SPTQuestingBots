@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using BepInEx;
+﻿using BepInEx;
 using BepInEx.Bootstrap;
 using SPTQuestingBots.Components;
 using SPTQuestingBots.Components.Spawning;
@@ -17,29 +10,19 @@ namespace SPTQuestingBots
     [BepInIncompatibility("com.dvize.AILimit")]
     [BepInDependency("xyz.drakia.waypoints", "1.7.1")]
     [BepInDependency("xyz.drakia.bigbrain", "1.3.2")]
-    [BepInPlugin("com.DanW.QuestingBots", "DanW-QuestingBots", "1.10.0")]
+    [BepInPlugin("com.DanW.QuestingBots", "DanW-QuestingBots", "1.11.0")]
     public class QuestingBotsPlugin : BaseUnityPlugin
     {
         public static string ModName { get; private set; } = "???";
 
         protected void Awake()
         {
-            Patches.TarkovInitPatch.MinVersion = "3.11.2.0";
-            Patches.TarkovInitPatch.MaxVersion = "3.11.99.0";
+            Patches.TarkovInitPatch.MinVersion = "4.0.0.0";
+            Patches.TarkovInitPatch.MaxVersion = "4.99.99.0";
 
             Logger.LogInfo("Loading QuestingBots...");
             LoggingController.Logger = Logger;
             ModName = Info.Metadata.Name;
-
-            if (!confirmNoPreviousVersionExists())
-            {
-                Chainloader.DependencyErrors.Add(
-                    "An older version of "
-                        + ModName
-                        + " still exists in '/BepInEx/plugins'. Please remove SPTQuestingBots.dll from that directory, or this mod will not work correctly."
-                );
-                return;
-            }
 
             Logger.LogInfo("Loading QuestingBots...getting configuration data...");
             if (ConfigController.GetConfig() == null)
@@ -159,15 +142,5 @@ namespace SPTQuestingBots
             Logger.LogInfo("Loading QuestingBots...done.");
         }
 
-        private bool confirmNoPreviousVersionExists()
-        {
-            string oldPath = AppDomain.CurrentDomain.BaseDirectory + "/BepInEx/plugins/SPTQuestingBots.dll";
-            if (File.Exists(oldPath))
-            {
-                return false;
-            }
-
-            return true;
-        }
     }
 }

@@ -239,16 +239,26 @@ For detailed architecture documentation, see [docs/architecture.md](docs/archite
 
 ## Installation
 
-1. Download the latest release archive.
-2. Extract and copy the **server plugin** to your SPT server mods directory:
-   ```
-   SPT/user/mods/DanW-SPTQuestingBots/
-   ```
-3. Copy the **client plugin** DLL to your BepInEx plugins directory:
-   ```
-   SPT/BepInEx/plugins/DanW-SPTQuestingBots/SPTQuestingBots.dll
-   ```
-4. Launch SPT. Configure options via the F12 BepInEx menu in-game.
+Copy the contents of the release archive into your SPT installation root (the folder containing `EscapeFromTarkov.exe`). The archive mirrors the SPT directory structure, so a straight copy-paste works:
+
+```
+<SPT Installation>/
+├── BepInEx/plugins/DanW-SPTQuestingBots/
+│   └── SPTQuestingBots.dll              ← client plugin
+└── SPT/user/mods/SPTQuestingBots/
+    ├── SPTQuestingBots.Server.dll       ← server plugin
+    ├── Newtonsoft.Json.dll              ← required runtime dependency
+    ├── config/
+    │   ├── config.json                  ← main mod configuration
+    │   ├── eftQuestSettings.json        ← EFT quest overrides
+    │   └── zoneAndItemQuestPositions.json
+    └── quests/standard/
+        └── (12 per-map quest JSON files)
+```
+
+Launch SPT. Configure options via the F12 BepInEx menu in-game.
+
+> **Note:** `Newtonsoft.Json.dll` must be bundled with the server plugin because the SPT 4.x server does not ship it. The SPT mod loader automatically loads all DLLs in the mod folder.
 
 ---
 
@@ -327,9 +337,10 @@ Create a `libs/` folder in the repository root and copy DLLs from your SPT 4.x i
 make build           # Build both server and client plugin DLLs
 make build-server    # Build server plugin only
 make build-client    # Build client plugin only
+make deploy          # Build and create install layout in build/deploy/
 ```
 
-Build output goes to `build/`.
+Build output goes to `build/`. The `deploy` target creates a ready-to-copy directory structure in `build/deploy/` that mirrors the SPT installation layout.
 
 ### 4. Run tests
 
@@ -351,7 +362,8 @@ make lint-fix        # Auto-fix code style issues
 ### 6. Full CI pipeline
 
 ```bash
-make ci              # restore -> format-check -> lint -> build-tests -> test
+make ci              # restore -> format-check -> build-client-tests -> test-client (no game DLLs needed)
+make ci-full         # restore -> format-check -> lint -> build-tests -> test (requires libs/)
 ```
 
 For detailed development instructions, see [docs/development.md](docs/development.md).

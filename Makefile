@@ -71,9 +71,14 @@ THIRDPARTY_DLLS := \
 ALL_DLLS := $(SPT_SERVER_DLLS) $(BEPINEX_CORE_DLLS) $(EFT_MANAGED_DLLS) \
 	$(SPT_PLUGIN_DLLS) $(SPT_PATCHER_DLLS) $(THIRDPARTY_DLLS)
 
+# ─── Deploy layout ──────────────────────────────────────────────────
+DEPLOY_DIR           := build/deploy
+SERVER_MOD_DIR       := $(DEPLOY_DIR)/SPT/user/mods/SPTQuestingBots
+CLIENT_PLUGIN_DIR    := $(DEPLOY_DIR)/BepInEx/plugins/DanW-SPTQuestingBots
+
 .DEFAULT_GOAL := help
 .PHONY: help all ci ci-full restore build build-server build-client \
-	build-tests test test-server test-client clean format format-check \
+	build-tests test test-server test-client deploy clean format format-check \
 	lint lint-fix copy-libs check-libs
 
 # ─── Meta ─────────────────────────────────────────────────────────────
@@ -157,6 +162,22 @@ build-tests: ## Build all test projects (requires libs/)
 build-client-tests: ## Build client test project only
 	$(DOTNET) build $(CLIENT_TEST) -c $(CONFIGURATION) --nologo
 
+# ─── Deploy ──────────────────────────────────────────────────────
+
+deploy: build ## Build and create install layout in build/deploy/
+	@rm -rf $(DEPLOY_DIR)
+	@mkdir -p $(SERVER_MOD_DIR)/config $(SERVER_MOD_DIR)/quests/standard $(CLIENT_PLUGIN_DIR)
+	@echo "Assembling deploy layout..."
+	@cp build/SPTQuestingBots.Server.dll $(SERVER_MOD_DIR)/
+	@cp $(LIBS_DIR)/Newtonsoft.Json.dll  $(SERVER_MOD_DIR)/
+	@cp config/*.json                    $(SERVER_MOD_DIR)/config/
+	@cp quests/standard/*.json           $(SERVER_MOD_DIR)/quests/standard/
+	@cp build/SPTQuestingBots.dll        $(CLIENT_PLUGIN_DIR)/
+	@echo ""
+	@echo "Deploy layout ready at $(DEPLOY_DIR)/"
+	@echo "Copy its contents into your SPT installation root:"
+	@echo "  cp -r $(DEPLOY_DIR)/* \$$(SPT_DIR)/"
+
 # ─── Test ─────────────────────────────────────────────────────────────
 
 test: ## Run all unit tests
@@ -191,4 +212,5 @@ lint-fix: ## Auto-fix code style issues
 
 clean: ## Remove build artifacts
 	$(DOTNET) clean $(SOLUTION) --nologo -v q 2>/dev/null || true
+	rm -rf $(DEPLOY_DIR)
 	find . -type d \( -name bin -o -name obj \) -exec rm -rf {} + 2>/dev/null || true

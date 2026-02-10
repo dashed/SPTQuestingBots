@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] - 2026-02-10
+
+### Fixed
+- SPT version range updated from 3.11.x to 4.x (`TarkovInitPatch.MinVersion`/`MaxVersion`)
+- Removed `confirmNoPreviousVersionExists()` that blocked loading when client DLL was in `BepInEx/plugins/`
+- Bundled `Newtonsoft.Json.dll` with server plugin — SPT 4.x server does not ship it
+
+### Added
+- `make deploy` target — builds and creates a copy-paste-ready install layout in `build/deploy/`
+
+### Changed
+- README Installation section rewritten with correct directory tree and Newtonsoft.Json note
+- README CI section fixed: `make ci` description now matches actual Makefile target, added `make ci-full`
+- Cleaned up unused `using` directives in `QuestingBotsPlugin.cs`
+
 ## [1.10.0] - 2026-02-10
 
 ### Added
