@@ -565,5 +565,5 @@ New section in `config/config.json` under `questing.vulture`:
 
 *Analysis date: 2026-02-10*
 *Implementation completed: 2026-02-10*
-*QuestingBots version: 1.9.0 → Unreleased (post-vulture implementation)*
+*QuestingBots version: 1.9.0 → 1.10.0*
 *Test count: 58 server + 1499 client = 1557 total*

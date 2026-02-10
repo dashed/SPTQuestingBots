@@ -40,7 +40,7 @@ public record QuestingBotsMetadata : AbstractModMetadata
     /// Semantic version of this C# port. Starts at 1.0.0 to distinguish
     /// from the original TypeScript releases (0.x.x).
     /// </summary>
-    public override Version Version { get; init; } = new("1.6.0");
+    public override Version Version { get; init; } = new("1.10.0");
 
     /// <summary>
     /// Compatible SPT server version range. The tilde (<c>~</c>) prefix means
