@@ -182,14 +182,50 @@ Quest objective actions:
 | `UnlockDoorAction` | Navigate to and unlock a locked door |
 | `CloseNearbyDoorsAction` | Close all doors within a radius |
 
-#### Sleep
+#### Bot LOD System
 
-AI limiter behavior:
+All bots remain active at all times (Phobos-style). BSG's StandBy system is fully disabled via `CanDoStandBy = false` + `Activate()` in `BotOwnerBrainActivatePatch`. Instead of deactivating distant bots, the LOD system reduces how often they re-evaluate their questing decisions.
+
+**How it works:** Each HiveMind tick (50ms), `BotHiveMindMonitor` snapshots human player positions into `HumanPlayerCache` (once, zero allocation), then computes each bot's squared distance to the nearest human. `BotLodCalculator.ComputeTier()` maps that distance to a tier. `BotObjectiveLayer.IsActive()` calls `BotLodCalculator.ShouldSkipUpdate()` — if the current frame should be skipped for the bot's tier, the layer returns its previous state without re-evaluating.
+
+**LOD tiers:**
+
+| Tier | Distance | Frames processed | What happens |
+|------|----------|-----------------|--------------|
+| **Full** (0) | < 150m | Every frame | Bot re-evaluates questing decisions every tick. No reduction. This is the experience for bots near the player. |
+| **Reduced** (1) | 150--300m | 1 of every 3 | Bot skips 2 out of 3 `BotObjectiveLayer.IsActive()` evaluations. The bot is still fully alive — it moves, shoots, reacts to combat — but quest/objective decisions update at ~1/3 frequency. At this distance the player can't observe the difference. |
+| **Minimal** (2) | > 300m | 1 of every 5 | Bot skips 4 out of 5 evaluations. Quest decisions update at ~1/5 frequency. At 300m+ the bot is far out of view; combat, movement, and BSG brain layers still run every frame. |
+
+**What is NOT affected by LOD:** BSG's core brain (combat, patrol, look, hearing), BigBrain layer switching, physics, animation, rendering, and all non-questing layers run at full speed regardless of tier. LOD only throttles the questing decision layer (`BotObjectiveLayer`).
+
+**Configuration** (`questing.bot_lod` in config.json):
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `enabled` | `true` | Master toggle for the LOD system |
+| `reduced_distance` | `150` | Distance (meters) beyond which bots enter Reduced tier |
+| `minimal_distance` | `300` | Distance (meters) beyond which bots enter Minimal tier |
+| `reduced_frame_skip` | `2` | Frames to skip per cycle in Reduced tier (2 = process 1 of every 3) |
+| `minimal_frame_skip` | `4` | Frames to skip per cycle in Minimal tier (4 = process 1 of every 5) |
+
+**Key files:**
+
+| Class | File | Purpose |
+|-------|------|---------|
+| `BotLodCalculator` | `BotLogic/ECS/Systems/BotLodCalculator.cs` | Pure-logic tier computation + frame skip decisions |
+| `BotLodConfig` | `Configuration/BotLodConfig.cs` | JSON config with 5 properties |
+| `HumanPlayerCache` | `Helpers/HumanPlayerCache.cs` | Static SoA position cache, zero-allocation min-distance query |
+| `BotEntity.LodTier` | `BotLogic/ECS/BotEntity.cs` | Per-entity LOD tier (byte) |
+| `BotEntity.LodFrameCounter` | `BotLogic/ECS/BotEntity.cs` | Per-entity monotonic frame counter |
+
+#### Sleep (Opt-in Fallback)
+
+The legacy sleeping system is retained as an opt-in fallback for lower-end hardware. It is **disabled by default** (`SleepingEnabled = false` in F12 menu). When enabled, it fully deactivates distant bot GameObjects (`gameObject.SetActive(false)`), which is more aggressive than LOD but causes bots to disappear entirely.
 
 | Class | Purpose |
 |-------|---------|
-| `SleepingLayer` | BigBrain layer that activates when the bot is far enough from players |
-| `SleepingAction` | Disables bot AI processing to reduce performance impact |
+| `SleepingLayer` | BigBrain layer (priority 99) that activates when the bot is far enough from players |
+| `SleepingAction` | Disables bot GameObject to eliminate all CPU cost for that bot |
 
 #### ExternalMods
 

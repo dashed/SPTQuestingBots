@@ -8,6 +8,7 @@ using SPTQuestingBots.BehaviorExtensions;
 using SPTQuestingBots.BotLogic.BotMonitor;
 using SPTQuestingBots.BotLogic.BotMonitor.Monitors;
 using SPTQuestingBots.BotLogic.ECS;
+using SPTQuestingBots.BotLogic.ECS.Systems;
 using SPTQuestingBots.BotLogic.ECS.UtilityAI;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Models.Questing;
@@ -42,6 +43,24 @@ namespace SPTQuestingBots.BotLogic.Objective
             if (!canUpdate())
             {
                 return previousState;
+            }
+
+            // LOD skip: reduce update frequency for distant bots
+            var lodConfig = Controllers.ConfigController.Config?.Questing?.BotLod;
+            if (lodConfig != null && lodConfig.Enabled)
+            {
+                if (
+                    BotLogic.ECS.BotEntityBridge.TryGetEntity(BotOwner, out var lodEntity)
+                    && BotLodCalculator.ShouldSkipUpdate(
+                        lodEntity.LodTier,
+                        lodEntity.LodFrameCounter,
+                        lodConfig.ReducedFrameSkip,
+                        lodConfig.MinimalFrameSkip
+                    )
+                )
+                {
+                    return previousState;
+                }
             }
 
             BotQuestingDecisionMonitor decisionMonitor = objectiveManager.BotMonitor.GetMonitor<BotQuestingDecisionMonitor>();

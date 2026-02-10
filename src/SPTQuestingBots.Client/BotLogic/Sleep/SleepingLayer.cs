@@ -98,51 +98,57 @@ namespace SPTQuestingBots.BotLogic.Sleep
                 return updatePreviousState(false);
             }
 
-            // Ensure there are still alive human players on the map
-            IEnumerable<Player> allPlayers = Singleton<GameWorld>.Instance.AllAlivePlayersList.Where(p => !p.IsAI);
-            if (!allPlayers.Any())
+            // Use cached human player positions (zero-allocation) instead of LINQ
+            if (!Helpers.HumanPlayerCache.HasPlayers)
             {
                 return updatePreviousState(false);
             }
 
-            // If the bot is close to any of the human players, don't allow it to sleep
-            if (allPlayers.Any(p => Vector3.Distance(BotOwner.Position, p.Position) < distanceFromHumans))
+            // Check squared distance to nearest human player
+            float distanceFromHumansSqr = (float)distanceFromHumans * distanceFromHumans;
+            Vector3 pos = BotOwner.Position;
+            float minSqrDist = Helpers.HumanPlayerCache.ComputeMinSqrDistance(pos.x, pos.y, pos.z);
+            if (minSqrDist < distanceFromHumansSqr)
             {
                 return updatePreviousState(false);
             }
 
-            // Enumerate all alive bots on the map
-            IEnumerable<BotOwner> allBots = Singleton<IBotGame>
-                .Instance.BotsController.Bots.BotOwners.Where(b => b.BotState == EBotState.Active)
-                .Where(b => !b.IsDead);
+            // Count alive active bots without LINQ allocation
+            int aliveBotCount = 0;
+            foreach (BotOwner b in Singleton<IBotGame>.Instance.BotsController.Bots.BotOwners)
+            {
+                if (b.BotState == EBotState.Active && !b.IsDead)
+                    aliveBotCount++;
+            }
 
             // Only allow bots to sleep if there are at least a certain number in total on the map
-            if (allBots.Count() <= QuestingBotsPluginConfig.MinBotsToEnableSleeping.Value)
+            if (aliveBotCount <= QuestingBotsPluginConfig.MinBotsToEnableSleeping.Value)
             {
                 return updatePreviousState(false);
             }
 
-            // Of alive bots, enumerate all besides this one that are active
-            IEnumerable<BotOwner> allOtherBots = allBots.Where(b => b.gameObject.activeSelf).Where(b => b.Id != BotOwner.Id);
-
-            foreach (BotOwner bot in allOtherBots)
+            // Check proximity to questing bots without LINQ allocation
+            float questDistSqr =
+                QuestingBotsPluginConfig.SleepingMinDistanceToQuestingBots.Value
+                * QuestingBotsPluginConfig.SleepingMinDistanceToQuestingBots.Value;
+            foreach (BotOwner bot in Singleton<IBotGame>.Instance.BotsController.Bots.BotOwners)
             {
+                if (bot.BotState != EBotState.Active || bot.IsDead || !bot.gameObject.activeSelf || bot.Id == BotOwner.Id)
+                    continue;
+
                 // We only care about other bots that can quest
                 Components.BotObjectiveManager otherBotObjectiveManager = bot.GetObjectiveManager();
                 if (otherBotObjectiveManager?.IsQuestingAllowed != true)
-                {
                     continue;
-                }
 
                 // Ignore bots that are in the same group
                 List<BotOwner> groupMemberList = SPT.Custom.CustomAI.AIExtensions.GetAllMembers(bot.BotsGroup);
                 if (groupMemberList.Contains(BotOwner))
-                {
                     continue;
-                }
 
-                // If a questing bot is close to this one, don't allow this one to sleep
-                if (Vector3.Distance(BotOwner.Position, bot.Position) <= QuestingBotsPluginConfig.SleepingMinDistanceToQuestingBots.Value)
+                // Use squared distance instead of Vector3.Distance
+                Vector3 delta = pos - bot.Position;
+                if (delta.sqrMagnitude <= questDistSqr)
                 {
                     return updatePreviousState(false);
                 }

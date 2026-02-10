@@ -266,6 +266,14 @@
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/ObjectiveSharingCalculator.cs"
       Link="LinkedSources/ECS/Systems/ObjectiveSharingCalculator.cs"
     />
+    <!-- Human player position cache: zero-allocation distance queries -->
+    <Compile Include="../../src/SPTQuestingBots.Client/Helpers/HumanPlayerCache.cs" Link="LinkedSources/HumanPlayerCache.cs" />
+    <!-- LOD: distance-based update frequency control -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/BotLodCalculator.cs"
+      Link="LinkedSources/ECS/Systems/BotLodCalculator.cs"
+    />
+    <Compile Include="../../src/SPTQuestingBots.Client/Configuration/BotLodConfig.cs" Link="LinkedSources/Configuration/BotLodConfig.cs" />
   </ItemGroup>
 
   <!--

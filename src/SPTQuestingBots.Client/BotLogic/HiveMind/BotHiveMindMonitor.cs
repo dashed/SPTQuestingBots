@@ -36,7 +36,13 @@ namespace SPTQuestingBots.BotLogic.HiveMind
         public static void Clear()
         {
             ECS.BotEntityBridge.Clear();
+            HumanPlayerCache.Clear();
         }
+
+        /// <summary>Scratch buffers for refreshing HumanPlayerCache.</summary>
+        private static readonly float[] _humanX = new float[HumanPlayerCache.MaxPlayers];
+        private static readonly float[] _humanY = new float[HumanPlayerCache.MaxPlayers];
+        private static readonly float[] _humanZ = new float[HumanPlayerCache.MaxPlayers];
 
         /// <summary>
         /// Deterministic tick order (50ms interval, Phobos-inspired):
@@ -44,6 +50,9 @@ namespace SPTQuestingBots.BotLogic.HiveMind
         ///   2. updateBossFollowers()        — cleanup dead boss/follower references (CleanupDeadEntities)
         ///   3. updatePullSensors()          — CanQuest + CanSprintToObjective via dense ECS iteration
         ///   4. ResetInactiveEntitySensors() — clear sensor state on dead/despawned entities
+        ///   5. updateSquadStrategies()      — squad lifecycle, tactical positions, formations
+        ///   6. refreshHumanPlayerCache()    — snapshot human positions for LOD + SleepingLayer
+        ///   7. updateLodTiers()             — compute LOD tier + increment frame counter per entity
         ///
         /// Push sensors (InCombat, IsSuspicious, WantsToLoot) are event-driven via
         /// <see cref="UpdateValueForBot"/> and do not participate in the tick.
@@ -75,6 +84,12 @@ namespace SPTQuestingBots.BotLogic.HiveMind
 
             // 5. Update squad strategies (position sync, objective sync, tactical positions)
             updateSquadStrategies();
+
+            // 6. Refresh human player position cache (used by LOD + SleepingLayer)
+            refreshHumanPlayerCache();
+
+            // 7. Compute LOD tiers for all active entities
+            updateLodTiers();
         }
 
         public static void UpdateValueForBot(BotHiveMindSensorType sensorType, BotOwner bot, bool value)
@@ -881,6 +896,61 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                         }
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// Snapshot alive human player positions into HumanPlayerCache.
+        /// Called once per tick — all bots then use ComputeMinSqrDistance with zero allocation.
+        /// </summary>
+        private static void refreshHumanPlayerCache()
+        {
+            var allPlayers = Singleton<GameWorld>.Instance.AllAlivePlayersList;
+            int count = 0;
+            for (int i = 0; i < allPlayers.Count && count < HumanPlayerCache.MaxPlayers; i++)
+            {
+                var p = allPlayers[i];
+                if (p.IsAI)
+                    continue;
+
+                var pos = p.Position;
+                _humanX[count] = pos.x;
+                _humanY[count] = pos.y;
+                _humanZ[count] = pos.z;
+                count++;
+            }
+
+            HumanPlayerCache.SetPositions(_humanX, _humanY, _humanZ, count);
+        }
+
+        /// <summary>
+        /// Compute LOD tier for every active entity based on distance to nearest human.
+        /// Increments per-entity LodFrameCounter each tick.
+        /// </summary>
+        private static void updateLodTiers()
+        {
+            var lodConfig = ConfigController.Config?.Questing?.BotLod;
+            if (lodConfig == null || !lodConfig.Enabled)
+                return;
+
+            float reducedSqr = lodConfig.ReducedDistance * lodConfig.ReducedDistance;
+            float minimalSqr = lodConfig.MinimalDistance * lodConfig.MinimalDistance;
+
+            var entities = ECS.BotEntityBridge.Registry.Entities;
+            for (int i = 0; i < entities.Count; i++)
+            {
+                var entity = entities[i];
+                if (!entity.IsActive)
+                    continue;
+
+                float sqrDist = HumanPlayerCache.ComputeMinSqrDistance(
+                    entity.CurrentPositionX,
+                    entity.CurrentPositionY,
+                    entity.CurrentPositionZ
+                );
+
+                entity.LodTier = BotLodCalculator.ComputeTier(sqrDist, reducedSqr, minimalSqr);
+                entity.LodFrameCounter++;
             }
         }
 

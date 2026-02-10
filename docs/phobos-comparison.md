@@ -15,7 +15,7 @@
 | **Zone/field system** | Advection + convergence fields from JSON per-map configs | Advection + convergence fields, auto-detected from spawn points, per-bot momentum + noise |
 | **Bot spawning** | None (uses whatever spawns) | Custom PMC/PScav generation system (optional) |
 | **Stuck detection** | Two-tier: soft (EWMA) + hard (ring buffer + teleport) | Two-tier: soft (EWMA) + hard (ring buffer + teleport) — ported from Phobos |
-| **Performance** | Batch nav jobs, ECS data layout, AggressiveInlining | Batch nav jobs, PathfindingThrottle, sleeping system, ECS-Lite dense iteration, AggressiveInlining, static buffers |
+| **Performance** | Batch nav jobs, ECS data layout, AggressiveInlining | Batch nav jobs, PathfindingThrottle, 3-tier LOD system, ECS-Lite dense iteration, AggressiveInlining, static buffers, HumanPlayerCache |
 | **Maturity** | v0.1.11 (early) | v1.9.0 (utility AI, custom movement, NavMesh corner-cutting, ECS-Lite, zone fields) |
 
 **Key takeaway**: These mods have converged almost completely on a technical level. QuestingBots now incorporates Phobos-inspired features (Phobos-style utility AI with scored tasks and additive hysteresis for action selection, custom `Player.Move()` path following with path-deviation spring force, ECS-Lite dense entity storage with swap-remove, zone-based movement fields with per-bot momentum/noise, squad-level strategies with tactical positioning, two-tier stuck detection, batched pathfinding, AggressiveInlining on hot paths, identical BSG mover patches) alongside its original quest-driven objective system. The primary remaining differences are architectural: Phobos uses utility AI for everything (movement, guarding) with a `DummyAction` bypassing BigBrain dispatch, while QuestingBots uses utility AI for action selection only with BigBrain handling execution (hybrid approach); Phobos uses per-map JSON zone configurations while QuestingBots auto-detects zones from spawn points; Phobos uses cover points for tactical positioning while QuestingBots uses quest-type-aware geometric formations; QuestingBots has a full bot spawning system, server component, and quest data system that Phobos lacks; and QuestingBots supports 20+ brain types compared to Phobos's 9.
@@ -37,7 +37,7 @@
 
 - **Author**: DanW (`com.DanW.QuestingBots`), C# port by Alberto Leal
 - **Version**: 1.9.0
-- **Scope**: Full quest-driven behavior, Phobos-style utility AI action selection, custom movement system, zone-based fallback movement, squad strategies with tactical positioning (including combat-aware repositioning and zone movement integration), ECS-Lite data layout, boss/follower coordination, PMC/PScav spawning (optional), AI sleeping
+- **Scope**: Full quest-driven behavior, Phobos-style utility AI action selection, custom movement system, zone-based fallback movement, squad strategies with tactical positioning (including combat-aware repositioning and zone movement integration), ECS-Lite data layout, boss/follower coordination, PMC/PScav spawning (optional), 3-tier LOD system with HumanPlayerCache
 - **Approach**: Bots receive actual game quest objectives (from 12 per-map JSON files) and navigate to complete them using a custom `Player.Move()` movement system inspired by Phobos (path-deviation spring force, Chaikin smoothing, sprint angle-jitter gating, 3 BSG patches). A Phobos-style utility AI system (8 scored quest tasks with additive hysteresis) selects which action to execute, while BigBrain handles action execution (hybrid approach). When no quests are available, a Phobos-inspired zone movement system uses advection/convergence fields to guide bots toward interesting map areas. An ECS-Lite data layout (dense entity list with swap-remove, inspired by Phobos's EntityArray) provides centralized bot state, static system methods, and zero-allocation sensor iteration.
 - **Maturity**: Mature; 13 action types with utility AI scoring, custom movement system with NavMesh corner-cutting, squad strategies with combat-aware tactical positioning, zone follower spread, and multi-level objective sharing, extensive spawning system, broad bot-type support, zone movement with debug overlay, ECS-Lite entity storage with 1180 tests
 - **Source**: `src/SPTQuestingBots.Client/` (~180 C# files) + `src/SPTQuestingBots.Server/` (9 C# files)
@@ -640,7 +640,7 @@ Phobos does not spawn bots. It only manages bots that already exist:
 | **Spawns bots** | No | Yes (PMCs + PScavs, optional) |
 | **Despawns bots** | No | Yes (via extraction system) |
 | **Bot type tracking** | Agent entity only | Full type registry (Scav/PScav/PMC/Boss) |
-| **StandBy disable** | Yes (prevents far deactivation) | No (uses sleeping system instead) |
+| **StandBy disable** | Yes (`CanDoStandBy=false` + `Activate()`) | Yes (same pattern: `CanDoStandBy=false` + `Activate()`) |
 | **Death handling** | Remove agent from systems | Track dead bots, update follower chains |
 | **BSG mover** | Fully replaces | Replaces when custom mover active (default); coexists when disabled |
 | **Default spawning** | N/A | Disabled by default since v1.2.0 |
@@ -679,12 +679,14 @@ Phobos does not spawn bots. It only manages bots that already exist:
    - `BotEntityBridge`: zero-allocation sensor iteration, static reusable buffers for `GetFollowers()`/`GetAllGroupMembers()`
    - `[AggressiveInlining]` on hot-path methods (pacing utilities, registry lookups)
 
-2. **Sleeping System** (`src/.../BotLogic/Sleep/SleepingLayer.cs`):
-   - Priority 99 (highest) - takes precedence over all other behavior
-   - Disables bots far from human players (configurable per-map distances)
-   - Minimum bot count threshold before sleeping activates
-   - Exemptions for certain bot types and questing bots
-   - Effectively reduces active bot count to those near the player
+2. **LOD System** (v1.10.0): Phobos-style all-bots-active with SAIN-inspired distance-based LOD:
+   - `BotLodCalculator`: 3-tier system (Full/Reduced/Minimal) based on squared distance to nearest human
+   - `HumanPlayerCache`: Once-per-tick position snapshot with zero-allocation `ComputeMinSqrDistance()`
+   - `BotObjectiveLayer`: Skips update frames for distant bots (Reduced=2/3 skipped, Minimal=4/5 skipped)
+   - StandBy hardened: `CanDoStandBy=false` + `Activate()` (matching Phobos pattern)
+   - Default thresholds: Reduced at 150m, Minimal at 300m (configurable via `bot_lod` config)
+   - Opt-in sleeping fallback retained for lower-end hardware (disabled by default)
+   - SleepingLayer LINQ cleanup: all `.Where().Any()` chains replaced with zero-allocation for-loops
 
 3. **Allocation Optimizations** (v1.1.0–v1.7.0):
    - Eliminated all dictionary-based sensor storage (5 `Dictionary<BotOwner, bool>` → embedded bools on `BotEntity`)
@@ -720,11 +722,11 @@ Phobos does not spawn bots. It only manages bots that already exist:
 
 | Technique | Phobos | QuestingBots |
 |-----------|--------|--------------|
-| **Bot culling** | Disables StandBy (keeps all active) | Sleeping system disables far bots |
+| **Bot culling** | Disables StandBy (keeps all active) | Disables StandBy (keeps all active) + 3-tier LOD (Full/Reduced/Minimal) + opt-in sleeping fallback |
 | **Update throttling** | Per-system update rates (TimePacing) | Per-layer/component intervals + TimePacing/FramePacing utilities |
 | **Pathfinding** | Batched across frames | PathfindingThrottle (5/frame) + NavJobExecutor (batched) |
 | **Data access** | Dense entity list (cache-friendly) | Dense entity list (ECS-Lite, same pattern as Phobos) |
-| **Distance calcs** | Squared distances throughout | Mix of Distance() and sqrMagnitude |
+| **Distance calcs** | Squared distances throughout | Squared distances in hot paths (SleepingLayer, LOD, squad), Vector3.Distance in cold paths |
 | **Memory** | Pre-allocated arrays, pooling | Static buffers, zero-alloc sensor iteration, ring buffers |
 | **LINQ** | Minimal | Eliminated from hot paths (replaced with for-loops) |
 | **AggressiveInlining** | ~25+ methods | TimePacing/FramePacing, BsgBotRegistry lookup |
@@ -864,7 +866,7 @@ All major Phobos patterns have been ported. QuestingBots now has cover point int
 
 2. **Bot spawning**: QuestingBots' PMC/PScav generation system creates a dynamic population. Phobos only works with existing bots and cannot adjust spawn rates or types.
 
-3. **Sleeping system**: QuestingBots' distance-based sleeping is highly effective for performance. Phobos disables BSG's StandBy but doesn't replace it, meaning all bots are always active.
+3. **LOD system**: QuestingBots now keeps all bots active (like Phobos) but adds a 3-tier LOD system (Full/Reduced/Minimal) that progressively reduces update frequency for distant bots. Phobos has no LOD — all bots run at full fidelity regardless of distance. QuestingBots also retains an opt-in sleeping fallback for lower-end hardware.
 
 4. **Broad bot-type support**: QuestingBots supports 20+ brain types including all bosses, followers, rogues, raiders, and cultists. Phobos supports 9 types.
 
@@ -884,7 +886,7 @@ All major Phobos patterns have been ported. QuestingBots now has cover point int
 
 If both mods were to coexist (now more viable given movement system convergence):
 - **Movement is no longer a conflict**: Both mods use `Player.Move()` with per-bot active checks. BigBrain layer priority determines which mod controls each bot — no custom coordination needed.
-- QuestingBots' sleeping system could gate which bots Phobos processes
+- QuestingBots' LOD system could optimize which bots Phobos processes at full fidelity
 - Both zone field systems would need a coordination layer to avoid conflicting directions (though QuestingBots' zone movement is low-priority fallback)
 - QuestingBots' auto-detection approach could replace Phobos's per-map JSON configs
 - Both mods apply identical `IsAI` and vault patches — duplicate prefixes are harmless

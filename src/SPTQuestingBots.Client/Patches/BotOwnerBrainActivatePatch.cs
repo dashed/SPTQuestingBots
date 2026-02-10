@@ -35,8 +35,10 @@ namespace SPTQuestingBots.Patches
                 Controllers.BotRegistrationManager.MakeBotGroupHostileTowardAllBosses(__instance);
             }
 
-            // Fix for bots getting stuck in Standby when enemy PMC's are near them
+            // Fix for bots getting stuck in Standby when enemy PMC's are near them.
+            // Phobos also calls Activate() to force-exit any pending StandBy state.
             __instance.StandBy.CanDoStandBy = false;
+            __instance.StandBy.Activate();
         }
 
         private static void registerBot(BotOwner __instance)

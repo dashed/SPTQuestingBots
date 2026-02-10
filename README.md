@@ -21,9 +21,15 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - Advanced spawning tricks EFT into treating AI as human players, preserving normal Scav/boss spawns
 - Configurable group sizes (solo through 5-man squads), difficulty distribution, and spawn distances
 
-### AI Limiter
-- Built-in AI limiter that respects questing behavior (disables distant bots without breaking objectives)
-- Per-map distance thresholds and configurable limits
+### Bot LOD System
+- Phobos-style all-bots-active approach: BSG's StandBy system is fully disabled (`CanDoStandBy = false` + `Activate()`)
+- 3-tier distance-based LOD progressively reduces update frequency for distant bots:
+  - **Full** (< 150m): every tick, no frames skipped
+  - **Reduced** (150--300m): 1 of every 3 ticks processed
+  - **Minimal** (> 300m): 1 of every 5 ticks processed
+- `HumanPlayerCache`: once-per-tick human player position snapshot with zero-allocation per-bot distance queries
+- All thresholds and skip counts configurable via `questing.bot_lod` in config.json
+- Opt-in sleeping fallback retained for lower-end hardware (disabled by default via F12 menu)
 
 ### Scav Spawn Restrictions
 - Spawn-rate limiting, max-alive-scav caps, and distance-based exclusion zones to prevent Scav swarms
@@ -85,7 +91,7 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - `QuestScorer`: pure-logic quest scoring with static buffers — replaces 5 dictionary allocations + `OrderBy` in quest selection hot path
 - `BotEntityBridge`: ECS-only integration layer — push sensors write only to ECS, pull sensors iterate dense entity list with zero allocation, boss/follower lifecycle uses O(1) `IsActive` checks, ProfileId→entity mapping for O(1) string lookups
 - Full ECS migration complete (Phases 5A–5F, 6, 8): all old dictionaries (`deadBots`, `botBosses`, `botFollowers`, `sensors`, `botFieldStates`, `botJobAssignments`) and 6 sensor subclasses deleted; ECS is the sole data store for all sensor, sleep, type, boss/follower, zone movement field state, and job assignment data
-- Deterministic tick order (Phase 7C): `BotHiveMindMonitor.Update()` orchestrates all ECS system calls in a fixed 4-step sequence
+- Deterministic tick order (Phase 7C): `BotHiveMindMonitor.Update()` orchestrates all ECS system calls in a fixed 7-step sequence (boss discovery, dead entity cleanup, pull sensors, sensor reset, squad strategies, human player cache refresh, LOD tier computation)
 - Allocation cleanup (Phase 7D): static reusable buffers for `GetFollowers()`/`GetAllGroupMembers()`, O(n) min/max scans replacing Dictionary+LINQ chains, for-loop replacements for LINQ `.Where().ToArray()` patterns
 - Job assignment wiring (Phase 8): `botJobAssignments` dictionary migrated to `BotEntityBridge` keyed by entity ID; `ConsecutiveFailedAssignments` cached as O(1) entity field; `NumberOfActiveBots()` iterates dense entity list
 - `TimePacing` / `FramePacing`: reusable rate-limiter utilities with `[AggressiveInlining]`, inspired by Phobos
@@ -151,7 +157,7 @@ For detailed architecture documentation, see [docs/architecture.md](docs/archite
 - Realism (disable its bot-spawning changes when using QuestingBots spawning)
 
 **Not compatible:**
-- AI Limit or similar mods that disable AI globally (use the built-in AI limiter instead)
+- AI Limit or similar mods that disable AI globally (use the built-in Bot LOD system instead)
 
 > If using other spawn-management mods, disable the QuestingBots spawning system to avoid excessive bot counts. The spawning system auto-disables when SWAG + DONUTS, MOAR, Better Spawns Plus, Reality, or ABPS are detected.
 
@@ -316,6 +322,7 @@ The mod is configured through `config/config.json` and the BepInEx F12 in-game m
 | `questing.bot_quests` | Quest-type settings: EFT quests, spawn rush, boss hunter, airdrop chaser, spawn wandering |
 | `bot_spawns` | PMC/PScav spawning: group sizes, difficulty, distances, hostility, bot caps, boss limits |
 | `questing.bot_pathing` | Path following: custom mover toggle (`use_custom_mover`), incomplete path retry, start position discrepancy |
+| `questing.bot_lod` | LOD system: enable/disable, reduced/minimal distance thresholds (150m/300m), frame skip counts (2/4) |
 | `questing.zone_movement` | Zone-based movement: grid size, field weights, POI scoring, convergence interval, debug overlay |
 | `adjust_pscav_chance` | Dynamic player-Scav conversion rates when spawning system is disabled |
 

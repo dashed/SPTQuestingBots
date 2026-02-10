@@ -72,6 +72,9 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("squad_strategy")]
         public SquadStrategyConfig SquadStrategy { get; set; } = new SquadStrategyConfig();
 
+        [JsonProperty("bot_lod")]
+        public BotLodConfig BotLod { get; set; } = new BotLodConfig();
+
         public QuestingConfig() { }
     }
 }

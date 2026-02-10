@@ -253,6 +253,14 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// <summary>Game time at which to play the pending callout.</summary>
         public float PendingCalloutTime;
 
+        // ── LOD State ─────────────────────────────────────────────
+
+        /// <summary>LOD tier: 0=Full, 1=Reduced, 2=Minimal.</summary>
+        public byte LodTier;
+
+        /// <summary>Frame counter for LOD skip logic, incremented each HiveMind tick.</summary>
+        public int LodFrameCounter;
+
         // ── Constructor ─────────────────────────────────────────
 
         public BotEntity(int id)
