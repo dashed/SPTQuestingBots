@@ -141,6 +141,5 @@ namespace SPTQuestingBots
 
             Logger.LogInfo("Loading QuestingBots...done.");
         }
-
     }
 }

@@ -11,9 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SPT version range updated from 3.11.x to 4.x (`TarkovInitPatch.MinVersion`/`MaxVersion`)
 - Removed `confirmNoPreviousVersionExists()` that blocked loading when client DLL was in `BepInEx/plugins/`
 - Bundled `Newtonsoft.Json.dll` with server plugin — SPT 4.x server does not ship it
+- `AirdropLandPatch`: fixed Harmony field injection — BSG renamed `airdropSynchronizableObject_0` to `AirdropSynchronizableObject_0` (PascalCase) in SPT 4.x
+- `DiscardLimitsService`: fixed "database not initialized" error — `TypePriority` was 101 (before DB import), now runs at `OnLoadOrder.PostDBModLoader + 1` (400,001)
+- `DiscardLimitsService`: items with `DiscardLimit >= 0` are now marked `InsuranceDisabled = true` to compensate for disabling `DiscardLimitsEnabled` (same approach as LootingBots)
 
 ### Added
 - `make deploy` target — builds and creates a copy-paste-ready install layout in `build/deploy/`
+- `DiscardLimitsServiceTests` — 8 unit tests covering insurance marking logic and `TypePriority` attribute validation
 
 ### Changed
 - README Installation section rewritten with correct directory tree and Newtonsoft.Json note
