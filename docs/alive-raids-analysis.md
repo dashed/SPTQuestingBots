@@ -41,7 +41,7 @@ When SAIN is installed alongside QuestingBots, this is the full priority stack:
 
 **Key insight**: When no layer above priority 18 is active, QuestingBots drives movement. When no QuestingBots layer is active (quest selection fails, between objectives), bots fall through to BSG's terrible default patrol — standing around and pacing.
 
-### Utility AI Tasks (12 scored tasks)
+### Utility AI Tasks (13 scored tasks)
 
 | Task | Max Score | Behavior |
 |------|-----------|----------|
@@ -57,6 +57,7 @@ When SAIN is installed alongside QuestingBots, this is the full priority stack:
 | Vulture | 0.60 | Multi-phase combat scavenging |
 | Linger | 0.45 | Post-objective idle with linear decay |
 | Investigate | 0.40 | Lightweight gunfire response |
+| SpawnEntry | 0.80 | Spawn pause + scan (gating task, overrides all others) |
 
 All task scores are modified by personality (aggression float) and raid time progression multipliers via `ScoringModifiers.CombinedModifier()`.
 
@@ -362,39 +363,42 @@ Implemented as `ConvergenceMapConfig` + combat pull + time weight:
 
 **Files**: `ConvergenceMapConfig.cs`, `ConvergenceField.cs`, `FieldComposer.cs`, `WorldGridManager.cs`
 
-### Tier 3 — Medium Impact, Medium-High Effort
+### Tier 3 — Medium Impact, Medium-High Effort ✅ IMPLEMENTED
 
-#### 3.1 Spawn Entry Behavior
+#### 3.1 Spawn Entry Behavior ✅
 
-When a bot first spawns:
-- 3-5 second pause (checking surroundings)
-- Initial look scan (360 degrees over 3s)
-- First objective biased toward spawn direction (not 180-degree turns)
-- Squad members stagger departure (1-3s between members)
+Implemented as `SpawnEntryTask` (`BotActionTypeId=SpawnEntry(17)`, MaxBaseScore=0.80, gating task):
+- 3–5s pause with 360° look rotation, pose 0.85, sprint disabled
+- Flat score of 0.80 overrides all other tasks during spawn duration, drops to 0 once complete
+- Direction bias in `GoToObjectiveTask`: dot-product bonus toward spawn facing for 30s (linear decay)
+- Squad stagger: 0.5s extra per member index for natural departure spread
+- `SpawnEntryConfig`: 7 JSON properties under `questing.spawn_entry`
+- ~31 new tests
 
-**Effort**: ~200 lines. New spawn state in `BotObjectiveManager`, modify `PMCGenerator`.
+**Files**: `SpawnEntryTask.cs`, `SpawnEntryAction.cs`, `SpawnEntryConfig.cs`
 
-#### 3.2 Head-Look Variance
+#### 3.2 Head-Look Variance ✅
 
-While moving, bots should occasionally:
-- Glance at interesting objects (containers, doors, corpses) within 20m
-- Check flanks every 5-15s (random head rotation ±45°)
-- Look toward nearby sounds (if hearing sensor is available)
-- Look at squad members when close
+Implemented as `LookVarianceController` + `LookDirectionHelper`:
+- 3-priority look system: combat event glance > squad member glance > flank check (±45°)
+- Flank checks every 5–15s, squad member glances when nearby, combat event glances on configurable chance
+- Integrated into `GoToPositionAbstractAction.ApplyLookVariance()` — called every frame
+- `LookVarianceConfig`: 9 JSON properties under `questing.look_variance`
+- ~19 new tests
 
-This uses BSG's `BotOwner.LookDirection` or `Player.Rotate()`.
+**Files**: `LookVarianceController.cs`, `LookDirectionHelper.cs`, `LookVarianceConfig.cs`
 
-**Effort**: ~250 lines. New `LookVarianceController`, integrate with movement system.
+#### 3.3 Room Clearing Behavior ✅
 
-#### 3.3 Room Clearing Behavior
+Implemented as `RoomClearController`:
+- Outdoor→indoor transition detection via BSG `EnvironmentId` (0=indoor)
+- `RoomClearInstruction` enum: None, SlowWalk, PauseAtCorner
+- Room clear timer: random 3–8s duration, corner pause at sharp path angles
+- Integrated into `GoToObjectiveAction.Update()`: pose capped, sprint disabled
+- `RoomClearConfig`: 9 JSON properties under `questing.room_clear`
+- ~24 new tests
 
-When entering a building (environment transition from outdoor to indoor):
-- Slow down to walk speed
-- Lower pose to 0.7
-- Check corners (brief pauses at doorways)
-- Clear rooms sequentially (use door detection from Waypoints)
-
-**Effort**: ~350 lines. New `RoomClearAction`, environment transition detection.
+**Files**: `RoomClearController.cs`, `RoomClearConfig.cs`
 
 #### 3.4 Continuous Scoring for GoToObjective ✅ (moved to Phase 1)
 
@@ -454,13 +458,11 @@ Define named patrol routes per map (sequences of waypoints):
 9. ✅ **Time-of-raid progression** (Tier 2.3)
 10. ✅ **Convergence tuning** (Tier 2.4)
 
-### Phase 4: Immersion Polish (3-4 sessions)
+### Phase 4: Immersion Polish ✅ COMPLETE
 
-**Goal**: The details that make bots feel like players.
-
-11. **Spawn entry behavior** (Tier 3.1)
-12. **Head-look variance** (Tier 3.2)
-13. **Room clearing** (Tier 3.3)
+11. ✅ **Spawn entry behavior** (Tier 3.1)
+12. ✅ **Head-look variance** (Tier 3.2)
+13. ✅ **Room clearing** (Tier 3.3)
 
 ---
 

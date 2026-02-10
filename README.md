@@ -57,7 +57,7 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 
 ### Utility AI (Optional)
 - Phobos-style scored task framework for bot action selection — enabled by default via F12 (`Use Utility AI for Action Selection`, default: true)
-- 12 scored tasks replace the `BotObjectiveLayer.trySetNextAction()` enum switch: GoToObjective, Ambush, Snipe, HoldPosition, PlantItem, UnlockDoor, ToggleSwitch, CloseDoors, Loot, Vulture, Linger, Investigate
+- 13 scored tasks replace the `BotObjectiveLayer.trySetNextAction()` enum switch: GoToObjective, Ambush, Snipe, HoldPosition, PlantItem, UnlockDoor, ToggleSwitch, CloseDoors, Loot, Vulture, Linger, Investigate, SpawnEntry
 - Column-major scoring with additive hysteresis prevents action flip-flopping (identical to Phobos `BaseTaskManager.PickTask`)
 - Continuous GoToObjective scoring: exponential distance-based decay (`BaseScore * (1 - e^(-d/75))`) instead of binary on/off — eliminates abrupt score jumps
 - Two-phase action handoff: GoToObjective scores high when far, drops to 0 when close so the action-specific task takes over
@@ -100,6 +100,28 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - Combat interrupts lingering immediately
 - Context-aware speed/posture approaching objectives: indoor areas (crouch, no sprint), combat/suspicious (deep crouch), near objective (<30m slow approach, <15m no sprint)
 - Variable wait times between objectives: random sampling from configurable range (5–15s) instead of flat 5s
+
+### Spawn Entry Behavior
+- Bots pause and scan surroundings for 3–5 seconds on first spawn instead of instantly beelining to objectives
+- 360° look rotation during pause, pose 0.85, sprint disabled
+- Direction bias: first objective biased toward spawn facing direction for 30s (linear decay), preventing immediate U-turns
+- Squad stagger: 0.5s extra per member index for natural departure spread
+- Gating task (score=0.80) that overrides all other tasks during spawn duration
+- Configurable via `questing.spawn_entry` in config.json
+
+### Head-Look Variance
+- Bots glance at flanks, combat events, and squad members while moving — no more forward-only staring
+- 3-priority look system: combat event glance > squad member glance > flank check (random ±45°)
+- Flank checks every 5–15s, squad member glances when nearby, combat event glances on configurable chance
+- Integrated into all movement actions via `GoToPositionAbstractAction.ApplyLookVariance()`
+- Configurable via `questing.look_variance` in config.json
+
+### Room Clearing
+- Bots slow down, lower posture, and pause at corners when entering buildings (outdoor→indoor transition)
+- Environment transition detection via BSG `EnvironmentId` (0=indoor)
+- Room clear duration: random 3–8s of slow walk + reduced pose after entering
+- Corner pauses: brief pauses at sharp path angles for door/corner-checking behavior
+- Configurable via `questing.room_clear` in config.json (duration, pose, corner angle threshold, per-bot-type toggles)
 
 ### Investigate Task (Lightweight Gunfire Response)
 - When bots detect nearby combat events that don't warrant full vulture behavior, they cautiously investigate
@@ -324,7 +346,7 @@ SPTQuestingBots/
 │       │   ├── ECS/                 #   Entity data containers + system methods
 │       │   │   ├── Systems/         #   HiveMindSystem (static dense-list iteration)
 │       │   │   └── UtilityAI/       #   Scored task framework (Phobos-style)
-│       │   │       └── Tasks/       #   12 concrete quest utility tasks
+│       │   │       └── Tasks/       #   13 concrete quest utility tasks
 │       │   ├── BotMonitor/          #   Health, combat, extraction monitors
 │       │   ├── HiveMind/            #   Group coordination sensors
 │       │   ├── Follow/              #   Boss follower behavior
@@ -379,6 +401,9 @@ The mod is configured through `config/config.json` and the BepInEx F12 in-game m
 | `questing.looting` | Looting system: enable/disable, scan radius, scoring weights, cooldowns, squad coordination settings |
 | `questing.vulture` | Vulture system: enable/disable, detection range, courage threshold, ambush duration, time-of-day modifiers |
 | `questing.investigate` | Investigate task: enable/disable, intensity threshold, detection range, movement timeout, approach speed/pose |
+| `questing.spawn_entry` | Spawn entry: enable/disable, pause duration range, squad stagger, direction bias duration/strength, pose |
+| `questing.look_variance` | Look variance: flank/POI check intervals, squad glance range, combat event glance chance, per-bot-type toggles |
+| `questing.room_clear` | Room clearing: enable/disable, duration range, corner pause duration, angle threshold, pose, per-bot-type toggles |
 | `questing.linger` | Linger system: enable/disable, base score, duration range, head scan intervals, pose, per-bot-type toggles |
 | `questing.personality` | Personality system: enable/disable personality-influenced scoring and raid time progression |
 | `adjust_pscav_chance` | Dynamic player-Scav conversion rates when spawning system is disabled |

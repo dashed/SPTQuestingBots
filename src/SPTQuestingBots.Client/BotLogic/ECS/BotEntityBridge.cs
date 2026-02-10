@@ -110,6 +110,9 @@ namespace SPTQuestingBots.BotLogic.ECS
             // Personality: derive from bot difficulty
             AssignPersonality(entity, bot);
 
+            // Spawn entry: initialize timing and facing direction
+            InitializeSpawnEntry(entity, bot);
+
             LoggingController.LogInfo(
                 "[BotEntityBridge] Registered entity "
                     + entity.Id
@@ -729,6 +732,31 @@ namespace SPTQuestingBots.BotLogic.ECS
             // Sync game time for linger scoring
             entity.CurrentGameTime = UnityEngine.Time.time;
 
+            // Decay spawn facing bias linearly: 1.0 → 0 over configured duration
+            if (entity.SpawnFacingBias > 0f && entity.IsSpawnEntryComplete)
+            {
+                var spawnConfig = Controllers.ConfigController.Config?.Questing?.SpawnEntry;
+                float biasDuration = spawnConfig?.DirectionBiasDuration ?? 30f;
+                if (biasDuration > 0f)
+                {
+                    float elapsedSinceSpawn = entity.CurrentGameTime - entity.SpawnTime;
+                    // Bias starts decaying after spawn entry is complete
+                    float decayElapsed = elapsedSinceSpawn - entity.SpawnEntryDuration;
+                    if (decayElapsed >= biasDuration)
+                    {
+                        entity.SpawnFacingBias = 0f;
+                    }
+                    else if (decayElapsed > 0f)
+                    {
+                        entity.SpawnFacingBias = 1f - decayElapsed / biasDuration;
+                    }
+                }
+                else
+                {
+                    entity.SpawnFacingBias = 0f;
+                }
+            }
+
             // Sync raid time progression (0.0 = start, 1.0 = end)
             try
             {
@@ -983,6 +1011,82 @@ namespace SPTQuestingBots.BotLogic.ECS
             }
 
             entity.Aggression = PersonalityHelper.GetAggression(entity.Personality);
+        }
+
+        // ── Spawn Entry Initialization ────────────────────────────
+
+        /// <summary>Shared RNG for spawn entry duration sampling.</summary>
+        private static readonly System.Random _spawnEntryRng = new System.Random();
+
+        /// <summary>
+        /// Initialize spawn entry state on a newly registered bot entity.
+        /// Sets spawn time, samples duration from config, adds squad stagger for followers,
+        /// and captures the spawn facing direction.
+        /// </summary>
+        private static void InitializeSpawnEntry(BotEntity entity, BotOwner bot)
+        {
+            var config = Controllers.ConfigController.Config?.Questing?.SpawnEntry;
+            if (config == null || !config.Enabled)
+            {
+                entity.IsSpawnEntryComplete = true;
+                return;
+            }
+
+            entity.SpawnTime = UnityEngine.Time.time;
+
+            // Sample base duration from config range
+            float durationMin = config.BaseDurationMin;
+            float durationMax = config.BaseDurationMax;
+            float baseDuration = durationMin + (float)(_spawnEntryRng.NextDouble() * (durationMax - durationMin));
+
+            // Squad stagger: followers add extra time based on their index
+            if (entity.Boss != null && entity.Boss.Followers != null)
+            {
+                int followerIndex = entity.Boss.Followers.IndexOf(entity);
+                if (followerIndex >= 0)
+                {
+                    float stagger = (followerIndex + 1) * config.SquadStaggerPerMember * (1f + (float)(_spawnEntryRng.NextDouble()));
+                    baseDuration += stagger;
+                }
+            }
+
+            entity.SpawnEntryDuration = baseDuration;
+
+            // Capture spawn facing direction
+            try
+            {
+                var forward = bot.LookDirection;
+                float length = (float)System.Math.Sqrt(forward.x * forward.x + forward.z * forward.z);
+                if (length > 0.001f)
+                {
+                    entity.SpawnFacingX = forward.x / length;
+                    entity.SpawnFacingZ = forward.z / length;
+                }
+                else
+                {
+                    entity.SpawnFacingX = 0f;
+                    entity.SpawnFacingZ = 1f;
+                }
+            }
+            catch
+            {
+                entity.SpawnFacingX = 0f;
+                entity.SpawnFacingZ = 1f;
+            }
+
+            entity.SpawnFacingBias = 1f;
+
+            LoggingController.LogDebug(
+                "[BotEntityBridge] Entity "
+                    + entity.Id
+                    + " spawn entry initialized: duration="
+                    + entity.SpawnEntryDuration.ToString("F1")
+                    + "s, facing=("
+                    + entity.SpawnFacingX.ToString("F2")
+                    + ", "
+                    + entity.SpawnFacingZ.ToString("F2")
+                    + ")"
+            );
         }
 
         // ── Earpiece + Personality Sync ───────────────────────────

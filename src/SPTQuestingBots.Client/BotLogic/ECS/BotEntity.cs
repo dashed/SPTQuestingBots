@@ -350,6 +350,40 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// <summary>Game time at which the current investigation expires.</summary>
         public float InvestigateTimeoutAt;
 
+        // ── Spawn Entry State ──────────────────────────────────────────────
+
+        /// <summary>Game time when this bot spawned. Set once during RegisterBot.</summary>
+        public float SpawnTime;
+
+        /// <summary>Whether this bot has completed its spawn entry scan.</summary>
+        public bool IsSpawnEntryComplete;
+
+        /// <summary>Duration in seconds for the spawn entry pause (sampled from config + squad stagger).</summary>
+        public float SpawnEntryDuration;
+
+        /// <summary>Spawn facing direction X component (normalized).</summary>
+        public float SpawnFacingX;
+
+        /// <summary>Spawn facing direction Z component (normalized).</summary>
+        public float SpawnFacingZ;
+
+        /// <summary>Spawn facing direction bias factor. Decays linearly from 1.0 to 0 over config duration.</summary>
+        public float SpawnFacingBias;
+
+        // ── Room Clear State ──────────────────────────────────────────────
+
+        /// <summary>Previous environment ID for transition detection. -1 = uninitialized.</summary>
+        public int LastEnvironmentId = -1;
+
+        /// <summary>Game time at which room clear mode expires.</summary>
+        public float RoomClearUntil;
+
+        /// <summary>Whether the bot is currently in room clear mode (indoor transition active).</summary>
+        public bool IsInRoomClear;
+
+        /// <summary>Game time at which the current corner pause expires.</summary>
+        public float CornerPauseUntil;
+
         // ── Linger State ──────────────────────────────────────────────
 
         /// <summary>Game time when the bot's last objective was completed. 0 = no recent completion.</summary>
@@ -363,6 +397,20 @@ namespace SPTQuestingBots.BotLogic.ECS
 
         /// <summary>Current game time, synced from Time.time for pure-logic scoring.</summary>
         public float CurrentGameTime;
+
+        // ── Look Variance State ──────────────────────────────────────────────
+
+        /// <summary>Game time when next flank check should occur.</summary>
+        public float NextFlankCheckTime;
+
+        /// <summary>Game time when next POI/event glance should occur.</summary>
+        public float NextPoiGlanceTime;
+
+        /// <summary>Bot's current facing direction X (normalized). Synced from movement.</summary>
+        public float CurrentFacingX;
+
+        /// <summary>Bot's current facing direction Z (normalized). Synced from movement.</summary>
+        public float CurrentFacingZ;
 
         // ── Constructor ─────────────────────────────────────────
 

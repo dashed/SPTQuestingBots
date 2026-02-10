@@ -87,6 +87,15 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("investigate")]
         public InvestigateConfig Investigate { get; set; } = new InvestigateConfig();
 
+        [JsonProperty("spawn_entry")]
+        public SpawnEntryConfig SpawnEntry { get; set; } = new SpawnEntryConfig();
+
+        [JsonProperty("room_clear")]
+        public RoomClearConfig RoomClear { get; set; } = new RoomClearConfig();
+
+        [JsonProperty("look_variance")]
+        public LookVarianceConfig LookVariance { get; set; } = new LookVarianceConfig();
+
         [JsonProperty("personality")]
         public PersonalityConfig Personality { get; set; } = new PersonalityConfig();
 

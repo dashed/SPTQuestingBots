@@ -77,6 +77,32 @@ namespace SPTQuestingBots.BotLogic.Objective
                     }
                 }
 
+                // Room clear: detect indoor transition and apply movement instructions
+                var roomClearConfig = Controllers.ConfigController.Config.Questing?.RoomClear;
+                if (roomClearConfig?.Enabled == true && ECS.BotEntityBridge.TryGetEntity(BotOwner, out var rcEntity))
+                {
+                    int envId = BotOwner.AIData?.EnvironmentId ?? 1; // default outdoor
+                    var instruction = RoomClearController.Update(
+                        rcEntity,
+                        envId,
+                        UnityEngine.Time.time,
+                        roomClearConfig.DurationMin,
+                        roomClearConfig.DurationMax,
+                        roomClearConfig.CornerPauseDuration
+                    );
+
+                    if (instruction == RoomClearInstruction.SlowWalk)
+                    {
+                        pose = Math.Min(pose, roomClearConfig.Pose);
+                        CanSprint = false;
+                    }
+                    else if (instruction == RoomClearInstruction.PauseAtCorner)
+                    {
+                        pose = Math.Min(pose, roomClearConfig.Pose - 0.1f); // slightly lower at corners
+                        CanSprint = false;
+                    }
+                }
+
                 BotOwner.SetPose(pose);
                 BotOwner.BotLay.GetUp(true);
                 BotOwner.BewarePlantedMine.Update();
@@ -88,6 +114,7 @@ namespace SPTQuestingBots.BotLogic.Objective
             }
 
             UpdateBotSteering();
+            ApplyLookVariance();
             UpdateBotMiscActions();
 
             // Don't allow expensive parts of this behavior (calculating a path to an objective) to run too often

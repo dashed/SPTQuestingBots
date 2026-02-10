@@ -169,10 +169,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `BotPathData`, `NavJob`, `PathfindingThrottle`, `StaticPathData`, `PathVisualizationData`: full class and member docstrings
   - `LootingConfig`, `VultureConfig`, `ZoneMovementConfig`, `SquadStrategyConfig`: property-level docstrings
   - `SquadCalloutId`, `SquadCalloutDecider`, `FormationSpeedController`: class and method docstrings
+- **Spawn entry behavior** — bots pause and scan on first spawn instead of instantly beelining to objectives
+  - `SpawnEntryTask`: utility task (`BotActionTypeId=SpawnEntry(17)`, MaxBaseScore=0.80, gating task)
+    - Flat score of 0.80 during spawn duration, drops to 0 once complete — overrides all other tasks
+    - Does NOT use `ScoringModifiers.CombinedModifier()` (flat gating, not personality-influenced)
+    - Gates: `!IsSpawnEntryComplete`, elapsed time < spawn duration
+  - `SpawnEntryAction`: BigBrain action extending `CustomLogicDelayedUpdate`
+    - 3–5s pause with 360° look rotation, pose 0.85, sprint disabled
+    - Squad stagger: 0.5s extra per member index for natural departure spread
+  - Direction bias in `GoToObjectiveTask`: small dot-product bonus toward spawn facing direction for 30s after spawn
+    - `SpawnFacingBias` decays linearly from 1.0 to 0.0 over `direction_bias_duration` (default: 30s)
+    - Prevents immediate U-turns after spawn
+  - `SpawnEntryConfig`: 7 JSON properties under `questing.spawn_entry` (enabled, base_duration_min/max, squad_stagger_per_member, direction_bias_duration/strength, pose)
+  - 5 new fields on `BotEntity`: `SpawnTime`, `IsSpawnEntryComplete`, `SpawnEntryDuration`, `SpawnFacingX/Z`, `SpawnFacingBias`
+  - ~31 new tests (SpawnEntryTask scoring + SpawnEntryConfig deserialization)
+- **Head-look variance** — bots glance at flanks, combat events, and squad members while moving
+  - `LookVarianceController`: pure C# static system with 3-priority look system
+    - Priority 1: Combat event glance — look toward recent gunfire/explosions (configurable chance)
+    - Priority 2: Squad member glance — look at nearby squad members within range
+    - Priority 3: Flank check — random ±45° head rotation every 5–15s
+  - `LookDirectionHelper`: thin Unity wrapper for `BotOwner.Steering.LookToDirection()`
+  - Timer state on `BotEntity`: `NextFlankCheckTime`, `NextPoiGlanceTime`, `CurrentFacingX/Z`
+  - Integrated into `GoToPositionAbstractAction.ApplyLookVariance()` — called every frame from all movement actions
+  - `LookVarianceConfig`: 9 JSON properties under `questing.look_variance` (flank/POI intervals, squad range, combat event chance, enable toggles)
+  - ~19 new tests (LookVarianceController priority logic + LookVarianceConfig deserialization)
+- **Room clearing behavior** — bots slow down and check corners when entering buildings
+  - `RoomClearController`: pure C# static system detecting outdoor→indoor environment transitions
+    - `RoomClearInstruction` enum: None, SlowWalk, PauseAtCorner
+    - Environment transition detection via BSG `EnvironmentId` (0=indoor, 1=outdoor)
+    - Room clear timer: random duration between `DurationMin` and `DurationMax` (default: 3–8s)
+    - `IsSharpCorner()`: 2D angle computation between path segments for corner detection
+    - `TriggerCornerPause()`: brief pause at sharp corners (configurable duration)
+  - Integrated into `GoToObjectiveAction.Update()`:
+    - SlowWalk instruction: pose capped at config value (0.7), sprint disabled
+    - PauseAtCorner instruction: slightly lower pose (config - 0.1), sprint disabled
+  - `RoomClearConfig`: 9 JSON properties under `questing.room_clear` (enabled, duration_min/max, corner_pause_duration, corner_angle_threshold, pose, per-bot-type toggles)
+  - Room clear state on `BotEntity`: `LastEnvironmentId`, `RoomClearUntil`, `IsInRoomClear`, `CornerPauseUntil`
+  - ~24 new tests (RoomClearController state transitions + RoomClearConfig deserialization)
 
 ### Changed
-- Utility AI now has 12 scored tasks (was 8): added Loot, Vulture, Linger, and Investigate
-- `QuestTaskFactory.TaskCount` updated from 8 to 12
+- Utility AI now has 13 scored tasks (was 8): added Loot, Vulture, Linger, Investigate, and SpawnEntry
+- `QuestTaskFactory.TaskCount` updated from 8 to 13
 - All task scores now modified by personality (aggression) and raid time progression multipliers
 - GoToObjective scoring changed from binary (0 or BaseScore) to continuous exponential decay based on distance
 - `default_wait_time_after_objective_completion` reduced from 5s to 3s
@@ -181,7 +218,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   5. updateSquadStrategies (+ formations, combat positioning, zone follower spread, voice commands),
   6. updateCombatEvents (CombatEventRegistry cleanup + CombatEventScanner),
   7. updateLootScanning, 8. refreshHumanPlayerCache, 9. updateLodTiers
-- 1687 client tests total (was 938), 58 server tests, 1745 total
+- 1761 client tests total (was 938), 58 server tests, 1819 total
 
 ## [1.9.0] - 2026-02-09
 

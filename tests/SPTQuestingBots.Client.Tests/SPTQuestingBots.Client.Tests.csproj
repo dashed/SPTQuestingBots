@@ -384,6 +384,33 @@
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/ScoringModifiers.cs"
       Link="LinkedSources/ECS/UtilityAI/ScoringModifiers.cs"
     />
+    <!-- Room clear: pure C# controller for indoor transition behavior -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/RoomClearController.cs"
+      Link="LinkedSources/ECS/Systems/RoomClearController.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Configuration/RoomClearConfig.cs"
+      Link="LinkedSources/Configuration/RoomClearConfig.cs"
+    />
+    <!-- Spawn entry: utility AI task and configuration -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/SpawnEntryTask.cs"
+      Link="LinkedSources/ECS/UtilityAI/Tasks/SpawnEntryTask.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Configuration/SpawnEntryConfig.cs"
+      Link="LinkedSources/Configuration/SpawnEntryConfig.cs"
+    />
+    <!-- Look variance: pure C# controller and configuration -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/LookVarianceController.cs"
+      Link="LinkedSources/ECS/Systems/LookVarianceController.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Configuration/LookVarianceConfig.cs"
+      Link="LinkedSources/Configuration/LookVarianceConfig.cs"
+    />
   </ItemGroup>
 
   <!--

@@ -388,6 +388,36 @@
 			"enable_for_scavs": true,
 			"enable_for_pscavs": false
 		},
+		"spawn_entry": {
+			"enabled": true,
+			"base_duration_min": 3.0,
+			"base_duration_max": 5.0,
+			"squad_stagger_per_member": 1.5,
+			"direction_bias_duration": 30.0,
+			"direction_bias_strength": 0.05,
+			"pose": 0.85
+		},
+		"room_clear": {
+			"enabled": true,
+			"duration_min": 15.0,
+			"duration_max": 30.0,
+			"corner_pause_duration": 1.5,
+			"corner_angle_threshold": 60.0,
+			"pose": 0.7,
+			"enable_for_pmcs": true,
+			"enable_for_scavs": true,
+			"enable_for_pscavs": true
+		},
+		"look_variance": {
+			"enabled": true,
+			"flank_check_interval_min": 5.0,
+			"flank_check_interval_max": 15.0,
+			"poi_glance_interval_min": 8.0,
+			"poi_glance_interval_max": 20.0,
+			"poi_detection_range": 20.0,
+			"squad_glance_range": 15.0,
+			"combat_event_look_chance": 0.7
+		},
 		"personality": {
 			"enabled": true,
 			"raid_time_enabled": true

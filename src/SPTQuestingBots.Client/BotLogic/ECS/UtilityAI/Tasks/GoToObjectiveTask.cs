@@ -66,7 +66,56 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks
             float distance = entity.DistanceToObjective;
             float falloff = 75f;
             float score = BaseScore * (1f - (float)Math.Exp(-distance / falloff));
+
+            // Spawn direction bias: small bonus for objectives in the spawn facing direction
+            score += DirectionBias(entity);
+
             return score;
+        }
+
+        /// <summary>
+        /// Compute a small direction bonus for objectives aligned with the bot's spawn facing.
+        /// Returns max(0, dot(spawnFacing, toObjective) * strength * bias).
+        /// Bias decays linearly from 1.0 to 0 over the configured duration after spawn entry completes.
+        /// </summary>
+        internal static float DirectionBias(BotEntity entity)
+        {
+            if (entity.SpawnFacingBias <= 0f)
+                return 0f;
+
+            // Need objective position to compute direction — use DistanceToObjective > 0 as proxy
+            if (entity.DistanceToObjective <= 0f || entity.DistanceToObjective >= float.MaxValue)
+                return 0f;
+
+            // Compute dot product between spawn facing and direction to objective
+            // We use entity's current position and the objective distance as a proxy.
+            // Since we don't have the objective XYZ here, we use TacticalPosition if available,
+            // or skip if no tactical position data.
+            // Actually, GoToObjectiveTask only has DistanceToObjective, not the actual objective
+            // position. We'll use the squad objective if available, otherwise skip.
+            var squad = entity.Squad;
+            if (squad == null || !squad.Objective.HasObjective)
+                return 0f;
+
+            float objX = squad.Objective.ObjectiveX;
+            float objZ = squad.Objective.ObjectiveZ;
+            float dx = objX - entity.CurrentPositionX;
+            float dz = objZ - entity.CurrentPositionZ;
+
+            float distSqr = dx * dx + dz * dz;
+            if (distSqr < 1f)
+                return 0f;
+
+            float invDist = 1f / (float)Math.Sqrt(distSqr);
+            float normDx = dx * invDist;
+            float normDz = dz * invDist;
+
+            float dot = normDx * entity.SpawnFacingX + normDz * entity.SpawnFacingZ;
+
+            if (dot <= 0f)
+                return 0f;
+
+            return dot * 0.05f * entity.SpawnFacingBias;
         }
     }
 }

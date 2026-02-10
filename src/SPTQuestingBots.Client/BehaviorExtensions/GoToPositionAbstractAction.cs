@@ -418,5 +418,43 @@ namespace SPTQuestingBots.BehaviorExtensions
             LoggingController.LogWarning("Teleporting " + BotOwner.GetText() + " to " + teleportPos);
             BotOwner.GetPlayer.Teleport(teleportPos);
         }
+
+        /// <summary>
+        /// Periodically redirects the bot's look direction for natural head movement.
+        /// Call after UpdateBotSteering() in movement actions.
+        /// </summary>
+        protected void ApplyLookVariance()
+        {
+            var lookCfg = ConfigController.Config.Questing.LookVariance;
+            if (lookCfg == null || !lookCfg.Enabled)
+                return;
+
+            if (!BotLogic.ECS.BotEntityBridge.TryGetEntity(BotOwner, out var entity))
+                return;
+
+            // Sync current facing from bot
+            var forward = BotOwner.LookDirection;
+            entity.CurrentFacingX = forward.x;
+            entity.CurrentFacingZ = forward.z;
+
+            float squadRangeSqr = lookCfg.SquadGlanceRange * lookCfg.SquadGlanceRange;
+
+            if (
+                BotLogic.ECS.Systems.LookVarianceController.TryGetLookTarget(
+                    entity,
+                    entity.CurrentGameTime,
+                    lookCfg.FlankCheckIntervalMin,
+                    lookCfg.FlankCheckIntervalMax,
+                    lookCfg.PoiGlanceIntervalMin,
+                    lookCfg.PoiGlanceIntervalMax,
+                    squadRangeSqr,
+                    out float targetX,
+                    out float targetZ
+                )
+            )
+            {
+                LookDirectionHelper.LookAt(BotOwner, targetX, entity.CurrentPositionY, targetZ);
+            }
+        }
     }
 }
