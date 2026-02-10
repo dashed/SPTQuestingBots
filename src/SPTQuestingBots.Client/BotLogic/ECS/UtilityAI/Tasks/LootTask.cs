@@ -1,4 +1,5 @@
 using System;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks
 {
@@ -73,6 +74,19 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks
                 return 0f;
             if (score > MaxBaseScore)
                 return MaxBaseScore;
+
+            LoggingController.LogDebug(
+                "[LootTask] Entity "
+                    + entity.Id
+                    + ": value="
+                    + valueScore.ToString("F3")
+                    + ", proximity="
+                    + proximityBonus.ToString("F2")
+                    + ", distPenalty="
+                    + distancePenalty.ToString("F3")
+                    + ", total="
+                    + score.ToString("F3")
+            );
 
             return score;
         }

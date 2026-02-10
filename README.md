@@ -122,6 +122,14 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - `TimePacing` / `FramePacing`: reusable rate-limiter utilities with `[AggressiveInlining]`, inspired by Phobos
 - Pure C# with zero Unity dependencies for full testability
 
+### Dedicated Log File
+- Per-session log file at `BepInEx/plugins/DanW-SPTQuestingBots/log/QuestingBots.log` for easier debugging
+- Frame-stamped log lines: `[yyyy-MM-dd HH:mm:ss.fff] [LEVEL] F{frame}: message` for timing correlation with game events
+- Dual-destination logging: all messages go to both BepInEx's shared `LogOutput.log` and the dedicated file
+- Thread-safe via lock, auto-flushed, truncated fresh each session
+- 720 logging calls across 166 files covering all major systems (ECS, utility AI, squads, formations, looting, vulture, zone movement, pathing)
+- Toggle via `debug.dedicated_log_file` in config.json (default: enabled)
+
 ---
 
 ## Architecture
@@ -341,7 +349,7 @@ The mod is configured through `config/config.json` and the BepInEx F12 in-game m
 | Section | Description |
 |---------|-------------|
 | `enabled` | Master toggle for the entire mod |
-| `debug` | Debug visualization and forced spawning options |
+| `debug` | Debug visualization, forced spawning, and dedicated log file (`dedicated_log_file`) |
 | `chance_of_being_hostile_toward_bosses` | Per-bot-type boss hostility chances |
 | `questing` | Objective system: brain layer priorities, quest selection, pathing, stuck detection, door unlocking, sprint limits, extraction |
 | `questing.bot_quests` | Quest-type settings: EFT quests, spawn rush, boss hunter, airdrop chaser, spawn wandering |
@@ -356,6 +364,29 @@ The mod is configured through `config/config.json` and the BepInEx F12 in-game m
 ### Custom Quests
 
 Create custom quest files in `quests/custom/` with the same filenames as `quests/standard/` (one per map). See the original README sections on quest data structures for the full schema (Quests, Objectives, Steps).
+
+---
+
+## Troubleshooting
+
+### Log files
+
+QuestingBots writes to two log destinations:
+
+| Log | Path | Contents |
+|-----|------|----------|
+| **Dedicated log** | `BepInEx/plugins/DanW-SPTQuestingBots/log/QuestingBots.log` | QuestingBots messages only, frame-stamped |
+| **BepInEx shared log** | `BepInEx/LogOutput.log` | All mods combined |
+
+The dedicated log is the best place to start debugging. Each line includes a timestamp and Unity frame number:
+```
+[2026-02-10 14:30:52.123] [INFO] F4821: [BotRegistry] Registered entity 7 (count=12)
+[2026-02-10 14:30:52.456] [DEBUG] F4822: [LootScorer] Entity 3: scored loot — value=15420, distance=8.2m, total=0.612
+```
+
+The log file is truncated fresh each game session. To preserve a session's log, copy or rename the file before relaunching.
+
+To disable the dedicated log file, set `debug.dedicated_log_file` to `false` in `config/config.json`.
 
 ---
 

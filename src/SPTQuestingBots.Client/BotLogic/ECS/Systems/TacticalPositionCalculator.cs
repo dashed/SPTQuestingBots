@@ -1,6 +1,7 @@
 using System;
 using SPTQuestingBots.BotLogic.ECS.UtilityAI;
 using SPTQuestingBots.Configuration;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.Systems
 {
@@ -22,6 +23,10 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
         /// <param name="outRoles">Output array for roles (length must be >= followerCount).</param>
         public static void AssignRoles(int questActionId, int followerCount, SquadRole[] outRoles)
         {
+            LoggingController.LogDebug(
+                "[TacticalPositionCalculator] Assigning roles for " + followerCount + " followers (questAction=" + questActionId + ")"
+            );
+
             switch (questActionId)
             {
                 case QuestActionId.MoveToPosition:
@@ -133,6 +138,10 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
                 outPositions[i * 3] = x;
                 outPositions[i * 3 + 1] = y;
                 outPositions[i * 3 + 2] = z;
+
+                LoggingController.LogDebug(
+                    "[TacticalPositionCalculator] Slot " + i + " role=" + roles[i] + " pos=(" + x + ", " + y + ", " + z + ")"
+                );
             }
         }
 

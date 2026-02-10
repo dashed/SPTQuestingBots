@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.Systems
 {
@@ -87,6 +88,22 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
                 return 0f;
             if (score > 1f)
                 return 1f;
+
+            LoggingController.LogDebug(
+                "[LootScorer] value="
+                    + valueScore.ToString("F3")
+                    + ", distPenalty="
+                    + distancePenalty.ToString("F3")
+                    + ", proximity="
+                    + proximityBonus.ToString("F2")
+                    + ", gear="
+                    + gearBonus.ToString("F2")
+                    + ", cooldown="
+                    + cooldownFactor.ToString("F2")
+                    + ", total="
+                    + score.ToString("F3")
+            );
+
             return score;
         }
     }

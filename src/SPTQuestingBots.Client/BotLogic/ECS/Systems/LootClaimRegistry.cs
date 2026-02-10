@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.Systems
 {
@@ -21,6 +22,12 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
         {
             if (_lootToBotId.TryGetValue(lootId, out int existingBotId))
             {
+                if (existingBotId != botId)
+                {
+                    LoggingController.LogDebug(
+                        "[LootClaimRegistry] Entity " + botId + " claim denied for loot " + lootId + " (owned by " + existingBotId + ")"
+                    );
+                }
                 return existingBotId == botId;
             }
 
@@ -32,6 +39,11 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
                 _botToLootIds[botId] = lootIds;
             }
             lootIds.Add(lootId);
+
+            LoggingController.LogInfo(
+                "[LootClaimRegistry] Entity " + botId + " claimed loot " + lootId + " (total claims=" + _lootToBotId.Count + ")"
+            );
+
             return true;
         }
 
@@ -43,6 +55,9 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
             if (_lootToBotId.TryGetValue(lootId, out int existingBotId) && existingBotId == botId)
             {
                 _lootToBotId.Remove(lootId);
+                LoggingController.LogInfo(
+                    "[LootClaimRegistry] Entity " + botId + " released loot " + lootId + " (total claims=" + _lootToBotId.Count + ")"
+                );
             }
 
             if (_botToLootIds.TryGetValue(botId, out var lootIds))
@@ -58,12 +73,24 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
         {
             if (_botToLootIds.TryGetValue(botId, out var lootIds))
             {
+                int count = lootIds.Count;
                 for (int i = 0; i < lootIds.Count; i++)
                 {
                     _lootToBotId.Remove(lootIds[i]);
                 }
                 lootIds.Clear();
                 _botToLootIds.Remove(botId);
+
+                LoggingController.LogInfo(
+                    "[LootClaimRegistry] Entity "
+                        + botId
+                        + " released all "
+                        + count
+                        + " claims"
+                        + " (total claims="
+                        + _lootToBotId.Count
+                        + ")"
+                );
             }
         }
 
@@ -92,8 +119,15 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
         /// </summary>
         public void Clear()
         {
+            int totalClaims = _lootToBotId.Count;
+            int totalBots = _botToLootIds.Count;
             _lootToBotId.Clear();
             _botToLootIds.Clear();
+
+            if (totalClaims > 0)
+            {
+                LoggingController.LogInfo("[LootClaimRegistry] Cleared all claims: " + totalClaims + " claims from " + totalBots + " bots");
+            }
         }
     }
 }

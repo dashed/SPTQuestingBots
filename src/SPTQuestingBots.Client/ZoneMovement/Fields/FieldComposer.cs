@@ -1,4 +1,5 @@
 using System;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.ZoneMovement.Fields;
 
@@ -110,5 +111,24 @@ public sealed class FieldComposer
             outX = 0f;
             outZ = 0f;
         }
+        LoggingController.LogDebug(
+            "[FieldComposer] Composed dir=("
+                + outX.ToString("F2")
+                + ","
+                + outZ.ToString("F2")
+                + ") adv=("
+                + advectionX.ToString("F2")
+                + ","
+                + advectionZ.ToString("F2")
+                + ") conv=("
+                + convergenceX.ToString("F2")
+                + ","
+                + convergenceZ.ToString("F2")
+                + ") mom=("
+                + momentumX.ToString("F2")
+                + ","
+                + momentumZ.ToString("F2")
+                + ")"
+        );
     }
 }

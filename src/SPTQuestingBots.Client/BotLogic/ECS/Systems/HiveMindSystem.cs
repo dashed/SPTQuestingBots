@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.Systems
 {
@@ -18,6 +19,7 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
         /// </summary>
         public static void ResetInactiveEntitySensors(List<BotEntity> entities)
         {
+            int resetCount = 0;
             for (int i = 0; i < entities.Count; i++)
             {
                 var entity = entities[i];
@@ -29,6 +31,12 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
                 entity.CanQuest = false;
                 entity.CanSprintToObjective = true; // default is true
                 entity.WantsToLoot = false;
+                resetCount++;
+            }
+
+            if (resetCount > 0)
+            {
+                LoggingController.LogDebug("[HiveMindSystem] Reset sensors for " + resetCount + " inactive entities");
             }
         }
 
@@ -49,6 +57,13 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
                     continue;
 
                 // If this dead entity was a boss, detach all its followers
+                if (entity.Followers.Count > 0)
+                {
+                    LoggingController.LogInfo(
+                        "[HiveMindSystem] Detaching " + entity.Followers.Count + " followers from dead boss entity " + entity.Id
+                    );
+                }
+
                 for (int j = entity.Followers.Count - 1; j >= 0; j--)
                 {
                     entity.Followers[j].Boss = null;
@@ -59,6 +74,9 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
                 // If this dead entity was a follower, detach from its boss
                 if (entity.Boss != null)
                 {
+                    LoggingController.LogInfo(
+                        "[HiveMindSystem] Detaching dead follower entity " + entity.Id + " from boss entity " + entity.Boss.Id
+                    );
                     entity.Boss.Followers.Remove(entity);
                     entity.Boss = null;
                 }
@@ -77,6 +95,9 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
             // Detach from old boss if switching bosses
             if (follower.Boss != null && follower.Boss != boss)
             {
+                LoggingController.LogInfo(
+                    "[HiveMindSystem] Entity " + follower.Id + " switching boss from " + follower.Boss.Id + " to " + boss.Id
+                );
                 follower.Boss.Followers.Remove(follower);
             }
 
@@ -85,6 +106,9 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
             if (!boss.Followers.Contains(follower))
             {
                 boss.Followers.Add(follower);
+                LoggingController.LogDebug(
+                    "[HiveMindSystem] Entity " + follower.Id + " assigned to boss " + boss.Id + " (followers=" + boss.Followers.Count + ")"
+                );
             }
         }
 
@@ -113,11 +137,19 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
             // If this entity is a follower, detach from boss
             if (entity.Boss != null)
             {
+                LoggingController.LogInfo("[HiveMindSystem] Separating entity " + entity.Id + " from boss " + entity.Boss.Id);
                 entity.Boss.Followers.Remove(entity);
                 entity.Boss = null;
             }
 
             // If this entity is a boss, detach all followers
+            if (entity.Followers.Count > 0)
+            {
+                LoggingController.LogInfo(
+                    "[HiveMindSystem] Separating entity " + entity.Id + " from " + entity.Followers.Count + " followers"
+                );
+            }
+
             for (int i = entity.Followers.Count - 1; i >= 0; i--)
             {
                 entity.Followers[i].Boss = null;

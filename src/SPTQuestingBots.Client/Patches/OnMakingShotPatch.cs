@@ -23,12 +23,20 @@ namespace SPTQuestingBots.Patches
         protected static void PatchPostfix(Player __instance)
         {
             if (__instance.HandsController is Player.FirearmController controller && controller.IsSilenced)
+            {
+                LoggingController.LogDebug(
+                    "[OnMakingShotPatch] Silenced weapon, skipping event for " + __instance.Profile.Info.Settings.Role
+                );
                 return;
+            }
 
             var role = __instance.Profile.Info.Settings.Role;
 
             if (IsMarksmanType(role))
+            {
+                LoggingController.LogDebug("[OnMakingShotPatch] Marksman type " + role + ", skipping event");
                 return;
+            }
 
             bool isBoss = IsBossType(role);
 
@@ -44,6 +52,18 @@ namespace SPTQuestingBots.Patches
                     IsBoss = isBoss,
                     IsActive = true,
                 }
+            );
+            LoggingController.LogDebug(
+                "[OnMakingShotPatch] Recorded gunshot from "
+                    + role
+                    + " at ("
+                    + __instance.Position.x.ToString("F0")
+                    + ","
+                    + __instance.Position.y.ToString("F0")
+                    + ","
+                    + __instance.Position.z.ToString("F0")
+                    + ") isBoss="
+                    + isBoss
             );
         }
 

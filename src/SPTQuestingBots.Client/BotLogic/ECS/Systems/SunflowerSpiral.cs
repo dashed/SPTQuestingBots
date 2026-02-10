@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.Systems
 {
@@ -33,6 +34,17 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
                 return 0;
 
             int maxCount = System.Math.Min(count, outXZ.Length / 2);
+            LoggingController.LogDebug(
+                "[SunflowerSpiral] Generating "
+                    + maxCount
+                    + " candidates (center=("
+                    + centerX
+                    + ", "
+                    + centerZ
+                    + "), radius="
+                    + innerRadius
+                    + ")"
+            );
 
             for (int i = 0; i < maxCount; i++)
             {

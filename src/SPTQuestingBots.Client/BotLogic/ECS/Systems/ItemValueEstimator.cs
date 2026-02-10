@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.Systems
 {
@@ -22,8 +23,13 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
         public static int GetValue(int templateId, PriceLookup lookup)
         {
             if (lookup == null)
+            {
+                LoggingController.LogWarning("[ItemValueEstimator] PriceLookup is null, returning 0");
                 return 0;
-            return lookup(templateId);
+            }
+            int value = lookup(templateId);
+            LoggingController.LogDebug("[ItemValueEstimator] Template " + templateId + " value=" + value);
+            return value;
         }
 
         /// <summary>
@@ -41,6 +47,9 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
             {
                 total += lookup(modTemplateIds[i]);
             }
+
+            LoggingController.LogDebug("[ItemValueEstimator] Weapon total=" + total + " from " + len + " mods");
+
             return total;
         }
 

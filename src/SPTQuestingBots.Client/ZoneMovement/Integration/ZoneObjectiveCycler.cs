@@ -33,26 +33,49 @@ public static class ZoneObjectiveCycler
     public static QuestObjective SelectZoneObjective(BotOwner bot, Quest zoneQuest, WorldGridManager gridManager)
     {
         if (bot == null || zoneQuest == null || gridManager == null || !gridManager.IsInitialized)
+        {
+            LoggingController.LogWarning("[ZoneObjectiveCycler] Null or uninitialized input, returning null");
             return null;
+        }
 
         // Get field-based recommended destination using per-bot state
         Vector3? destination = gridManager.GetRecommendedDestination(bot.Profile.Id, bot.Position);
         if (!destination.HasValue)
+        {
+            LoggingController.LogDebug("[ZoneObjectiveCycler] No recommended destination for bot " + bot.GetText());
             return null;
+        }
 
         // Find the grid cell for the destination
         GridCell cell = gridManager.GetCellForBot(destination.Value);
         if (cell == null)
+        {
+            LoggingController.LogWarning(
+                "[ZoneObjectiveCycler] No cell found for destination ("
+                    + destination.Value.x.ToString("F0")
+                    + ","
+                    + destination.Value.z.ToString("F0")
+                    + ")"
+            );
             return null;
+        }
 
         // Match the objective by the naming convention used in ZoneQuestBuilder
         string objectiveName = $"Zone ({cell.Col},{cell.Row})";
         QuestObjective match = zoneQuest.AllObjectives.FirstOrDefault(o => o.ToString() == objectiveName);
 
         if (match != null && match.CanAssignBot(bot))
+        {
+            LoggingController.LogInfo(
+                "[ZoneObjectiveCycler] Bot " + bot.GetText() + ": selected zone objective (" + cell.Col + "," + cell.Row + ")"
+            );
             return match;
+        }
 
         // Fallback: nearest remaining objective the bot can do
+        LoggingController.LogDebug(
+            "[ZoneObjectiveCycler] Bot " + bot.GetText() + ": zone (" + cell.Col + "," + cell.Row + ") unavailable, falling back to nearest"
+        );
         return zoneQuest.RemainingObjectivesForBot(bot)?.Where(o => o.CanAssignBot(bot))?.NearestToBot(bot);
     }
 }

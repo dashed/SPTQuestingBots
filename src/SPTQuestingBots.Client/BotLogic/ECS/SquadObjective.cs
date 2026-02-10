@@ -1,3 +1,5 @@
+using SPTQuestingBots.Controllers;
+
 namespace SPTQuestingBots.BotLogic.ECS
 {
     /// <summary>
@@ -121,6 +123,8 @@ namespace SPTQuestingBots.BotLogic.ECS
             HasObjective = true;
             State = ObjectiveState.Active;
             Version++;
+
+            LoggingController.LogDebug("[SquadObjective] Set objective at (" + x + ", " + y + ", " + z + ") version=" + Version);
         }
 
         /// <summary>
@@ -129,6 +133,8 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// </summary>
         public void ClearObjective()
         {
+            LoggingController.LogDebug("[SquadObjective] Clearing objective (was version=" + Version + ")");
+
             HasObjective = false;
             State = ObjectiveState.Active;
             MemberCount = 0;

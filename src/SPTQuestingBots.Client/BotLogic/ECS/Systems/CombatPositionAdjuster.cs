@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using SPTQuestingBots.Configuration;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.Systems
 {
@@ -24,10 +25,24 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ReassignRolesForCombat(SquadRole[] currentRoles, int count, SquadRole[] outRoles)
         {
+            int reassigned = 0;
             for (int i = 0; i < count; i++)
             {
-                outRoles[i] = currentRoles[i] == SquadRole.Escort ? SquadRole.Flanker : currentRoles[i];
+                if (currentRoles[i] == SquadRole.Escort)
+                {
+                    outRoles[i] = SquadRole.Flanker;
+                    reassigned++;
+                }
+                else
+                {
+                    outRoles[i] = currentRoles[i];
+                }
             }
+
+            if (reassigned > 0)
+                LoggingController.LogDebug(
+                    "[CombatPositionAdjuster] Reassigned " + reassigned + " Escort->Flanker for combat (total=" + count + ")"
+                );
         }
 
         /// <summary>
@@ -46,10 +61,21 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
             float[] outPositions
         )
         {
+            LoggingController.LogDebug(
+                "[CombatPositionAdjuster] Computing combat positions for "
+                    + count
+                    + " members (threat=("
+                    + threatDirX
+                    + ", "
+                    + threatDirZ
+                    + "))"
+            );
+
             // Degenerate threat direction: place everyone at the objective
             float lenSq = threatDirX * threatDirX + threatDirZ * threatDirZ;
             if (lenSq < 0.0001f)
             {
+                LoggingController.LogWarning("[CombatPositionAdjuster] Degenerate threat direction, placing all at objective");
                 for (int i = 0; i < count; i++)
                 {
                     int off = i * 3;

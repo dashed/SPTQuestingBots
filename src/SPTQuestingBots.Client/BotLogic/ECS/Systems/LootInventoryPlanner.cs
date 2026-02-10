@@ -1,3 +1,5 @@
+using SPTQuestingBots.Controllers;
+
 namespace SPTQuestingBots.BotLogic.ECS.Systems
 {
     /// <summary>
@@ -93,13 +95,46 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
         {
             // Gear upgrade checks (swap)
             if (item.IsArmor && GearComparer.IsArmorUpgrade(gear.ArmorClass, item.ArmorClass))
-                return gearSwapEnabled ? LootActionType.Swap : LootActionType.Skip;
+            {
+                var action = gearSwapEnabled ? LootActionType.Swap : LootActionType.Skip;
+                LoggingController.LogDebug(
+                    "[LootInventoryPlanner] Armor upgrade — current="
+                        + gear.ArmorClass
+                        + ", candidate="
+                        + item.ArmorClass
+                        + ", action="
+                        + action
+                );
+                return action;
+            }
 
             if (item.IsWeapon && GearComparer.IsWeaponUpgrade(gear.WeaponValue, item.WeaponValue))
-                return gearSwapEnabled ? LootActionType.Swap : LootActionType.Skip;
+            {
+                var action = gearSwapEnabled ? LootActionType.Swap : LootActionType.Skip;
+                LoggingController.LogDebug(
+                    "[LootInventoryPlanner] Weapon upgrade — current="
+                        + gear.WeaponValue
+                        + ", candidate="
+                        + item.WeaponValue
+                        + ", action="
+                        + action
+                );
+                return action;
+            }
 
             if (item.IsBackpack && GearComparer.IsContainerUpgrade(gear.BackpackGridSize, item.BackpackGridSize))
-                return gearSwapEnabled ? LootActionType.Swap : LootActionType.Skip;
+            {
+                var action = gearSwapEnabled ? LootActionType.Swap : LootActionType.Skip;
+                LoggingController.LogDebug(
+                    "[LootInventoryPlanner] Backpack upgrade — current="
+                        + gear.BackpackGridSize
+                        + " slots, candidate="
+                        + item.BackpackGridSize
+                        + " slots, action="
+                        + action
+                );
+                return action;
+            }
 
             if (
                 item.IsRig
@@ -112,16 +147,43 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
                     item.RigIsArmored
                 )
             )
-                return gearSwapEnabled ? LootActionType.Swap : LootActionType.Skip;
+            {
+                var action = gearSwapEnabled ? LootActionType.Swap : LootActionType.Skip;
+                LoggingController.LogDebug(
+                    "[LootInventoryPlanner] Rig upgrade — current="
+                        + gear.RigGridSize
+                        + " slots, candidate="
+                        + item.RigGridSize
+                        + " slots, action="
+                        + action
+                );
+                return action;
+            }
 
             // Value check for non-gear items
             if (item.Value < minItemValue)
+            {
+                LoggingController.LogDebug("[LootInventoryPlanner] Skip — value=" + item.Value + " below min=" + minItemValue);
                 return LootActionType.Skip;
+            }
 
             // Space check for pickup
             if (item.GridSize <= gear.InventorySpaceFree)
+            {
+                LoggingController.LogDebug(
+                    "[LootInventoryPlanner] Pickup — value="
+                        + item.Value
+                        + ", size="
+                        + item.GridSize
+                        + ", free="
+                        + gear.InventorySpaceFree.ToString("F0")
+                );
                 return LootActionType.Pickup;
+            }
 
+            LoggingController.LogDebug(
+                "[LootInventoryPlanner] Skip — no space: size=" + item.GridSize + ", free=" + gear.InventorySpaceFree.ToString("F0")
+            );
             return LootActionType.Skip;
         }
     }

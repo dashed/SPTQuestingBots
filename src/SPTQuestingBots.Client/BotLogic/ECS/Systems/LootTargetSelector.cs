@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.Systems
 {
@@ -30,11 +31,15 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
 
             int bestIndex = -1;
             float bestScore = 0f;
+            int skippedClaimed = 0;
 
             for (int i = 0; i < count; i++)
             {
                 if (claims != null && claims.IsClaimedByOther(botId, results[i].Id))
+                {
+                    skippedClaimed++;
                     continue;
+                }
 
                 float score = LootScorer.Score(
                     results[i].Value,
@@ -52,6 +57,37 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
                     bestScore = score;
                     bestIndex = i;
                 }
+            }
+
+            if (bestIndex >= 0)
+            {
+                LoggingController.LogDebug(
+                    "[LootTargetSelector] Entity "
+                        + botId
+                        + ": selected loot "
+                        + results[bestIndex].Id
+                        + " (score="
+                        + bestScore.ToString("F3")
+                        + ", type="
+                        + results[bestIndex].Type
+                        + ", candidates="
+                        + count
+                        + ", skippedClaimed="
+                        + skippedClaimed
+                        + ")"
+                );
+            }
+            else if (count > 0)
+            {
+                LoggingController.LogDebug(
+                    "[LootTargetSelector] Entity "
+                        + botId
+                        + ": no suitable target from "
+                        + count
+                        + " candidates (skippedClaimed="
+                        + skippedClaimed
+                        + ")"
+                );
             }
 
             return bestIndex;

@@ -1,3 +1,5 @@
+using SPTQuestingBots.Controllers;
+
 namespace SPTQuestingBots.BotLogic.ECS.Systems
 {
     /// <summary>
@@ -16,7 +18,10 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
         public static SquadPersonalityType DeterminePersonality(BotType[] memberTypes, int count)
         {
             if (count <= 0 || memberTypes == null)
+            {
+                LoggingController.LogDebug("[SquadPersonalityCalculator] No members to determine personality");
                 return SquadPersonalityType.None;
+            }
 
             // Vote counts per personality type (index matches enum value)
             int eliteVotes = 0;
@@ -76,6 +81,19 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
                 bestCount = eliteVotes;
             }
 
+            LoggingController.LogInfo(
+                "[SquadPersonalityCalculator] Determined personality="
+                    + bestType
+                    + " (elite="
+                    + eliteVotes
+                    + ", gigaChad="
+                    + gigaChadVotes
+                    + ", rat="
+                    + ratVotes
+                    + ", timmy="
+                    + timmyVotes
+                    + ")"
+            );
             return bestType;
         }
     }

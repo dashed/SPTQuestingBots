@@ -1,6 +1,7 @@
 using System;
 using SPTQuestingBots.BotLogic.ECS.Systems;
 using SPTQuestingBots.Configuration;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
 {
@@ -129,6 +130,9 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
             // If no objective or leader's objective changed, assign new objective
             if (!obj.HasObjective || HasLeaderObjectiveChanged(squad))
             {
+                LoggingController.LogDebug(
+                    "[GotoObjectiveStrategy] Squad " + squad.Id + " objective changed or missing, assigning new objective"
+                );
                 AssignNewObjective(squad);
                 return;
             }
@@ -136,6 +140,15 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
             // Combat-triggered position re-evaluation
             if (_config.EnableCombatAwarePositioning && squad.CombatVersion != squad.LastProcessedCombatVersion && obj.HasObjective)
             {
+                LoggingController.LogDebug(
+                    "[GotoObjectiveStrategy] Squad "
+                        + squad.Id
+                        + " combat version changed ("
+                        + squad.LastProcessedCombatVersion
+                        + " -> "
+                        + squad.CombatVersion
+                        + "), recomputing positions"
+                );
                 RecomputeForCombat(squad);
                 squad.LastProcessedCombatVersion = squad.CombatVersion;
             }
@@ -172,7 +185,12 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
             }
 
             if (followerCount == 0)
+            {
+                LoggingController.LogDebug(
+                    "[GotoObjectiveStrategy] Squad " + squad.Id + " has no active followers, skipping objective assignment"
+                );
                 return;
+            }
 
             int clampedCount = Math.Min(followerCount, SquadObjective.MaxMembers);
 
@@ -181,6 +199,16 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                 TacticalPositionCalculator.AssignRoles(leader.CurrentQuestAction, clampedCount, _roleBuffer);
             else
                 TacticalPositionCalculator.AssignRoles(0, clampedCount, _roleBuffer);
+
+            LoggingController.LogDebug(
+                "[GotoObjectiveStrategy] Squad "
+                    + squad.Id
+                    + " assigning objective for "
+                    + clampedCount
+                    + " followers (questAction="
+                    + leader.CurrentQuestAction
+                    + ")"
+            );
 
             // Try BSG cover positions first (if available)
             bool usedCoverPositions = false;
@@ -195,11 +223,17 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                     clampedCount
                 );
                 if (coverCount >= clampedCount)
+                {
                     usedCoverPositions = true;
+                    LoggingController.LogDebug(
+                        "[GotoObjectiveStrategy] Squad " + squad.Id + " using " + coverCount + " BSG cover positions"
+                    );
+                }
             }
 
             if (!usedCoverPositions)
             {
+                LoggingController.LogDebug("[GotoObjectiveStrategy] Squad " + squad.Id + " using geometric positions");
                 // Compute positions geometrically
                 TacticalPositionCalculator.ComputePositions(
                     obj.ObjectiveX,
@@ -343,6 +377,24 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
             // Set duration with Gaussian sampling (60-180 seconds)
             obj.Duration = SampleGaussian(60f, 180f);
             obj.DurationAdjusted = false;
+
+            LoggingController.LogInfo(
+                "[GotoObjectiveStrategy] Squad "
+                    + squad.Id
+                    + " assigned "
+                    + posIdx
+                    + " tactical positions (obj=("
+                    + obj.ObjectiveX
+                    + ", "
+                    + obj.ObjectiveY
+                    + ", "
+                    + obj.ObjectiveZ
+                    + "), duration="
+                    + obj.Duration
+                    + "s, version="
+                    + obj.Version
+                    + ")"
+            );
         }
 
         /// <summary>
@@ -380,6 +432,15 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
 
             if (squad.HasThreatDirection)
             {
+                LoggingController.LogDebug(
+                    "[GotoObjectiveStrategy] Squad "
+                        + squad.Id
+                        + " recomputing with threat direction ("
+                        + squad.ThreatDirectionX
+                        + ", "
+                        + squad.ThreatDirectionZ
+                        + ")"
+                );
                 // Combat mode: reassign roles (Escort→Flanker) and use threat-oriented positions
                 CombatPositionAdjuster.ReassignRolesForCombat(_roleBuffer, clampedCount, _combatRoleBuffer);
                 CombatPositionAdjuster.ComputeCombatPositions(
@@ -399,6 +460,9 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
             }
             else
             {
+                LoggingController.LogDebug(
+                    "[GotoObjectiveStrategy] Squad " + squad.Id + " threat cleared, reverting to standard positions"
+                );
                 // No threat direction (combat cleared) — revert to standard geometric positions
                 float approachX = leader.CurrentPositionX;
                 float approachZ = leader.CurrentPositionZ;
@@ -564,6 +628,15 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
             // When first member arrives, switch to Wait
             if (arrived > 0 && obj.State == ObjectiveState.Active)
             {
+                LoggingController.LogDebug(
+                    "[GotoObjectiveStrategy] Squad "
+                        + squad.Id
+                        + " first arrival detected ("
+                        + arrived
+                        + "/"
+                        + totalFollowers
+                        + "), switching to Wait"
+                );
                 obj.State = ObjectiveState.Wait;
             }
 
@@ -571,8 +644,22 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
             if (arrived >= totalFollowers && totalFollowers > 0 && !obj.DurationAdjusted)
             {
                 float factor = SampleGaussian(0.2f, 0.5f);
+                float oldDuration = obj.Duration;
                 obj.Duration *= factor;
                 obj.DurationAdjusted = true;
+                LoggingController.LogDebug(
+                    "[GotoObjectiveStrategy] Squad "
+                        + squad.Id
+                        + " all "
+                        + totalFollowers
+                        + " arrived, duration cut "
+                        + oldDuration
+                        + " -> "
+                        + obj.Duration
+                        + "s (factor="
+                        + factor
+                        + ")"
+                );
             }
         }
 
@@ -623,6 +710,7 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                 {
                     // Mark position as invalid
                     _positionBuffer[off] = float.NaN;
+                    LoggingController.LogDebug("[GotoObjectiveStrategy] Position validation failed for slot " + i + " (no fallback found)");
                 }
             }
         }

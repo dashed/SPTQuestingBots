@@ -1,5 +1,6 @@
 using EFT;
 using EFT.InventoryLogic;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.Helpers
 {
@@ -18,11 +19,17 @@ namespace SPTQuestingBots.Helpers
         {
             var inventory = botOwner?.GetPlayer?.InventoryController?.Inventory;
             if (inventory?.Equipment == null)
+            {
+                LoggingController.LogWarning("[InventorySpaceHelper] ComputeFreeSlots: null inventory or equipment");
                 return 0f;
+            }
 
             float freeSlots = 0f;
             freeSlots += CountFreeInSlot(inventory.Equipment, EquipmentSlot.Backpack);
             freeSlots += CountFreeInSlot(inventory.Equipment, EquipmentSlot.TacticalVest);
+
+            LoggingController.LogDebug("[InventorySpaceHelper] Free slots=" + freeSlots.ToString("F0"));
+
             return freeSlots;
         }
 

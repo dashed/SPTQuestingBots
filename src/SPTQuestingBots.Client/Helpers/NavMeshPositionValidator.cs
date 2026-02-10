@@ -1,3 +1,4 @@
+using SPTQuestingBots.Controllers;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -32,10 +33,28 @@ namespace SPTQuestingBots.Helpers
                 outX = hit.position.x;
                 outY = hit.position.y;
                 outZ = hit.position.z;
+                LoggingController.LogDebug(
+                    "[NavMeshPositionValidator] Snapped ("
+                        + inX
+                        + ", "
+                        + inY
+                        + ", "
+                        + inZ
+                        + ") -> ("
+                        + outX
+                        + ", "
+                        + outY
+                        + ", "
+                        + outZ
+                        + ")"
+                );
                 return true;
             }
 
             outX = outY = outZ = 0f;
+            LoggingController.LogDebug(
+                "[NavMeshPositionValidator] Failed to snap (" + inX + ", " + inY + ", " + inZ + ") within radius=" + SampleRadius
+            );
             return false;
         }
 
@@ -67,7 +86,11 @@ namespace SPTQuestingBots.Helpers
                 totalLength += (float)System.Math.Sqrt(dx * dx + dy * dy + dz * dz);
             }
 
-            return totalLength <= maxPathLength;
+            bool reachable = totalLength <= maxPathLength;
+            LoggingController.LogDebug(
+                "[NavMeshPositionValidator] Reachability: pathLen=" + totalLength + " maxLen=" + maxPathLength + " reachable=" + reachable
+            );
+            return reachable;
         }
 
         /// <summary>
@@ -81,7 +104,11 @@ namespace SPTQuestingBots.Helpers
             Vector3 to = new Vector3(toX, toY + 0.5f, toZ);
 
             // Returns true if NO obstacle was hit (i.e., line of sight exists)
-            return !Physics.Linecast(from, to);
+            bool hasLos = !Physics.Linecast(from, to);
+            LoggingController.LogDebug(
+                "[NavMeshPositionValidator] LOS check: (" + fromX + ", " + fromZ + ") -> (" + toX + ", " + toZ + ") = " + hasLos
+            );
+            return hasLos;
         }
     }
 }

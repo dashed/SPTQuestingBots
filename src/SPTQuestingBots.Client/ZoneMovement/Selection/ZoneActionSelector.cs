@@ -1,4 +1,5 @@
 using System;
+using SPTQuestingBots.Controllers;
 using SPTQuestingBots.ZoneMovement.Core;
 
 namespace SPTQuestingBots.ZoneMovement.Selection;
@@ -101,10 +102,16 @@ public static class ZoneActionSelector
         for (int i = 0; i < weights.Length; i++)
         {
             if (roll < weights[i].cumulative)
+            {
+                LoggingController.LogDebug(
+                    "[ZoneActionSelector] Category=" + category + " roll=" + roll + " selected action=" + weights[i].action
+                );
                 return weights[i].action;
+            }
         }
 
         // Fallback (should never happen if weights sum to 100)
+        LoggingController.LogWarning("[ZoneActionSelector] Fallback for category=" + category + " roll=" + roll + ", using MoveToPosition");
         return 0; // MoveToPosition
     }
 

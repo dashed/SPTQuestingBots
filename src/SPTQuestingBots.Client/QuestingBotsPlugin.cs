@@ -52,6 +52,8 @@ namespace SPTQuestingBots
                 return;
             }
 
+            LoggingController.InitFileLogger();
+
             new Patches.MenuShowPatch().Enable();
 
             if (ConfigController.Config.Enabled)

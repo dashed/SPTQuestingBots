@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.Systems
 {
@@ -23,7 +24,20 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
         {
             float range = (hasEarpieceA && hasEarpieceB) ? earpieceRange : noEarpieceRange;
             float rangeSqr = range * range;
-            return sqrDistance <= rangeSqr;
+            bool inRange = sqrDistance <= rangeSqr;
+            LoggingController.LogDebug(
+                "[CommunicationRange] Check: earA="
+                    + hasEarpieceA
+                    + " earB="
+                    + hasEarpieceB
+                    + " sqrDist="
+                    + sqrDistance
+                    + " range="
+                    + range
+                    + " inRange="
+                    + inRange
+            );
+            return inRange;
         }
     }
 }

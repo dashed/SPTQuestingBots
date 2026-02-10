@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
 {
@@ -134,10 +135,22 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                 return;
 
             // Switch tasks
+            var previousTaskName = assignment.Task != null ? assignment.Task.GetType().Name : "None";
             assignment.Task?.Deactivate(entity);
             nextTask.Activate(entity);
 
             entity.TaskAssignment = new UtilityTaskAssignment(nextTask, nextTaskOrdinal);
+            LoggingController.LogDebug(
+                "[UtilityTaskManager] Entity "
+                    + entity.Id
+                    + " switched from "
+                    + previousTaskName
+                    + " to "
+                    + nextTask.GetType().Name
+                    + " (score="
+                    + highestScore.ToString("F3")
+                    + ")"
+            );
         }
 
         /// <summary>
@@ -171,6 +184,13 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
         /// </summary>
         public void RemoveEntity(BotEntity entity)
         {
+            if (entity.TaskAssignment.Task != null)
+            {
+                LoggingController.LogDebug(
+                    "[UtilityTaskManager] Removing entity " + entity.Id + " from task " + entity.TaskAssignment.Task.GetType().Name
+                );
+            }
+
             entity.TaskAssignment.Task?.Deactivate(entity);
             entity.TaskAssignment = default;
         }

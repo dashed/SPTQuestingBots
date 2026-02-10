@@ -1,4 +1,5 @@
 using System;
+using SPTQuestingBots.Controllers;
 using SPTQuestingBots.ZoneMovement.Core;
 using UnityEngine;
 
@@ -88,6 +89,19 @@ public sealed class CellScorer
             poiFactor = Math.Min(candidate.PoiDensity / maxPoiDensity, 1f);
         }
 
-        return angleFactor * (1f - poiWeight) + poiFactor * poiWeight;
+        float finalScore = angleFactor * (1f - poiWeight) + poiFactor * poiWeight;
+        LoggingController.LogDebug(
+            "[CellScorer] Cell ("
+                + candidate.Col
+                + ","
+                + candidate.Row
+                + "): angle="
+                + angleFactor.ToString("F2")
+                + " poi="
+                + poiFactor.ToString("F2")
+                + " score="
+                + finalScore.ToString("F2")
+        );
+        return finalScore;
     }
 }

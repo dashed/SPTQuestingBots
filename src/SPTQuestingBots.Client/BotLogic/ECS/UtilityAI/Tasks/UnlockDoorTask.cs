@@ -1,3 +1,5 @@
+using SPTQuestingBots.Controllers;
+
 namespace SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks
 {
     /// <summary>

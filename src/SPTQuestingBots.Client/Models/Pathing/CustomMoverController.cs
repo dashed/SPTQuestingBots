@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using EFT;
 using SPTQuestingBots.BotLogic.ECS;
+using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
 using UnityEngine;
 using UnityEngine.AI;
@@ -54,6 +55,7 @@ namespace SPTQuestingBots.Models.Pathing
                     _entity = BotEntityBridge.GetEntityByProfileId(profileId);
             }
 
+            LoggingController.LogDebug("[CustomMoverController] Activated for bot");
             CustomMoverHandoff.Activate(_bot);
         }
 
@@ -63,6 +65,7 @@ namespace SPTQuestingBots.Models.Pathing
         /// </summary>
         public void Deactivate()
         {
+            LoggingController.LogDebug("[CustomMoverController] Deactivated for bot");
             _follower.ResetPath();
             CustomMoverHandoff.Deactivate(_bot);
         }
@@ -77,6 +80,7 @@ namespace SPTQuestingBots.Models.Pathing
         {
             if (corners == null || corners.Length == 0)
             {
+                LoggingController.LogWarning("[CustomMoverController] SetPath called with null/empty corners");
                 _follower.SetPath(null, target);
                 SyncMovementState();
                 return;
@@ -84,6 +88,9 @@ namespace SPTQuestingBots.Models.Pathing
 
             // Apply Chaikin smoothing to reduce corner jitter
             Vector3[] smoothed = PathSmoother.Smooth(corners, _config);
+            LoggingController.LogDebug(
+                "[CustomMoverController] Path set: " + corners.Length + " raw corners, smoothed to " + smoothed.Length
+            );
             _follower.SetPath(smoothed, target);
             SyncMovementState();
         }
@@ -146,7 +153,12 @@ namespace SPTQuestingBots.Models.Pathing
             bool blocked = NavMesh.Raycast(position, nextCorner, out _, NavMesh.AllAreas);
             if (!blocked)
             {
-                _follower.TryCornerCut(position, true);
+                if (_follower.TryCornerCut(position, true))
+                {
+                    LoggingController.LogDebug(
+                        "[CustomMoverController] NavMesh corner cut succeeded at corner " + (_follower.CurrentCorner - 1)
+                    );
+                }
             }
         }
 
@@ -159,7 +171,10 @@ namespace SPTQuestingBots.Models.Pathing
         {
             Player player = _bot.GetPlayer;
             if (player == null)
+            {
+                LoggingController.LogWarning("[CustomMoverController] ExecuteMovement: player is null");
                 return;
+            }
 
             // Compute world-space move direction (blended with path-deviation spring)
             Vector3 moveVector = _follower.ComputeMoveDirection(position);

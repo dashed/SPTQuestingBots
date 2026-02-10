@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using SPTQuestingBots.Controllers;
 using SPTQuestingBots.ZoneMovement.Core;
 using UnityEngine;
 
@@ -77,6 +78,26 @@ public sealed class DestinationSelector
         }
 
         // Fall back to current cell if no navigable neighbor found
-        return best ?? currentCell;
+        if (best == null)
+        {
+            LoggingController.LogDebug(
+                "[DestinationSelector] No navigable neighbor from (" + currentCell.Col + "," + currentCell.Row + "), holding position"
+            );
+            return currentCell;
+        }
+
+        LoggingController.LogDebug(
+            "[DestinationSelector] Selected ("
+                + best.Col
+                + ","
+                + best.Row
+                + ") from ("
+                + currentCell.Col
+                + ","
+                + currentCell.Row
+                + ") score="
+                + bestScore.ToString("F2")
+        );
+        return best;
     }
 }

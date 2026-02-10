@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
 {
@@ -75,6 +76,9 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                 return;
 
             _activeEntities.Add(entity);
+            LoggingController.LogDebug(
+                "[UtilityTask] Activated " + GetType().Name + " for entity " + entity.Id + " (activeCount=" + _activeEntities.Count + ")"
+            );
         }
 
         /// <summary>
@@ -85,6 +89,8 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
         {
             if (!_activeEntityIds.Remove(entity.Id))
                 return;
+
+            LoggingController.LogDebug("[UtilityTask] Deactivated " + GetType().Name + " for entity " + entity.Id);
 
             for (int i = 0; i < _activeEntities.Count; i++)
             {

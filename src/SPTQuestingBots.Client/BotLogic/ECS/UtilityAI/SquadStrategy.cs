@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
 {
@@ -70,6 +71,7 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                 return;
 
             _activeSquads.Add(squad);
+            LoggingController.LogDebug("[SquadStrategy] Activated squad " + squad.Id + " (activeCount=" + _activeSquads.Count + ")");
         }
 
         /// <summary>
@@ -80,6 +82,10 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
         {
             if (!_activeSquadIds.Remove(squad.Id))
                 return;
+
+            LoggingController.LogDebug(
+                "[SquadStrategy] Deactivated squad " + squad.Id + " (activeCount=" + (_activeSquads.Count - 1) + ")"
+            );
 
             for (int i = 0; i < _activeSquads.Count; i++)
             {

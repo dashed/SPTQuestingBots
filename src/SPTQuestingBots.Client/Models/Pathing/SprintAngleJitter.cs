@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 using UnityEngine;
 
 namespace SPTQuestingBots.Models.Pathing;
@@ -121,6 +122,17 @@ public static class SprintAngleJitter
             _ => thresholdMedium,
         };
 
-        return angleJitter <= threshold;
+        bool canSprint = angleJitter <= threshold;
+        LoggingController.LogDebug(
+            "[SprintAngleJitter] jitter="
+                + angleJitter.ToString("F1")
+                + " threshold="
+                + threshold.ToString("F1")
+                + " urgency="
+                + urgency
+                + " canSprint="
+                + canSprint
+        );
+        return canSprint;
     }
 }

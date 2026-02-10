@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.Systems
 {
@@ -101,6 +102,15 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
                 _sortedIndices[j + 1] = key;
             }
 
+            LoggingController.LogDebug(
+                "[ObjectiveSharingCalculator] AssignTiers: "
+                    + count
+                    + " followers, trustedCount="
+                    + trustedCount
+                    + ", commRange="
+                    + enableCommRange
+            );
+
             // Phase 1: Assign TierDirect to closest followers within leader comm range
             int directAssigned = 0;
             for (int s = 0; s < count && directAssigned < trustedCount; s++)
@@ -165,8 +175,13 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
                 if (relayInRange)
                 {
                     outTiers[idx] = TierRelayed;
+                    LoggingController.LogDebug(
+                        "[ObjectiveSharingCalculator] Follower " + idx + " assigned TierRelayed via direct member " + bestDirect
+                    );
                 }
             }
+
+            LoggingController.LogDebug("[ObjectiveSharingCalculator] Tier assignment complete: direct=" + directAssigned);
         }
 
         /// <summary>

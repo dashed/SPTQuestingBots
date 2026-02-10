@@ -61,7 +61,10 @@ namespace SPTQuestingBots.Helpers
                 int hits = Physics.OverlapSphereNonAlloc(botPosition, detectionRadius, colliders, LootMask, QueryTriggerInteraction.Ignore);
 
                 if (hits == 0)
+                {
+                    LoggingController.LogDebug("[LootScanHelper] Scan at " + botPosition + ": 0 colliders hit");
                     return 0;
+                }
 
                 // Sort by distance (closest first) — matches LootingBots pattern
                 Array.Sort(colliders, 0, hits, new ColliderDistanceComparer(botPosition));
@@ -178,6 +181,21 @@ namespace SPTQuestingBots.Helpers
             {
                 ColliderPool.Return(colliders, clearArray: true);
             }
+
+            LoggingController.LogDebug(
+                "[LootScanHelper] Scan complete: found "
+                    + resultCount
+                    + " loot targets within "
+                    + detectionRadius.ToString("F0")
+                    + "m"
+                    + " (containers="
+                    + (containersEnabled ? "on" : "off")
+                    + ", items="
+                    + (itemsEnabled ? "on" : "off")
+                    + ", corpses="
+                    + (corpsesEnabled ? "on" : "off")
+                    + ")"
+            );
 
             return resultCount;
         }

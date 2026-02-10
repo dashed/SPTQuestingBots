@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using EFT;
 using EFT.InventoryLogic;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.Helpers
 {
@@ -50,11 +51,17 @@ namespace SPTQuestingBots.Helpers
         public static bool IsCorpseValid(Player corpse)
         {
             if (corpse == null)
+            {
+                LoggingController.LogWarning("[CorpseSearchHelper] IsCorpseValid: corpse is null");
                 return false;
+            }
 
             // GetPlayer != null distinguishes bot corpses from static "Dead scav" corpses
             if (corpse.GetPlayer == null)
+            {
+                LoggingController.LogDebug("[CorpseSearchHelper] Corpse " + corpse.GetInstanceID() + " has null GetPlayer (static corpse)");
                 return false;
+            }
 
             return true;
         }
@@ -67,6 +74,11 @@ namespace SPTQuestingBots.Helpers
         {
             if (!IsCorpseValid(corpse))
                 return null;
+
+            if (corpse.InventoryController == null)
+            {
+                LoggingController.LogWarning("[CorpseSearchHelper] Corpse " + corpse.GetInstanceID() + " has null InventoryController");
+            }
 
             return corpse.InventoryController;
         }
@@ -116,6 +128,21 @@ namespace SPTQuestingBots.Helpers
                 }
             }
 
+            LoggingController.LogDebug(
+                "[CorpseSearchHelper] Corpse "
+                    + corpse.GetInstanceID()
+                    + ": found "
+                    + items.Count
+                    + " lootable items from "
+                    + prioritySlotList.Count
+                    + " slots"
+                    + " (backpack="
+                    + hasBackpack
+                    + ", tacVest="
+                    + hasTacVest
+                    + ")"
+            );
+
             return items;
         }
 
@@ -139,6 +166,11 @@ namespace SPTQuestingBots.Helpers
                         lockedItems.Add(item);
                     }
                 }
+            }
+
+            if (lockedItems.Count > 0)
+            {
+                LoggingController.LogDebug("[CorpseSearchHelper] Found " + lockedItems.Count + " locked items to skip");
             }
 
             return lockedItems;

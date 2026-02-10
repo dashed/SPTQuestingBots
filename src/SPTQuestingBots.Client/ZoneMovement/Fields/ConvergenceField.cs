@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using SPTQuestingBots.Controllers;
 using UnityEngine;
 
 namespace SPTQuestingBots.ZoneMovement.Fields;
@@ -62,6 +63,17 @@ public sealed class ConvergenceField
         cachedX = outX;
         cachedZ = outZ;
         lastUpdateTime = currentTime;
+        LoggingController.LogDebug(
+            "[ConvergenceField] Recomputed at t="
+                + currentTime.ToString("F1")
+                + " players="
+                + (playerPositions?.Count ?? 0)
+                + " dir=("
+                + outX.ToString("F2")
+                + ","
+                + outZ.ToString("F2")
+                + ")"
+        );
     }
 
     /// <summary>
@@ -115,5 +127,6 @@ public sealed class ConvergenceField
     public void InvalidateCache()
     {
         lastUpdateTime = float.NegativeInfinity;
+        LoggingController.LogDebug("[ConvergenceField] Cache invalidated");
     }
 }

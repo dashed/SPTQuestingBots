@@ -74,6 +74,7 @@
       Link="LinkedSources/ZoneMovement/MinimapProjection.cs"
     />
     <!-- Configuration: pure POCOs with Newtonsoft.Json -->
+    <Compile Include="../../src/SPTQuestingBots.Client/Configuration/DebugConfig.cs" Link="LinkedSources/Configuration/DebugConfig.cs" />
     <Compile
       Include="../../src/SPTQuestingBots.Client/Configuration/BotPathingConfig.cs"
       Link="LinkedSources/Configuration/BotPathingConfig.cs"

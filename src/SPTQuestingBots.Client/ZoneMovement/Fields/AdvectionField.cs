@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using SPTQuestingBots.Controllers;
 using UnityEngine;
 
 namespace SPTQuestingBots.ZoneMovement.Fields;
@@ -42,6 +43,16 @@ public sealed class AdvectionField
     public void AddZone(Vector3 position, float strength)
     {
         zoneSources.Add(new ZoneSource(position, strength));
+        LoggingController.LogDebug(
+            "[AdvectionField] Added zone at ("
+                + position.x.ToString("F0")
+                + ","
+                + position.z.ToString("F0")
+                + ") strength="
+                + strength.ToString("F2")
+                + " total="
+                + zoneSources.Count
+        );
     }
 
     /// <summary>Number of registered zone sources.</summary>
@@ -104,6 +115,20 @@ public sealed class AdvectionField
             outX = 0f;
             outZ = 0f;
         }
+        LoggingController.LogDebug(
+            "[AdvectionField] Computed at ("
+                + position.x.ToString("F0")
+                + ","
+                + position.z.ToString("F0")
+                + "): dir=("
+                + outX.ToString("F2")
+                + ","
+                + outZ.ToString("F2")
+                + ") zones="
+                + zoneSources.Count
+                + " bots="
+                + (botPositions?.Count ?? 0)
+        );
     }
 
     /// <summary>

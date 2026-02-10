@@ -58,6 +58,9 @@ namespace SPTQuestingBots.Patches
             // Not really needed since BotHiveMindMonitor is attached to GameWorld, but this may reduce CPU load a tad
             // BotHiveMindMonitor.Clear() also calls BotEntityBridge.Clear() internally
             BotLogic.HiveMind.BotHiveMindMonitor.Clear();
+
+            // Flush and close the dedicated log file
+            LoggingController.DisposeFileLogger();
         }
     }
 }

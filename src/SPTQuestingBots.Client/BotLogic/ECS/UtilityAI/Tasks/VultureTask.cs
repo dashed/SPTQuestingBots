@@ -1,3 +1,5 @@
+using SPTQuestingBots.Controllers;
+
 namespace SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks
 {
     /// <summary>
@@ -50,27 +52,62 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks
         {
             // No nearby combat event → no score
             if (!entity.HasNearbyEvent)
+            {
+                LoggingController.LogDebug("[VultureTask] Entity " + entity.Id + ": no nearby event, score=0");
                 return 0f;
+            }
 
             // In combat → don't vulture (already fighting)
             if (entity.IsInCombat)
+            {
+                LoggingController.LogDebug("[VultureTask] Entity " + entity.Id + ": in combat, score=0");
                 return 0f;
+            }
 
             // In a boss zone → too dangerous
             if (entity.IsInBossZone)
+            {
+                LoggingController.LogDebug("[VultureTask] Entity " + entity.Id + ": in boss zone, score=0");
                 return 0f;
+            }
 
             // On cooldown → recently rejected
             if (entity.VultureCooldownUntil > 0f)
+            {
+                LoggingController.LogDebug(
+                    "[VultureTask] Entity " + entity.Id + ": on cooldown until " + entity.VultureCooldownUntil.ToString("F1") + ", score=0"
+                );
                 return 0f;
+            }
 
             // Already vulturing → maintain current phase with high score
             if (entity.VulturePhase != Systems.VulturePhase.None && entity.VulturePhase != Systems.VulturePhase.Complete)
+            {
+                LoggingController.LogDebug(
+                    "[VultureTask] Entity "
+                        + entity.Id
+                        + ": active phase "
+                        + entity.VulturePhase
+                        + ", maintaining score="
+                        + MaxBaseScore.ToString("F2")
+                );
                 return MaxBaseScore;
+            }
 
             // Intensity must meet courage threshold
             if (entity.CombatIntensity < courageThreshold)
+            {
+                LoggingController.LogDebug(
+                    "[VultureTask] Entity "
+                        + entity.Id
+                        + ": intensity "
+                        + entity.CombatIntensity
+                        + " below courage threshold "
+                        + courageThreshold
+                        + ", score=0"
+                );
                 return 0f;
+            }
 
             // Intensity component: how much over threshold, capped at 2×
             float intensityRatio = (float)entity.CombatIntensity / courageThreshold;
@@ -101,6 +138,18 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks
             if (score > MaxBaseScore)
                 return MaxBaseScore;
 
+            LoggingController.LogDebug(
+                "[VultureTask] Entity "
+                    + entity.Id
+                    + ": intensity="
+                    + entity.CombatIntensity
+                    + " ratio="
+                    + intensityRatio.ToString("F2")
+                    + " proximityScore="
+                    + proximityScore.ToString("F2")
+                    + " finalScore="
+                    + score.ToString("F2")
+            );
             return score;
         }
     }

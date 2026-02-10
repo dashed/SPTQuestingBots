@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.Systems
 {
@@ -39,6 +40,17 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
         {
             var type = FormationPositionUpdater.SelectFormation(pathWidth, switchWidth);
             spacing = type == FormationType.Column ? columnSpacing : spreadSpacing;
+            LoggingController.LogDebug(
+                "[FormationSelector] Selected "
+                    + type
+                    + " (pathWidth="
+                    + pathWidth
+                    + ", switchWidth="
+                    + switchWidth
+                    + ", spacing="
+                    + spacing
+                    + ")"
+            );
             return type;
         }
     }

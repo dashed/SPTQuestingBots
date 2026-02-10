@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.Helpers
 {
@@ -40,6 +41,10 @@ namespace SPTQuestingBots.Helpers
                 _posY[i] = y[i];
                 _posZ[i] = z[i];
             }
+
+            if (clamp != _count)
+                LoggingController.LogDebug("[HumanPlayerCache] Player count changed: " + _count + " -> " + clamp);
+
             _count = clamp;
         }
 

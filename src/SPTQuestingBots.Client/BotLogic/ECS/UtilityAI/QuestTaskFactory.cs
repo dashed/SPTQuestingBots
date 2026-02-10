@@ -1,3 +1,5 @@
+using SPTQuestingBots.Controllers;
+
 namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
 {
     /// <summary>
@@ -14,6 +16,7 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
         /// </summary>
         public static UtilityTaskManager Create()
         {
+            LoggingController.LogInfo("[QuestTaskFactory] Creating UtilityTaskManager with " + TaskCount + " tasks");
             return new UtilityTaskManager(
                 new UtilityTask[]
                 {

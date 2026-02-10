@@ -1,5 +1,6 @@
 using EFT;
 using SPTQuestingBots.BotLogic.ECS;
+using SPTQuestingBots.Controllers;
 using UnityEngine;
 
 namespace SPTQuestingBots.Helpers
@@ -22,8 +23,12 @@ namespace SPTQuestingBots.Helpers
         public static void Activate(BotOwner bot)
         {
             if (bot?.Mover == null)
+            {
+                LoggingController.LogWarning("[CustomMoverHandoff] Activate: bot or Mover is null");
                 return;
+            }
 
+            LoggingController.LogDebug("[CustomMoverHandoff] Activating custom mover — stopping BSG mover");
             bot.Mover.Stop();
             BotEntityBridge.ActivateCustomMover(bot);
         }
@@ -41,13 +46,17 @@ namespace SPTQuestingBots.Helpers
         public static void Deactivate(BotOwner bot)
         {
             if (bot?.Mover == null)
+            {
+                LoggingController.LogWarning("[CustomMoverHandoff] Deactivate: bot or Mover is null");
                 return;
+            }
 
             // Only deactivate if we were actually active
             string profileId = bot.Profile?.Id;
             if (profileId == null || !BotEntityBridge.IsCustomMoverActive(profileId))
                 return;
 
+            LoggingController.LogDebug("[CustomMoverHandoff] Handoff to BSG mover — syncing state fields");
             SyncBsgMoverState(bot);
             BotEntityBridge.DeactivateCustomMover(bot);
         }

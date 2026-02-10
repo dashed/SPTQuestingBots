@@ -1,5 +1,6 @@
 using EFT;
 using SPTQuestingBots.BotLogic.ECS.Systems;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.Helpers
 {
@@ -20,7 +21,10 @@ namespace SPTQuestingBots.Helpers
 
             var player = bot?.GetPlayer;
             if (player == null)
+            {
+                LoggingController.LogWarning("[SquadVoiceHelper] TrySay called with null player for calloutId=" + calloutId);
                 return false;
+            }
 
             // Don't interrupt ongoing speech
             if (player.Speaker != null && (player.Speaker.Speaking || player.Speaker.Busy))
@@ -29,6 +33,9 @@ namespace SPTQuestingBots.Helpers
             var phrase = MapCalloutToPhrase(calloutId);
             var mask = BuildMask(bot);
             player.Say(phrase, true, 0f, mask, aggressive ? 1 : 0);
+            LoggingController.LogDebug(
+                "[SquadVoiceHelper] Bot said " + phrase + " (calloutId=" + calloutId + ", aggressive=" + aggressive + ")"
+            );
             return true;
         }
 

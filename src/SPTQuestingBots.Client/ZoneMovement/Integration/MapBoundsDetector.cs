@@ -1,4 +1,5 @@
 using System;
+using SPTQuestingBots.Controllers;
 using UnityEngine;
 
 namespace SPTQuestingBots.ZoneMovement.Integration;
@@ -64,6 +65,21 @@ public static class MapBoundsDetector
                 maxZ = z;
         }
 
-        return (new Vector3(minX - padding, -10000f, minZ - padding), new Vector3(maxX + padding, 10000f, maxZ + padding));
+        var result = (new Vector3(minX - padding, -10000f, minZ - padding), new Vector3(maxX + padding, 10000f, maxZ + padding));
+        LoggingController.LogInfo(
+            "[MapBoundsDetector] Detected bounds from "
+                + positions.Length
+                + " spawn points: min=("
+                + result.Item1.x.ToString("F0")
+                + ","
+                + result.Item1.z.ToString("F0")
+                + ") max=("
+                + result.Item2.x.ToString("F0")
+                + ","
+                + result.Item2.z.ToString("F0")
+                + ") padding="
+                + padding.ToString("F0")
+        );
+        return result;
     }
 }

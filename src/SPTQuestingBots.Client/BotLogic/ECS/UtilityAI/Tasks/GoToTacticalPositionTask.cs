@@ -1,3 +1,5 @@
+using SPTQuestingBots.Controllers;
+
 namespace SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks
 {
     /// <summary>
@@ -33,6 +35,9 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks
             if (sqrDist <= MinDistanceSqr)
                 return 0f;
 
+            LoggingController.LogDebug(
+                "[GoToTacticalPositionTask] Entity " + entity.Id + " scored " + BaseScore + " (sqrDist=" + sqrDist + ")"
+            );
             return BaseScore;
         }
     }

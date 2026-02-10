@@ -18,13 +18,25 @@ namespace SPTQuestingBots.Helpers
         public static bool IsContainerAccessible(LootableContainer container)
         {
             if (container == null)
+            {
+                LoggingController.LogWarning("[ContainerInteractionHelper] IsContainerAccessible: container is null");
                 return false;
+            }
             if (!container.isActiveAndEnabled)
+            {
+                LoggingController.LogDebug("[ContainerInteractionHelper] Container " + container.GetInstanceID() + " is not active");
                 return false;
+            }
             if (container.DoorState == EDoorState.Locked)
+            {
+                LoggingController.LogDebug("[ContainerInteractionHelper] Container " + container.GetInstanceID() + " is locked");
                 return false;
+            }
             if (container.ItemOwner == null)
+            {
+                LoggingController.LogWarning("[ContainerInteractionHelper] Container " + container.GetInstanceID() + " has null ItemOwner");
                 return false;
+            }
 
             return true;
         }
@@ -40,6 +52,7 @@ namespace SPTQuestingBots.Helpers
 
             if (container.DoorState == EDoorState.Shut)
             {
+                LoggingController.LogInfo("[ContainerInteractionHelper] Opening container " + container.GetInstanceID());
                 InteractionResult result = new InteractionResult(EInteractionType.Open);
                 container.Interact(result);
             }
@@ -55,6 +68,7 @@ namespace SPTQuestingBots.Helpers
 
             if (container.DoorState == EDoorState.Open)
             {
+                LoggingController.LogDebug("[ContainerInteractionHelper] Closing container " + container.GetInstanceID());
                 InteractionResult result = new InteractionResult(EInteractionType.Close);
                 container.Interact(result);
             }
@@ -69,11 +83,17 @@ namespace SPTQuestingBots.Helpers
             var items = new List<Item>();
 
             if (container?.ItemOwner?.RootItem == null)
+            {
+                LoggingController.LogWarning("[ContainerInteractionHelper] GetContainerItems: null root item");
                 return items;
+            }
 
             var rootItem = container.ItemOwner.RootItem as SearchableItemItemClass;
             if (rootItem == null)
+            {
+                LoggingController.LogWarning("[ContainerInteractionHelper] GetContainerItems: root item is not SearchableItemItemClass");
                 return items;
+            }
 
             foreach (var item in rootItem.GetFirstLevelItems())
             {
@@ -83,6 +103,10 @@ namespace SPTQuestingBots.Helpers
 
                 items.Add(item);
             }
+
+            LoggingController.LogDebug(
+                "[ContainerInteractionHelper] Container " + container.GetInstanceID() + ": found " + items.Count + " items"
+            );
 
             return items;
         }

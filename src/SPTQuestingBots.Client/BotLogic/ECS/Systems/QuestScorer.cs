@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.Systems
 {
@@ -112,6 +113,15 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
                 }
             }
 
+            LoggingController.LogDebug(
+                "[QuestScorer] Selected quest index "
+                    + bestIndex
+                    + " with score "
+                    + bestScore.ToString("F3")
+                    + " out of "
+                    + count
+                    + " candidates"
+            );
             return bestIndex;
         }
     }

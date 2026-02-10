@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.Systems
 {
@@ -89,6 +90,18 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
                     intensityWindow,
                     currentTime
                 );
+
+                float dx = botX - nearest.X;
+                float dz = botZ - nearest.Z;
+                float dist = (float)System.Math.Sqrt(dx * dx + dz * dz);
+                LoggingController.LogDebug(
+                    "[CombatEventScanner] Entity "
+                        + entity.Id
+                        + ": nearest event at "
+                        + dist.ToString("F0")
+                        + "m, intensity="
+                        + entity.CombatIntensity
+                );
             }
             else
             {
@@ -101,6 +114,12 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
 
             // Query boss zone
             entity.IsInBossZone = CombatEventRegistry.IsInBossZone(botX, botZ, bossAvoidanceRadius, bossZoneDecay, currentTime);
+            if (entity.IsInBossZone)
+            {
+                LoggingController.LogDebug(
+                    "[CombatEventScanner] Entity " + entity.Id + ": in boss zone (radius=" + bossAvoidanceRadius.ToString("F0") + ")"
+                );
+            }
         }
     }
 }

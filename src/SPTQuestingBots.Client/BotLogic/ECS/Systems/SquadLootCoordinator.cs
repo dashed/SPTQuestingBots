@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.Systems
 {
@@ -40,6 +41,17 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
             if (bestIndex >= 0)
             {
                 claims.TryClaim(bossEntityId, results[bestIndex].Id);
+                LoggingController.LogInfo(
+                    "[SquadLootCoordinator] Boss "
+                        + bossEntityId
+                        + " claiming loot "
+                        + results[bestIndex].Id
+                        + " (value="
+                        + bestValue.ToString("F0")
+                        + ", from "
+                        + count
+                        + " candidates)"
+                );
             }
 
             return bestIndex;
@@ -60,16 +72,31 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
             float dz = follower.CurrentPositionZ - boss.CurrentPositionZ;
             float distSqr = dx * dx + dz * dz;
             if (distSqr > commRangeSqr)
+            {
+                LoggingController.LogDebug(
+                    "[SquadLootCoordinator] Follower " + follower.Id + ": denied loot — out of comm range from boss " + boss.Id
+                );
                 return false;
+            }
 
             // Follower can loot when boss is:
             // 1. Currently looting (idle time)
             if (boss.IsLooting)
+            {
+                LoggingController.LogDebug(
+                    "[SquadLootCoordinator] Follower " + follower.Id + ": allowed to loot — boss " + boss.Id + " is looting"
+                );
                 return true;
+            }
 
             // 2. At objective and holding/ambushing (waiting phase)
             if (boss.IsCloseToObjective && boss.HasActiveObjective)
+            {
+                LoggingController.LogDebug(
+                    "[SquadLootCoordinator] Follower " + follower.Id + ": allowed to loot — boss " + boss.Id + " at objective"
+                );
                 return true;
+            }
 
             // 3. Follower has arrived at tactical position
             if (follower.HasTacticalPosition && !follower.IsApproachingLoot)
@@ -79,7 +106,12 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
                 float tactDistSqr = tdx * tdx + tdz * tdz;
                 // Within 5m of tactical position
                 if (tactDistSqr < 25f)
+                {
+                    LoggingController.LogDebug(
+                        "[SquadLootCoordinator] Follower " + follower.Id + ": allowed to loot — at tactical position"
+                    );
                     return true;
+                }
             }
 
             return false;
@@ -109,6 +141,18 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
             }
 
             squad.SharedLootCount = shareCount;
+
+            if (shareCount > 0)
+            {
+                LoggingController.LogDebug(
+                    "[SquadLootCoordinator] Shared "
+                        + shareCount
+                        + " loot targets with squad"
+                        + " (from "
+                        + bossResultCount
+                        + " boss results)"
+                );
+            }
         }
 
         /// <summary>
@@ -143,6 +187,21 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
                     bestValue = squad.SharedLootValues[i];
                     bestIndex = i;
                 }
+            }
+
+            if (bestIndex >= 0)
+            {
+                LoggingController.LogDebug(
+                    "[SquadLootCoordinator] Follower "
+                        + followerEntityId
+                        + " picked shared loot "
+                        + squad.SharedLootIds[bestIndex]
+                        + " (value="
+                        + bestValue.ToString("F0")
+                        + ", shared="
+                        + squad.SharedLootCount
+                        + ")"
+                );
             }
 
             return bestIndex;

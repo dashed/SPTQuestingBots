@@ -12,38 +12,81 @@ using UnityEngine;
 
 namespace SPTQuestingBots.Models.Pathing
 {
+    /// <summary>
+    /// Reason a bot's path needs to be recalculated.
+    /// </summary>
     public enum BotPathUpdateNeededReason
     {
+        /// <summary>No update needed.</summary>
         None = 0,
+
+        /// <summary>Forced recalculation requested.</summary>
         Force,
+
+        /// <summary>Path refresh triggered by time interval.</summary>
         RefreshNeededTime,
+
+        /// <summary>Path refresh triggered by path state change.</summary>
         RefreshNeededPath,
+
+        /// <summary>A new target position was set.</summary>
         NewTarget,
+
+        /// <summary>Path is partial or invalid and needs retry.</summary>
         IncompletePath,
     }
 
+    /// <summary>
+    /// Per-bot path data that extends <see cref="StaticPathData"/> with live bot position
+    /// tracking, automatic path recalculation, and static path merging.
+    /// </summary>
+    /// <remarks>
+    /// Handles path validity checks, incomplete path retries, and detection of
+    /// path changes by other components (SAIN, Looting Bots, etc.).
+    /// </remarks>
     public class BotPathData : StaticPathData
     {
+        /// <summary>
+        /// Distance from the bot's current position to the target destination.
+        /// </summary>
         public float DistanceToTarget => Vector3.Distance(bot.Position, TargetPosition);
 
         private BotOwner bot;
 
+        /// <summary>
+        /// Creates a new bot path data instance bound to the given bot.
+        /// </summary>
         public BotPathData(BotOwner botOwner)
             : base()
         {
             bot = botOwner;
         }
 
+        /// <summary>
+        /// Clears the current path corners, resetting to an empty path.
+        /// </summary>
         public void ClearPath()
         {
             SetCorners(new Vector3[0]);
         }
 
+        /// <summary>
+        /// Forces a path recalculation on the next update by marking the path as partial.
+        /// </summary>
         public void ForcePathRecalculation()
         {
             Status = UnityEngine.AI.NavMeshPathStatus.PathPartial;
         }
 
+        /// <summary>
+        /// Checks whether the bot's path needs recalculation based on target changes,
+        /// path validity, external modifications, and retry intervals.
+        /// </summary>
+        /// <param name="target">The desired destination position.</param>
+        /// <param name="targetVariationAllowed">Minimum target movement to trigger recalculation.</param>
+        /// <param name="reachDistance">Distance threshold for reaching the target.</param>
+        /// <param name="force">If true, forces immediate recalculation.</param>
+        /// <returns>The reason for the update, or None if no update was needed.</returns>
         public BotPathUpdateNeededReason CheckIfUpdateIsNeeded(
             Vector3 target,
             float targetVariationAllowed = 0.2f,
@@ -151,6 +194,10 @@ namespace SPTQuestingBots.Models.Pathing
             return reason;
         }
 
+        /// <summary>
+        /// Gets the distance from the bot's current position to the last corner in the path.
+        /// Returns NaN if no corners exist.
+        /// </summary>
         public float GetDistanceToFinalPoint()
         {
             if (Corners.Length == 0)

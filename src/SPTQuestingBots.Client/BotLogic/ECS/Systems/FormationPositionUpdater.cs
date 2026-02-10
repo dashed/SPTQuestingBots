@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.Systems
 {
@@ -131,6 +132,10 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
             float[] outPositions
         )
         {
+            LoggingController.LogDebug(
+                "[FormationPositionUpdater] Computing " + type + " positions for " + count + " followers (spacing=" + spacing + ")"
+            );
+
             if (type == FormationType.Column)
                 ComputeColumnPositions(bossX, bossY, bossZ, headingX, headingZ, count, spacing, outPositions);
             else

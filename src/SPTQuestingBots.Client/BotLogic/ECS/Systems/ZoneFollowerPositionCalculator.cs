@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.Systems
 {
@@ -39,12 +40,23 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
         {
             if (candidateCount <= 0 || candidatePositions == null)
             {
+                LoggingController.LogWarning("[ZoneFollowerPositionCalculator] No candidate positions for " + followerCount + " followers");
                 for (int i = 0; i < followerCount * 3; i++)
                 {
                     outPositions[i] = float.NaN;
                 }
                 return;
             }
+
+            LoggingController.LogDebug(
+                "[ZoneFollowerPositionCalculator] Distributing "
+                    + followerCount
+                    + " followers across "
+                    + candidateCount
+                    + " cells (jitter="
+                    + jitterRadius
+                    + "m)"
+            );
 
             for (int i = 0; i < followerCount; i++)
             {

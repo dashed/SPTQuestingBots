@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
 {
@@ -131,7 +132,32 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
 
             // Switch strategies
             if (assignment.Strategy != null)
+            {
+                LoggingController.LogInfo(
+                    "[SquadStrategyManager] Squad "
+                        + squad.Id
+                        + " switching strategy from ordinal "
+                        + assignment.Ordinal
+                        + " to "
+                        + nextOrdinal
+                        + " (score="
+                        + highestScore
+                        + ")"
+                );
                 ((SquadStrategy)assignment.Strategy).Deactivate(squad);
+            }
+            else
+            {
+                LoggingController.LogInfo(
+                    "[SquadStrategyManager] Squad "
+                        + squad.Id
+                        + " activating strategy ordinal "
+                        + nextOrdinal
+                        + " (score="
+                        + highestScore
+                        + ")"
+                );
+            }
             nextStrategy.Activate(squad);
 
             squad.StrategyAssignment = new StrategyAssignment(nextStrategy, nextOrdinal);
@@ -169,7 +195,10 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
         public void RemoveSquad(SquadEntity squad)
         {
             if (squad.StrategyAssignment.Strategy != null)
+            {
+                LoggingController.LogDebug("[SquadStrategyManager] Removing squad " + squad.Id + " from strategy tracking");
                 ((SquadStrategy)squad.StrategyAssignment.Strategy).Deactivate(squad);
+            }
             squad.StrategyAssignment = default;
         }
     }

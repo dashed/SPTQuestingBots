@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 using UnityEngine;
 
 namespace SPTQuestingBots.Models.Pathing;
@@ -122,6 +123,8 @@ public static class PathSmoother
     public static Vector3[] Smooth(Vector3[] corners, CustomMoverConfig config)
     {
         var withIntermediates = InsertIntermediatePoints(corners, config.MinSegmentLength);
-        return ChaikinSmooth(withIntermediates, config.SmoothingIterations);
+        var result = ChaikinSmooth(withIntermediates, config.SmoothingIterations);
+        LoggingController.LogDebug("[PathSmoother] Smoothed path: " + (corners?.Length ?? 0) + " corners -> " + (result?.Length ?? 0));
+        return result;
     }
 }

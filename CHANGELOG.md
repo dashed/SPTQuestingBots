@@ -76,6 +76,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - ~91 new tests (28 CombatEventRegistry + 12 CombatEventScanner + 28 VultureTask + 15 VultureSquadStrategy + 8 VultureConfig)
 - Vulture port analysis document (`docs/vulture-port-analysis.md`)
 - Bot looting analysis document (`docs/looting-analysis.md`)
+- **Dedicated log file** — per-session log at `BepInEx/plugins/DanW-SPTQuestingBots/log/QuestingBots.log`
+  - `LoggingController.InitFileLogger()`: creates/truncates log file with StreamWriter, gated by `debug.dedicated_log_file` config
+  - `LoggingController.DisposeFileLogger()`: thread-safe flush/close on raid end
+  - Frame-stamped log lines: `[yyyy-MM-dd HH:mm:ss.fff] [LEVEL] F{frame}: message` for timing correlation
+  - Thread-safe via `lock` + `[AggressiveInlining]` on `WriteToFile()`
+  - Dual-destination: all log calls write to both BepInEx `LogOutput.log` and dedicated file
+  - `DebugConfig.DedicatedLogFile` toggle (default: true)
+  - `LoggingController` test shim for test project
+- **Extensive logging across 166 files** — 720 logging calls (was ~499 across 97 files)
+  - ECS core + Utility AI: entity lifecycle, registry operations, task scoring/switching, quest scoring
+  - Squad strategies: squad creation/destruction, member tracking, objective assignment, strategy selection, tactical positions
+  - Formation movement: speed mode changes, position calculations, formation type selection
+  - Combat positioning: role reassignment, combat position computation
+  - LOD system: tier changes, human player cache refresh
+  - Cover points: validation results, candidate generation, cover point collection
+  - Looting system: score computation, claim/release, scan results, gear comparison, upgrade planning, squad coordination
+  - Vulture system: phase transitions, combat event recording/scanning, strategy activation, fan-out positions
+  - Zone movement: grid creation, field computation, cell scoring, destination selection, objective cycling
+  - Movement/pathing: path start/complete, corner reaching/cutting, sprint state, handoff operations
+- **XML doc comments across movement/pathing and configuration files**
+  - `BotPathData`, `NavJob`, `PathfindingThrottle`, `StaticPathData`, `PathVisualizationData`: full class and member docstrings
+  - `LootingConfig`, `VultureConfig`, `ZoneMovementConfig`, `SquadStrategyConfig`: property-level docstrings
+  - `SquadCalloutId`, `SquadCalloutDecider`, `FormationSpeedController`: class and method docstrings
 
 ### Changed
 - Utility AI now has 10 scored tasks (was 8): added Loot and Vulture

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS
 {
@@ -74,6 +75,7 @@ namespace SPTQuestingBots.BotLogic.ECS
 
             var squad = new SquadEntity(id, strategyCount, targetMembers);
             _squads.Add(squad);
+            LoggingController.LogInfo("[SquadRegistry] Created squad " + id + " (total squads=" + _squads.Count + ")");
             return squad;
         }
 
@@ -92,11 +94,15 @@ namespace SPTQuestingBots.BotLogic.ECS
                     return existing;
 
                 // Stale mapping — clean it up
+                LoggingController.LogWarning(
+                    "[SquadRegistry] Stale BSG group mapping for groupId=" + bsgGroupId + " -> squadId=" + squadId
+                );
                 _bsgGroupToSquadId.Remove(bsgGroupId);
             }
 
             var squad = Add(strategyCount, targetMembers);
             _bsgGroupToSquadId[bsgGroupId] = squad.Id;
+            LoggingController.LogDebug("[SquadRegistry] Mapped BSG groupId=" + bsgGroupId + " -> squadId=" + squad.Id);
             return squad;
         }
 
@@ -111,7 +117,10 @@ namespace SPTQuestingBots.BotLogic.ECS
                 return false;
 
             if (squad.Id < 0 || squad.Id >= _idToIndex.Count)
+            {
+                LoggingController.LogWarning("[SquadRegistry] Remove called with invalid squad ID=" + squad.Id);
                 return false;
+            }
 
             var slot = _idToIndex[squad.Id];
             if (!slot.HasValue)
@@ -119,6 +128,16 @@ namespace SPTQuestingBots.BotLogic.ECS
 
             var removedIndex = slot.Value;
             var lastIndex = _squads.Count - 1;
+
+            LoggingController.LogInfo(
+                "[SquadRegistry] Removing squad "
+                    + squad.Id
+                    + " (members="
+                    + squad.Members.Count
+                    + ", remaining="
+                    + (_squads.Count - 1)
+                    + ")"
+            );
 
             // Clear member references
             for (int i = squad.Members.Count - 1; i >= 0; i--)
@@ -203,7 +222,12 @@ namespace SPTQuestingBots.BotLogic.ECS
 
             // Remove from previous squad if any
             if (member.Squad != null)
+            {
+                LoggingController.LogDebug(
+                    "[SquadRegistry] Entity " + member.Id + " transferring from squad " + member.Squad.Id + " to squad " + squad.Id
+                );
                 RemoveMember(member.Squad, member);
+            }
 
             squad.Members.Add(member);
             member.Squad = squad;
@@ -212,10 +236,16 @@ namespace SPTQuestingBots.BotLogic.ECS
             {
                 squad.Leader = member;
                 member.SquadRole = SquadRole.Leader;
+                LoggingController.LogInfo(
+                    "[SquadRegistry] Entity " + member.Id + " added as leader of squad " + squad.Id + " (size=" + squad.Size + ")"
+                );
             }
             else
             {
                 member.SquadRole = SquadRole.Guard; // Default role for non-leaders
+                LoggingController.LogInfo(
+                    "[SquadRegistry] Entity " + member.Id + " added to squad " + squad.Id + " as Guard (size=" + squad.Size + ")"
+                );
             }
         }
 
@@ -231,6 +261,16 @@ namespace SPTQuestingBots.BotLogic.ECS
             if (member.Squad != squad)
                 return;
 
+            LoggingController.LogInfo(
+                "[SquadRegistry] Removing entity "
+                    + member.Id
+                    + " from squad "
+                    + squad.Id
+                    + " (remaining="
+                    + (squad.Members.Count - 1)
+                    + ")"
+            );
+
             squad.Members.Remove(member);
             member.Squad = null;
             member.SquadRole = SquadRole.None;
@@ -243,10 +283,12 @@ namespace SPTQuestingBots.BotLogic.ECS
                 {
                     squad.Leader = squad.Members[0];
                     squad.Leader.SquadRole = SquadRole.Leader;
+                    LoggingController.LogInfo("[SquadRegistry] Squad " + squad.Id + " leader reassigned to entity " + squad.Leader.Id);
                 }
                 else
                 {
                     squad.Leader = null;
+                    LoggingController.LogDebug("[SquadRegistry] Squad " + squad.Id + " has no remaining members");
                 }
             }
         }
@@ -286,6 +328,8 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// </summary>
         public void Clear()
         {
+            LoggingController.LogInfo("[SquadRegistry] Clearing all squads (count=" + _squads.Count + ")");
+
             // Clear member references before clearing squads
             for (int i = 0; i < _squads.Count; i++)
             {

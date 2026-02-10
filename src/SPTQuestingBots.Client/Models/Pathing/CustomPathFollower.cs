@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 using UnityEngine;
 
 namespace SPTQuestingBots.Models.Pathing;
@@ -97,6 +98,7 @@ public class CustomPathFollower
 
         if (corners == null || corners.Length == 0)
         {
+            LoggingController.LogWarning("[CustomPathFollower] SetPath called with null/empty corners");
             _corners = null;
             _status = PathFollowerStatus.Failed;
             return;
@@ -105,6 +107,7 @@ public class CustomPathFollower
         _corners = corners;
         _currentCorner = 0;
         _status = PathFollowerStatus.Following;
+        LoggingController.LogInfo("[CustomPathFollower] Path started: " + corners.Length + " corners");
     }
 
     /// <summary>
@@ -192,7 +195,9 @@ public class CustomPathFollower
         if (!canSeeNextCorner)
             return false;
 
+        int skippedIndex = _currentCorner;
         AdvanceCorner();
+        LoggingController.LogDebug("[CustomPathFollower] Corner cut: skipped corner " + skippedIndex + " via NavMesh.Raycast");
         return true;
     }
 
@@ -333,6 +338,7 @@ public class CustomPathFollower
             // Check if we've reached the current corner
             if (HasReachedCorner(position, isSprinting))
             {
+                LoggingController.LogDebug("[CustomPathFollower] Corner " + _currentCorner + "/" + _corners.Length + " reached");
                 AdvanceCorner();
             }
         }
@@ -344,6 +350,7 @@ public class CustomPathFollower
                 // Path doesn't reach the target — needs retry
                 if (IncrementRetry())
                 {
+                    LoggingController.LogWarning("[CustomPathFollower] Path failed: retries exhausted (" + _retryCount + ")");
                     _status = PathFollowerStatus.Failed;
                     return _status;
                 }
@@ -353,6 +360,7 @@ public class CustomPathFollower
 
             if (HasReachedDestination(position))
             {
+                LoggingController.LogInfo("[CustomPathFollower] Path completed: destination reached");
                 _status = PathFollowerStatus.Reached;
                 return _status;
             }

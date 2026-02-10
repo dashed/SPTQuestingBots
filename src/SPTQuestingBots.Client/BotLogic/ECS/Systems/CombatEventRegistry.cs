@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.Systems
 {
@@ -35,6 +36,7 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
             _events = new CombatEvent[_capacity];
             _head = 0;
             _count = 0;
+            LoggingController.LogInfo("[CombatEventRegistry] Initialized with capacity=" + _capacity);
         }
 
         /// <summary>
@@ -48,6 +50,22 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
             _head = (_head + 1) % _capacity;
             if (_count < _capacity)
                 _count++;
+            LoggingController.LogInfo(
+                "[CombatEventRegistry] Recorded type="
+                    + evt.Type
+                    + " event at ("
+                    + evt.X.ToString("F0")
+                    + ","
+                    + evt.Y.ToString("F0")
+                    + ","
+                    + evt.Z.ToString("F0")
+                    + "), power="
+                    + evt.Power.ToString("F0")
+                    + " isBoss="
+                    + evt.IsBoss
+                    + " count="
+                    + _count
+            );
         }
 
         /// <summary>
@@ -181,6 +199,7 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
         /// </summary>
         public static void CleanupExpired(float currentTime, float maxAge)
         {
+            int expiredCount = 0;
             for (int i = 0; i < _count; i++)
             {
                 int idx = (_head - 1 - i + _capacity * 2) % _capacity;
@@ -188,7 +207,14 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
                 if (evt.IsActive && currentTime - evt.Time > maxAge)
                 {
                     evt.IsActive = false;
+                    expiredCount++;
                 }
+            }
+            if (expiredCount > 0)
+            {
+                LoggingController.LogDebug(
+                    "[CombatEventRegistry] Cleaned up " + expiredCount + " expired events, maxAge=" + maxAge.ToString("F0") + "s"
+                );
             }
         }
 
@@ -220,6 +246,7 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
         /// </summary>
         public static void Clear()
         {
+            LoggingController.LogInfo("[CombatEventRegistry] Clearing all events, count=" + _count);
             for (int i = 0; i < _capacity; i++)
             {
                 _events[i] = default;

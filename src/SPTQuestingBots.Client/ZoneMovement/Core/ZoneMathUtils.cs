@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using SPTQuestingBots.Controllers;
 using UnityEngine;
 
 namespace SPTQuestingBots.ZoneMovement.Core;
@@ -117,6 +118,12 @@ public static class ZoneMathUtils
     /// <returns>The average position across all input points.</returns>
     public static Vector3 ComputeCentroid(List<Vector3> positions)
     {
+        if (positions == null || positions.Count == 0)
+        {
+            LoggingController.LogError("[ZoneMathUtils] ComputeCentroid called with null or empty positions list");
+            return default;
+        }
+
         float x = 0,
             y = 0,
             z = 0;

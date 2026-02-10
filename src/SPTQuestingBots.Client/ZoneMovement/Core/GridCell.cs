@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using SPTQuestingBots.Controllers;
 using UnityEngine;
 
 namespace SPTQuestingBots.ZoneMovement.Core;
@@ -80,6 +81,18 @@ public sealed class GridCell
     public void AddPoi(PointOfInterest poi)
     {
         pois.Add(poi);
+        LoggingController.LogDebug(
+            "[GridCell] ("
+                + Col
+                + ","
+                + Row
+                + ") registered POI category="
+                + poi.Category
+                + " weight="
+                + poi.Weight.ToString("F1")
+                + " total="
+                + pois.Count
+        );
     }
 
     /// <summary>

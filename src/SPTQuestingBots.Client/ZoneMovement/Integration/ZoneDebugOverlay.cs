@@ -48,6 +48,7 @@ public class ZoneDebugOverlay : MonoBehaviour
     protected void Awake()
     {
         gridManager = GetComponent<WorldGridManager>();
+        LoggingController.LogInfo("[ZoneDebugOverlay] Awake, gridManager=" + (gridManager != null));
     }
 
     protected void OnGUI()

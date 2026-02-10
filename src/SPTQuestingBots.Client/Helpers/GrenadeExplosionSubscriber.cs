@@ -26,12 +26,13 @@ namespace SPTQuestingBots.Helpers
 
             if (!Singleton<BotEventHandler>.Instantiated)
             {
-                LoggingController.LogWarning("GrenadeExplosionSubscriber: BotEventHandler not instantiated, cannot subscribe");
+                LoggingController.LogWarning("[GrenadeExplosionSubscriber] BotEventHandler not instantiated, cannot subscribe");
                 return;
             }
 
             Singleton<BotEventHandler>.Instance.OnGrenadeExplosive += OnGrenadeExplosion;
             _subscribed = true;
+            LoggingController.LogInfo("[GrenadeExplosionSubscriber] Subscribed to grenade explosions");
         }
 
         /// <summary>
@@ -48,6 +49,7 @@ namespace SPTQuestingBots.Helpers
             }
 
             _subscribed = false;
+            LoggingController.LogInfo("[GrenadeExplosionSubscriber] Unsubscribed from grenade explosions");
         }
 
         /// <summary>
@@ -68,8 +70,29 @@ namespace SPTQuestingBots.Helpers
         )
         {
             if (isSmoke)
+            {
+                LoggingController.LogDebug(
+                    "[GrenadeExplosionSubscriber] Smoke grenade at ("
+                        + explosionPosition.x.ToString("F0")
+                        + ","
+                        + explosionPosition.y.ToString("F0")
+                        + ","
+                        + explosionPosition.z.ToString("F0")
+                        + "), skipping"
+                );
                 return;
+            }
 
+            LoggingController.LogInfo(
+                "[GrenadeExplosionSubscriber] Explosion at ("
+                    + explosionPosition.x.ToString("F0")
+                    + ","
+                    + explosionPosition.y.ToString("F0")
+                    + ","
+                    + explosionPosition.z.ToString("F0")
+                    + ") by "
+                    + playerProfileID
+            );
             CombatEventRegistry.RecordEvent(
                 new CombatEvent
                 {

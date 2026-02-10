@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using SPTQuestingBots.Controllers;
 using UnityEngine;
 
 namespace SPTQuestingBots.ZoneMovement.Core;
@@ -92,6 +93,10 @@ public sealed class WorldGrid
         }
 
         LinkNeighbors();
+        int cellCount = Cols * Rows;
+        LoggingController.LogInfo(
+            "[WorldGrid] Created grid: " + Cols + "x" + Rows + " = " + cellCount + " cells, cellSize=" + CellSize.ToString("F1") + "m"
+        );
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using Comfort.Common;
 using EFT;
+using SPTQuestingBots.Controllers;
 using UnityEngine;
 
 namespace SPTQuestingBots.Helpers
@@ -41,11 +42,17 @@ namespace SPTQuestingBots.Helpers
 
             var botGame = Singleton<IBotGame>.Instance;
             if (botGame == null)
+            {
+                LoggingController.LogWarning("[BsgCoverPointCollector] IBotGame instance is null");
                 return 0;
+            }
 
             var coversData = botGame.BotsController?.CoversData;
             if (coversData == null)
+            {
+                LoggingController.LogWarning("[BsgCoverPointCollector] CoversData is null");
                 return 0;
+            }
 
             var objective = new Vector3(objX, objY, objZ);
             var voxelIndex = coversData.GetIndexes(objective);
@@ -54,7 +61,12 @@ namespace SPTQuestingBots.Helpers
             var voxels = coversData.GetVoxelesExtended(voxelIndex.x, voxelIndex.y, voxelIndex.z, searchRange, true);
 
             if (voxels == null || voxels.Count == 0)
+            {
+                LoggingController.LogDebug(
+                    "[BsgCoverPointCollector] No voxels found near (" + objX + ", " + objZ + ") with radius=" + radius
+                );
                 return 0;
+            }
 
             // Phobos uses 0.75 * radius as inner filter radius
             float innerRadius = 0.75f * radius;
@@ -110,6 +122,19 @@ namespace SPTQuestingBots.Helpers
                 }
             }
 
+            LoggingController.LogDebug(
+                "[BsgCoverPointCollector] Collected "
+                    + count
+                    + " cover positions near ("
+                    + objX
+                    + ", "
+                    + objZ
+                    + ") (max="
+                    + maxCount
+                    + ", radius="
+                    + radius
+                    + ")"
+            );
             return count;
         }
     }

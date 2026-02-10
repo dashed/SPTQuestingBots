@@ -1,3 +1,5 @@
+using SPTQuestingBots.Controllers;
+
 namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
 {
     /// <summary>
@@ -11,6 +13,7 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
 
         public static UtilityTaskManager Create()
         {
+            LoggingController.LogDebug("[SquadTaskFactory] Creating squad task manager with " + TaskCount + " tasks");
             return new UtilityTaskManager(new UtilityTask[] { new Tasks.GoToTacticalPositionTask(), new Tasks.HoldTacticalPositionTask() });
         }
     }

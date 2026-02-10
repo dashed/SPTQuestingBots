@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.Systems
 {
@@ -21,11 +22,16 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static byte ComputeTier(float sqrDistToNearestHuman, float reducedThresholdSqr, float minimalThresholdSqr)
         {
+            byte tier;
             if (sqrDistToNearestHuman >= minimalThresholdSqr)
-                return TierMinimal;
-            if (sqrDistToNearestHuman >= reducedThresholdSqr)
-                return TierReduced;
-            return TierFull;
+                tier = TierMinimal;
+            else if (sqrDistToNearestHuman >= reducedThresholdSqr)
+                tier = TierReduced;
+            else
+                tier = TierFull;
+
+            LoggingController.LogDebug("[BotLodCalculator] ComputeTier: tier=" + tier + " (sqrDist=" + sqrDistToNearestHuman + ")");
+            return tier;
         }
 
         /// <summary>

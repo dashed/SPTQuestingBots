@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS
 {
@@ -145,6 +146,10 @@ namespace SPTQuestingBots.BotLogic.ECS
             Objective = new SquadObjective();
             StrategyScores = new float[strategyCount];
             TargetMembersCount = targetMembers;
+
+            LoggingController.LogInfo(
+                "[SquadEntity] Created squad " + id + " (strategySlots=" + strategyCount + ", targetMembers=" + targetMembers + ")"
+            );
         }
 
         // ── Equality ────────────────────────────────────────────────

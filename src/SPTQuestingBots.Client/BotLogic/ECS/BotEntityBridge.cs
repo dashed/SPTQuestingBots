@@ -107,6 +107,19 @@ namespace SPTQuestingBots.BotLogic.ECS
             // Phase 8: create empty job assignment list
             _jobAssignments[entity.Id] = new List<BotJobAssignment>();
 
+            LoggingController.LogInfo(
+                "[BotEntityBridge] Registered entity "
+                    + entity.Id
+                    + " for bot "
+                    + bot.GetText()
+                    + " (type="
+                    + controllerBotType
+                    + ", bsgId="
+                    + bot.Id
+                    + ", count="
+                    + _ownerToEntity.Count
+                    + ")"
+            );
             return entity;
         }
 
@@ -139,11 +152,13 @@ namespace SPTQuestingBots.BotLogic.ECS
         {
             if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
             {
+                LoggingController.LogInfo("[BotEntityBridge] Deactivating entity " + entity.Id + " for bot " + bot.GetText());
                 entity.IsActive = false;
 
                 // Release loot claims on deactivation (death/despawn)
                 if (entity.HasLootTarget)
                 {
+                    LoggingController.LogDebug("[BotEntityBridge] Releasing loot claims for deactivated entity " + entity.Id);
                     _lootClaims.ReleaseAll(entity.Id);
                     entity.HasLootTarget = false;
                     entity.IsLooting = false;
@@ -188,6 +203,17 @@ namespace SPTQuestingBots.BotLogic.ECS
                 && _ownerToEntity.TryGetValue(boss, out var bossEntity)
             )
             {
+                LoggingController.LogDebug(
+                    "[BotEntityBridge] Syncing boss-follower: "
+                        + bot.GetText()
+                        + " (entity "
+                        + followerEntity.Id
+                        + ") -> boss "
+                        + boss.GetText()
+                        + " (entity "
+                        + bossEntity.Id
+                        + ")"
+                );
                 HiveMindSystem.AssignBoss(followerEntity, bossEntity);
             }
         }
@@ -199,6 +225,7 @@ namespace SPTQuestingBots.BotLogic.ECS
         {
             if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
             {
+                LoggingController.LogInfo("[BotEntityBridge] Separating " + bot.GetText() + " (entity " + entity.Id + ") from group");
                 HiveMindSystem.SeparateFromGroup(entity);
             }
         }
@@ -488,10 +515,16 @@ namespace SPTQuestingBots.BotLogic.ECS
         public static SquadEntity RegisterSquad(BotEntity boss, int bsgGroupId)
         {
             if (boss == null)
+            {
+                LoggingController.LogWarning("[BotEntityBridge] RegisterSquad called with null boss");
                 return null;
+            }
             var squad = _squadRegistry.GetOrCreate(bsgGroupId, 1, 6); // 1 strategy for now
             if (squad.Leader == null)
+            {
                 _squadRegistry.AddMember(squad, boss);
+                LoggingController.LogInfo("[BotEntityBridge] Registered squad for group " + bsgGroupId + " with leader entity " + boss.Id);
+            }
             return squad;
         }
 
@@ -503,6 +536,15 @@ namespace SPTQuestingBots.BotLogic.ECS
             if (follower == null || boss == null || boss.Squad == null)
                 return;
             _squadRegistry.AddMember(boss.Squad, follower);
+            LoggingController.LogDebug(
+                "[BotEntityBridge] Added entity "
+                    + follower.Id
+                    + " to squad of boss entity "
+                    + boss.Id
+                    + " (members="
+                    + boss.Squad.Members.Count
+                    + ")"
+            );
         }
 
         /// <summary>
@@ -512,6 +554,7 @@ namespace SPTQuestingBots.BotLogic.ECS
         {
             if (member == null || member.Squad == null)
                 return;
+            LoggingController.LogDebug("[BotEntityBridge] Removing entity " + member.Id + " from squad");
             _squadRegistry.RemoveMember(member.Squad, member);
         }
 
@@ -562,6 +605,17 @@ namespace SPTQuestingBots.BotLogic.ECS
                 if (!obj.HasObjective || obj.ObjectiveX != pos.x || obj.ObjectiveY != pos.y || obj.ObjectiveZ != pos.z)
                 {
                     obj.SetObjective(pos.x, pos.y, pos.z);
+                    LoggingController.LogDebug(
+                        "[BotEntityBridge] Squad objective updated for entity "
+                            + entity.Id
+                            + " to ("
+                            + pos.x.ToString("F1")
+                            + ", "
+                            + pos.y.ToString("F1")
+                            + ", "
+                            + pos.z.ToString("F1")
+                            + ")"
+                    );
                 }
             }
         }
@@ -571,6 +625,8 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// </summary>
         public static void Clear()
         {
+            int entityCount = _ownerToEntity.Count;
+            LoggingController.LogInfo("[BotEntityBridge] Clearing all entity data (count=" + entityCount + ")");
             _ownerToEntity.Clear();
             _entityToOwner.Clear();
             _profileIdToEntity.Clear();
@@ -655,11 +711,24 @@ namespace SPTQuestingBots.BotLogic.ECS
             if (objectiveManager == null)
                 return;
 
+            int previousAction = entity.CurrentQuestAction;
             entity.CurrentQuestAction = (int)objectiveManager.CurrentQuestAction;
             entity.DistanceToObjective = objectiveManager.DistanceToObjective;
             entity.IsCloseToObjective = objectiveManager.IsCloseToObjective();
             entity.MustUnlockDoor = objectiveManager.MustUnlockDoor;
             entity.HasActiveObjective = objectiveManager.IsJobAssignmentActive;
+
+            if (previousAction != entity.CurrentQuestAction)
+            {
+                LoggingController.LogDebug(
+                    "[BotEntityBridge] Entity "
+                        + entity.Id
+                        + " quest action changed from "
+                        + previousAction
+                        + " to "
+                        + entity.CurrentQuestAction
+                );
+            }
 
             // Sync inventory space for loot scoring
             try
@@ -693,6 +762,7 @@ namespace SPTQuestingBots.BotLogic.ECS
             if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
             {
                 entity.Movement.IsCustomMoverActive = true;
+                LoggingController.LogDebug("[BotEntityBridge] Activated custom mover for entity " + entity.Id);
             }
         }
 
@@ -704,6 +774,7 @@ namespace SPTQuestingBots.BotLogic.ECS
         {
             if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
             {
+                LoggingController.LogDebug("[BotEntityBridge] Deactivating custom mover for entity " + entity.Id);
                 entity.Movement.Reset();
             }
         }
@@ -756,11 +827,13 @@ namespace SPTQuestingBots.BotLogic.ECS
                 {
                     list = new List<BotJobAssignment>();
                     _jobAssignments[entity.Id] = list;
+                    LoggingController.LogDebug("[BotEntityBridge] Created job assignment list for entity " + entity.Id);
                 }
 
                 return list;
             }
 
+            LoggingController.LogWarning("[BotEntityBridge] EnsureJobAssignments called for unknown profileId");
             return _emptyAssignments;
         }
 
@@ -792,7 +865,12 @@ namespace SPTQuestingBots.BotLogic.ECS
         public static void IncrementConsecutiveFailedAssignments(BotOwner bot)
         {
             if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
+            {
                 entity.ConsecutiveFailedAssignments++;
+                LoggingController.LogDebug(
+                    "[BotEntityBridge] Entity " + entity.Id + " consecutive failed assignments: " + entity.ConsecutiveFailedAssignments
+                );
+            }
         }
 
         /// <summary>
@@ -860,11 +938,13 @@ namespace SPTQuestingBots.BotLogic.ECS
                 {
                     var slot = player.Equipment.GetSlot(EFT.InventoryLogic.EquipmentSlot.Earpiece);
                     entity.HasEarPiece = slot?.ContainedItem != null;
+                    LoggingController.LogDebug("[BotEntityBridge] Entity " + entity.Id + " earpiece=" + entity.HasEarPiece);
                 }
             }
             catch
             {
                 entity.HasEarPiece = false;
+                LoggingController.LogWarning("[BotEntityBridge] Failed to sync earpiece for entity " + entity.Id);
             }
         }
 
@@ -878,6 +958,7 @@ namespace SPTQuestingBots.BotLogic.ECS
         {
             if (squad == null || squad.Members.Count == 0)
                 return;
+            LoggingController.LogDebug("[BotEntityBridge] Computing squad personality for " + squad.Members.Count + " members");
             int count = Math.Min(squad.Members.Count, _personalityBuffer.Length);
             for (int i = 0; i < count; i++)
                 _personalityBuffer[i] = squad.Members[i].BotType;
@@ -949,6 +1030,17 @@ namespace SPTQuestingBots.BotLogic.ECS
             entity.LootTargetValue = value;
 
             _lootClaims.TryClaim(entity.Id, lootId);
+            LoggingController.LogDebug(
+                "[BotEntityBridge] Set loot target for entity "
+                    + entity.Id
+                    + " (lootId="
+                    + lootId
+                    + ", value="
+                    + value
+                    + ", type="
+                    + type
+                    + ")"
+            );
         }
 
         /// <summary>
@@ -961,6 +1053,9 @@ namespace SPTQuestingBots.BotLogic.ECS
 
             if (entity.HasLootTarget)
             {
+                LoggingController.LogDebug(
+                    "[BotEntityBridge] Clearing loot target for entity " + entity.Id + " (lootId=" + entity.LootTargetId + ")"
+                );
                 _lootClaims.Release(entity.Id, entity.LootTargetId);
             }
 
@@ -982,6 +1077,7 @@ namespace SPTQuestingBots.BotLogic.ECS
         {
             if (_ownerToEntity.TryGetValue(bot, out var entity))
             {
+                LoggingController.LogDebug("[BotEntityBridge] Releasing all loot claims for entity " + entity.Id);
                 _lootClaims.ReleaseAll(entity.Id);
                 entity.HasLootTarget = false;
                 entity.IsLooting = false;

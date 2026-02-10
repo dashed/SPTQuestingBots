@@ -1,3 +1,5 @@
+using SPTQuestingBots.Controllers;
+
 namespace SPTQuestingBots.BotLogic.ECS
 {
     /// <summary>
@@ -21,19 +23,35 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// </summary>
         public static SquadPersonalitySettings ForType(SquadPersonalityType type)
         {
+            SquadPersonalitySettings settings;
             switch (type)
             {
                 case SquadPersonalityType.Elite:
-                    return new SquadPersonalitySettings(5f, 4f);
+                    settings = new SquadPersonalitySettings(5f, 4f);
+                    break;
                 case SquadPersonalityType.GigaChads:
-                    return new SquadPersonalitySettings(4f, 5f);
+                    settings = new SquadPersonalitySettings(4f, 5f);
+                    break;
                 case SquadPersonalityType.Rats:
-                    return new SquadPersonalitySettings(2f, 1f);
+                    settings = new SquadPersonalitySettings(2f, 1f);
+                    break;
                 case SquadPersonalityType.TimmyTeam6:
-                    return new SquadPersonalitySettings(1f, 2f);
+                    settings = new SquadPersonalitySettings(1f, 2f);
+                    break;
                 default:
-                    return new SquadPersonalitySettings(3f, 3f);
+                    settings = new SquadPersonalitySettings(3f, 3f);
+                    break;
             }
+
+            LoggingController.LogDebug(
+                "[SquadPersonalitySettings] Type="
+                    + type
+                    + " -> coordination="
+                    + settings.CoordinationLevel
+                    + ", aggression="
+                    + settings.AggressionLevel
+            );
+            return settings;
         }
 
         /// <summary>

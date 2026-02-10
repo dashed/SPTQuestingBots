@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using SPTQuestingBots.Controllers;
 using UnityEngine;
 
 namespace SPTQuestingBots.Models.Pathing;
@@ -58,7 +59,11 @@ public static class PathDeviationForce
         float cz = sz + t * dz;
 
         // Deviation: from bot toward closest point
-        return new Vector3(cx - bx, 0f, cz - bz);
+        Vector3 deviation = new Vector3(cx - bx, 0f, cz - bz);
+        LoggingController.LogDebug(
+            "[PathDeviationForce] deviation=(" + deviation.x.ToString("F2") + ", " + deviation.z.ToString("F2") + ") t=" + t.ToString("F2")
+        );
+        return deviation;
     }
 
     /// <summary>

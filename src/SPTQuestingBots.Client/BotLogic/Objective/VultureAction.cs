@@ -45,6 +45,17 @@ namespace SPTQuestingBots.BotLogic.Objective
                 _targetPosition = new Vector3(entity.NearbyEventX, entity.NearbyEventY, entity.NearbyEventZ);
                 _hasTarget = true;
                 entity.VulturePhase = VulturePhase.Approach;
+                LoggingController.LogInfo(
+                    "[VultureAction] Bot "
+                        + BotOwner.GetText()
+                        + ": started vulture approach to ("
+                        + _targetPosition.x.ToString("F0")
+                        + ","
+                        + _targetPosition.y.ToString("F0")
+                        + ","
+                        + _targetPosition.z.ToString("F0")
+                        + ")"
+                );
 
                 var config = ConfigController.Config?.Questing?.Vulture;
                 if (config != null)
@@ -83,6 +94,7 @@ namespace SPTQuestingBots.BotLogic.Objective
             else
             {
                 _hasTarget = false;
+                LoggingController.LogWarning("[VultureAction] Bot " + BotOwner.GetText() + ": no target event found on Start()");
             }
         }
 
@@ -92,6 +104,9 @@ namespace SPTQuestingBots.BotLogic.Objective
 
             if (BotEntityBridge.TryGetEntity(BotOwner, out var entity))
             {
+                LoggingController.LogInfo(
+                    "[VultureAction] Bot " + BotOwner.GetText() + ": stopped, phase " + entity.VulturePhase + " -> Complete"
+                );
                 entity.VulturePhase = VulturePhase.Complete;
             }
         }
@@ -135,6 +150,9 @@ namespace SPTQuestingBots.BotLogic.Objective
             float elapsedSeconds = (float)_phaseTimer.ElapsedMilliseconds / 1000f;
             if (elapsedSeconds > _movementTimeout)
             {
+                LoggingController.LogInfo(
+                    "[VultureAction] Bot " + BotOwner.GetText() + ": movement timeout after " + elapsedSeconds.ToString("F1") + "s"
+                );
                 CompleteVulture();
                 return;
             }
@@ -169,11 +187,20 @@ namespace SPTQuestingBots.BotLogic.Objective
             // Transition to silent approach when close enough
             if (_enableSilentApproach && distSqr < _silentApproachDistance * _silentApproachDistance)
             {
+                float dist = (float)System.Math.Sqrt(distSqr);
+                LoggingController.LogInfo(
+                    "[VultureAction] Bot "
+                        + BotOwner.GetText()
+                        + ": phase Approach -> SilentApproach at distance "
+                        + dist.ToString("F0")
+                        + "m"
+                );
                 entity.VulturePhase = VulturePhase.SilentApproach;
                 CanSprint = false;
 
                 if (_enableFlashlightDiscipline)
                 {
+                    LoggingController.LogDebug("[VultureAction] Bot " + BotOwner.GetText() + ": flashlight off for silent approach");
                     BotOwner.BotLight.TurnOff(false, true);
                 }
 
@@ -186,6 +213,7 @@ namespace SPTQuestingBots.BotLogic.Objective
 
             if (checkIfBotIsStuck())
             {
+                LoggingController.LogInfo("[VultureAction] Bot " + BotOwner.GetText() + ": stuck during Approach, completing");
                 CompleteVulture();
             }
         }
@@ -198,6 +226,14 @@ namespace SPTQuestingBots.BotLogic.Objective
             // Transition to hold ambush when at ambush distance
             if (distSqr < _ambushDistanceMaxSqr)
             {
+                float dist = (float)System.Math.Sqrt(distSqr);
+                LoggingController.LogInfo(
+                    "[VultureAction] Bot "
+                        + BotOwner.GetText()
+                        + ": phase SilentApproach -> HoldAmbush at distance "
+                        + dist.ToString("F0")
+                        + "m"
+                );
                 entity.VulturePhase = VulturePhase.HoldAmbush;
                 _phaseTimer.Restart();
                 return;
@@ -209,6 +245,7 @@ namespace SPTQuestingBots.BotLogic.Objective
 
             if (checkIfBotIsStuck())
             {
+                LoggingController.LogInfo("[VultureAction] Bot " + BotOwner.GetText() + ": stuck during SilentApproach, completing");
                 CompleteVulture();
             }
         }
@@ -220,6 +257,13 @@ namespace SPTQuestingBots.BotLogic.Objective
             // Paranoia: look around periodically
             if (_enableParanoia && Time.time > _nextParanoiaTime)
             {
+                LoggingController.LogDebug(
+                    "[VultureAction] Bot "
+                        + BotOwner.GetText()
+                        + ": paranoia lookback triggered at "
+                        + elapsed.ToString("F1")
+                        + "s into ambush"
+                );
                 entity.VulturePhase = VulturePhase.Paranoia;
                 _nextParanoiaTime =
                     Time.time
@@ -234,6 +278,13 @@ namespace SPTQuestingBots.BotLogic.Objective
             // Ambush duration expired → rush in
             if (elapsed > _ambushDuration)
             {
+                LoggingController.LogInfo(
+                    "[VultureAction] Bot "
+                        + BotOwner.GetText()
+                        + ": phase HoldAmbush -> Rush (ambush duration "
+                        + _ambushDuration.ToString("F0")
+                        + "s expired)"
+                );
                 entity.VulturePhase = VulturePhase.Rush;
                 _phaseTimer.Restart();
             }
@@ -241,6 +292,13 @@ namespace SPTQuestingBots.BotLogic.Objective
             // If silence detected (no recent events), rush in early
             if (elapsed > _silenceTriggerDuration && entity.CombatIntensity == 0)
             {
+                LoggingController.LogInfo(
+                    "[VultureAction] Bot "
+                        + BotOwner.GetText()
+                        + ": phase HoldAmbush -> Rush (silence detected after "
+                        + elapsed.ToString("F1")
+                        + "s)"
+                );
                 entity.VulturePhase = VulturePhase.Rush;
                 _phaseTimer.Restart();
             }
@@ -266,6 +324,14 @@ namespace SPTQuestingBots.BotLogic.Objective
             // Arrived at target
             if (distSqr < _ambushDistanceMinSqr)
             {
+                float dist = (float)System.Math.Sqrt(distSqr);
+                LoggingController.LogInfo(
+                    "[VultureAction] Bot "
+                        + BotOwner.GetText()
+                        + ": arrived at target during Rush at "
+                        + dist.ToString("F0")
+                        + "m, completing"
+                );
                 CompleteVulture();
                 return;
             }
@@ -275,6 +341,7 @@ namespace SPTQuestingBots.BotLogic.Objective
 
             if (checkIfBotIsStuck())
             {
+                LoggingController.LogInfo("[VultureAction] Bot " + BotOwner.GetText() + ": stuck during Rush, completing");
                 CompleteVulture();
             }
         }
@@ -291,6 +358,9 @@ namespace SPTQuestingBots.BotLogic.Objective
         {
             if (BotEntityBridge.TryGetEntity(BotOwner, out var entity))
             {
+                LoggingController.LogInfo(
+                    "[VultureAction] Bot " + BotOwner.GetText() + ": vulture completed from phase " + entity.VulturePhase
+                );
                 entity.VulturePhase = VulturePhase.Complete;
                 entity.HasNearbyEvent = false;
             }

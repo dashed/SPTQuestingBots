@@ -30,6 +30,9 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("allow_zero_distance_sleeping")]
         public bool AllowZeroDistanceSleeping { get; set; } = false;
 
+        [JsonProperty("dedicated_log_file")]
+        public bool DedicatedLogFile { get; set; } = true;
+
         public DebugConfig() { }
     }
 }

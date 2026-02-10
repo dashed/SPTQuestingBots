@@ -1,5 +1,6 @@
 using System;
 using SPTQuestingBots.BotLogic.ECS.Systems;
+using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
 {
@@ -33,11 +34,22 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                 return 0f;
 
             if (leader.VulturePhase == VulturePhase.None || leader.VulturePhase == VulturePhase.Complete)
+            {
+                LoggingController.LogDebug(
+                    "[VultureSquadStrategy] Squad leader phase=" + (leader?.VulturePhase.ToString() ?? "null") + ", score=0"
+                );
                 return 0f;
+            }
 
             if (!leader.HasNearbyEvent)
+            {
+                LoggingController.LogDebug("[VultureSquadStrategy] Squad leader has no nearby event, score=0");
                 return 0f;
+            }
 
+            LoggingController.LogDebug(
+                "[VultureSquadStrategy] Squad active, leader phase=" + leader.VulturePhase + " score=" + BaseScore.ToString("F2")
+            );
             return BaseScore;
         }
 
@@ -54,6 +66,16 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
             var leader = squad.Leader;
             if (leader == null || !leader.HasNearbyEvent)
                 return;
+
+            LoggingController.LogDebug(
+                "[VultureSquadStrategy] Updating squad size="
+                    + squad.Size
+                    + " target=("
+                    + leader.NearbyEventX.ToString("F0")
+                    + ","
+                    + leader.NearbyEventZ.ToString("F0")
+                    + ")"
+            );
 
             float targetX = leader.NearbyEventX;
             float targetZ = leader.NearbyEventZ;
@@ -121,6 +143,18 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                 else
                     member.SquadRole = SquadRole.Guard;
 
+                LoggingController.LogDebug(
+                    "[VultureSquadStrategy] Follower "
+                        + member.Id
+                        + ": fan-out pos=("
+                        + posX.ToString("F0")
+                        + ","
+                        + posZ.ToString("F0")
+                        + ") role="
+                        + member.SquadRole
+                        + " offset="
+                        + lateralOffset.ToString("F1")
+                );
                 idx++;
             }
         }
