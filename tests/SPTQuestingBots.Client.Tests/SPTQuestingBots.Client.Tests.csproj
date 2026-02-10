@@ -225,6 +225,10 @@
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/FormationPositionUpdater.cs"
       Link="LinkedSources/ECS/Systems/FormationPositionUpdater.cs"
     />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/FormationSelector.cs"
+      Link="LinkedSources/ECS/Systems/FormationSelector.cs"
+    />
     <!-- Squad strategy: follower tasks -->
     <Compile
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/GoToTacticalPositionTask.cs"

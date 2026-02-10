@@ -1641,11 +1641,20 @@ to the boss's current position and heading.
   `match_speed_distance` (15), `slow_approach_distance` (5),
   `column_spacing` (4), `spread_spacing` (3), `formation_switch_width` (8)
 - **Tests**: 22 FormationSpeedController + 21 FormationPositionUpdater +
-  6 config/wiring = 49 new tests
-
-**Future enhancements:**
-- Spread formation (currently Column only; needs path-width sensor)
-- NavMesh-based path-width detection for automatic Column/Spread switching
+  10 FormationSelector + 6 config/wiring = 59 new tests
+- **NavMeshPathWidthProbe** (`Helpers/NavMeshPathWidthProbe.cs`):
+  Unity-side static class that probes NavMesh laterally (perpendicular
+  to heading) via NavMesh.Raycast to measure available path width.
+  Two raycasts per tick per squad (left + right, max 15m per side).
+- **FormationSelector** (`BotLogic/ECS/Systems/FormationSelector.cs`):
+  Pure-logic static class + `PathWidthProbe` delegate type. Wraps
+  `FormationPositionUpdater.SelectFormation()` with spacing resolution —
+  returns Column + columnSpacing for narrow paths, Spread + spreadSpacing
+  for wide paths. Threshold controlled by `formation_switch_width` config.
+- **Automatic Column/Spread switching**: `updateFormationMovement()` calls
+  `NavMeshPathWidthProbe.MeasureWidth()` each tick, feeds result to
+  `FormationSelector.SelectWithSpacing()` to dynamically choose formation
+  type and spacing based on available lateral space.
 
 ### 12.3 Squad Voice Commands
 

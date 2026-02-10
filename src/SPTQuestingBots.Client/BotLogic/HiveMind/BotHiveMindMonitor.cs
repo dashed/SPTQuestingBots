@@ -374,17 +374,33 @@ namespace SPTQuestingBots.BotLogic.HiveMind
 
                 if (leaderIsEnRoute && followerCount > 0)
                 {
+                    // Probe NavMesh for lateral width to select Column vs Spread
+                    float pathWidth = NavMeshPathWidthProbe.MeasureWidth(
+                        leader.CurrentPositionX,
+                        leader.CurrentPositionY,
+                        leader.CurrentPositionZ,
+                        hx,
+                        hz
+                    );
+                    var formationType = FormationSelector.SelectWithSpacing(
+                        pathWidth,
+                        config.FormationSwitchWidth,
+                        out float spacing,
+                        config.ColumnSpacing,
+                        config.SpreadSpacing
+                    );
+
                     // Compute en-route formation positions
                     int clampedCount = Math.Min(followerCount, ECS.SquadObjective.MaxMembers);
                     FormationPositionUpdater.ComputeFormationPositions(
-                        FormationType.Column,
+                        formationType,
                         leader.CurrentPositionX,
                         leader.CurrentPositionY,
                         leader.CurrentPositionZ,
                         hx,
                         hz,
                         clampedCount,
-                        config.ColumnSpacing,
+                        spacing,
                         _formationPositionBuffer
                     );
 
