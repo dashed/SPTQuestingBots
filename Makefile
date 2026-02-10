@@ -78,8 +78,8 @@ CLIENT_PLUGIN_DIR    := $(DEPLOY_DIR)/BepInEx/plugins/DanW-SPTQuestingBots
 
 .DEFAULT_GOAL := help
 .PHONY: help all ci ci-full restore build build-server build-client \
-	build-tests test test-server test-client deploy clean format format-check \
-	lint lint-fix copy-libs check-libs
+	build-tests test test-server test-client deploy install clean format \
+	format-check lint lint-fix copy-libs check-libs
 
 # ─── Meta ─────────────────────────────────────────────────────────────
 
@@ -177,6 +177,14 @@ deploy: build ## Build and create install layout in build/deploy/
 	@echo "Deploy layout ready at $(DEPLOY_DIR)/"
 	@echo "Copy its contents into your SPT installation root:"
 	@echo "  cp -r $(DEPLOY_DIR)/* \$$(SPT_DIR)/"
+	@echo "Or run: make install"
+
+install: deploy ## Deploy and install to SPT_DIR (wipes old mod files first)
+	@echo "Installing to $(SPT_DIR)..."
+	@rm -rf "$(SPT_DIR)/SPT/user/mods/SPTQuestingBots"
+	@rm -rf "$(SPT_DIR)/BepInEx/plugins/DanW-SPTQuestingBots"
+	@cp -r $(DEPLOY_DIR)/* "$(SPT_DIR)/"
+	@echo "Installed to $(SPT_DIR)/"
 
 # ─── Test ─────────────────────────────────────────────────────────────
 
