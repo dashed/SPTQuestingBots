@@ -52,5 +52,6 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
         public const int UnlockDoor = 11;
         public const int CloseNearbyDoors = 12;
         public const int Loot = 13;
+        public const int Vulture = 14;
     }
 }

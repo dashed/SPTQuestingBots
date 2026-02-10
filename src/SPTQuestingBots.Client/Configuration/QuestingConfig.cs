@@ -78,6 +78,9 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("looting")]
         public LootingConfig Looting { get; set; } = new LootingConfig();
 
+        [JsonProperty("vulture")]
+        public VultureConfig Vulture { get; set; } = new VultureConfig();
+
         public QuestingConfig() { }
     }
 }

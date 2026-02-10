@@ -7,6 +7,86 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Cover point system (3 phases)** — NavMesh position validation + sunflower spiral fallback + BSG voxel integration
+  - `NavMeshPositionValidator`: TrySnap, IsReachable, HasLineOfSight via NavMesh.Raycast
+  - `SunflowerSpiral`: golden-angle Vogel's formula from Phobos for radial candidate generation
+  - `BsgCoverPointCollector`: wraps BSG `CoversData.GetVoxelesExtended()` for voxel-based cover queries
+  - `CoverPositionSource` delegate pattern for swappable cover point providers
+  - Reachability validation via `NavMesh.CalculatePath` + LOS verification via `NavMesh.Raycast`
+- **Formation movement** — coordinated en-route squad movement with speed matching
+  - `FormationSpeedController`: Sprint/Walk/MatchBoss/SlowApproach speed modes
+  - `FormationPositionUpdater`: Column (trail) and Spread (fan) formation computation
+  - `FormationSelector`: Column/Spread selection with `PathWidthProbe` delegate for NavMesh path-width detection
+- **Squad voice commands** — contextual boss callouts, follower responses, and combat warnings
+  - `SquadVoiceHelper`: 14 callout types (`SquadCalloutId`) mapped to BSG `EPhraseTrigger` voice lines
+  - Contextual triggers: objective arrival, follower acknowledgment, combat warnings, loot notifications
+- **Combat-aware tactical positioning** — threat-oriented squad repositioning (pioneering — neither Phobos nor SAIN implement this)
+  - `CombatPositionAdjuster`: `ReassignRolesForCombat()` + `ComputeCombatPositions()` for dynamic role rotation
+  - Version-gated re-evaluation when `CombatVersion` changes on squad entity
+- **Zone movement integration** — follower spread across neighboring grid cells
+  - `ZoneFollowerPositionCalculator`: round-robin cell assignment + golden-angle jitter for spatial diversity
+- **Multi-level objective sharing** — two-tier communication chain with position degradation
+  - Boss→follower objective broadcasting with per-tier accuracy degradation
+  - Comm range gating (earpiece/voice) determines sharing quality
+- **Bot LOD system** — Phobos-style all-active with distance-based update throttling
+  - `BotLodCalculator`: 3-tier LOD (Full/Reduced/Minimal) with configurable distance thresholds and frame skip counts
+  - `HumanPlayerCache`: static SoA cache with zero-allocation per-bot distance queries (once-per-tick snapshot)
+  - BSG StandBy system fully disabled (`CanDoStandBy = false` + `Activate()`)
+  - Config: `questing.bot_lod` with distance thresholds (150m/300m) and skip counts (2/4)
+  - Sleeping retained as opt-in fallback (disabled by default)
+- **Hybrid looting system** — utility AI scoring + dedicated controller with squad coordination
+  - `LootTask`: `QuestUtilityTask` subclass, `BotActionTypeId=Loot(13)`, MaxBaseScore=0.55, hysteresis=0.15
+  - `LootAction`: BigBrain action with state machine (Approach→Interact→Complete/Failed)
+  - `LootScorer`: pure-logic scoring (value/distance/proximity/gear/cooldown), `ItemValueEstimator` with `PriceLookup` delegate
+  - `LootInventoryPlanner`: gear upgrade planning (value+space), `GearComparer` (armor/weapon/container/rig)
+  - `SquadLootCoordinator`: boss priority claims, follower loot windows, shared scan results
+  - `LootClaimRegistry`: multi-bot loot deconfliction with bidirectional Dictionary mapping
+  - Unity helpers: `LootScanHelper` (Physics.OverlapSphereNonAlloc), `LootInteractionHelper`, `ContainerInteractionHelper`, `GearSwapHelper`, `CorpseSearchHelper`
+  - `InventorySpaceHelper`: approximate free grid slots (backpack + tactical vest)
+  - Server: `DiscardLimitsService` (disables BSG discard limits)
+  - LootingBots compat: auto-detect via `ExternalModHandler.IsNativeLootingEnabled()`
+  - Config: `LootingConfig` with 22 JSON properties under `questing.looting`
+  - 10 loot fields on `BotEntity` + shared loot arrays on `SquadEntity`
+  - ~198 new tests (39 scoring + 26 inventory + 8 config + 52 coordination + ~73 other)
+- **Vulture system (ported from Vulture mod)** — combat event detection, multi-phase ambush behavior, squad coordination
+  - `CombatEventRegistry`: global ring buffer (128 slots) for zero-allocation combat event storage with `AggressiveInlining`
+    - Spatial queries: `GetNearestEvent`, `GetIntensity`, `IsInBossZone`, `CleanupExpired`
+    - `CombatEvent` struct with `CombatEventType` byte constants (Gunshot=1, Explosion=2, Airdrop=3)
+  - `CombatEventScanner`: pure-logic system querying `CombatEventRegistry` per `BotEntity` per tick
+    - Writes: `HasNearbyEvent`, `NearbyEventX/Y/Z`, `NearbyEventTime`, `CombatIntensity`, `IsInBossZone`
+  - `VultureTask`: `QuestUtilityTask` subclass, `BotActionTypeId=Vulture(14)`, MaxBaseScore=0.60
+    - Gates: `HasNearbyEvent`, `!IsInCombat`, `!IsInBossZone`, `!cooldown`, `intensity>=CourageThreshold`
+    - Scoring: intensity component (IntensityWeight=0.30) + proximity component (ProximityWeight=0.30)
+  - `VultureAction`: `GoToPositionAbstractAction` with 6-phase state machine
+    - Approach (sprint) → SilentApproach (walk, flashlight off, pose=0.6) → HoldAmbush (paranoia lookback) → Rush (sprint) / Paranoia (random scan) → Complete
+    - Config-driven: 12 tuning parameters from `VultureConfig`
+  - `VultureSquadStrategy`: `SquadStrategy` subclass, BaseScore=0.75
+    - Activates when leader enters vulture phases; fan-out positions perpendicular to approach direction
+    - Roles: outer followers = Flanker, middle = Guard
+  - Event sources: 3 Harmony patches/subscribers
+    - `OnMakingShotPatch`: `Player.OnMakingShot` postfix (filters silenced weapons, tags boss shots)
+    - `GrenadeExplosionSubscriber`: `BotEventHandler.OnGrenadeExplosive` event (filters smoke grenades)
+    - `AirdropLandPatch`: extended to record `CombatEventType.Airdrop` (power=200)
+  - `TimeOfDayHelper`: `GameWorld.GameDateTime` detection range modifier (night=0.65×, dawn/dusk lerp, day=1.0×)
+  - `VultureConfig`: 32 JSON properties under `questing.vulture` in config.json
+  - 9 vulture fields on `BotEntity`: `HasNearbyEvent`, `NearbyEventX/Y/Z/Time`, `CombatIntensity`, `IsInBossZone`, `VultureCooldownUntil`, `VulturePhase`
+  - `VulturePhase` byte constants: None=0, Approach=1, SilentApproach=2, HoldAmbush=3, Rush=4, Paranoia=5, Complete=6
+  - `updateCombatEvents()` added to `BotHiveMindMonitor` as step 6 in tick order
+  - ~91 new tests (28 CombatEventRegistry + 12 CombatEventScanner + 28 VultureTask + 15 VultureSquadStrategy + 8 VultureConfig)
+- Vulture port analysis document (`docs/vulture-port-analysis.md`)
+- Bot looting analysis document (`docs/looting-analysis.md`)
+
+### Changed
+- Utility AI now has 10 scored tasks (was 8): added Loot and Vulture
+- `QuestTaskFactory.TaskCount` updated from 8 to 10
+- `BotHiveMindMonitor.Update()` tick order expanded to 9 steps (was 5 in v1.9.0):
+  1. updateBosses, 2. updateBossFollowers, 3. updatePullSensors, 4. ResetInactiveEntitySensors,
+  5. updateSquadStrategies (+ formations, combat positioning, zone follower spread, voice commands),
+  6. updateCombatEvents (CombatEventRegistry cleanup + CombatEventScanner),
+  7. updateLootScanning, 8. refreshHumanPlayerCache, 9. updateLodTiers
+- 1499 client tests total (was 938), 58 server tests, 1557 total
+
 ## [1.9.0] - 2026-02-09
 
 ### Added

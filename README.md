@@ -57,7 +57,7 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 
 ### Utility AI (Optional)
 - Phobos-style scored task framework for bot action selection — enabled by default via F12 (`Use Utility AI for Action Selection`, default: true)
-- 8 scored tasks replace the `BotObjectiveLayer.trySetNextAction()` enum switch: GoToObjective, Ambush, Snipe, HoldPosition, PlantItem, UnlockDoor, ToggleSwitch, CloseDoors
+- 10 scored tasks replace the `BotObjectiveLayer.trySetNextAction()` enum switch: GoToObjective, Ambush, Snipe, HoldPosition, PlantItem, UnlockDoor, ToggleSwitch, CloseDoors, Loot, Vulture
 - Column-major scoring with additive hysteresis prevents action flip-flopping (identical to Phobos `BaseTaskManager.PickTask`)
 - Two-phase action handoff: GoToObjective scores high when far, drops to 0 when close so the action-specific task takes over
 - Quest state synced from `BotObjectiveManager` to `BotEntity` before each scoring pass — keeps utility tasks pure C# with zero Unity dependencies
@@ -80,6 +80,31 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - Disables physics collision between each bot's colliders and all door colliders on the map
 - Prevents "bot stuck at door" failures that occur with BSG's default door physics
 
+### Hybrid Looting System
+- Utility AI decides WHEN to loot, dedicated controller handles HOW — enabled by default (`questing.looting.enabled`, default: true)
+- `LootScorer`: pure-logic scoring evaluates value, distance, proximity to threats, gear relevance, and cooldown
+- `LootInventoryPlanner`: plans gear upgrades comparing armor class, weapon ergonomics, container sizes, and available inventory space
+- Squad coordination: bosses get priority loot claims, followers receive timed loot windows, scan results are shared within communication range
+- `LootClaimRegistry`: multi-bot loot deconfliction prevents multiple bots targeting the same item
+- `LootAction`: BigBrain action with Approach → Interact → Complete state machine
+- LootingBots compatibility: auto-detects when LootingBots is installed and defers to it
+- All scoring thresholds and timing configurable via `questing.looting` in config.json
+
+### Vulture System (Combat Scavenging)
+- Bots hear gunfire and explosions, then investigate combat zones to ambush weakened survivors — ported from the [Vulture](https://hub.sp-tarkov.com/files/file/2283-vulture/) mod
+- `CombatEventRegistry`: global ring buffer (128 slots) tracking gunshots, explosions, and airdrops with zero-allocation spatial queries
+- Multi-phase behavior state machine:
+  - **Approach**: Sprint toward combat event position
+  - **Silent Approach**: Within 35m — crouch-walk, flashlight off, reduced stance
+  - **Hold Ambush**: At position — paranoia sweeps (random look direction scanning), deep crouch, wait for up to 90s
+  - **Rush**: If gunfire stops — sprint to exact event position to catch weakened survivors
+- Squad vulturing: when a boss enters vulture mode, followers fan out to perpendicular ambush positions
+- Time-of-day modifier: detection range reduced at night (0.65×), interpolated at dawn/dusk
+- Boss avoidance: bots avoid vulturing into areas with active boss combat
+- Courage system: high-intensity firefights (many shots) scare off less aggressive bots
+- Event sources: `Player.OnMakingShot` (gunshots), `BotEventHandler.OnGrenadeExplosive` (explosions), airdrop landings
+- All thresholds configurable via `questing.vulture` in config.json
+
 ### ECS-Lite Data Layout
 - Dense entity storage with swap-remove and ID recycling, inspired by Phobos's EntityArray pattern
 - `BotEntity`: per-bot data container with stable recycled ID, boss/follower hierarchy, embedded sensor state, field state, and job assignment tracking
@@ -91,7 +116,7 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - `QuestScorer`: pure-logic quest scoring with static buffers — replaces 5 dictionary allocations + `OrderBy` in quest selection hot path
 - `BotEntityBridge`: ECS-only integration layer — push sensors write only to ECS, pull sensors iterate dense entity list with zero allocation, boss/follower lifecycle uses O(1) `IsActive` checks, ProfileId→entity mapping for O(1) string lookups
 - Full ECS migration complete (Phases 5A–5F, 6, 8): all old dictionaries (`deadBots`, `botBosses`, `botFollowers`, `sensors`, `botFieldStates`, `botJobAssignments`) and 6 sensor subclasses deleted; ECS is the sole data store for all sensor, sleep, type, boss/follower, zone movement field state, and job assignment data
-- Deterministic tick order (Phase 7C): `BotHiveMindMonitor.Update()` orchestrates all ECS system calls in a fixed 7-step sequence (boss discovery, dead entity cleanup, pull sensors, sensor reset, squad strategies, human player cache refresh, LOD tier computation)
+- Deterministic tick order (Phase 7C): `BotHiveMindMonitor.Update()` orchestrates all ECS system calls in a fixed 9-step sequence (boss discovery, dead entity cleanup, pull sensors, sensor reset, squad strategies, combat events, loot scanning, human player cache refresh, LOD tier computation)
 - Allocation cleanup (Phase 7D): static reusable buffers for `GetFollowers()`/`GetAllGroupMembers()`, O(n) min/max scans replacing Dictionary+LINQ chains, for-loop replacements for LINQ `.Where().ToArray()` patterns
 - Job assignment wiring (Phase 8): `botJobAssignments` dictionary migrated to `BotEntityBridge` keyed by entity ID; `ConsecutiveFailedAssignments` cached as O(1) entity field; `NumberOfActiveBots()` iterates dense entity list
 - `TimePacing` / `FramePacing`: reusable rate-limiter utilities with `[AggressiveInlining]`, inspired by Phobos
@@ -272,7 +297,7 @@ SPTQuestingBots/
 │       │   ├── ECS/                 #   Entity data containers + system methods
 │       │   │   ├── Systems/         #   HiveMindSystem (static dense-list iteration)
 │       │   │   └── UtilityAI/       #   Scored task framework (Phobos-style)
-│       │   │       └── Tasks/       #   8 concrete quest utility tasks
+│       │   │       └── Tasks/       #   10 concrete quest utility tasks
 │       │   ├── BotMonitor/          #   Health, combat, extraction monitors
 │       │   ├── HiveMind/            #   Group coordination sensors
 │       │   ├── Follow/              #   Boss follower behavior
@@ -324,6 +349,8 @@ The mod is configured through `config/config.json` and the BepInEx F12 in-game m
 | `questing.bot_pathing` | Path following: custom mover toggle (`use_custom_mover`), incomplete path retry, start position discrepancy |
 | `questing.bot_lod` | LOD system: enable/disable, reduced/minimal distance thresholds (150m/300m), frame skip counts (2/4) |
 | `questing.zone_movement` | Zone-based movement: grid size, field weights, POI scoring, convergence interval, debug overlay |
+| `questing.looting` | Looting system: enable/disable, scan radius, scoring weights, cooldowns, squad coordination settings |
+| `questing.vulture` | Vulture system: enable/disable, detection range, courage threshold, ambush duration, time-of-day modifiers |
 | `adjust_pscav_chance` | Dynamic player-Scav conversion rates when spawning system is disabled |
 
 ### Custom Quests

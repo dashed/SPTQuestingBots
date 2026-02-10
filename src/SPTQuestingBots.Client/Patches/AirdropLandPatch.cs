@@ -8,6 +8,7 @@ using Comfort.Common;
 using EFT;
 using EFT.SynchronizableObjects;
 using SPT.Reflection.Patching;
+using SPTQuestingBots.BotLogic.ECS.Systems;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -34,6 +35,20 @@ namespace SPTQuestingBots.Patches
 
             Vector3 airdropPosition = ___airdropSynchronizableObject_0.transform.position;
             Singleton<GameWorld>.Instance.GetComponent<Components.BotQuestBuilder>().AddAirdropChaserQuest(airdropPosition);
+
+            CombatEventRegistry.RecordEvent(
+                new CombatEvent
+                {
+                    X = airdropPosition.x,
+                    Y = airdropPosition.y,
+                    Z = airdropPosition.z,
+                    Time = Time.time,
+                    Power = 200f,
+                    Type = CombatEventType.Airdrop,
+                    IsBoss = false,
+                    IsActive = true,
+                }
+            );
         }
 
         private static void AddNavMeshObstacle(AirdropSynchronizableObject ___airdropSynchronizableObject_0)

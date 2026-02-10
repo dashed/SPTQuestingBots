@@ -38,6 +38,8 @@ namespace SPTQuestingBots.BotLogic.HiveMind
         {
             ECS.BotEntityBridge.Clear();
             HumanPlayerCache.Clear();
+            CombatEventRegistry.Clear();
+            GrenadeExplosionSubscriber.Clear();
             _lastScanTime.Clear();
         }
 
@@ -53,9 +55,10 @@ namespace SPTQuestingBots.BotLogic.HiveMind
         ///   3. updatePullSensors()          — CanQuest + CanSprintToObjective via dense ECS iteration
         ///   4. ResetInactiveEntitySensors() — clear sensor state on dead/despawned entities
         ///   5. updateSquadStrategies()      — squad lifecycle, tactical positions, formations
-        ///   6. updateLootScanning()         — loot target selection + squad coordination
-        ///   7. refreshHumanPlayerCache()    — snapshot human positions for LOD + SleepingLayer
-        ///   8. updateLodTiers()             — compute LOD tier + increment frame counter per entity
+        ///   6. updateCombatEvents()         — cleanup expired events + per-bot combat event queries
+        ///   7. updateLootScanning()         — loot target selection + squad coordination
+        ///   8. refreshHumanPlayerCache()    — snapshot human positions for LOD + SleepingLayer
+        ///   9. updateLodTiers()             — compute LOD tier + increment frame counter per entity
         ///
         /// Push sensors (InCombat, IsSuspicious, WantsToLoot) are event-driven via
         /// <see cref="UpdateValueForBot"/> and do not participate in the tick.
@@ -88,13 +91,16 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             // 5. Update squad strategies (position sync, objective sync, tactical positions)
             updateSquadStrategies();
 
-            // 6. Loot target selection + squad coordination
+            // 6. Cleanup expired combat events + per-bot combat event queries
+            updateCombatEvents();
+
+            // 7. Loot target selection + squad coordination
             updateLootScanning();
 
-            // 7. Refresh human player position cache (used by LOD + SleepingLayer)
+            // 8. Refresh human player position cache (used by LOD + SleepingLayer)
             refreshHumanPlayerCache();
 
-            // 8. Compute LOD tiers for all active entities
+            // 9. Compute LOD tiers for all active entities
             updateLodTiers();
         }
 
@@ -910,11 +916,40 @@ namespace SPTQuestingBots.BotLogic.HiveMind
         /// <summary>Shared scan result buffer. 32 max results per scan pass.</summary>
         private static readonly LootScanResult[] _lootScanResults = new LootScanResult[32];
 
+        /// <summary>
+        /// Tick step 6: Cleanup expired combat events and query per-bot combat state
+        /// for vulture behavior. Writes HasNearbyEvent, CombatIntensity, IsInBossZone
+        /// on each active entity.
+        /// </summary>
+        private static void updateCombatEvents()
+        {
+            var vultureConfig = ConfigController.Config?.Questing?.Vulture;
+            if (vultureConfig == null || !vultureConfig.Enabled)
+                return;
+
+            float currentTime = Time.time;
+
+            // Cleanup expired events once per tick
+            CombatEventRegistry.CleanupExpired(currentTime, vultureConfig.MaxEventAge);
+
+            // Update per-entity combat event fields
+            CombatEventScanner.UpdateEntities(
+                ECS.BotEntityBridge.Registry.Entities,
+                currentTime,
+                vultureConfig.MaxEventAge,
+                vultureConfig.BaseDetectionRange,
+                vultureConfig.BaseDetectionRange,
+                vultureConfig.IntensityWindow,
+                vultureConfig.BossAvoidanceRadius,
+                vultureConfig.BossZoneDecay
+            );
+        }
+
         /// <summary>Per-entity last scan time for rate limiting (using Time.time).</summary>
         private static readonly Dictionary<int, float> _lastScanTime = new Dictionary<int, float>();
 
         /// <summary>
-        /// Tick step 6: For each active bot, scan for loot if the scan interval has elapsed.
+        /// Tick step 7: For each active bot, scan for loot if the scan interval has elapsed.
         /// Uses LootTargetSelector to pick the best target and SquadLootCoordinator for
         /// boss priority claims and follower shared-target picking.
         /// Gated by looting config and LootingBots compat check.

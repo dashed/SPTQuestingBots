@@ -293,6 +293,35 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// <summary>Whether this bot is currently moving toward a loot target.</summary>
         public bool IsApproachingLoot;
 
+        // ── Vulture State ──────────────────────────────────────────────
+
+        /// <summary>Whether a combat event was found nearby during the last HiveMind tick.</summary>
+        public bool HasNearbyEvent;
+
+        /// <summary>Nearest combat event X position.</summary>
+        public float NearbyEventX;
+
+        /// <summary>Nearest combat event Y position.</summary>
+        public float NearbyEventY;
+
+        /// <summary>Nearest combat event Z position.</summary>
+        public float NearbyEventZ;
+
+        /// <summary>Time of the nearest combat event.</summary>
+        public float NearbyEventTime;
+
+        /// <summary>Combat intensity at this bot's position (events within radius in time window).</summary>
+        public int CombatIntensity;
+
+        /// <summary>Whether the bot is within a recent boss activity zone.</summary>
+        public bool IsInBossZone;
+
+        /// <summary>Cooldown time — bot won't consider vulturing until game time exceeds this value.</summary>
+        public float VultureCooldownUntil;
+
+        /// <summary>Current vulture behavior phase. 0=None, see <see cref="Systems.VulturePhase"/>.</summary>
+        public byte VulturePhase;
+
         // ── Constructor ─────────────────────────────────────────
 
         public BotEntity(int id)

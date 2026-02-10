@@ -278,6 +278,37 @@
       Include="../../src/SPTQuestingBots.Client/Configuration/LootingConfig.cs"
       Link="LinkedSources/Configuration/LootingConfig.cs"
     />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Configuration/VultureConfig.cs"
+      Link="LinkedSources/Configuration/VultureConfig.cs"
+    />
+    <!-- Combat event registry: pure C# ring buffer (no Unity/EFT dependencies) -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/CombatEvent.cs"
+      Link="LinkedSources/ECS/Systems/CombatEvent.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/CombatEventRegistry.cs"
+      Link="LinkedSources/ECS/Systems/CombatEventRegistry.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/CombatEventScanner.cs"
+      Link="LinkedSources/ECS/Systems/CombatEventScanner.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/VulturePhase.cs"
+      Link="LinkedSources/ECS/Systems/VulturePhase.cs"
+    />
+    <!-- Vulture task: utility AI scoring -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/VultureTask.cs"
+      Link="LinkedSources/ECS/UtilityAI/Tasks/VultureTask.cs"
+    />
+    <!-- Vulture squad strategy: coordinated ambush positioning -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/VultureSquadStrategy.cs"
+      Link="LinkedSources/ECS/UtilityAI/VultureSquadStrategy.cs"
+    />
     <!-- Loot scoring: value estimation, scoring, claim deconfliction, target selection -->
     <Compile
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/LootScanResult.cs"
