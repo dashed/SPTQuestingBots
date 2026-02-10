@@ -529,5 +529,14 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS
             var entity = new BotEntity(0);
             Assert.AreEqual(0f, entity.PendingCalloutTime);
         }
+
+        // ── Multi-Level Objective Sharing ──────────────────────────
+
+        [Test]
+        public void SharingTier_DefaultsToZero()
+        {
+            var entity = new BotEntity(0);
+            Assert.AreEqual(0, entity.SharingTier);
+        }
     }
 }

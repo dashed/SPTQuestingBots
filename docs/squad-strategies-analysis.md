@@ -1731,11 +1731,35 @@ zone-derived tactical positions instead of simply following:
 - Config: `enable_zone_follower_spread` (true), `zone_jitter_radius` (5.0m)
 - Tests: 11 ZoneFollowerPositionCalculator + 1 SquadEntity + 3 SquadStrategyConfig = 15 new tests
 
-### 12.6 Multi-Level Objective Sharing
+### 12.6 Multi-Level Objective Sharing — **Implemented**
 
-SAIN's probabilistic sharing could be extended to quest objectives:
+Multi-level communication chain for tactical position sharing. Replaces the
+flat binary sharing gate with a two-tier hierarchy:
 
-- Boss shares objective with 1-2 trusted followers
-- Those followers share with their nearest group member
-- Information degrades through the chain (position accuracy decreases)
-- Creates realistic information asymmetry in larger groups
+- **Tier 1 (Direct)**: Closest followers within communication range of the
+  leader (up to `trusted_follower_count`, default: 2) receive exact tactical
+  positions. Selected by proximity — insertion sort on squared distance.
+- **Tier 2 (Relayed)**: Remaining followers receive positions relayed through
+  their nearest Tier 1 member. Communication range check runs against the
+  relay source (not the leader). Positions are degraded with Gaussian noise
+  scaled by coordination level.
+- **Tier 0 (None)**: Followers unreachable through either tier get no position.
+
+**Position degradation formula**:
+- `noiseScale = baseNoise × (6 - CoordinationLevel) / 5`
+- Elite (CoordLevel=5): 1m noise at default base. TimmyTeam6 (CoordLevel=1): 5m noise.
+- Box-Muller Gaussian applied to X and Z; Y unchanged (preserves NavMesh height).
+
+**Implementation**:
+- `ObjectiveSharingCalculator` (`BotLogic/ECS/Systems/`): Pure-logic static class.
+  `AssignTiers()` — proximity-sorted tier assignment with comm range gating via
+  `CommunicationRange.IsInRange()`. `DegradePositions()` — Box-Muller Gaussian
+  noise on Tier 2 X/Z coordinates.
+- `BotEntity.SharingTier`: byte field (0/1/2) set during distribution.
+- `GotoObjectiveStrategy`: Both `AssignNewObjective()` and `RecomputeForCombat()`
+  use multi-level sharing when `EnableObjectiveSharing` is true. Legacy flat
+  probabilistic gate preserved as fallback when disabled.
+- Config: `enable_objective_sharing` (true), `trusted_follower_count` (2),
+  `sharing_noise_base` (5.0m)
+- Tests: 20 ObjectiveSharingCalculator + 10 integration = 30 new tests
+- Neither Phobos nor SAIN implement position degradation — QuestingBots is pioneering

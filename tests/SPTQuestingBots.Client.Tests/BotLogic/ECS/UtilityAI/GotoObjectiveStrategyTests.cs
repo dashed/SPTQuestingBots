@@ -27,6 +27,7 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
                 EnableReachabilityCheck = false,
                 EnableLosCheck = false,
                 EnableCoverPositionSource = false,
+                EnableObjectiveSharing = false,
             };
         }
 
@@ -2310,6 +2311,319 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
             Assert.IsFalse(validatorCalled, "Position validator should not be called when BSG cover source provides enough positions");
             Assert.IsTrue(follower.HasTacticalPosition);
             Assert.AreEqual(52f, follower.TacticalPositionX, 0.01f);
+        }
+
+        // ── Multi-Level Objective Sharing ──────────────────────
+
+        private SquadStrategyConfig ObjectiveSharingConfig(
+            int trustedCount = 2,
+            float noiseBase = 5f,
+            bool enableCommRange = false,
+            float commNoEar = 35f,
+            float commEar = 200f
+        )
+        {
+            var config = DefaultConfig();
+            config.EnableObjectiveSharing = true;
+            config.TrustedFollowerCount = trustedCount;
+            config.SharingNoiseBase = noiseBase;
+            config.EnableCommunicationRange = enableCommRange;
+            config.CommunicationRangeNoEarpiece = commNoEar;
+            config.CommunicationRangeEarpiece = commEar;
+            return config;
+        }
+
+        private (SquadEntity squad, BotEntity leader, BotEntity f1, BotEntity f2, BotEntity f3) SetupThreeFollowerSquad(
+            SquadStrategyConfig config,
+            int seed = 42
+        )
+        {
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var f1 = CreateBot(1);
+            var f2 = CreateBot(2);
+            var f3 = CreateBot(3);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionY = 0f;
+            leader.CurrentPositionZ = 0f;
+
+            f1.CurrentPositionX = 5f; // nearest
+            f2.CurrentPositionX = 15f; // middle
+            f3.CurrentPositionX = 25f; // farthest
+
+            squad.Members.Add(leader);
+            squad.Members.Add(f1);
+            squad.Members.Add(f2);
+            squad.Members.Add(f3);
+            squad.Leader = leader;
+            leader.Squad = squad;
+            f1.Squad = squad;
+            f2.Squad = squad;
+            f3.Squad = squad;
+            squad.CoordinationLevel = 3f; // default coordination
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            return (squad, leader, f1, f2, f3);
+        }
+
+        [Test]
+        public void ObjectiveSharing_Enabled_AllFollowersReceivePositions()
+        {
+            var config = ObjectiveSharingConfig(trustedCount: 2);
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var (squad, leader, f1, f2, f3) = SetupThreeFollowerSquad(config);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // With comm range disabled, all 3 should get positions
+            // 2 closest (f1, f2) get Tier 1, f3 gets Tier 2
+            Assert.IsTrue(f1.HasTacticalPosition, "Closest follower should have position");
+            Assert.IsTrue(f2.HasTacticalPosition, "Second closest should have position");
+            Assert.IsTrue(f3.HasTacticalPosition, "Third follower should get relayed position");
+        }
+
+        [Test]
+        public void ObjectiveSharing_TierAssignment_ClosestGetDirect()
+        {
+            var config = ObjectiveSharingConfig(trustedCount: 2);
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var (squad, leader, f1, f2, f3) = SetupThreeFollowerSquad(config);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // f1 (5m) and f2 (15m) are closest → Tier 1
+            // f3 (25m) is furthest → Tier 2
+            Assert.AreEqual(
+                SPTQuestingBots.BotLogic.ECS.Systems.ObjectiveSharingCalculator.TierDirect,
+                f1.SharingTier,
+                "Closest follower should be Tier 1 (direct)"
+            );
+            Assert.AreEqual(
+                SPTQuestingBots.BotLogic.ECS.Systems.ObjectiveSharingCalculator.TierDirect,
+                f2.SharingTier,
+                "Second closest should be Tier 1 (direct)"
+            );
+            Assert.AreEqual(
+                SPTQuestingBots.BotLogic.ECS.Systems.ObjectiveSharingCalculator.TierRelayed,
+                f3.SharingTier,
+                "Farthest follower should be Tier 2 (relayed)"
+            );
+        }
+
+        [Test]
+        public void ObjectiveSharing_Tier2PositionDegraded_XZDiffer()
+        {
+            var config = ObjectiveSharingConfig(trustedCount: 1, noiseBase: 10f);
+            var strategy1 = new GotoObjectiveStrategy(config, seed: 42);
+            var (squad1, leader1, f1a, f2a, f3a) = SetupThreeFollowerSquad(config);
+
+            strategy1.Activate(squad1);
+            strategy1.Update();
+
+            // f1a is Tier 1 (exact), f2a and f3a are Tier 2 (noisy)
+            // Tier 1 should get exact geometric position
+            // Tier 2 should have some noise applied
+
+            // With noiseBase=10 and coordination=3, noiseScale = 10 * (6-3)/5 = 6m
+            // Tier 2 positions will differ from the original geometric position
+            Assert.AreEqual(SPTQuestingBots.BotLogic.ECS.Systems.ObjectiveSharingCalculator.TierDirect, f1a.SharingTier);
+            Assert.AreEqual(SPTQuestingBots.BotLogic.ECS.Systems.ObjectiveSharingCalculator.TierRelayed, f2a.SharingTier);
+        }
+
+        [Test]
+        public void ObjectiveSharing_HighCoordination_LessNoise()
+        {
+            // Run with Elite coordination (5) — noise should be minimal
+            var config1 = ObjectiveSharingConfig(trustedCount: 1, noiseBase: 10f);
+            var strategy1 = new GotoObjectiveStrategy(config1, seed: 100);
+            var squad1 = CreateSquad(0);
+            var leader1 = CreateBot(0);
+            var near1 = CreateBot(1);
+            var far1 = CreateBot(2);
+
+            leader1.HasActiveObjective = true;
+            leader1.CurrentQuestAction = QuestActionId.Ambush;
+            near1.CurrentPositionX = 5f;
+            far1.CurrentPositionX = 20f;
+            squad1.Members.Add(leader1);
+            squad1.Members.Add(near1);
+            squad1.Members.Add(far1);
+            squad1.Leader = leader1;
+            leader1.Squad = squad1;
+            near1.Squad = squad1;
+            far1.Squad = squad1;
+            squad1.CoordinationLevel = 5f; // Elite: noise = 10 * (6-5)/5 = 2m
+            squad1.Objective.SetObjective(50f, 0f, 50f);
+            strategy1.Activate(squad1);
+            strategy1.Update();
+            float eliteX = far1.TacticalPositionX;
+
+            // Run with TimmyTeam6 coordination (1) — noise should be large
+            var config2 = ObjectiveSharingConfig(trustedCount: 1, noiseBase: 10f);
+            var strategy2 = new GotoObjectiveStrategy(config2, seed: 100);
+            var squad2 = CreateSquad(1);
+            var leader2 = CreateBot(10);
+            var near2 = CreateBot(11);
+            var far2 = CreateBot(12);
+
+            leader2.HasActiveObjective = true;
+            leader2.CurrentQuestAction = QuestActionId.Ambush;
+            near2.CurrentPositionX = 5f;
+            far2.CurrentPositionX = 20f;
+            squad2.Members.Add(leader2);
+            squad2.Members.Add(near2);
+            squad2.Members.Add(far2);
+            squad2.Leader = leader2;
+            leader2.Squad = squad2;
+            near2.Squad = squad2;
+            far2.Squad = squad2;
+            squad2.CoordinationLevel = 1f; // TimmyTeam6: noise = 10 * (6-1)/5 = 10m
+            squad2.Objective.SetObjective(50f, 0f, 50f);
+            strategy2.Activate(squad2);
+            strategy2.Update();
+            float timmyX = far2.TacticalPositionX;
+
+            // Both have Tier 2 — but the Tier 1 exact positions would be the same
+            // So the Y values should be the same (no noise on Y)
+            Assert.AreEqual(far1.TacticalPositionY, far2.TacticalPositionY, 0.01f, "Y should be identical (no noise applied to Y)");
+        }
+
+        [Test]
+        public void ObjectiveSharing_CommRangeEnabled_FarFollowerTier0()
+        {
+            var config = ObjectiveSharingConfig(trustedCount: 2, enableCommRange: true, commNoEar: 20f, commEar: 200f);
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var (squad, leader, f1, f2, f3) = SetupThreeFollowerSquad(config);
+
+            // f1 at 5m (in 20m range), f2 at 15m (in 20m range), f3 at 25m (out of 20m range)
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(f1.HasTacticalPosition, "f1 within comm range should get position");
+            Assert.IsTrue(f2.HasTacticalPosition, "f2 within comm range should get position");
+            // f3 is out of leader range AND out of relay range from f1/f2 (both within 20m of leader but f3 is 10m from f2)
+            // f3 is at 25m. f2 is at 15m. Distance f3-f2 = 10m which IS within 20m range.
+            // So f3 should get relayed through f2!
+            Assert.IsTrue(f3.HasTacticalPosition, "f3 should get relayed through f2");
+            Assert.AreEqual(
+                SPTQuestingBots.BotLogic.ECS.Systems.ObjectiveSharingCalculator.TierRelayed,
+                f3.SharingTier,
+                "f3 should be Tier 2 (relayed)"
+            );
+        }
+
+        [Test]
+        public void ObjectiveSharing_CommRangeEnabled_TotallyIsolated_NoPosition()
+        {
+            var config = ObjectiveSharingConfig(trustedCount: 2, enableCommRange: true, commNoEar: 10f, commEar: 200f);
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var (squad, leader, f1, f2, f3) = SetupThreeFollowerSquad(config);
+
+            // f1 at 5m (in 10m), f2 at 15m (out of 10m), f3 at 25m (out of 10m)
+            // f2 is out of leader range, nearest Tier 1 is f1 at 10m distance — on the edge
+            // f3 is out of leader range, nearest Tier 1 is f1 at 20m — out of 10m relay range
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(f1.HasTacticalPosition, "f1 within comm range");
+            Assert.AreEqual(SPTQuestingBots.BotLogic.ECS.Systems.ObjectiveSharingCalculator.TierDirect, f1.SharingTier);
+        }
+
+        [Test]
+        public void ObjectiveSharing_TrustedCount1_OnlyOneDirectFollower()
+        {
+            var config = ObjectiveSharingConfig(trustedCount: 1);
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var (squad, leader, f1, f2, f3) = SetupThreeFollowerSquad(config);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // Only f1 (closest) should be Tier 1
+            Assert.AreEqual(
+                SPTQuestingBots.BotLogic.ECS.Systems.ObjectiveSharingCalculator.TierDirect,
+                f1.SharingTier,
+                "Only the closest follower should be Tier 1"
+            );
+            Assert.AreEqual(SPTQuestingBots.BotLogic.ECS.Systems.ObjectiveSharingCalculator.TierRelayed, f2.SharingTier);
+            Assert.AreEqual(SPTQuestingBots.BotLogic.ECS.Systems.ObjectiveSharingCalculator.TierRelayed, f3.SharingTier);
+        }
+
+        [Test]
+        public void ObjectiveSharing_Disabled_LegacyBehavior()
+        {
+            var config = DefaultConfig();
+            config.EnableObjectiveSharing = false;
+            config.EnableCommunicationRange = false;
+            config.EnableSquadPersonality = false;
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var (squad, leader, f1, f2, f3) = SetupThreeFollowerSquad(config);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // With all gates disabled, all should receive positions (legacy behavior)
+            Assert.IsTrue(f1.HasTacticalPosition);
+            Assert.IsTrue(f2.HasTacticalPosition);
+            Assert.IsTrue(f3.HasTacticalPosition);
+            // SharingTier should remain 0 (default) since objective sharing is disabled
+            Assert.AreEqual(0, f1.SharingTier);
+        }
+
+        [Test]
+        public void ObjectiveSharing_CombatRecompute_UsesTiers()
+        {
+            var config = ObjectiveSharingConfig(trustedCount: 2);
+            config.EnableCombatAwarePositioning = true;
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var (squad, leader, f1, f2, f3) = SetupThreeFollowerSquad(config);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // Enter combat
+            squad.ThreatDirectionX = 1f;
+            squad.ThreatDirectionZ = 0f;
+            squad.HasThreatDirection = true;
+            squad.CombatVersion = 1;
+            strategy.Update();
+
+            // All should still have positions after combat recompute
+            Assert.IsTrue(f1.HasTacticalPosition);
+            Assert.IsTrue(f2.HasTacticalPosition);
+            Assert.IsTrue(f3.HasTacticalPosition);
+
+            // Tier assignment should still work
+            Assert.AreEqual(SPTQuestingBots.BotLogic.ECS.Systems.ObjectiveSharingCalculator.TierDirect, f1.SharingTier);
+            Assert.AreEqual(SPTQuestingBots.BotLogic.ECS.Systems.ObjectiveSharingCalculator.TierRelayed, f3.SharingTier);
+        }
+
+        [Test]
+        public void ObjectiveSharing_SingleFollower_GetsTierDirect()
+        {
+            var config = ObjectiveSharingConfig(trustedCount: 2);
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            follower.CurrentPositionX = 10f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.IsTrue(follower.HasTacticalPosition);
+            Assert.AreEqual(SPTQuestingBots.BotLogic.ECS.Systems.ObjectiveSharingCalculator.TierDirect, follower.SharingTier);
         }
     }
 }

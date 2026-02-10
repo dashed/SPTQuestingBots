@@ -45,6 +45,9 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(config.FormationSwitchWidth, Is.EqualTo(8f));
                 Assert.That(config.EnableZoneFollowerSpread, Is.True);
                 Assert.That(config.ZoneJitterRadius, Is.EqualTo(5f));
+                Assert.That(config.EnableObjectiveSharing, Is.True);
+                Assert.That(config.TrustedFollowerCount, Is.EqualTo(2));
+                Assert.That(config.SharingNoiseBase, Is.EqualTo(5f));
                 Assert.That(config.EnableVoiceCommands, Is.True);
                 Assert.That(config.VoiceCommandCooldown, Is.EqualTo(5.0f));
                 Assert.That(config.FollowerResponseDelay, Is.EqualTo(0.8f));
@@ -89,6 +92,9 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(config.FormationSwitchWidth, Is.EqualTo(8f));
                 Assert.That(config.EnableZoneFollowerSpread, Is.True);
                 Assert.That(config.ZoneJitterRadius, Is.EqualTo(5f));
+                Assert.That(config.EnableObjectiveSharing, Is.True);
+                Assert.That(config.TrustedFollowerCount, Is.EqualTo(2));
+                Assert.That(config.SharingNoiseBase, Is.EqualTo(5f));
                 Assert.That(config.EnableVoiceCommands, Is.True);
                 Assert.That(config.VoiceCommandCooldown, Is.EqualTo(5.0f));
                 Assert.That(config.FollowerResponseDelay, Is.EqualTo(0.8f));
@@ -164,6 +170,9 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 FormationSwitchWidth = 10f,
                 EnableZoneFollowerSpread = false,
                 ZoneJitterRadius = 8.5f,
+                EnableObjectiveSharing = false,
+                TrustedFollowerCount = 5,
+                SharingNoiseBase = 12f,
                 EnableVoiceCommands = false,
                 VoiceCommandCooldown = 3.0f,
                 FollowerResponseDelay = 1.5f,
@@ -205,6 +214,9 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(deserialized.FormationSwitchWidth, Is.EqualTo(10f));
                 Assert.That(deserialized.EnableZoneFollowerSpread, Is.False);
                 Assert.That(deserialized.ZoneJitterRadius, Is.EqualTo(8.5f));
+                Assert.That(deserialized.EnableObjectiveSharing, Is.False);
+                Assert.That(deserialized.TrustedFollowerCount, Is.EqualTo(5));
+                Assert.That(deserialized.SharingNoiseBase, Is.EqualTo(12f));
                 Assert.That(deserialized.EnableVoiceCommands, Is.False);
                 Assert.That(deserialized.VoiceCommandCooldown, Is.EqualTo(3.0f));
                 Assert.That(deserialized.FollowerResponseDelay, Is.EqualTo(1.5f));
@@ -250,6 +262,9 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(json, Does.Contain("formation_switch_width"));
                 Assert.That(json, Does.Contain("enable_zone_follower_spread"));
                 Assert.That(json, Does.Contain("zone_jitter_radius"));
+                Assert.That(json, Does.Contain("enable_objective_sharing"));
+                Assert.That(json, Does.Contain("trusted_follower_count"));
+                Assert.That(json, Does.Contain("sharing_noise_base"));
                 Assert.That(json, Does.Contain("enable_voice_commands"));
                 Assert.That(json, Does.Contain("voice_command_cooldown"));
                 Assert.That(json, Does.Contain("follower_response_delay"));
@@ -417,6 +432,49 @@ namespace SPTQuestingBots.Client.Tests.Configuration
             var config = Newtonsoft.Json.JsonConvert.DeserializeObject<SquadStrategyConfig>(json);
             Assert.That(config.EnableZoneFollowerSpread, Is.False);
             Assert.That(config.ZoneJitterRadius, Is.EqualTo(8.5f).Within(0.01f));
+        }
+
+        // ── Multi-Level Objective Sharing ──────────────────────────
+
+        [Test]
+        public void ObjectiveSharing_DefaultValues()
+        {
+            var config = new SquadStrategyConfig();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(config.EnableObjectiveSharing, Is.True);
+                Assert.That(config.TrustedFollowerCount, Is.EqualTo(2));
+                Assert.That(config.SharingNoiseBase, Is.EqualTo(5f));
+            });
+        }
+
+        [Test]
+        public void Deserialize_ObjectiveSharingOverrides()
+        {
+            var json = """{ "enable_objective_sharing": false, "trusted_follower_count": 4, "sharing_noise_base": 10.5 }""";
+            var config = JsonConvert.DeserializeObject<SquadStrategyConfig>(json);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(config.EnableObjectiveSharing, Is.False);
+                Assert.That(config.TrustedFollowerCount, Is.EqualTo(4));
+                Assert.That(config.SharingNoiseBase, Is.EqualTo(10.5f));
+            });
+        }
+
+        [Test]
+        public void ObjectiveSharingDisabled_OtherDefaultsIntact()
+        {
+            var json = """{ "enable_objective_sharing": false }""";
+            var config = JsonConvert.DeserializeObject<SquadStrategyConfig>(json);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(config.EnableObjectiveSharing, Is.False);
+                Assert.That(config.TrustedFollowerCount, Is.EqualTo(2));
+                Assert.That(config.SharingNoiseBase, Is.EqualTo(5f));
+            });
         }
     }
 }

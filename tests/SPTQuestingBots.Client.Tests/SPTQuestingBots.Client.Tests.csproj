@@ -261,6 +261,11 @@
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/SquadCalloutDecider.cs"
       Link="LinkedSources/ECS/Systems/SquadCalloutDecider.cs"
     />
+    <!-- Objective sharing: tiered position sharing -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/ObjectiveSharingCalculator.cs"
+      Link="LinkedSources/ECS/Systems/ObjectiveSharingCalculator.cs"
+    />
   </ItemGroup>
 
   <!--

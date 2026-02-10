@@ -106,6 +106,17 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("zone_jitter_radius")]
         public float ZoneJitterRadius { get; set; } = 5f;
 
+        // ── Multi-Level Objective Sharing ──────────────────────────
+
+        [JsonProperty("enable_objective_sharing")]
+        public bool EnableObjectiveSharing { get; set; } = true;
+
+        [JsonProperty("trusted_follower_count")]
+        public int TrustedFollowerCount { get; set; } = 2;
+
+        [JsonProperty("sharing_noise_base")]
+        public float SharingNoiseBase { get; set; } = 5f;
+
         // ── Voice Commands ─────────────────────────────────────────
 
         [JsonProperty("enable_voice_commands")]

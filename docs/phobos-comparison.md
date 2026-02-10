@@ -39,7 +39,7 @@
 - **Version**: 1.9.0
 - **Scope**: Full quest-driven behavior, Phobos-style utility AI action selection, custom movement system, zone-based fallback movement, squad strategies with tactical positioning (including combat-aware repositioning and zone movement integration), ECS-Lite data layout, boss/follower coordination, PMC/PScav spawning (optional), AI sleeping
 - **Approach**: Bots receive actual game quest objectives (from 12 per-map JSON files) and navigate to complete them using a custom `Player.Move()` movement system inspired by Phobos (path-deviation spring force, Chaikin smoothing, sprint angle-jitter gating, 3 BSG patches). A Phobos-style utility AI system (8 scored quest tasks with additive hysteresis) selects which action to execute, while BigBrain handles action execution (hybrid approach). When no quests are available, a Phobos-inspired zone movement system uses advection/convergence fields to guide bots toward interesting map areas. An ECS-Lite data layout (dense entity list with swap-remove, inspired by Phobos's EntityArray) provides centralized bot state, static system methods, and zero-allocation sensor iteration.
-- **Maturity**: Mature; 13 action types with utility AI scoring, custom movement system with NavMesh corner-cutting, squad strategies with combat-aware tactical positioning and zone follower spread, extensive spawning system, broad bot-type support, zone movement with debug overlay, ECS-Lite entity storage with 1146 tests
+- **Maturity**: Mature; 13 action types with utility AI scoring, custom movement system with NavMesh corner-cutting, squad strategies with combat-aware tactical positioning, zone follower spread, and multi-level objective sharing, extensive spawning system, broad bot-type support, zone movement with debug overlay, ECS-Lite entity storage with 1180 tests
 - **Source**: `src/SPTQuestingBots.Client/` (~180 C# files) + `src/SPTQuestingBots.Server/` (9 C# files)
 
 ---
@@ -53,7 +53,7 @@
 | **Solution** | `Phobos.sln` (1 main project + Gym benchmark) | `SPTQuestingBots.sln` (2 main + 2 test projects) |
 | **Target** | netstandard2.1 | Client: net472, Server: net9.0, Tests: net9.0 |
 | **Build** | Standard .csproj | Makefile (`make build`, `make test`, `make ci`) |
-| **Testing** | Gym project (BenchmarkDotNet) | NUnit 3.x + NSubstitute (896 client + 58 server = 954 tests) |
+| **Testing** | Gym project (BenchmarkDotNet) | NUnit 3.x + NSubstitute (1122 client + 58 server = 1180 tests) |
 | **CI** | None observed | GitHub Actions (`ci.yml`) |
 | **Code style** | File-scoped namespaces, primary constructors | Block-scoped namespaces, traditional constructors, CSharpier formatting |
 

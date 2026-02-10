@@ -52,6 +52,13 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
         private readonly SquadRole[] _combatRoleBuffer = new SquadRole[SquadObjective.MaxMembers];
         private readonly float[] _positionBuffer = new float[SquadObjective.MaxMembers * 3];
 
+        // Multi-level objective sharing buffers
+        private readonly float[] _followerPosX = new float[SquadObjective.MaxMembers];
+        private readonly float[] _followerPosY = new float[SquadObjective.MaxMembers];
+        private readonly float[] _followerPosZ = new float[SquadObjective.MaxMembers];
+        private readonly bool[] _followerEarPiece = new bool[SquadObjective.MaxMembers];
+        private readonly byte[] _sharingTiers = new byte[SquadObjective.MaxMembers];
+
         public GotoObjectiveStrategy(
             SquadStrategyConfig config,
             float hysteresis = 0.25f,
@@ -213,7 +220,37 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                 }
             }
 
-            // Distribute to followers (with communication range + personality gating)
+            // Multi-level objective sharing: assign tiers and degrade Tier 2 positions
+            if (_config.EnableObjectiveSharing)
+            {
+                CollectFollowerData(squad, leader, clampedCount);
+                ObjectiveSharingCalculator.AssignTiers(
+                    leader.CurrentPositionX,
+                    leader.CurrentPositionY,
+                    leader.CurrentPositionZ,
+                    leader.HasEarPiece,
+                    _followerPosX,
+                    _followerPosY,
+                    _followerPosZ,
+                    _followerEarPiece,
+                    clampedCount,
+                    _config.TrustedFollowerCount,
+                    _config.CommunicationRangeNoEarpiece,
+                    _config.CommunicationRangeEarpiece,
+                    _config.EnableCommunicationRange,
+                    _sharingTiers
+                );
+                ObjectiveSharingCalculator.DegradePositions(
+                    _sharingTiers,
+                    clampedCount,
+                    _positionBuffer,
+                    squad.CoordinationLevel,
+                    _config.SharingNoiseBase,
+                    _rng
+                );
+            }
+
+            // Distribute to followers
             int posIdx = 0;
             for (int i = 0; i < squad.Members.Count; i++)
             {
@@ -223,38 +260,53 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                 if (posIdx >= clampedCount)
                     break;
 
-                // Communication range gate
-                if (_config.EnableCommunicationRange)
+                if (_config.EnableObjectiveSharing)
                 {
-                    float dx = leader.CurrentPositionX - member.CurrentPositionX;
-                    float dy = leader.CurrentPositionY - member.CurrentPositionY;
-                    float dz = leader.CurrentPositionZ - member.CurrentPositionZ;
-                    float sqrDist = dx * dx + dy * dy + dz * dz;
-                    if (
-                        !CommunicationRange.IsInRange(
-                            leader.HasEarPiece,
-                            member.HasEarPiece,
-                            sqrDist,
-                            _config.CommunicationRangeNoEarpiece,
-                            _config.CommunicationRangeEarpiece
-                        )
-                    )
+                    // Multi-level sharing: tier-based gating
+                    if (_sharingTiers[posIdx] == ObjectiveSharingCalculator.TierNone)
                     {
                         member.HasTacticalPosition = false;
+                        member.SharingTier = ObjectiveSharingCalculator.TierNone;
                         posIdx++;
                         continue;
                     }
-                }
 
-                // Probabilistic sharing gate (SAIN formula)
-                if (_config.EnableSquadPersonality)
+                    member.SharingTier = _sharingTiers[posIdx];
+                }
+                else
                 {
-                    float sharingChance = 25f + squad.CoordinationLevel * 15f;
-                    if ((float)_rng.NextDouble() * 100f >= sharingChance)
+                    // Legacy: flat communication range + probabilistic sharing gates
+                    if (_config.EnableCommunicationRange)
                     {
-                        member.HasTacticalPosition = false;
-                        posIdx++;
-                        continue;
+                        float dx = leader.CurrentPositionX - member.CurrentPositionX;
+                        float dy = leader.CurrentPositionY - member.CurrentPositionY;
+                        float dz = leader.CurrentPositionZ - member.CurrentPositionZ;
+                        float sqrDist = dx * dx + dy * dy + dz * dz;
+                        if (
+                            !CommunicationRange.IsInRange(
+                                leader.HasEarPiece,
+                                member.HasEarPiece,
+                                sqrDist,
+                                _config.CommunicationRangeNoEarpiece,
+                                _config.CommunicationRangeEarpiece
+                            )
+                        )
+                        {
+                            member.HasTacticalPosition = false;
+                            posIdx++;
+                            continue;
+                        }
+                    }
+
+                    if (_config.EnableSquadPersonality)
+                    {
+                        float sharingChance = 25f + squad.CoordinationLevel * 15f;
+                        if ((float)_rng.NextDouble() * 100f >= sharingChance)
+                        {
+                            member.HasTacticalPosition = false;
+                            posIdx++;
+                            continue;
+                        }
                     }
                 }
 
@@ -389,6 +441,36 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                 ValidatePositions(clampedCount, obj.ObjectiveX, obj.ObjectiveY, obj.ObjectiveZ);
             }
 
+            // Multi-level objective sharing for combat recompute
+            if (_config.EnableObjectiveSharing)
+            {
+                CollectFollowerData(squad, leader, clampedCount);
+                ObjectiveSharingCalculator.AssignTiers(
+                    leader.CurrentPositionX,
+                    leader.CurrentPositionY,
+                    leader.CurrentPositionZ,
+                    leader.HasEarPiece,
+                    _followerPosX,
+                    _followerPosY,
+                    _followerPosZ,
+                    _followerEarPiece,
+                    clampedCount,
+                    _config.TrustedFollowerCount,
+                    _config.CommunicationRangeNoEarpiece,
+                    _config.CommunicationRangeEarpiece,
+                    _config.EnableCommunicationRange,
+                    _sharingTiers
+                );
+                ObjectiveSharingCalculator.DegradePositions(
+                    _sharingTiers,
+                    clampedCount,
+                    _positionBuffer,
+                    squad.CoordinationLevel,
+                    _config.SharingNoiseBase,
+                    _rng
+                );
+            }
+
             // Distribute to followers (same gating as AssignNewObjective)
             int posIdx = 0;
             for (int i = 0; i < squad.Members.Count; i++)
@@ -399,26 +481,41 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                 if (posIdx >= clampedCount)
                     break;
 
-                // Communication range gate
-                if (_config.EnableCommunicationRange)
+                if (_config.EnableObjectiveSharing)
                 {
-                    float dx = leader.CurrentPositionX - member.CurrentPositionX;
-                    float dy = leader.CurrentPositionY - member.CurrentPositionY;
-                    float dz = leader.CurrentPositionZ - member.CurrentPositionZ;
-                    float sqrDist = dx * dx + dy * dy + dz * dz;
-                    if (
-                        !CommunicationRange.IsInRange(
-                            leader.HasEarPiece,
-                            member.HasEarPiece,
-                            sqrDist,
-                            _config.CommunicationRangeNoEarpiece,
-                            _config.CommunicationRangeEarpiece
-                        )
-                    )
+                    if (_sharingTiers[posIdx] == ObjectiveSharingCalculator.TierNone)
                     {
                         member.HasTacticalPosition = false;
+                        member.SharingTier = ObjectiveSharingCalculator.TierNone;
                         posIdx++;
                         continue;
+                    }
+
+                    member.SharingTier = _sharingTiers[posIdx];
+                }
+                else
+                {
+                    // Legacy: flat communication range gate
+                    if (_config.EnableCommunicationRange)
+                    {
+                        float dx = leader.CurrentPositionX - member.CurrentPositionX;
+                        float dy = leader.CurrentPositionY - member.CurrentPositionY;
+                        float dz = leader.CurrentPositionZ - member.CurrentPositionZ;
+                        float sqrDist = dx * dx + dy * dy + dz * dz;
+                        if (
+                            !CommunicationRange.IsInRange(
+                                leader.HasEarPiece,
+                                member.HasEarPiece,
+                                sqrDist,
+                                _config.CommunicationRangeNoEarpiece,
+                                _config.CommunicationRangeEarpiece
+                            )
+                        )
+                        {
+                            member.HasTacticalPosition = false;
+                            posIdx++;
+                            continue;
+                        }
                     }
                 }
 
@@ -588,6 +685,29 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                 }
             }
             return false;
+        }
+
+        /// <summary>
+        /// Collects follower position and earpiece data into reusable buffers
+        /// for multi-level objective sharing tier assignment.
+        /// </summary>
+        private void CollectFollowerData(SquadEntity squad, BotEntity leader, int clampedCount)
+        {
+            int fIdx = 0;
+            for (int i = 0; i < squad.Members.Count; i++)
+            {
+                var m = squad.Members[i];
+                if (m == leader || !m.IsActive)
+                    continue;
+                if (fIdx >= clampedCount)
+                    break;
+
+                _followerPosX[fIdx] = m.CurrentPositionX;
+                _followerPosY[fIdx] = m.CurrentPositionY;
+                _followerPosZ[fIdx] = m.CurrentPositionZ;
+                _followerEarPiece[fIdx] = m.HasEarPiece;
+                fIdx++;
+            }
         }
 
         /// <summary>

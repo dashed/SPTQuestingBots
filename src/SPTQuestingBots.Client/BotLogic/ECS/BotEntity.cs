@@ -196,6 +196,13 @@ namespace SPTQuestingBots.BotLogic.ECS
         public int LastSeenObjectiveVersion;
 
         /// <summary>
+        /// Sharing tier for multi-level objective sharing.
+        /// 0 = none (no position received), 1 = direct (from leader), 2 = relayed (through Tier 1 member).
+        /// Set during tactical position distribution in GotoObjectiveStrategy.
+        /// </summary>
+        public byte SharingTier;
+
+        /// <summary>
         /// Current world position X, synced from BotOwner.Position for pure-logic access.
         /// </summary>
         public float CurrentPositionX;
