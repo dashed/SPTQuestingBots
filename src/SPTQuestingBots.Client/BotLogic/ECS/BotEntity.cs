@@ -384,6 +384,23 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// <summary>Game time at which the current corner pause expires.</summary>
         public float CornerPauseUntil;
 
+        // ── Patrol State ──────────────────────────────────────────────
+
+        /// <summary>Index into PatrolTask.CurrentMapRoutes, -1 = no route assigned.</summary>
+        public int PatrolRouteIndex = -1;
+
+        /// <summary>Current waypoint index within the assigned route.</summary>
+        public int PatrolWaypointIndex = 0;
+
+        /// <summary>Whether this bot is currently following a patrol route.</summary>
+        public bool IsPatrolling = false;
+
+        /// <summary>Game time when patrol cooldown expires (Time.time).</summary>
+        public float PatrolCooldownUntil = 0f;
+
+        /// <summary>Game time when the current waypoint pause ends (Time.time).</summary>
+        public float PatrolPauseUntil = 0f;
+
         // ── Linger State ──────────────────────────────────────────────
 
         /// <summary>Game time when the bot's last objective was completed. 0 = no recent completion.</summary>

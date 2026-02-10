@@ -81,6 +81,14 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("combat_convergence_force")]
         public float CombatConvergenceForce { get; set; } = 0.5f;
 
+        /// <summary>
+        /// Per-map advection zone overrides. Keys are BSG location IDs (case-insensitive).
+        /// Maps not listed here use built-in defaults from <see cref="ZoneMovement.Core.AdvectionZoneConfig"/>.
+        /// </summary>
+        [JsonProperty("advection_zones_per_map")]
+        public Dictionary<string, AdvectionMapZonesEntry> AdvectionZonesPerMap { get; set; } =
+            new Dictionary<string, AdvectionMapZonesEntry>();
+
         public ZoneMovementConfig() { }
     }
 
@@ -99,5 +107,62 @@ namespace SPTQuestingBots.Configuration
         public bool Enabled { get; set; } = true;
 
         public ConvergenceMapEntry() { }
+    }
+
+    /// <summary>
+    /// JSON-serializable per-map advection zone overrides for config.json.
+    /// </summary>
+    public class AdvectionMapZonesEntry
+    {
+        [JsonProperty("builtin_zones")]
+        public Dictionary<string, AdvectionZoneEntryConfig> BuiltinZones { get; set; } = new Dictionary<string, AdvectionZoneEntryConfig>();
+
+        [JsonProperty("custom_zones")]
+        public List<CustomZoneEntryConfig> CustomZones { get; set; } = new List<CustomZoneEntryConfig>();
+
+        public AdvectionMapZonesEntry() { }
+    }
+
+    /// <summary>
+    /// JSON-serializable zone entry with force range, radius, decay, and time/boss multipliers.
+    /// </summary>
+    public class AdvectionZoneEntryConfig
+    {
+        [JsonProperty("force_min")]
+        public float ForceMin { get; set; }
+
+        [JsonProperty("force_max")]
+        public float ForceMax { get; set; }
+
+        [JsonProperty("radius")]
+        public float Radius { get; set; }
+
+        [JsonProperty("decay")]
+        public float Decay { get; set; } = 1.0f;
+
+        [JsonProperty("early_multiplier")]
+        public float EarlyMultiplier { get; set; } = 1.0f;
+
+        [JsonProperty("late_multiplier")]
+        public float LateMultiplier { get; set; } = 1.0f;
+
+        [JsonProperty("boss_alive_multiplier")]
+        public float BossAliveMultiplier { get; set; } = 1.0f;
+
+        public AdvectionZoneEntryConfig() { }
+    }
+
+    /// <summary>
+    /// JSON-serializable custom zone entry with position.
+    /// </summary>
+    public class CustomZoneEntryConfig : AdvectionZoneEntryConfig
+    {
+        [JsonProperty("x")]
+        public float X { get; set; }
+
+        [JsonProperty("z")]
+        public float Z { get; set; }
+
+        public CustomZoneEntryConfig() { }
     }
 }

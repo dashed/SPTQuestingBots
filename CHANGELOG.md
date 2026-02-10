@@ -206,10 +206,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `RoomClearConfig`: 9 JSON properties under `questing.room_clear` (enabled, duration_min/max, corner_pause_duration, corner_angle_threshold, pose, per-bot-type toggles)
   - Room clear state on `BotEntity`: `LastEnvironmentId`, `RoomClearUntil`, `IsInRoomClear`, `CornerPauseUntil`
   - ~24 new tests (RoomClearController state transitions + RoomClearConfig deserialization)
+- **Per-map advection zone configs (Phobos-style)** — bounded influence zones with per-map tuning
+  - `AdvectionZoneConfig`: hardcoded defaults for 8 maps with JSON override via `advection_zones_per_map`
+    - `AdvectionZoneEntry`: ForceMin/Max, Radius, Decay, EarlyMultiplier, LateMultiplier, BossAliveMultiplier
+    - `BuiltinZoneEntry`: tied to BSG BotZone names (resolved from spawn point centroids)
+    - `CustomZoneEntry`: arbitrary world X/Z positions
+  - `AdvectionZoneLoader`: resolves zones, injects bounded forces with `SampleForce()` and `ComputeTimeMultiplier()`
+  - `AdvectionField.AddBoundedZone()`: Phobos formula `pow(clamp01(1 - dist/radius), decay) * strength`
+  - Negative force supported (repulsor zones push bots away)
+  - Customs Dorms: strong attractor early (1.5×), weak late (0.5×); Interchange center: boss alive boost (1.5×)
+  - Wired into `WorldGridManager.Awake()` after `ZoneDiscovery`
+  - ~47 new tests (17 AdvectionZoneConfig + 16 AdvectionZoneLoader + 14 AdvectionFieldBounded)
+- **Dynamic objective generation** — quests generated from live game state
+  - `DynamicObjectiveGenerator`: pure C# generator accepting data parameters, returning Quest objects
+    - `GenerateFirefightObjectives()`: clusters nearby combat events → Ambush quests at cluster centroids
+    - `GenerateCorpseObjectives()`: filters Death events → MoveToPosition quests at corpse locations
+    - `GenerateBuildingClearObjectives()`: indoor zone positions → HoldAtPosition quests
+  - `CombatEventClustering`: greedy seed-based clustering + death event filtering (pure C#, testable)
+  - `DynamicObjectiveScanner`: MonoBehaviour orchestrator scanning every 30s with tracked quest lifecycle and auto-expiry
+  - `CombatEventType.Death = 4` added; `OnBeenKilledByAggressorPatch` extended to record death events in `CombatEventRegistry`
+  - `CombatEventRegistry.GatherActiveEvents()`: bulk active event retrieval for scanner
+  - `DynamicObjectiveConfig`: 16 JSON properties under `questing.dynamic_objectives` (firefight/corpse/building-clear toggles, thresholds, desirability scores)
+  - ~40 new tests (DynamicObjectiveGenerator + DynamicObjectiveConfig)
+- **Patrol route system** — named patrol routes per map with waypoint-following behavior
+  - `PatrolRoute`: Name, Type (Perimeter/Interior/Overwatch), waypoints with pause durations, personality+time filters, loop control
+  - `PatrolRouteConfig`: hardcoded defaults for 5 maps (Customs 3 routes, Interchange 2, Shoreline 2, Reserve 2, Woods 1) + JSON override via `routes_per_map`
+  - `PatrolRouteSelector`: proximity score (0.6 weight) + personality fit score (0.4 weight) + deterministic jitter tiebreak
+  - `PatrolTask`: utility task #14, `BotActionTypeId=Patrol(18)`, MaxBaseScore=0.50, fills idle time between objectives
+    - Gates: `!IsInCombat`, `!HasActiveObjective`, routes available, `!cooldown`
+    - Lazy route assignment in `ScoreEntity()` via `PatrolRouteSelector`
+  - `PatrolAction`: BigBrain `GoToPositionAbstractAction` with navigate→pause→advance state machine
+    - Head scanning during pauses, movement timeout (90s), stuck detection, cooldown on completion
+    - Loop routes (Perimeter/Interior) restart at waypoint 0; non-loop routes (Overwatch) complete after last waypoint
+  - `ScoringModifiers`: Patrol case — cautious bots patrol more (1.2×), aggressive less (0.8×); late raid more patrolling (1.2×)
+  - `PatrolConfig`: 10 JSON properties under `questing.patrol` (enabled, base_score, cooldown, waypoint radius, pose, per-bot-type toggles)
+  - 4 new fields on `BotEntity`: `PatrolRouteIndex`, `PatrolWaypointIndex`, `IsPatrolling`, `PatrolCooldownUntil`
+  - ~60 new tests (PatrolRouteConfig + PatrolRouteSelector + PatrolTask + PatrolConfig + PatrolRoute)
 
 ### Changed
-- Utility AI now has 13 scored tasks (was 8): added Loot, Vulture, Linger, Investigate, and SpawnEntry
-- `QuestTaskFactory.TaskCount` updated from 8 to 13
+- Utility AI now has 14 scored tasks (was 8): added Loot, Vulture, Linger, Investigate, SpawnEntry, and Patrol
+- `QuestTaskFactory.TaskCount` updated from 8 to 14
 - All task scores now modified by personality (aggression) and raid time progression multipliers
 - GoToObjective scoring changed from binary (0 or BaseScore) to continuous exponential decay based on distance
 - `default_wait_time_after_objective_completion` reduced from 5s to 3s
@@ -218,7 +254,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   5. updateSquadStrategies (+ formations, combat positioning, zone follower spread, voice commands),
   6. updateCombatEvents (CombatEventRegistry cleanup + CombatEventScanner),
   7. updateLootScanning, 8. refreshHumanPlayerCache, 9. updateLodTiers
-- 1761 client tests total (was 938), 58 server tests, 1819 total
+- 1922 client tests total (was 938), 58 server tests, 1980 total
 
 ## [1.9.0] - 2026-02-09
 

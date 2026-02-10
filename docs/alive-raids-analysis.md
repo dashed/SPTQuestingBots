@@ -406,34 +406,56 @@ Implemented as part of Tier 1:
 - `GoToObjectiveTask.ScoreEntity()`: `BaseScore * (1 - exp(-distance / 75))` — continuous distance decay
 - Far from objective: score ≈ 0.65, close: score → 0, allowing other tasks to compete
 
-### Tier 4 — Future Vision
+### Tier 4 — Future Vision ✅ COMPLETE
 
-#### 4.1 Per-Map Zone Configs (Phobos-style)
+#### 4.1 Per-Map Zone Configs (Phobos-style) ✅
 
-Define advection zones per map with attractor/repulsor forces:
-- Dorms on Customs: strong attractor early, repulsor late
-- Resort on Shoreline: moderate attractor
-- Killa on Interchange: dynamic based on boss alive/dead
+Phobos-style bounded advection zones per map with attractor/repulsor forces:
+- `AdvectionZoneConfig`: hardcoded defaults for 8 maps + JSON override via `advection_zones_per_map`
+- `AdvectionZoneEntry`: ForceMin/Max, Radius, Decay, EarlyMultiplier, LateMultiplier, BossAliveMultiplier
+- `BuiltinZoneEntry`: tied to BSG BotZone names (resolved from spawn point centroids via `ZoneDiscovery`)
+- `CustomZoneEntry`: arbitrary world X/Z positions for zones without BSG names
+- `AdvectionZoneLoader`: resolves + injects bounded zones; `SampleForce()` (uniform random), `ComputeTimeMultiplier()` (linear interpolation)
+- `AdvectionField.AddBoundedZone()`: Phobos formula `pow(clamp01(1 - dist/radius), decay) * strength`
+- Negative force supported (repulsor zones)
+- Dorms on Customs: strong attractor early (1.5×), weak late (0.5×)
+- Interchange center: boss alive multiplier (1.5×)
+- ~47 new tests
 
-**Effort**: High. Per-map JSON configs, zone definition system.
+**Files**: `AdvectionZoneConfig.cs`, `AdvectionZoneLoader.cs`, modified `AdvectionField.cs`, `ZoneDiscovery.cs`, `WorldGridManager.cs`, `ZoneMovementConfig.cs`
 
-#### 4.2 Dynamic Objective Generation
+#### 4.2 Dynamic Objective Generation ✅
 
-Instead of only using pre-defined quest positions:
-- Generate objectives from live game state (fresh corpses, opened containers, active firefights)
-- Loot-driven objectives from container/item scan
-- "Clear this building" objectives generated from BotZone data
+Generates quests from live game state via pure C# generator + MonoBehaviour orchestrator:
+- `DynamicObjectiveGenerator`: pure C# (testable), accepts data parameters, returns Quest objects
+  - `GenerateFirefightObjectives()`: clusters nearby combat events → Ambush quests at cluster centroids
+  - `GenerateCorpseObjectives()`: filters Death events → MoveToPosition quests at corpse locations
+  - `GenerateBuildingClearObjectives()`: indoor zone positions → HoldAtPosition quests
+- `CombatEventClustering`: greedy seed-based clustering + death event filtering
+- `DynamicObjectiveScanner`: MonoBehaviour scanning every 30s, tracked quest lifecycle with auto-expiry
+- `CombatEventType.Death = 4` added; `OnBeenKilledByAggressorPatch` records death events
+- `CombatEventRegistry.GatherActiveEvents()` for bulk event retrieval
+- `DynamicObjectiveConfig`: 16 JSON properties under `questing.dynamic_objectives`
+- ~40 new tests
 
-**Effort**: High. New objective generation system.
+**Files**: `DynamicObjectiveGenerator.cs`, `CombatEventClustering.cs`, `DynamicObjectiveScanner.cs`, `DynamicObjectiveConfig.cs`, modified `CombatEvent.cs`, `CombatEventRegistry.cs`, `OnBeenKilledByAggressorPatch.cs`
 
-#### 4.3 Patrol Route System
+#### 4.3 Patrol Route System ✅
 
-Define named patrol routes per map (sequences of waypoints):
-- Bots follow routes organically (not rigidly)
-- Routes have patrol types: perimeter, interior, overwatch
-- Dynamic route selection based on time, threat, personality
+Named patrol routes per map with waypoint sequences, personality/time-based selection:
+- `PatrolRoute`: Name, Type (Perimeter/Interior/Overwatch), waypoints, personality+time filters, loop behavior
+- `PatrolRouteConfig`: hardcoded defaults for 5 maps (Customs 3 routes, Interchange 2, Shoreline 2, Reserve 2, Woods 1)
+- `PatrolRouteSelector`: proximity score (0.6) + personality fit score (0.4) + deterministic jitter
+- `PatrolTask`: utility task #14, `BotActionTypeId.Patrol=18`, MaxBaseScore=0.50 — fills idle time between objectives
+  - Gates: !IsInCombat, !HasActiveObjective, routes available, !cooldown
+  - Lazy route assignment in ScoreEntity
+- `PatrolAction`: BigBrain `GoToPositionAbstractAction` with navigate→pause→advance state machine
+  - Head scanning during pauses, movement timeout (90s), stuck detection, cooldown on completion
+- `ScoringModifiers`: Patrol case (cautious bots 1.2×, late raid 1.2×)
+- `PatrolConfig`: 10 JSON properties under `questing.patrol` + `routes_per_map` overrides
+- ~60 new tests
 
-**Effort**: High. Route definition system, per-map JSON data, route-following logic.
+**Files**: `PatrolRoute.cs`, `PatrolRouteConfig.cs`, `PatrolRouteSelector.cs`, `PatrolTask.cs`, `PatrolAction.cs`, `PatrolConfig.cs`, modified `QuestUtilityTask.cs`, `QuestTaskFactory.cs`, `ScoringModifiers.cs`, `CustomLayerDelayedUpdate.cs`, `BotEntity.cs`
 
 ---
 
@@ -463,6 +485,12 @@ Define named patrol routes per map (sequences of waypoints):
 11. ✅ **Spawn entry behavior** (Tier 3.1)
 12. ✅ **Head-look variance** (Tier 3.2)
 13. ✅ **Room clearing** (Tier 3.3)
+
+### Phase 5: Future Vision ✅ COMPLETE
+
+14. ✅ **Per-map zone configs** (Tier 4.1) — Phobos-style bounded advection zones with radius/decay/time/boss modifiers
+15. ✅ **Dynamic objective generation** (Tier 4.2) — firefight clusters, corpse scavenging, building clears from live game state
+16. ✅ **Patrol route system** (Tier 4.3) — per-map waypoint routes, utility task #14, personality/time-based route selection
 
 ---
 

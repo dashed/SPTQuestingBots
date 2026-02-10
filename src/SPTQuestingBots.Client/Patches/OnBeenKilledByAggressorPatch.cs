@@ -41,6 +41,21 @@ namespace SPTQuestingBots.Patches
 
             // Make sure the bot doesn't have any active quests if it's dead
             Controllers.BotJobAssignmentFactory.FailAllJobAssignmentsForBot(__instance.Profile.Id);
+
+            // Record death as a combat event for dynamic objective generation
+            BotLogic.ECS.Systems.CombatEventRegistry.RecordEvent(
+                new BotLogic.ECS.Systems.CombatEvent
+                {
+                    X = __instance.Position.x,
+                    Y = __instance.Position.y,
+                    Z = __instance.Position.z,
+                    Time = UnityEngine.Time.time,
+                    Power = 50f,
+                    Type = BotLogic.ECS.Systems.CombatEventType.Death,
+                    IsBoss = false,
+                    IsActive = true,
+                }
+            );
         }
     }
 }

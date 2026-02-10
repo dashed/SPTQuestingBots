@@ -105,6 +105,15 @@
       Include="../../src/SPTQuestingBots.Client/Configuration/PersonalityConfig.cs"
       Link="LinkedSources/Configuration/PersonalityConfig.cs"
     />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Configuration/DynamicObjectiveConfig.cs"
+      Link="LinkedSources/Configuration/DynamicObjectiveConfig.cs"
+    />
+    <!-- Combat event clustering: pure C# clustering logic (no Unity/EFT dependencies) -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/CombatEventClustering.cs"
+      Link="LinkedSources/ECS/Systems/CombatEventClustering.cs"
+    />
     <!-- Movement: pure-logic path analysis (no Unity/EFT dependencies beyond Vector3 shim) -->
     <Compile
       Include="../../src/SPTQuestingBots.Client/Models/Pathing/SprintAngleJitter.cs"
@@ -411,6 +420,30 @@
       Include="../../src/SPTQuestingBots.Client/Configuration/LookVarianceConfig.cs"
       Link="LinkedSources/Configuration/LookVarianceConfig.cs"
     />
+    <!-- Advection zone config: per-map zone definitions and loader -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/ZoneMovement/Core/AdvectionZoneConfig.cs"
+      Link="LinkedSources/ZoneMovement/AdvectionZoneConfig.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/ZoneMovement/Core/AdvectionZoneLoader.cs"
+      Link="LinkedSources/ZoneMovement/AdvectionZoneLoader.cs"
+    />
+    <!-- Patrol route system: data models, selection, task, and config -->
+    <Compile Include="../../src/SPTQuestingBots.Client/Models/Pathing/PatrolRoute.cs" Link="LinkedSources/Pathing/PatrolRoute.cs" />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Models/Pathing/PatrolRouteConfig.cs"
+      Link="LinkedSources/Pathing/PatrolRouteConfig.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/PatrolRouteSelector.cs"
+      Link="LinkedSources/ECS/Systems/PatrolRouteSelector.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/PatrolTask.cs"
+      Link="LinkedSources/ECS/UtilityAI/Tasks/PatrolTask.cs"
+    />
+    <Compile Include="../../src/SPTQuestingBots.Client/Configuration/PatrolConfig.cs" Link="LinkedSources/Configuration/PatrolConfig.cs" />
   </ItemGroup>
 
   <!--

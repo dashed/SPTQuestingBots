@@ -131,6 +131,52 @@ public class WorldGridManager : MonoBehaviour
                 discoveredZoneSources.Add((position, strength));
             }
 
+            // 6b. Resolve map ID and inject per-map bounded advection zones
+            string mapId = Singleton<GameWorld>.Instance.GetComponent<LocationData>().CurrentLocation.Id;
+            var builtinZoneCentroids = ZoneDiscovery.DiscoverZoneCentroids(spawnPoints);
+            Dictionary<string, AdvectionMapZones> zoneOverrides = null;
+            if (config.AdvectionZonesPerMap != null && config.AdvectionZonesPerMap.Count > 0)
+            {
+                zoneOverrides = new Dictionary<string, AdvectionMapZones>(StringComparer.OrdinalIgnoreCase);
+                foreach (var kvp in config.AdvectionZonesPerMap)
+                {
+                    var builtins = new Dictionary<string, BuiltinZoneEntry>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var bkvp in kvp.Value.BuiltinZones)
+                    {
+                        builtins[bkvp.Key] = new BuiltinZoneEntry(
+                            bkvp.Key,
+                            bkvp.Value.ForceMin,
+                            bkvp.Value.ForceMax,
+                            bkvp.Value.Radius,
+                            bkvp.Value.Decay,
+                            bkvp.Value.EarlyMultiplier,
+                            bkvp.Value.LateMultiplier,
+                            bkvp.Value.BossAliveMultiplier
+                        );
+                    }
+                    var customs = new List<CustomZoneEntry>();
+                    foreach (var c in kvp.Value.CustomZones)
+                    {
+                        customs.Add(
+                            new CustomZoneEntry(
+                                c.X,
+                                c.Z,
+                                c.ForceMin,
+                                c.ForceMax,
+                                c.Radius,
+                                c.Decay,
+                                c.EarlyMultiplier,
+                                c.LateMultiplier,
+                                c.BossAliveMultiplier
+                            )
+                        );
+                    }
+                    zoneOverrides[kvp.Key] = new AdvectionMapZones(builtins, customs);
+                }
+            }
+            int boundedCount = AdvectionZoneLoader.LoadAndInjectZones(advectionField, builtinZoneCentroids, mapId, zoneOverrides, 0f);
+            LoggingController.LogInfo($"[ZoneMovement] Injected {boundedCount} bounded advection zones for map '{mapId}'");
+
             // 7. Synthetic fill: add NavMesh-validated synthetic POIs to empty cells
             int syntheticCount = 0;
             for (int col = 0; col < Grid.Cols; col++)
@@ -151,7 +197,6 @@ public class WorldGridManager : MonoBehaviour
             LoggingController.LogInfo($"[ZoneMovement] Added {syntheticCount} synthetic POIs to empty cells");
 
             // 8. Resolve per-map convergence config
-            string mapId = Singleton<GameWorld>.Instance.GetComponent<LocationData>().CurrentLocation.Id;
             Dictionary<string, ConvergenceMapConfig> mapOverrides = null;
             if (config.ConvergencePerMap != null && config.ConvergencePerMap.Count > 0)
             {

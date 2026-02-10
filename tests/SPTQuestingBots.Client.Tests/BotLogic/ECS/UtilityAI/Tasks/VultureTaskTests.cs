@@ -258,9 +258,9 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI.Tasks
         // ── QuestTaskFactory ──────────────────────────────────
 
         [Test]
-        public void QuestTaskFactory_TaskCount_IsThirteen()
+        public void QuestTaskFactory_TaskCount_IsFourteen()
         {
-            Assert.That(QuestTaskFactory.TaskCount, Is.EqualTo(13));
+            Assert.That(QuestTaskFactory.TaskCount, Is.EqualTo(14));
         }
 
         [Test]

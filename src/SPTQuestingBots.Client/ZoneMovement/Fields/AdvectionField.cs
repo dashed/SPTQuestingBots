@@ -22,6 +22,7 @@ namespace SPTQuestingBots.ZoneMovement.Fields;
 public sealed class AdvectionField
 {
     private readonly List<ZoneSource> zoneSources = new List<ZoneSource>();
+    private readonly List<BoundedZoneSource> boundedZoneSources = new List<BoundedZoneSource>();
     private float crowdRepulsionStrength;
 
     /// <summary>
@@ -55,8 +56,38 @@ public sealed class AdvectionField
         );
     }
 
-    /// <summary>Number of registered zone sources.</summary>
+    /// <summary>Number of registered simple zone sources.</summary>
     public int ZoneCount => zoneSources.Count;
+
+    /// <summary>Number of registered bounded zone sources.</summary>
+    public int BoundedZoneCount => boundedZoneSources.Count;
+
+    /// <summary>
+    /// Registers a bounded geographic zone with radius-limited falloff.
+    /// Force = strength * pow(clamp01(1 - dist/radius), decay).
+    /// </summary>
+    /// <param name="position">World-space position of the zone (only X and Z are used).</param>
+    /// <param name="strength">Peak attraction/repulsion strength at the zone center.</param>
+    /// <param name="radius">Maximum effective radius in meters. No effect beyond this distance.</param>
+    /// <param name="decay">Falloff exponent. 1.0 = linear, &lt;1 = soft, &gt;1 = sharp edge.</param>
+    public void AddBoundedZone(Vector3 position, float strength, float radius, float decay)
+    {
+        boundedZoneSources.Add(new BoundedZoneSource(position, strength, radius, decay));
+        LoggingController.LogDebug(
+            "[AdvectionField] Added bounded zone at ("
+                + position.x.ToString("F0")
+                + ","
+                + position.z.ToString("F0")
+                + ") strength="
+                + strength.ToString("F2")
+                + " radius="
+                + radius.ToString("F0")
+                + " decay="
+                + decay.ToString("F2")
+                + " total="
+                + boundedZoneSources.Count
+        );
+    }
 
     /// <summary>
     /// Computes the normalized advection direction at a given position.
@@ -82,6 +113,25 @@ public sealed class AdvectionField
                 continue;
             float dist = (float)Math.Sqrt(distSq);
             float w = zoneSources[i].Strength / dist;
+            ax += (dx / dist) * w;
+            az += (dz / dist) * w;
+        }
+
+        // Bounded zone attraction: pow(clamp01(1 - dist/radius), decay) * strength
+        for (int i = 0; i < boundedZoneSources.Count; i++)
+        {
+            float dx = boundedZoneSources[i].Position.x - position.x;
+            float dz = boundedZoneSources[i].Position.z - position.z;
+            float distSq = dx * dx + dz * dz;
+            if (distSq < 0.01f)
+                continue;
+            float dist = (float)Math.Sqrt(distSq);
+            float radius = boundedZoneSources[i].Radius;
+            if (dist >= radius)
+                continue;
+            float normalized = 1f - dist / radius;
+            float falloff = (float)Math.Pow(normalized, boundedZoneSources[i].Decay);
+            float w = boundedZoneSources[i].Strength * falloff;
             ax += (dx / dist) * w;
             az += (dz / dist) * w;
         }
@@ -126,6 +176,8 @@ public sealed class AdvectionField
                 + outZ.ToString("F2")
                 + ") zones="
                 + zoneSources.Count
+                + " bounded="
+                + boundedZoneSources.Count
                 + " bots="
                 + (botPositions?.Count ?? 0)
         );
@@ -143,6 +195,25 @@ public sealed class AdvectionField
         {
             Position = position;
             Strength = strength;
+        }
+    }
+
+    /// <summary>
+    /// Internal data for a bounded zone with radius-limited falloff.
+    /// </summary>
+    private readonly struct BoundedZoneSource
+    {
+        public readonly Vector3 Position;
+        public readonly float Strength;
+        public readonly float Radius;
+        public readonly float Decay;
+
+        public BoundedZoneSource(Vector3 position, float strength, float radius, float decay)
+        {
+            Position = position;
+            Strength = strength;
+            Radius = radius;
+            Decay = decay;
         }
     }
 }

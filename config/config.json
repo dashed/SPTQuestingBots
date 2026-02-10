@@ -298,7 +298,8 @@
 			},
 			"combat_convergence_decay_sec": 30,
 			"combat_convergence_radius": 300,
-			"combat_convergence_force": 0.5
+			"combat_convergence_force": 0.5,
+			"advection_zones_per_map": {}
 		},
 		"looting": {
 			"enabled": true,
@@ -408,6 +409,23 @@
 			"enable_for_scavs": true,
 			"enable_for_pscavs": true
 		},
+		"dynamic_objectives": {
+			"enabled": true,
+			"scan_interval_sec": 30,
+			"max_active_quests": 10,
+			"firefight_enabled": true,
+			"firefight_min_intensity": 20,
+			"firefight_desirability": 8,
+			"firefight_max_age_sec": 120,
+			"firefight_cluster_radius": 50,
+			"corpse_enabled": true,
+			"corpse_desirability": 6,
+			"corpse_max_age_sec": 180,
+			"building_clear_enabled": true,
+			"building_clear_desirability": 4,
+			"building_clear_hold_min": 15,
+			"building_clear_hold_max": 30
+		},
 		"look_variance": {
 			"enabled": true,
 			"flank_check_interval_min": 5.0,
@@ -417,6 +435,17 @@
 			"poi_detection_range": 20.0,
 			"squad_glance_range": 15.0,
 			"combat_event_look_chance": 0.7
+		},
+		"patrol": {
+			"enabled": true,
+			"base_score": 0.50,
+			"cooldown_sec": 120,
+			"waypoint_arrival_radius": 3,
+			"pose": 0.85,
+			"enable_for_pmcs": true,
+			"enable_for_scavs": true,
+			"enable_for_pscavs": true,
+			"routes_per_map": {}
 		},
 		"personality": {
 			"enabled": true,

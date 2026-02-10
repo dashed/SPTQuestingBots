@@ -962,16 +962,16 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
     public class QuestTaskFactoryTests
     {
         [Test]
-        public void TaskCount_Is13()
+        public void TaskCount_Is14()
         {
-            Assert.AreEqual(13, QuestTaskFactory.TaskCount);
+            Assert.AreEqual(14, QuestTaskFactory.TaskCount);
         }
 
         [Test]
-        public void Create_Returns13Tasks()
+        public void Create_Returns14Tasks()
         {
             var manager = QuestTaskFactory.Create();
-            Assert.AreEqual(13, manager.Tasks.Length);
+            Assert.AreEqual(14, manager.Tasks.Length);
         }
 
         [Test]

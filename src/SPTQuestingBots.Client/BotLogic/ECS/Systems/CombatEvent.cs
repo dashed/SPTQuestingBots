@@ -41,5 +41,6 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
         public const byte Gunshot = 1;
         public const byte Explosion = 2;
         public const byte Airdrop = 3;
+        public const byte Death = 4;
     }
 }

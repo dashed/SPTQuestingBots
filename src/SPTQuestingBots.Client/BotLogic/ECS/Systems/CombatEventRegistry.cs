@@ -295,6 +295,44 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
         }
 
         /// <summary>
+        /// Gathers all active, non-expired events into the output buffer.
+        /// Used by <see cref="Components.DynamicObjectiveScanner"/> to pass
+        /// raw event data to <see cref="DynamicObjectiveGenerator"/>.
+        /// </summary>
+        /// <param name="buffer">Pre-allocated output buffer for events.</param>
+        /// <param name="currentTime">Current game time.</param>
+        /// <param name="maxAge">Maximum event age in seconds.</param>
+        /// <returns>Number of valid events written to <paramref name="buffer"/>.</returns>
+        public static int GatherActiveEvents(CombatEvent[] buffer, float currentTime, float maxAge)
+        {
+            int written = 0;
+            if (buffer == null || maxAge <= 0f)
+                return 0;
+
+            int maxWrite = buffer.Length;
+
+            for (int i = 0; i < _count; i++)
+            {
+                int idx = (_head - 1 - i + _capacity * 2) % _capacity;
+                ref CombatEvent evt = ref _events[idx];
+                if (!evt.IsActive)
+                    continue;
+
+                float age = currentTime - evt.Time;
+                if (age > maxAge || age < 0f)
+                    continue;
+
+                if (written >= maxWrite)
+                    break;
+
+                buffer[written] = evt;
+                written++;
+            }
+
+            return written;
+        }
+
+        /// <summary>
         /// Clear all events. Call at raid end.
         /// </summary>
         public static void Clear()

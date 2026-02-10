@@ -81,6 +81,38 @@ public static class ZoneDiscovery
     }
 
     /// <summary>
+    /// Discovers zone centroids keyed by BotZoneName. Used by <see cref="Core.AdvectionZoneLoader"/>
+    /// to resolve builtin zone positions.
+    /// </summary>
+    /// <param name="spawnPoints">All valid spawn points for the current map.</param>
+    /// <returns>Dictionary mapping BotZoneName to its centroid position.</returns>
+    public static Dictionary<string, Vector3> DiscoverZoneCentroids(SpawnPointParams[] spawnPoints)
+    {
+        var centroids = new Dictionary<string, Vector3>();
+
+        if (spawnPoints == null || spawnPoints.Length == 0)
+            return centroids;
+
+        var groups = new Dictionary<string, List<Vector3>>();
+        foreach (var sp in spawnPoints)
+        {
+            string zoneName = sp.BotZoneName ?? "";
+            if (string.IsNullOrEmpty(zoneName))
+                continue;
+            if (!groups.ContainsKey(zoneName))
+                groups[zoneName] = new List<Vector3>();
+            groups[zoneName].Add(sp.Position);
+        }
+
+        foreach (var kvp in groups)
+        {
+            centroids[kvp.Key] = ComputeCentroid(kvp.Value);
+        }
+
+        return centroids;
+    }
+
+    /// <summary>
     /// Computes the centroid (average position) of a list of positions.
     /// Delegates to <see cref="Core.ZoneMathUtils.ComputeCentroid"/>.
     /// </summary>

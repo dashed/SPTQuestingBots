@@ -29,6 +29,7 @@ namespace SPTQuestingBots.BehaviorExtensions
         Linger,
         Investigate,
         SpawnEntry,
+        Patrol,
     }
 
     internal abstract class CustomLayerDelayedUpdate : CustomLayer
@@ -99,6 +100,8 @@ namespace SPTQuestingBots.BehaviorExtensions
                     return new Action(typeof(BotLogic.Objective.InvestigateAction), actionReason);
                 case BotActionType.SpawnEntry:
                     return new Action(typeof(BotLogic.Objective.SpawnEntryAction), actionReason);
+                case BotActionType.Patrol:
+                    return new Action(typeof(BotLogic.Objective.PatrolAction), actionReason);
             }
 
             throw new InvalidOperationException("Invalid action selected for layer");

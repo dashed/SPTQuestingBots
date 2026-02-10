@@ -58,5 +58,6 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
         public const int Linger = 15;
         public const int Investigate = 16;
         public const int SpawnEntry = 17;
+        public const int Patrol = 18;
     }
 }

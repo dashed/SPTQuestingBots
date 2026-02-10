@@ -93,8 +93,14 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("room_clear")]
         public RoomClearConfig RoomClear { get; set; } = new RoomClearConfig();
 
+        [JsonProperty("dynamic_objectives")]
+        public DynamicObjectiveConfig DynamicObjectives { get; set; } = new DynamicObjectiveConfig();
+
         [JsonProperty("look_variance")]
         public LookVarianceConfig LookVariance { get; set; } = new LookVarianceConfig();
+
+        [JsonProperty("patrol")]
+        public PatrolConfig Patrol { get; set; } = new PatrolConfig();
 
         [JsonProperty("personality")]
         public PersonalityConfig Personality { get; set; } = new PersonalityConfig();

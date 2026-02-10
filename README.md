@@ -57,7 +57,7 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 
 ### Utility AI (Optional)
 - Phobos-style scored task framework for bot action selection — enabled by default via F12 (`Use Utility AI for Action Selection`, default: true)
-- 13 scored tasks replace the `BotObjectiveLayer.trySetNextAction()` enum switch: GoToObjective, Ambush, Snipe, HoldPosition, PlantItem, UnlockDoor, ToggleSwitch, CloseDoors, Loot, Vulture, Linger, Investigate, SpawnEntry
+- 14 scored tasks replace the `BotObjectiveLayer.trySetNextAction()` enum switch: GoToObjective, Ambush, Snipe, HoldPosition, PlantItem, UnlockDoor, ToggleSwitch, CloseDoors, Loot, Vulture, Linger, Investigate, SpawnEntry, Patrol
 - Column-major scoring with additive hysteresis prevents action flip-flopping (identical to Phobos `BaseTaskManager.PickTask`)
 - Continuous GoToObjective scoring: exponential distance-based decay (`BaseScore * (1 - e^(-d/75))`) instead of binary on/off — eliminates abrupt score jumps
 - Two-phase action handoff: GoToObjective scores high when far, drops to 0 when close so the action-specific task takes over
@@ -122,6 +122,38 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - Room clear duration: random 3–8s of slow walk + reduced pose after entering
 - Corner pauses: brief pauses at sharp path angles for door/corner-checking behavior
 - Configurable via `questing.room_clear` in config.json (duration, pose, corner angle threshold, per-bot-type toggles)
+
+### Per-Map Advection Zone Configs
+- Phobos-style bounded influence zones with per-map tuning via `advection_zones_per_map` config override
+- Each zone defines force range, radius, decay exponent, and time/boss multipliers
+- Builtin zones tied to BSG BotZone names (resolved from spawn point centroids at raid start)
+- Custom zones at arbitrary world positions for areas without BSG zone definitions
+- Negative force supported (repulsor zones push bots away from areas)
+- Time multipliers: early-raid attractors (Dorms 1.5×) fade to late-raid (0.5×)
+- Boss alive/dead modifiers: Interchange center boosts 1.5× when Killa is alive
+- Hardcoded defaults for 8 maps (Customs, Interchange, Shoreline, Woods, Reserve, Laboratory, Factory day/night)
+- Wired into `WorldGridManager` after zone discovery; all overridable via config.json
+
+### Dynamic Objective Generation
+- Quests generated from live game state — bots investigate firefights, scavenge corpses, and clear buildings
+- `DynamicObjectiveScanner` scans every 30s, creates quests via `BotJobAssignmentFactory.AddQuest()`, auto-expires them
+- **Firefight clusters**: groups nearby combat events (gunshots/explosions) into Ambush quests at cluster centroids
+- **Corpse scavenging**: death events generate MoveToPosition quests at corpse locations
+- **Building clear**: indoor zone positions generate HoldAtPosition quests (created once at raid start)
+- `CombatEventType.Death` (=4) recorded from `OnBeenKilledByAggressorPatch` — enables corpse-based objectives
+- Pure C# generator with MonoBehaviour orchestrator — generator is fully unit-testable
+- All thresholds configurable via `questing.dynamic_objectives` in config.json
+
+### Patrol Route System
+- Named patrol routes per map with waypoint sequences — bots follow structured paths between quest objectives
+- 3 route types: Perimeter (loop), Interior (loop), Overwatch (no loop) — route type affects default loop behavior
+- Per-map hardcoded defaults: Customs (Dorms Perimeter, Customs Road, Construction Overwatch), Interchange (Mall Interior, Parking Perimeter), Shoreline (Resort Sweep, Shoreline Path), Reserve (Bunker Patrol, Base Perimeter), Woods (Sawmill Circuit)
+- `PatrolRouteSelector`: picks best route by proximity (0.6 weight) + personality fit (0.4 weight) with deterministic tiebreak
+- `PatrolTask`: utility task #14 that fills idle time when bot has no active quest objective (MaxBaseScore=0.50)
+- `PatrolAction`: navigate→pause→advance state machine with head scanning at waypoints, movement timeout, stuck detection
+- Routes filterable by aggression range and raid time window (e.g., overwatch routes only for cautious bots)
+- Personality-influenced: cautious bots patrol more (1.2×), aggressive bots less (0.8×); late raid increases patrol (1.2×)
+- All routes overridable via `questing.patrol.routes_per_map` in config.json
 
 ### Investigate Task (Lightweight Gunfire Response)
 - When bots detect nearby combat events that don't warrant full vulture behavior, they cautiously investigate
@@ -346,7 +378,7 @@ SPTQuestingBots/
 │       │   ├── ECS/                 #   Entity data containers + system methods
 │       │   │   ├── Systems/         #   HiveMindSystem (static dense-list iteration)
 │       │   │   └── UtilityAI/       #   Scored task framework (Phobos-style)
-│       │   │       └── Tasks/       #   13 concrete quest utility tasks
+│       │   │       └── Tasks/       #   14 concrete quest utility tasks
 │       │   ├── BotMonitor/          #   Health, combat, extraction monitors
 │       │   ├── HiveMind/            #   Group coordination sensors
 │       │   ├── Follow/              #   Boss follower behavior
@@ -406,6 +438,9 @@ The mod is configured through `config/config.json` and the BepInEx F12 in-game m
 | `questing.room_clear` | Room clearing: enable/disable, duration range, corner pause duration, angle threshold, pose, per-bot-type toggles |
 | `questing.linger` | Linger system: enable/disable, base score, duration range, head scan intervals, pose, per-bot-type toggles |
 | `questing.personality` | Personality system: enable/disable personality-influenced scoring and raid time progression |
+| `questing.dynamic_objectives` | Dynamic objectives: enable/disable, scan interval, firefight/corpse/building-clear toggles, intensity thresholds, desirability scores |
+| `questing.patrol` | Patrol routes: enable/disable, base score, cooldown, waypoint arrival radius, pose, per-bot-type toggles, per-map route overrides (`routes_per_map`) |
+| `questing.zone_movement.advection_zones_per_map` | Per-map advection zone overrides: builtin zones (by BSG BotZone name) and custom zones (by world position) with force/radius/decay/time/boss settings |
 | `adjust_pscav_chance` | Dynamic player-Scav conversion rates when spawning system is disabled |
 
 ### Custom Quests

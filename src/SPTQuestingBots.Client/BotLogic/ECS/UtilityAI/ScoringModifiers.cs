@@ -32,6 +32,8 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                     return Lerp(0.7f, 1.3f, aggression);
                 case BotActionTypeId.Investigate:
                     return Lerp(0.8f, 1.2f, aggression);
+                case BotActionTypeId.Patrol:
+                    return Lerp(1.2f, 0.8f, aggression);
                 default:
                     return 1f;
             }
@@ -56,6 +58,8 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
                     return Lerp(0.9f, 1.1f, raidTimeNormalized);
                 case BotActionTypeId.Snipe:
                     return Lerp(0.9f, 1.1f, raidTimeNormalized);
+                case BotActionTypeId.Patrol:
+                    return Lerp(0.8f, 1.2f, raidTimeNormalized);
                 default:
                     return 1f;
             }
