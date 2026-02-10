@@ -10,7 +10,7 @@ namespace SPTQuestingBots
     [BepInIncompatibility("com.dvize.AILimit")]
     [BepInDependency("xyz.drakia.waypoints", "1.7.1")]
     [BepInDependency("xyz.drakia.bigbrain", "1.3.2")]
-    [BepInPlugin("com.DanW.QuestingBots", "DanW-QuestingBots", "1.11.0")]
+    [BepInPlugin("com.DanW.QuestingBots", "DanW-QuestingBots", "1.12.0")]
     public class QuestingBotsPlugin : BaseUnityPlugin
     {
         public static string ModName { get; private set; } = "???";
@@ -135,6 +135,10 @@ namespace SPTQuestingBots
 
                 // Add options to the F12 menu
                 QuestingBotsPluginConfig.BuildConfigOptions(Config);
+
+                // Push F12 config values into ConfigController.Config
+                ConfigSync.SyncToModConfig();
+                Config.SettingChanged += (_, _) => ConfigSync.SyncToModConfig();
 
                 this.GetOrAddComponent<TarkovData>();
             }

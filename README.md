@@ -455,6 +455,36 @@ The mod is configured through `config/config.json` and the BepInEx F12 in-game m
 | `questing.zone_movement.advection_zones_per_map` | Per-map advection zone overrides: builtin zones (by BSG BotZone name) and custom zones (by world position) with force/radius/decay/time/boss settings |
 | `adjust_pscav_chance` | Dynamic player-Scav conversion rates when spawning system is disabled |
 
+### In-Game Configuration (F12 Menu)
+
+Most config.json settings are also exposed in the BepInEx F12 in-game menu with 21 organized sections. Changes take effect immediately — no restart required.
+
+| Section | Settings |
+|---------|----------|
+| **01. General** | Questing toggle, sprinting, utility AI, squad strategies, max calc time |
+| **02. Bot Spawns** | Spawn toggle, retry time, initial bosses, game start delay |
+| **03. PMC Spawns** | PMC toggle, raid time, distances, player fraction |
+| **04. PScav Spawns** | PScav toggle, raid time, distances, player fraction |
+| **05. Scav Limits** | Spawn restrictions, rate limits, max alive scavs, exclusion radius |
+| **06. Bot Pathing** | Custom mover, door bypass, path retry interval |
+| **07. Bot LOD** | LOD toggle, reduced/minimal distances, frame skip counts |
+| **08. Looting** | Loot toggle, detection distances, value threshold, concurrent looters, loot types |
+| **09. Vulture** | Vulture toggle, detection range, courage, ambush, silent approach, baiting |
+| **10. Investigate** | Investigate toggle, detection range, intensity threshold, timeout |
+| **11. Linger** | Linger toggle, duration range, pose |
+| **12. Spawn Entry** | Spawn entry toggle, duration range, pose |
+| **13. Room Clear** | Room clear toggle, duration, corner pause, pose |
+| **14. Patrol** | Patrol toggle, base score, cooldown, pose |
+| **15. Dynamic Objectives** | Dynamic objectives toggle, scan interval, max active, firefight/corpse/building toggles |
+| **16. Personality** | Personality toggle, raid time toggle |
+| **17. Look Variance** | Look variance toggle |
+| **18. Zone Movement** | Zone movement toggle, field weights, debug overlay/minimap |
+| **19. AI Limiter** | Sleeping system toggle, per-map distances, bot type exemptions |
+| **20. Debug** | Bot info/path overlays, quest info, font size, spawn debug messages |
+| **21. Custom Quest Locations** | Quest location saving, display, naming, hotkey |
+
+> **Tip:** Numeric settings have sliders with min/max ranges. Advanced/technical settings are hidden by default — enable "Show Advanced" in BepInEx Configuration Manager to see them.
+
 ### Custom Quests
 
 Create custom quest files in `quests/custom/` with the same filenames as `quests/standard/` (one per map). See the original README sections on quest data structures for the full schema (Quests, Objectives, Steps).

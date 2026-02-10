@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.0] - 2026-02-10
+
+### Added
+- **Rich F12 configuration menu** — 21 numbered sections with ~110 ConfigEntry fields exposing config.json settings in the BepInEx F12 in-game menu
+  - Sections use numbered prefixes ("01. General" through "21. Custom Quest Locations") for consistent alphabetical ordering in the configuration manager
+  - New sections: Bot Spawns, PMC Spawns, PScav Spawns, Bot Pathing, Bot LOD, Looting, Vulture, Investigate, Linger, Spawn Entry, Room Clear, Patrol, Dynamic Objectives, Personality, Look Variance
+  - Numeric fields use `AcceptableValueRange<T>` sliders; advanced/technical settings marked with `IsAdvanced = true`
+  - All new ConfigEntry fields use config.json values as defaults — F12 menu starts with the same values as config.json
+- **ConfigSync system** — bridges F12 ConfigEntry values to `ConfigController.Config` with live `SettingChanged` support
+  - `ConfigSync.SyncToModConfig()`: pushes all ConfigEntry values into the runtime config model
+  - Registered on `Config.SettingChanged` event — F12 changes take effect immediately without restart
+  - Null-checks for conditional fields (PMC/PScav spawns only bound when `BotSpawns.Enabled`)
+- `ConfigSections` standalone class — section name constants extracted for testability (no BepInEx dependencies)
+- 27 new ConfigSections tests: pattern validation (`^\d{2}\. .+$`), ascending order, unique prefixes, contiguous numbering 01–21, per-field value verification
+
+### Changed
+- F12 menu sections renamed with numbered prefixes: "Main" → "01. General", "Scav Spawn Restrictions" → "05. Scav Limits", "AI Limiter" → "19. AI Limiter", "Debug" → "20. Debug", "Custom Quest Locations" → "21. Custom Quest Locations", "Zone Movement" → "18. Zone Movement"
+- 1949 client tests total (was 1922), 66 server tests, 2015 total
+
 ## [1.11.0] - 2026-02-10
 
 ### Fixed
