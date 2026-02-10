@@ -104,6 +104,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `default_wait_time_after_objective_completion` reduced from 5s to 3s (linger adds 10–30s idle on top)
   - Config: `wait_time_min` (5s) and `wait_time_max` (15s) in `questing` section
   - 5 new config validation tests
+- **Investigate task** — lightweight gunfire response behavior
+  - `InvestigateTask`: utility task (`BotActionTypeId=Investigate(16)`, MaxBaseScore=0.40, hysteresis=0.15)
+    - Gates: `HasNearbyEvent`, `!IsInCombat`, not already vulturing, `CombatIntensity >= threshold(5)`
+    - Scoring: intensity component (IntensityWeight=0.20) + proximity component (ProximityWeight=0.20)
+  - `InvestigateAction`: BigBrain action extending `GoToPositionAbstractAction`
+    - 2-state: cautious approach (speed 0.5, pose 0.6) → look around (head scanning, 5–10s)
+    - Movement timeout configurable (default: 60s)
+  - `InvestigateConfig`: 14 JSON properties under `questing.investigate`
+  - 2 new fields on `BotEntity`: `IsInvestigating`, `InvestigateTimeoutAt`
+  - ~25 new tests (22 InvestigateTask scoring + 3 InvestigateConfig deserialization)
+- **Personality system** — bot-specific scoring modifiers across all utility tasks
+  - `BotPersonality`: byte constants (Timid=0, Cautious=1, Normal=2, Aggressive=3, Reckless=4)
+  - `PersonalityHelper`: maps from `BotDifficulty` (easy→Cautious, normal→Normal, hard→Aggressive, impossible→Reckless), weighted random fallback
+  - `Aggression` float (0.0–1.0): Timid=0.1, Cautious=0.3, Normal=0.5, Aggressive=0.7, Reckless=0.9
+  - `ScoringModifiers`: pure C# static helper computing per-task personality multipliers:
+    - GoToObjective: lerp(0.85, 1.15, aggression) — aggressive bots rush more
+    - Ambush/Snipe: lerp(1.2, 0.8, aggression) — cautious bots camp more
+    - Linger: lerp(1.3, 0.7, aggression) — cautious bots linger longer
+    - Vulture/Investigate: lerp(0.7/0.8, 1.3/1.2, aggression) — aggressive bots investigate more
+    - Loot: lerp(1.1, 0.9, aggression)
+  - Set once on bot registration from `BotDifficulty`
+  - `PersonalityConfig`: config POCO under `questing.personality`
+  - 3 new fields on `BotEntity`: `Personality` (byte), `Aggression` (float), `RaidTimeNormalized` (float)
+  - ~49 new tests (14 BotPersonality + 30 ScoringModifiers + 5 PersonalityConfig)
+- **Raid time behavior progression** — scoring multipliers change throughout the raid
+  - `RaidTimeNormalized` (0.0=start, 1.0=end) synced from game timer each HiveMind tick
+  - `ScoringModifiers.RaidTimeModifier()` per-task multipliers:
+    - Early raid (0.0–0.2): GoToObjective ×1.2 (rush), Linger ×0.7 (less idle)
+    - Mid raid (0.2–0.7): balanced (×1.0)
+    - Late raid (0.7–1.0): Linger ×1.3 (more idle), Loot ×1.2 (more looting), GoToObjective ×0.8 (less rushing)
+  - Combined modifier: `PersonalityModifier × RaidTimeModifier` applied to all 12 task scores
+- **Convergence field tuning** — per-map config, combat event boost, time-based weight decay
+  - `ConvergenceMapConfig`: per-map convergence settings (radius, force, enabled) for all 12 maps
+    - Factory disabled, Customs 250m/1.0, Woods 400m/0.8, Laboratory 150m/1.2, etc.
+  - `CombatPullPoint`: temporary convergence boost toward recent gunfire (linear decay over 30s)
+    - `CombatEventRegistry.GatherCombatPull()`: zero-alloc combat event scanning for field integration
+  - `ConvergenceTimeWeight`: time-based convergence multiplier — early raid 1.3× (creates encounters), mid 1.0×, late 0.7× (bots spread out)
+  - Per-map config wired through `WorldGridManager` → `FieldComposer` → `ConvergenceField`
+  - Config: `convergence_per_map`, `combat_convergence_*` under `questing.zone_movement`
+  - ~33 new tests (ConvergenceMapConfig defaults + per-map + time weight + combat pull)
 - Vulture port analysis document (`docs/vulture-port-analysis.md`)
 - Bot looting analysis document (`docs/looting-analysis.md`)
 - **Dedicated log file** — per-session log at `BepInEx/plugins/DanW-SPTQuestingBots/log/QuestingBots.log`
@@ -131,8 +171,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `SquadCalloutId`, `SquadCalloutDecider`, `FormationSpeedController`: class and method docstrings
 
 ### Changed
-- Utility AI now has 11 scored tasks (was 8): added Loot, Vulture, and Linger
-- `QuestTaskFactory.TaskCount` updated from 8 to 11
+- Utility AI now has 12 scored tasks (was 8): added Loot, Vulture, Linger, and Investigate
+- `QuestTaskFactory.TaskCount` updated from 8 to 12
+- All task scores now modified by personality (aggression) and raid time progression multipliers
 - GoToObjective scoring changed from binary (0 or BaseScore) to continuous exponential decay based on distance
 - `default_wait_time_after_objective_completion` reduced from 5s to 3s
 - `BotHiveMindMonitor.Update()` tick order expanded to 9 steps (was 5 in v1.9.0):
@@ -140,7 +181,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   5. updateSquadStrategies (+ formations, combat positioning, zone follower spread, voice commands),
   6. updateCombatEvents (CombatEventRegistry cleanup + CombatEventScanner),
   7. updateLootScanning, 8. refreshHumanPlayerCache, 9. updateLodTiers
-- 1558 client tests total (was 938), 58 server tests, 1616 total
+- 1687 client tests total (was 938), 58 server tests, 1745 total
 
 ## [1.9.0] - 2026-02-09
 

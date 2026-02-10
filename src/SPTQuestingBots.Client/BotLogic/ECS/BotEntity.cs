@@ -322,6 +322,34 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// <summary>Current vulture behavior phase. 0=None, see <see cref="Systems.VulturePhase"/>.</summary>
         public byte VulturePhase;
 
+        // ── Personality + Raid Time ──────────────────────────────────
+
+        /// <summary>
+        /// Bot personality classification (see <see cref="BotPersonality"/> constants).
+        /// Set once on registration from bot difficulty.
+        /// </summary>
+        public byte Personality;
+
+        /// <summary>
+        /// Aggression factor (0.0-1.0) derived from personality.
+        /// Timid=0.1, Cautious=0.3, Normal=0.5, Aggressive=0.7, Reckless=0.9.
+        /// </summary>
+        public float Aggression;
+
+        /// <summary>
+        /// Normalized raid time (0.0 = raid start, 1.0 = raid end).
+        /// Synced from game timer each HiveMind tick via BotEntityBridge.SyncQuestState().
+        /// </summary>
+        public float RaidTimeNormalized;
+
+        // ── Investigate State ──────────────────────────────────────────────
+
+        /// <summary>Whether this bot is currently investigating a gunfire event.</summary>
+        public bool IsInvestigating;
+
+        /// <summary>Game time at which the current investigation expires.</summary>
+        public float InvestigateTimeoutAt;
+
         // ── Linger State ──────────────────────────────────────────────
 
         /// <summary>Game time when the bot's last objective was completed. 0 = no recent completion.</summary>

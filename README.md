@@ -57,12 +57,14 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 
 ### Utility AI (Optional)
 - Phobos-style scored task framework for bot action selection — enabled by default via F12 (`Use Utility AI for Action Selection`, default: true)
-- 11 scored tasks replace the `BotObjectiveLayer.trySetNextAction()` enum switch: GoToObjective, Ambush, Snipe, HoldPosition, PlantItem, UnlockDoor, ToggleSwitch, CloseDoors, Loot, Vulture, Linger
+- 12 scored tasks replace the `BotObjectiveLayer.trySetNextAction()` enum switch: GoToObjective, Ambush, Snipe, HoldPosition, PlantItem, UnlockDoor, ToggleSwitch, CloseDoors, Loot, Vulture, Linger, Investigate
 - Column-major scoring with additive hysteresis prevents action flip-flopping (identical to Phobos `BaseTaskManager.PickTask`)
 - Continuous GoToObjective scoring: exponential distance-based decay (`BaseScore * (1 - e^(-d/75))`) instead of binary on/off — eliminates abrupt score jumps
 - Two-phase action handoff: GoToObjective scores high when far, drops to 0 when close so the action-specific task takes over
 - Quest state synced from `BotObjectiveManager` to `BotEntity` before each scoring pass — keeps utility tasks pure C# with zero Unity dependencies
 - Hybrid approach: utility scoring for action SELECTION, BigBrain for action EXECUTION
+- Personality-influenced scoring: aggression float (0-1) modifies all task scores — aggressive bots rush objectives, cautious bots camp and linger
+- Raid time progression: scoring multipliers shift throughout the raid — early rush, mid balanced, late cautious/looting
 - When disabled, the existing deterministic switch statement is used as fallback
 
 ### Squad Strategies (Optional)
@@ -98,6 +100,14 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - Combat interrupts lingering immediately
 - Context-aware speed/posture approaching objectives: indoor areas (crouch, no sprint), combat/suspicious (deep crouch), near objective (<30m slow approach, <15m no sprint)
 - Variable wait times between objectives: random sampling from configurable range (5–15s) instead of flat 5s
+
+### Investigate Task (Lightweight Gunfire Response)
+- When bots detect nearby combat events that don't warrant full vulture behavior, they cautiously investigate
+- Lower intensity threshold (5 vs Vulture's 15) and lower max score (0.40 vs 0.60) — triggers more often but yields to stronger behaviors
+- 2-state behavior: cautious approach (speed 0.5, pose 0.6) then look around with head scanning (5–10s)
+- Gated: not in combat, not already vulturing, nearby event exists with sufficient intensity
+- Personality-influenced: aggressive bots investigate more readily (1.2× modifier), cautious bots less (0.8×)
+- All thresholds configurable via `questing.investigate` in config.json
 
 ### Vulture System (Combat Scavenging)
 - Bots hear gunfire and explosions, then investigate combat zones to ambush weakened survivors — ported from the [Vulture](https://hub.sp-tarkov.com/files/file/2283-vulture/) mod
@@ -314,7 +324,7 @@ SPTQuestingBots/
 │       │   ├── ECS/                 #   Entity data containers + system methods
 │       │   │   ├── Systems/         #   HiveMindSystem (static dense-list iteration)
 │       │   │   └── UtilityAI/       #   Scored task framework (Phobos-style)
-│       │   │       └── Tasks/       #   11 concrete quest utility tasks
+│       │   │       └── Tasks/       #   12 concrete quest utility tasks
 │       │   ├── BotMonitor/          #   Health, combat, extraction monitors
 │       │   ├── HiveMind/            #   Group coordination sensors
 │       │   ├── Follow/              #   Boss follower behavior
@@ -368,7 +378,9 @@ The mod is configured through `config/config.json` and the BepInEx F12 in-game m
 | `questing.zone_movement` | Zone-based movement: grid size, field weights, POI scoring, convergence interval, debug overlay |
 | `questing.looting` | Looting system: enable/disable, scan radius, scoring weights, cooldowns, squad coordination settings |
 | `questing.vulture` | Vulture system: enable/disable, detection range, courage threshold, ambush duration, time-of-day modifiers |
+| `questing.investigate` | Investigate task: enable/disable, intensity threshold, detection range, movement timeout, approach speed/pose |
 | `questing.linger` | Linger system: enable/disable, base score, duration range, head scan intervals, pose, per-bot-type toggles |
+| `questing.personality` | Personality system: enable/disable personality-influenced scoring and raid time progression |
 | `adjust_pscav_chance` | Dynamic player-Scav conversion rates when spawning system is disabled |
 
 ### Custom Quests

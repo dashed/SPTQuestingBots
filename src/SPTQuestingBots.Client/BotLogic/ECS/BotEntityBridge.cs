@@ -107,6 +107,9 @@ namespace SPTQuestingBots.BotLogic.ECS
             // Phase 8: create empty job assignment list
             _jobAssignments[entity.Id] = new List<BotJobAssignment>();
 
+            // Personality: derive from bot difficulty
+            AssignPersonality(entity, bot);
+
             LoggingController.LogInfo(
                 "[BotEntityBridge] Registered entity "
                     + entity.Id
@@ -116,6 +119,10 @@ namespace SPTQuestingBots.BotLogic.ECS
                     + controllerBotType
                     + ", bsgId="
                     + bot.Id
+                    + ", personality="
+                    + entity.Personality
+                    + ", aggression="
+                    + entity.Aggression.ToString("F1")
                     + ", count="
                     + _ownerToEntity.Count
                     + ")"
@@ -722,6 +729,17 @@ namespace SPTQuestingBots.BotLogic.ECS
             // Sync game time for linger scoring
             entity.CurrentGameTime = UnityEngine.Time.time;
 
+            // Sync raid time progression (0.0 = start, 1.0 = end)
+            try
+            {
+                float remainingFraction = Helpers.RaidHelpers.GetRaidTimeRemainingFraction();
+                entity.RaidTimeNormalized = 1f - remainingFraction;
+            }
+            catch
+            {
+                // RaidTimeUtil may not be available during early initialization
+            }
+
             // Track objective completion: true→false transition triggers linger
             if (previousHasActiveObjective && !entity.HasActiveObjective && !entity.IsLingering)
             {
@@ -941,6 +959,30 @@ namespace SPTQuestingBots.BotLogic.ECS
                 if (_jobAssignments.TryGetValue(kvp.Value.Id, out var list))
                     yield return new KeyValuePair<string, List<BotJobAssignment>>(kvp.Key, list);
             }
+        }
+
+        // ── Personality Assignment ────────────────────────────────
+
+        /// <summary>Shared RNG for personality fallback, seeded once.</summary>
+        private static readonly System.Random _personalityRng = new System.Random();
+
+        /// <summary>
+        /// Assign personality and aggression to a bot entity from its BotDifficulty.
+        /// Called once during RegisterBot().
+        /// </summary>
+        private static void AssignPersonality(BotEntity entity, BotOwner bot)
+        {
+            try
+            {
+                int difficulty = (int)bot.Profile.Info.Settings.BotDifficulty;
+                entity.Personality = PersonalityHelper.FromDifficulty(difficulty, _personalityRng);
+            }
+            catch
+            {
+                entity.Personality = PersonalityHelper.RandomFallback(_personalityRng);
+            }
+
+            entity.Aggression = PersonalityHelper.GetAggression(entity.Personality);
         }
 
         // ── Earpiece + Personality Sync ───────────────────────────

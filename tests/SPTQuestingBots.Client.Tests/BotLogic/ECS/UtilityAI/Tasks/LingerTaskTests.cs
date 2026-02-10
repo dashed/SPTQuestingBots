@@ -168,7 +168,8 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI.Tasks
             var task = new LingerTask();
             task.BaseScore = 0.80f;
             task.ScoreEntity(10, _entity);
-            Assert.That(_entity.TaskScores[10], Is.EqualTo(0.80f).Within(0.001f));
+            float modifier = ScoringModifiers.CombinedModifier(_entity.Aggression, _entity.RaidTimeNormalized, BotActionTypeId.Linger);
+            Assert.That(_entity.TaskScores[10], Is.EqualTo(0.80f * modifier).Within(0.001f));
         }
 
         // ── Constants ─────────────────────────────────────────
@@ -196,9 +197,9 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI.Tasks
         // ── QuestTaskFactory integration ────────────────────────
 
         [Test]
-        public void QuestTaskFactory_TaskCount_IsEleven()
+        public void QuestTaskFactory_TaskCount_IsTwelve()
         {
-            Assert.That(QuestTaskFactory.TaskCount, Is.EqualTo(11));
+            Assert.That(QuestTaskFactory.TaskCount, Is.EqualTo(12));
         }
 
         [Test]

@@ -41,11 +41,11 @@ When SAIN is installed alongside QuestingBots, this is the full priority stack:
 
 **Key insight**: When no layer above priority 18 is active, QuestingBots drives movement. When no QuestingBots layer is active (quest selection fails, between objectives), bots fall through to BSG's terrible default patrol — standing around and pacing.
 
-### Utility AI Tasks (10 scored tasks)
+### Utility AI Tasks (12 scored tasks)
 
 | Task | Max Score | Behavior |
 |------|-----------|----------|
-| GoToObjective | 0.65 | Travel to quest objective |
+| GoToObjective | 0.65 | Travel to quest objective (continuous distance-based decay) |
 | Ambush | 0.65 | Hold ambush position |
 | Snipe | 0.65 | Hold snipe position |
 | HoldPosition | 0.65 | Hold at position |
@@ -54,9 +54,13 @@ When SAIN is installed alongside QuestingBots, this is the full priority stack:
 | ToggleSwitch | 0.65 | Toggle quest switch |
 | CloseDoors | 0.65 | Close nearby doors |
 | Loot | 0.55 | Value-based loot scoring |
-| Vulture | varies | Respond to combat events |
+| Vulture | 0.60 | Multi-phase combat scavenging |
+| Linger | 0.45 | Post-objective idle with linear decay |
+| Investigate | 0.40 | Lightweight gunfire response |
 
-**Problem**: Most tasks score exactly 0 or 0.65 — binary, no gradient. Only Loot has genuine continuous scoring.
+All task scores are modified by personality (aggression float) and raid time progression multipliers via `ScoringModifiers.CombinedModifier()`.
+
+**~~Problem~~**: ~~Most tasks score exactly 0 or 0.65 — binary, no gradient. Only Loot has genuine continuous scoring.~~ **Resolved**: GoToObjective now uses exponential distance decay, Linger uses linear time decay, all tasks have personality + raid time modifiers.
 
 ### Zone Movement System
 
@@ -267,91 +271,96 @@ Several powerful knobs exist but are disabled or hardcoded:
 
 ## 4. Proposed Improvements
 
-### Tier 1 — High Impact, Low-Medium Effort
+### Tier 1 — High Impact, Low-Medium Effort ✅ IMPLEMENTED
 
-#### 1.1 Idle Behavior System (new utility task: "Linger")
+#### 1.1 Idle Behavior System (LingerTask) ✅
 
-Add a `LingerTask` that scores 0.3-0.5 when a bot just completed an objective. The bot would:
-- Move to a nearby cover point
-- Look around (random head rotations every 3-8s)
-- Optionally check nearby containers (if within 15m)
-- Duration: 10-30s (Gaussian-sampled)
-- Score decays over time, eventually yielding to GoToObjective
+Implemented as `LingerTask` (`BotActionTypeId=Linger(15)`, BaseScore=0.45, hysteresis=0.10):
+- Linear score decay: `baseScore * (1 - elapsed / duration)` over 10–30s random duration
+- `LingerAction`: pauses patrol, slight crouch (pose=0.7), random head scans every 3–8s
+- Gates: `ObjectiveCompletedTime > 0`, `!IsInCombat`, `LingerDuration > 0`
+- `LingerConfig`: 10 JSON properties under `questing.linger`
+- ~27 new tests
 
-This single addition would break up the "complete → beeline → complete" pattern.
+**Files**: `LingerTask.cs`, `LingerAction.cs`, `LingerConfig.cs`
 
-**Effort**: ~200 lines. New `LingerTask.cs`, add cover point lookup, wire into `QuestTaskFactory`.
+#### 1.2 Speed and Posture Variation ✅
 
-#### 1.2 Speed and Posture Variation
+Implemented in `GoToObjectiveAction.Update()`:
+- Indoor (`EnvironmentId == 0`): pose 0.8, no sprint
+- Combat/suspicious: pose 0.6, no sprint
+- Near objective (<30m): pose 0.75; within 15m: no sprint
+- Personality affects base pose: lerp 0.8..1.0 by aggression
+- Uses `Math.Min` to apply the most restrictive condition
 
-Add context-aware speed and posture control:
-- **Indoor detection** (`BotOwner.AIData.EnvironmentId == 0`): Walk speed, slight crouch (0.8 pose)
-- **Recent combat** (within 60s of last enemy): Cautious speed (0.6), lower pose (0.6)
-- **Open terrain sprint**: Only sprint outdoors on long paths (>50m to next corner)
-- **Approach behavior**: Slow down and lower pose when within 30m of objective
+**Files**: `GoToObjectiveAction.cs`
 
-This replaces the binary sprint/walk with contextual speed selection.
+#### 1.3 Zone Movement as Default Fallback ✅
 
-**Effort**: ~150 lines. Modify `GoToPositionAbstractAction` and `CustomMoverController`.
+Implemented in `BotObjectiveLayer.IsActive()`:
+- `tryZoneMovementFallback()` activates when `trySetNextActionUtility()` returns false
+- Dispatches `GoToObjective` with "ZoneWander" reason
+- `spawn_point_wander.desirability` bumped from 0 to 3
 
-#### 1.3 Zone Movement as Default Fallback
+**Files**: `BotObjectiveLayer.cs`, config.json
 
-Make the zone movement system activate as the default when no quest is available, instead of falling through to BSG patrol:
-- When quest selection fails or between quests, the zone system picks the next cell
-- Zone movement becomes the "organic wander" behavior
-- Enable `spawn_point_wander` with low desirability (2-3)
+#### 1.4 Variable Wait Times ✅
 
-**Effort**: ~100 lines. Modify `BotObjectiveLayer` to delegate to zone system when no quest.
+Implemented as `QuestObjectiveStep.SampleWaitTime()`:
+- Random sampling from `[WaitTimeMin, WaitTimeMax]` range (default: 5–15s)
+- `default_wait_time_after_objective_completion` reduced from 5s to 3s (linger adds 10–30s idle on top)
+- Config: `wait_time_min` (5s) and `wait_time_max` (15s) in `questing` section
+- 5 new config validation tests
 
-#### 1.4 Variable Wait Times
+**Files**: `QuestObjectiveStep.cs`, config.json
 
-Replace the flat 5-second wait with Gaussian-sampled waits:
-- Short objective (MoveToPosition): 5-15s
-- Long objective (Ambush, Snipe): 3-8s (already spent time there)
-- Loot objective: 8-20s (checking gear)
-- Add personality modifier: aggressive bots wait less, cautious bots wait more
+### Tier 2 — High Impact, Medium Effort ✅ IMPLEMENTED
 
-**Effort**: ~50 lines. Modify `BotObjectiveManager` wait time calculation.
+#### 2.1 Investigate Task (Sound/Gunfire Response) ✅
 
-### Tier 2 — High Impact, Medium Effort
+Implemented as `InvestigateTask` (`BotActionTypeId=Investigate(16)`, MaxBaseScore=0.40, hysteresis=0.15):
+- Gates: `HasNearbyEvent`, `!IsInCombat`, not already vulturing, `CombatIntensity >= threshold(5)`
+- Scoring: intensity component (IntensityWeight=0.20) + proximity component (ProximityWeight=0.20)
+- `InvestigateAction`: 2-state BigBrain action — cautious approach (speed 0.5, pose 0.6) → look around (head scanning, 5–10s)
+- `InvestigateConfig`: 14 JSON properties under `questing.investigate`
+- Personality-influenced via `ScoringModifiers.CombinedModifier()` — aggressive bots investigate more (1.2×)
+- ~25 new tests
 
-#### 2.1 Investigate Task (Sound/Gunfire Response)
+**Files**: `InvestigateTask.cs`, `InvestigateAction.cs`, `InvestigateConfig.cs`
 
-Add an `InvestigateTask` that responds to combat events (our existing CombatEventRegistry):
-- Score based on: distance to event, event intensity, bot personality (aggression)
-- Movement: cautious approach at 0.5 speed, crouched, head scanning
-- Timeout: 30-60s, then return to previous behavior
-- Unlike Vulture (which is a full multi-phase behavior), this is lightweight "check it out" movement
+#### 2.2 Personality-Influenced Scoring ✅
 
-**Effort**: ~300 lines. New `InvestigateTask.cs` + integration with `CombatEventScanner`.
+Implemented as `BotPersonality` + `ScoringModifiers`:
+- `BotPersonality`: byte constants (Timid=0→Reckless=4) with aggression float (0.1→0.9)
+- `PersonalityHelper`: maps from `BotDifficulty` (easy→Cautious, normal→Normal, hard→Aggressive, impossible→Reckless)
+- `ScoringModifiers.PersonalityModifier()`: per-task lerp multipliers — aggressive bots rush (GoToObjective 1.15×), cautious bots camp (Ambush/Snipe 1.2×, Linger 1.3×)
+- Applied to all 12 task `ScoreEntity` methods via `ScoringModifiers.CombinedModifier()`
+- `PersonalityConfig` under `questing.personality`
+- ~49 new tests
 
-#### 2.2 Personality-Influenced Scoring
+**Files**: `BotPersonality.cs`, `ScoringModifiers.cs`, `PersonalityConfig.cs`
 
-Add personality as a scoring modifier across all utility tasks:
-- Map SAIN personality (if available) or bot difficulty to an aggression float (0-1)
-- Aggressive bots: higher GoToObjective scores, lower Linger, faster movement
-- Cautious bots: higher Linger/Ambush scores, slower movement, more indoor preference
-- Random personality assignment for bots without SAIN
+#### 2.3 Time-of-Raid Behavior Progression ✅
 
-**Effort**: ~200 lines. Add personality field to `BotEntity`, modify all task `ScoreEntity` methods.
+Implemented as `ScoringModifiers.RaidTimeModifier()`:
+- `RaidTimeNormalized` (0.0=start, 1.0=end) synced from game timer each HiveMind tick
+- Per-task multipliers: early raid GoToObjective ×1.2 (rush), late raid Linger ×1.3 + Loot ×1.2 (cautious/looting)
+- Combined with personality: `PersonalityModifier × RaidTimeModifier` = single multiplication per task
+- Included in ScoringModifiers tests
 
-#### 2.3 Time-of-Raid Behavior Progression
+**Files**: `ScoringModifiers.cs`, `BotEntityBridge.cs`
 
-Adjust behavior based on raid time percentage:
-- **Early raid (0-20%)**: Higher GoToObjective priority, sprint more, rush to objectives
-- **Mid raid (20-70%)**: Normal behavior mix, more camping/sniping
-- **Late raid (70-100%)**: More cautious, preference for exit-direction objectives, looting priority up
+#### 2.4 Convergence Field Tuning ✅
 
-**Effort**: ~150 lines. Add time factor to `QuestUtilityTask` base scoring, modify `BotObjectiveManager`.
+Implemented as `ConvergenceMapConfig` + combat pull + time weight:
+- Per-map convergence settings (radius, force, enabled) for all 12 maps — Factory disabled, Customs 250m/1.0, Woods 400m/0.8, etc.
+- `CombatPullPoint`: temporary convergence boost toward recent gunfire (linear decay over 30s)
+- `ConvergenceTimeWeight`: early raid 1.3× (creates encounters), mid 1.0×, late 0.7× (bots spread out)
+- `CombatEventRegistry.GatherCombatPull()`: zero-alloc scanning for field integration
+- Config: `convergence_per_map`, `combat_convergence_*` under `questing.zone_movement`
+- ~33 new tests
 
-#### 2.4 Convergence Field Tuning
-
-Currently convergence pulls toward human players with flat parameters. Improve:
-- Per-map convergence config (like Phobos: different radius/force per map)
-- Gunfire convergence: temporary convergence boost toward combat events
-- Time-based convergence: stronger pull early raid (creates encounters), weaker late raid
-
-**Effort**: ~100 lines. Add per-map config, modify `FieldComposer`.
+**Files**: `ConvergenceMapConfig.cs`, `ConvergenceField.cs`, `FieldComposer.cs`, `WorldGridManager.cs`
 
 ### Tier 3 — Medium Impact, Medium-High Effort
 
@@ -387,17 +396,11 @@ When entering a building (environment transition from outdoor to indoor):
 
 **Effort**: ~350 lines. New `RoomClearAction`, environment transition detection.
 
-#### 3.4 Continuous Scoring for GoToObjective
+#### 3.4 Continuous Scoring for GoToObjective ✅ (moved to Phase 1)
 
-Replace binary 0/0.65 with distance-based decay:
-```
-score = baseScore * (1 - exp(-distance / falloff))
-```
-- Far from objective: score ≈ 0.65 (must travel)
-- Close to objective: score decays, allowing other tasks to compete
-- Add fatigue factor: score decreases after long consecutive travel
-
-**Effort**: ~80 lines. Modify `GoToObjectiveTask.Score()`.
+Implemented as part of Tier 1:
+- `GoToObjectiveTask.ScoreEntity()`: `BaseScore * (1 - exp(-distance / 75))` — continuous distance decay
+- Far from objective: score ≈ 0.65, close: score → 0, allowing other tasks to compete
 
 ### Tier 4 — Future Vision
 
@@ -432,65 +435,24 @@ Define named patrol routes per map (sequences of waypoints):
 
 ## 5. Implementation Roadmap
 
-### Phase 1: Quick Wins (1-2 sessions)
+### Phase 1: Quick Wins ✅ COMPLETE
 
-**Goal**: Break the "GPS navigator" pattern with minimal code changes.
+1. ✅ **Variable wait times** (Tier 1.4)
+2. ✅ **Speed/posture variation** (Tier 1.2)
+3. ✅ **Enable spawn_point_wander** (config change)
+4. ✅ **Continuous GoToObjective scoring** (Tier 3.4)
 
-1. **Variable wait times** (Tier 1.4) — 50 lines
-   - Gaussian-sampled waits replace flat 5s
-   - Immediate improvement to between-objective feel
+### Phase 2: Organic Behavior ✅ COMPLETE
 
-2. **Speed/posture variation** (Tier 1.2) — 150 lines
-   - Indoor/outdoor detection for speed
-   - Recent combat awareness for cautious movement
-   - Approach slowdown near objectives
+5. ✅ **LingerTask** (Tier 1.1)
+6. ✅ **Zone movement as fallback** (Tier 1.3)
+7. ✅ **InvestigateTask** (Tier 2.1)
 
-3. **Enable spawn_point_wander** (config change) — 0 lines
-   - Set `spawn_point_wander.desirability` to 2-3
-   - Bots occasionally wander from spawn instead of beelining
+### Phase 3: Personality and Progression ✅ COMPLETE
 
-4. **Continuous GoToObjective scoring** (Tier 3.4) — 80 lines
-   - Distance-based score decay
-   - Allows other tasks to compete when close to objective
-
-**Total**: ~280 lines, measurable improvement.
-
-### Phase 2: Organic Behavior (2-3 sessions)
-
-**Goal**: Bots do things between objectives that look natural.
-
-5. **LingerTask** (Tier 1.1) — 200 lines
-   - Post-objective lingering at nearby cover
-   - Head scanning and container checking
-   - Breaks the "complete → sprint" pattern
-
-6. **Zone movement as fallback** (Tier 1.3) — 100 lines
-   - Replace BSG patrol fallback with zone movement
-   - Bots always have somewhere to go
-
-7. **InvestigateTask** (Tier 2.1) — 300 lines
-   - Respond to gunfire/combat events with cautious approach
-   - Uses existing CombatEventRegistry
-
-**Total**: ~600 lines, significant behavior improvement.
-
-### Phase 3: Personality and Progression (2-3 sessions)
-
-**Goal**: Each bot feels different, each raid feels different.
-
-8. **Personality scoring** (Tier 2.2) — 200 lines
-   - Map personality to aggression float
-   - All tasks influenced by personality
-
-9. **Time-of-raid progression** (Tier 2.3) — 150 lines
-   - Early rush, mid patrol, late caution
-   - Creates raid "narrative arc"
-
-10. **Convergence tuning** (Tier 2.4) — 100 lines
-    - Per-map convergence config
-    - Combat event convergence boost
-
-**Total**: ~450 lines, behavioral depth.
+8. ✅ **Personality scoring** (Tier 2.2)
+9. ✅ **Time-of-raid progression** (Tier 2.3)
+10. ✅ **Convergence tuning** (Tier 2.4)
 
 ### Phase 4: Immersion Polish (3-4 sessions)
 

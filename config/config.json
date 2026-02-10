@@ -269,6 +269,37 @@
 				"max_distance": 400
 			}
 		},
+		"zone_movement": {
+			"enabled": true,
+			"target_cell_count": 150,
+			"convergence_update_interval_sec": 30,
+			"convergence_weight": 1.0,
+			"advection_weight": 0.5,
+			"momentum_weight": 0.5,
+			"noise_weight": 0.3,
+			"poi_score_weight": 0.3,
+			"crowd_repulsion_strength": 2.0,
+			"bounds_padding": 50,
+			"quest_desirability": 5,
+			"quest_name": "Zone Movement",
+			"convergence_per_map": {
+				"factory4_day": { "radius": 0, "force": 0, "enabled": false },
+				"factory4_night": { "radius": 0, "force": 0, "enabled": false },
+				"bigmap": { "radius": 250, "force": 1.0, "enabled": true },
+				"woods": { "radius": 400, "force": 0.8, "enabled": true },
+				"shoreline": { "radius": 300, "force": 0.9, "enabled": true },
+				"lighthouse": { "radius": 300, "force": 0.9, "enabled": true },
+				"rezervbase": { "radius": 250, "force": 1.0, "enabled": true },
+				"interchange": { "radius": 300, "force": 0.9, "enabled": true },
+				"laboratory": { "radius": 150, "force": 1.2, "enabled": true },
+				"tarkovstreets": { "radius": 350, "force": 0.9, "enabled": true },
+				"sandbox": { "radius": 300, "force": 0.9, "enabled": true },
+				"sandbox_high": { "radius": 300, "force": 0.9, "enabled": true }
+			},
+			"combat_convergence_decay_sec": 30,
+			"combat_convergence_radius": 300,
+			"combat_convergence_force": 0.5
+		},
 		"looting": {
 			"enabled": true,
 			"detect_container_distance": 60,
@@ -340,6 +371,26 @@
 			"enable_for_pmcs": true,
 			"enable_for_scavs": true,
 			"enable_for_pscavs": true
+		},
+		"investigate": {
+			"enabled": true,
+			"base_score": 0.40,
+			"intensity_threshold": 5,
+			"detection_range": 120.0,
+			"movement_timeout": 45.0,
+			"approach_speed": 0.5,
+			"approach_pose": 0.6,
+			"arrival_distance": 15.0,
+			"look_around_duration": 8.0,
+			"head_scan_interval_min": 2.0,
+			"head_scan_interval_max": 5.0,
+			"enable_for_pmcs": true,
+			"enable_for_scavs": true,
+			"enable_for_pscavs": false
+		},
+		"personality": {
+			"enabled": true,
+			"raid_time_enabled": true
 		}
 	},
 	"bot_spawns": {

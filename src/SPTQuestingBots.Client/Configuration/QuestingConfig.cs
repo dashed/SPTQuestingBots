@@ -84,6 +84,12 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("linger")]
         public LingerConfig Linger { get; set; } = new LingerConfig();
 
+        [JsonProperty("investigate")]
+        public InvestigateConfig Investigate { get; set; } = new InvestigateConfig();
+
+        [JsonProperty("personality")]
+        public PersonalityConfig Personality { get; set; } = new PersonalityConfig();
+
         [JsonProperty("wait_time_min")]
         public float WaitTimeMin { get; set; } = 5f;
 

@@ -42,6 +42,10 @@
       Link="LinkedSources/ZoneMovement/ConvergenceField.cs"
     />
     <Compile
+      Include="../../src/SPTQuestingBots.Client/ZoneMovement/Core/ConvergenceMapConfig.cs"
+      Link="LinkedSources/ZoneMovement/ConvergenceMapConfig.cs"
+    />
+    <Compile
       Include="../../src/SPTQuestingBots.Client/ZoneMovement/Fields/FieldComposer.cs"
       Link="LinkedSources/ZoneMovement/FieldComposer.cs"
     />
@@ -78,6 +82,28 @@
     <Compile
       Include="../../src/SPTQuestingBots.Client/Configuration/BotPathingConfig.cs"
       Link="LinkedSources/Configuration/BotPathingConfig.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Configuration/SquadStrategyConfig.cs"
+      Link="LinkedSources/Configuration/SquadStrategyConfig.cs"
+    />
+    <Compile Include="../../src/SPTQuestingBots.Client/Configuration/BotLodConfig.cs" Link="LinkedSources/Configuration/BotLodConfig.cs" />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Configuration/LootingConfig.cs"
+      Link="LinkedSources/Configuration/LootingConfig.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Configuration/VultureConfig.cs"
+      Link="LinkedSources/Configuration/VultureConfig.cs"
+    />
+    <Compile Include="../../src/SPTQuestingBots.Client/Configuration/LingerConfig.cs" Link="LinkedSources/Configuration/LingerConfig.cs" />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Configuration/InvestigateConfig.cs"
+      Link="LinkedSources/Configuration/InvestigateConfig.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Configuration/PersonalityConfig.cs"
+      Link="LinkedSources/Configuration/PersonalityConfig.cs"
     />
     <!-- Movement: pure-logic path analysis (no Unity/EFT dependencies beyond Vector3 shim) -->
     <Compile
@@ -174,10 +200,6 @@
     <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/SquadEntity.cs" Link="LinkedSources/ECS/SquadEntity.cs" />
     <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/SquadRegistry.cs" Link="LinkedSources/ECS/SquadRegistry.cs" />
     <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/StrategyAssignment.cs" Link="LinkedSources/ECS/StrategyAssignment.cs" />
-    <Compile
-      Include="../../src/SPTQuestingBots.Client/Configuration/SquadStrategyConfig.cs"
-      Link="LinkedSources/Configuration/SquadStrategyConfig.cs"
-    />
     <!-- Squad strategy: strategy framework and tactical positions -->
     <Compile
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/SquadStrategy.cs"
@@ -274,15 +296,6 @@
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/BotLodCalculator.cs"
       Link="LinkedSources/ECS/Systems/BotLodCalculator.cs"
     />
-    <Compile Include="../../src/SPTQuestingBots.Client/Configuration/BotLodConfig.cs" Link="LinkedSources/Configuration/BotLodConfig.cs" />
-    <Compile
-      Include="../../src/SPTQuestingBots.Client/Configuration/LootingConfig.cs"
-      Link="LinkedSources/Configuration/LootingConfig.cs"
-    />
-    <Compile
-      Include="../../src/SPTQuestingBots.Client/Configuration/VultureConfig.cs"
-      Link="LinkedSources/Configuration/VultureConfig.cs"
-    />
     <!-- Combat event registry: pure C# ring buffer (no Unity/EFT dependencies) -->
     <Compile
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/CombatEvent.cs"
@@ -360,7 +373,17 @@
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/LingerTask.cs"
       Link="LinkedSources/ECS/UtilityAI/Tasks/LingerTask.cs"
     />
-    <Compile Include="../../src/SPTQuestingBots.Client/Configuration/LingerConfig.cs" Link="LinkedSources/Configuration/LingerConfig.cs" />
+    <!-- Investigate: utility AI task -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/InvestigateTask.cs"
+      Link="LinkedSources/ECS/UtilityAI/Tasks/InvestigateTask.cs"
+    />
+    <!-- Personality system: bot personality enum, helpers, scoring modifiers -->
+    <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/BotPersonality.cs" Link="LinkedSources/ECS/BotPersonality.cs" />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/ScoringModifiers.cs"
+      Link="LinkedSources/ECS/UtilityAI/ScoringModifiers.cs"
+    />
   </ItemGroup>
 
   <!--

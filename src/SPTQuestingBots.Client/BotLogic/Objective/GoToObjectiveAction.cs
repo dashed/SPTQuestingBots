@@ -44,10 +44,14 @@ namespace SPTQuestingBots.BotLogic.Objective
                 PathFollowerStatus status = TickCustomMover(CanSprint);
 
                 // Context-aware pose for custom mover
+                // Personality baseline: aggressive bots stand taller (1.0), cautious crouch more (0.8)
                 float pose = 1.0f;
 
                 if (ECS.BotEntityBridge.TryGetEntity(BotOwner, out var poseEntity))
                 {
+                    // Personality affects base pose: lerp(0.8, 1.0, aggression)
+                    pose = 0.8f + 0.2f * poseEntity.Aggression;
+
                     // Indoor detection: EnvironmentId == 0 means indoor
                     if (BotOwner.AIData?.EnvironmentId == 0)
                     {

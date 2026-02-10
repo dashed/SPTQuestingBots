@@ -295,8 +295,9 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.Systems
             int ordinal = 3;
             task.ScoreEntity(ordinal, e);
 
-            float expected = LootTask.Score(e);
-            Assert.AreEqual(expected, e.TaskScores[ordinal], 0.001f);
+            float rawScore = LootTask.Score(e);
+            float modifier = ScoringModifiers.CombinedModifier(e.Aggression, e.RaidTimeNormalized, BotActionTypeId.Loot);
+            Assert.AreEqual(rawScore * modifier, e.TaskScores[ordinal], 0.001f);
         }
 
         [Test]

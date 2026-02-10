@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using SPTQuestingBots.Controllers;
+using SPTQuestingBots.ZoneMovement.Core;
 
 namespace SPTQuestingBots.BotLogic.ECS.Systems
 {
@@ -239,6 +240,58 @@ namespace SPTQuestingBots.BotLogic.ECS.Systems
                 }
                 return active;
             }
+        }
+
+        /// <summary>
+        /// Gathers all active, non-expired events as <see cref="CombatPullPoint"/> values
+        /// with linearly decayed strength. Used by the convergence field to pull bots
+        /// toward recent combat activity.
+        /// </summary>
+        /// <param name="buffer">Pre-allocated output buffer. Must be at least <see cref="DefaultCapacity"/> elements.</param>
+        /// <param name="currentTime">Current game time.</param>
+        /// <param name="maxAge">Maximum event age in seconds. Events older than this are skipped.</param>
+        /// <param name="forceMultiplier">Global force multiplier applied to all pull strengths.</param>
+        /// <returns>Number of valid entries written to <paramref name="buffer"/>.</returns>
+        public static int GatherCombatPull(CombatPullPoint[] buffer, float currentTime, float maxAge, float forceMultiplier)
+        {
+            int written = 0;
+            if (buffer == null || maxAge <= 0f)
+                return 0;
+
+            int maxWrite = buffer.Length;
+
+            for (int i = 0; i < _count; i++)
+            {
+                int idx = (_head - 1 - i + _capacity * 2) % _capacity;
+                ref CombatEvent evt = ref _events[idx];
+                if (!evt.IsActive)
+                    continue;
+
+                float age = currentTime - evt.Time;
+                if (age > maxAge || age < 0f)
+                    continue;
+
+                // Linear decay: full strength at age=0, zero at age=maxAge
+                float decay = 1f - (age / maxAge);
+                // Scale by event power (normalized by gunshot baseline of 100)
+                float strength = decay * (evt.Power / 100f) * forceMultiplier;
+
+                if (strength < 0.01f)
+                    continue;
+
+                if (written >= maxWrite)
+                    break;
+
+                buffer[written] = new CombatPullPoint
+                {
+                    X = evt.X,
+                    Z = evt.Z,
+                    Strength = strength,
+                };
+                written++;
+            }
+
+            return written;
         }
 
         /// <summary>

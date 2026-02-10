@@ -83,9 +83,56 @@ public sealed class FieldComposer
         out float outZ
     )
     {
-        // Weighted sum of field components
-        float rx = advectionX * AdvectionWeight + convergenceX * ConvergenceWeight + momentumX * MomentumWeight;
-        float rz = advectionZ * AdvectionWeight + convergenceZ * ConvergenceWeight + momentumZ * MomentumWeight;
+        GetCompositeDirection(
+            advectionX,
+            advectionZ,
+            convergenceX,
+            convergenceZ,
+            momentumX,
+            momentumZ,
+            noiseAngleRadians,
+            1.0f,
+            out outX,
+            out outZ
+        );
+    }
+
+    /// <summary>
+    /// Computes the normalized composite direction from all field components,
+    /// with a time-based multiplier applied to the convergence weight.
+    /// </summary>
+    /// <param name="advectionX">X component of the advection field vector.</param>
+    /// <param name="advectionZ">Z component of the advection field vector.</param>
+    /// <param name="convergenceX">X component of the convergence field vector.</param>
+    /// <param name="convergenceZ">Z component of the convergence field vector.</param>
+    /// <param name="momentumX">X component of the bot's current travel direction.</param>
+    /// <param name="momentumZ">Z component of the bot's current travel direction.</param>
+    /// <param name="noiseAngleRadians">
+    /// Random angle in radians (typically from <c>UnityEngine.Random.Range(-π, π)</c>).
+    /// Scaled by <see cref="NoiseWeight"/> before application.
+    /// </param>
+    /// <param name="convergenceTimeMultiplier">
+    /// Time-based multiplier for convergence weight (e.g. 1.3 early, 1.0 mid, 0.7 late).
+    /// </param>
+    /// <param name="outX">X component of the normalized composite direction.</param>
+    /// <param name="outZ">Z component of the normalized composite direction.</param>
+    public void GetCompositeDirection(
+        float advectionX,
+        float advectionZ,
+        float convergenceX,
+        float convergenceZ,
+        float momentumX,
+        float momentumZ,
+        float noiseAngleRadians,
+        float convergenceTimeMultiplier,
+        out float outX,
+        out float outZ
+    )
+    {
+        // Weighted sum of field components (convergence weight scaled by time multiplier)
+        float effectiveConvergenceWeight = ConvergenceWeight * convergenceTimeMultiplier;
+        float rx = advectionX * AdvectionWeight + convergenceX * effectiveConvergenceWeight + momentumX * MomentumWeight;
+        float rz = advectionZ * AdvectionWeight + convergenceZ * effectiveConvergenceWeight + momentumZ * MomentumWeight;
 
         // Apply noise as rotation to the composite direction
         if (NoiseWeight > 0.001f && (Math.Abs(rx) > 0.001f || Math.Abs(rz) > 0.001f))

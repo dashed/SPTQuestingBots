@@ -24,7 +24,9 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks
 
         public override void ScoreEntity(int ordinal, BotEntity entity)
         {
-            entity.TaskScores[ordinal] = Score(entity);
+            float score = Score(entity);
+            entity.TaskScores[ordinal] =
+                score * ScoringModifiers.CombinedModifier(entity.Aggression, entity.RaidTimeNormalized, BotActionTypeId);
         }
 
         internal static float Score(BotEntity entity)

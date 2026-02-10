@@ -61,6 +61,43 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("quest_name")]
         public string QuestName { get; set; } = "Zone Movement";
 
+        /// <summary>
+        /// Per-map convergence overrides. Keys are BSG location IDs (case-insensitive).
+        /// Each entry specifies radius, force, and enabled flag.
+        /// Maps not listed here use built-in defaults from <see cref="ZoneMovement.Core.ConvergenceMapConfig"/>.
+        /// </summary>
+        [JsonProperty("convergence_per_map")]
+        public Dictionary<string, ConvergenceMapEntry> ConvergencePerMap { get; set; } = new Dictionary<string, ConvergenceMapEntry>();
+
+        /// <summary>Time (seconds) over which combat event convergence pull linearly decays to zero.</summary>
+        [JsonProperty("combat_convergence_decay_sec")]
+        public float CombatConvergenceDecaySec { get; set; } = 30f;
+
+        /// <summary>Maximum range (meters) for combat events to contribute to convergence pull.</summary>
+        [JsonProperty("combat_convergence_radius")]
+        public float CombatConvergenceRadius { get; set; } = 300f;
+
+        /// <summary>Force multiplier for combat event convergence pull (relative to player pull).</summary>
+        [JsonProperty("combat_convergence_force")]
+        public float CombatConvergenceForce { get; set; } = 0.5f;
+
         public ZoneMovementConfig() { }
+    }
+
+    /// <summary>
+    /// JSON-serializable per-map convergence entry for config.json.
+    /// </summary>
+    public class ConvergenceMapEntry
+    {
+        [JsonProperty("radius")]
+        public float Radius { get; set; }
+
+        [JsonProperty("force")]
+        public float Force { get; set; }
+
+        [JsonProperty("enabled")]
+        public bool Enabled { get; set; } = true;
+
+        public ConvergenceMapEntry() { }
     }
 }

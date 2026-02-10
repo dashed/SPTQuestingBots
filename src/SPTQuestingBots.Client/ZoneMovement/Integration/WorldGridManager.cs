@@ -5,7 +5,9 @@ using Comfort.Common;
 using EFT;
 using EFT.Game.Spawning;
 using SPTQuestingBots.BotLogic.ECS;
+using SPTQuestingBots.BotLogic.ECS.Systems;
 using SPTQuestingBots.Components;
+using SPTQuestingBots.Configuration;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.ZoneMovement.Core;
 using SPTQuestingBots.ZoneMovement.Fields;
@@ -39,6 +41,21 @@ public class WorldGridManager : MonoBehaviour
     private DestinationSelector destinationSelector;
     private float convergenceUpdateInterval;
     private float lastConvergenceUpdate;
+
+    /// <summary>Pre-allocated array for combat pull points (avoids per-frame allocation).</summary>
+    private CombatPullPoint[] combatPullBuffer = new CombatPullPoint[CombatEventRegistry.DefaultCapacity];
+    private int combatPullCount;
+
+    /// <summary>Combat convergence config cached from ZoneMovementConfig.</summary>
+    private float combatConvergenceDecaySec;
+    private float combatConvergenceRadius;
+    private float combatConvergenceForce;
+
+    /// <summary>
+    /// Normalized raid time (0.0 = start, 1.0 = end). Updated externally by the caller.
+    /// Defaults to 0.5 (mid-raid) if not set.
+    /// </summary>
+    public float RaidTimeNormalized { get; set; } = 0.5f;
 
     /// <summary>Cached human player positions, refreshed each convergence update.</summary>
     private readonly List<Vector3> cachedPlayerPositions = new List<Vector3>();
@@ -133,9 +150,33 @@ public class WorldGridManager : MonoBehaviour
             }
             LoggingController.LogInfo($"[ZoneMovement] Added {syntheticCount} synthetic POIs to empty cells");
 
-            // 8. Create remaining field components
-            convergenceField = new ConvergenceField(config.ConvergenceUpdateIntervalSec);
+            // 8. Resolve per-map convergence config
+            string mapId = Singleton<GameWorld>.Instance.GetComponent<LocationData>().CurrentLocation.Id;
+            Dictionary<string, ConvergenceMapConfig> mapOverrides = null;
+            if (config.ConvergencePerMap != null && config.ConvergencePerMap.Count > 0)
+            {
+                mapOverrides = new Dictionary<string, ConvergenceMapConfig>(StringComparer.OrdinalIgnoreCase);
+                foreach (var kvp in config.ConvergencePerMap)
+                {
+                    mapOverrides[kvp.Key] = new ConvergenceMapConfig(kvp.Value.Radius, kvp.Value.Force, kvp.Value.Enabled);
+                }
+            }
+            var mapConfig = ConvergenceMapConfig.GetForMap(mapId, mapOverrides);
+
+            // 9. Create convergence field with per-map radius and force
+            float convRadius = mapConfig.Enabled ? mapConfig.Radius : 0f;
+            float convForce = mapConfig.Enabled ? mapConfig.Force : 0f;
+            convergenceField = new ConvergenceField(config.ConvergenceUpdateIntervalSec, convRadius, convForce);
             convergenceUpdateInterval = config.ConvergenceUpdateIntervalSec;
+
+            LoggingController.LogInfo(
+                $"[ZoneMovement] Convergence for map '{mapId}': enabled={mapConfig.Enabled}, radius={convRadius:F0}, force={convForce:F1}"
+            );
+
+            // 10. Cache combat convergence config
+            combatConvergenceDecaySec = config.CombatConvergenceDecaySec;
+            combatConvergenceRadius = config.CombatConvergenceRadius;
+            combatConvergenceForce = config.CombatConvergenceForce;
 
             fieldComposer = new FieldComposer(config.ConvergenceWeight, config.AdvectionWeight, config.MomentumWeight, config.NoiseWeight);
 
@@ -154,7 +195,7 @@ public class WorldGridManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Periodically refreshes cached player and bot positions for the convergence field.
+    /// Periodically refreshes cached player/bot positions and combat pull points.
     /// </summary>
     protected void Update()
     {
@@ -184,6 +225,27 @@ public class WorldGridManager : MonoBehaviour
             else
                 cachedPlayerPositions.Add(player.Position);
         }
+
+        // Gather combat events into pull points with linear decay
+        RefreshCombatPullPoints(Time.time);
+    }
+
+    /// <summary>
+    /// Scans CombatEventRegistry for recent active events and populates the combat pull buffer.
+    /// Each event's strength is linearly decayed based on age.
+    /// </summary>
+    private void RefreshCombatPullPoints(float currentTime)
+    {
+        combatPullCount = 0;
+        if (combatConvergenceDecaySec <= 0f)
+            return;
+
+        combatPullCount = CombatEventRegistry.GatherCombatPull(
+            combatPullBuffer,
+            currentTime,
+            combatConvergenceDecaySec,
+            combatConvergenceForce
+        );
     }
 
     /// <summary>
@@ -247,12 +309,34 @@ public class WorldGridManager : MonoBehaviour
         // Get advection (zone attraction + crowd repulsion)
         advectionField.GetAdvection(botPosition, cachedBotPositions, out float advX, out float advZ);
 
-        // Get convergence (player attraction)
-        convergenceField.GetConvergence(botPosition, cachedPlayerPositions, Time.time, out float convX, out float convZ);
+        // Get convergence (player attraction + combat events)
+        convergenceField.GetConvergence(
+            botPosition,
+            cachedPlayerPositions,
+            combatPullBuffer,
+            combatPullCount,
+            Time.time,
+            out float convX,
+            out float convZ
+        );
 
         // Per-bot noise instead of global random
         float noiseAngle = state.GetNoiseAngle(Time.time);
-        fieldComposer.GetCompositeDirection(advX, advZ, convX, convZ, momX, momZ, noiseAngle, out float dirX, out float dirZ);
+
+        // Apply time-based convergence multiplier
+        float timeMultiplier = ConvergenceTimeWeight.ComputeMultiplier(RaidTimeNormalized);
+        fieldComposer.GetCompositeDirection(
+            advX,
+            advZ,
+            convX,
+            convZ,
+            momX,
+            momZ,
+            noiseAngle,
+            timeMultiplier,
+            out float dirX,
+            out float dirZ
+        );
 
         var targetCell = destinationSelector.SelectDestination(Grid, currentCell, dirX, dirZ, botPosition);
         if (targetCell != null)
@@ -294,12 +378,21 @@ public class WorldGridManager : MonoBehaviour
         // Get advection (zone attraction + crowd repulsion)
         advectionField.GetAdvection(position, botPositions, out float advX, out float advZ);
 
-        // Get convergence (player attraction)
-        convergenceField.GetConvergence(position, playerPositions, Time.time, out float convX, out float convZ);
+        // Get convergence (player attraction + combat events)
+        convergenceField.GetConvergence(
+            position,
+            playerPositions,
+            combatPullBuffer,
+            combatPullCount,
+            Time.time,
+            out float convX,
+            out float convZ
+        );
 
-        // Compose with noise
+        // Compose with noise and time-based convergence multiplier
         float noiseAngle = UnityEngine.Random.Range(-Mathf.PI, Mathf.PI);
-        fieldComposer.GetCompositeDirection(advX, advZ, convX, convZ, momentumX, momentumZ, noiseAngle, out outX, out outZ);
+        float timeMultiplier = ConvergenceTimeWeight.ComputeMultiplier(RaidTimeNormalized);
+        fieldComposer.GetCompositeDirection(advX, advZ, convX, convZ, momentumX, momentumZ, noiseAngle, timeMultiplier, out outX, out outZ);
     }
 
     /// <summary>
