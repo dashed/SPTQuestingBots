@@ -177,6 +177,38 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS
             Assert.That(str, Does.Contain("Leader=10"));
         }
 
+        // ── Combat Threat Tracking ─────────────────────────────────
+
+        [Test]
+        public void ThreatDirection_DefaultsToZero()
+        {
+            var squad = new SquadEntity(0, 2, 4);
+
+            Assert.AreEqual(0f, squad.ThreatDirectionX);
+            Assert.AreEqual(0f, squad.ThreatDirectionZ);
+            Assert.IsFalse(squad.HasThreatDirection);
+            Assert.AreEqual(0, squad.CombatVersion);
+            Assert.AreEqual(0, squad.LastProcessedCombatVersion);
+        }
+
+        [Test]
+        public void ThreatDirection_CanBeSetAndRead()
+        {
+            var squad = new SquadEntity(0, 2, 4);
+
+            squad.ThreatDirectionX = 0.707f;
+            squad.ThreatDirectionZ = 0.707f;
+            squad.HasThreatDirection = true;
+            squad.CombatVersion = 3;
+            squad.LastProcessedCombatVersion = 2;
+
+            Assert.AreEqual(0.707f, squad.ThreatDirectionX, 0.001f);
+            Assert.AreEqual(0.707f, squad.ThreatDirectionZ, 0.001f);
+            Assert.IsTrue(squad.HasThreatDirection);
+            Assert.AreEqual(3, squad.CombatVersion);
+            Assert.AreEqual(2, squad.LastProcessedCombatVersion);
+        }
+
         // ── Formation Heading Tracking ────────────────────────────
 
         [Test]

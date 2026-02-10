@@ -49,6 +49,7 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
 
         // Reusable buffers (max 6 followers)
         private readonly SquadRole[] _roleBuffer = new SquadRole[SquadObjective.MaxMembers];
+        private readonly SquadRole[] _combatRoleBuffer = new SquadRole[SquadObjective.MaxMembers];
         private readonly float[] _positionBuffer = new float[SquadObjective.MaxMembers * 3];
 
         public GotoObjectiveStrategy(
@@ -123,6 +124,13 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
             {
                 AssignNewObjective(squad);
                 return;
+            }
+
+            // Combat-triggered position re-evaluation
+            if (_config.EnableCombatAwarePositioning && squad.CombatVersion != squad.LastProcessedCombatVersion && obj.HasObjective)
+            {
+                RecomputeForCombat(squad);
+                squad.LastProcessedCombatVersion = squad.CombatVersion;
             }
 
             // Check member arrivals
@@ -283,6 +291,153 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI
             // Set duration with Gaussian sampling (60-180 seconds)
             obj.Duration = SampleGaussian(60f, 180f);
             obj.DurationAdjusted = false;
+        }
+
+        /// <summary>
+        /// Re-compute tactical positions in response to a combat state change.
+        /// Uses CombatPositionAdjuster for threat-oriented positioning when a threat
+        /// direction is available, otherwise falls back to standard geometric positions.
+        /// </summary>
+        internal void RecomputeForCombat(SquadEntity squad)
+        {
+            var leader = squad.Leader;
+            if (leader == null || !leader.IsActive || !leader.HasActiveObjective)
+                return;
+
+            var obj = squad.Objective;
+            if (!obj.HasObjective)
+                return;
+
+            int followerCount = 0;
+            for (int i = 0; i < squad.Members.Count; i++)
+            {
+                if (squad.Members[i] != leader && squad.Members[i].IsActive)
+                    followerCount++;
+            }
+
+            if (followerCount == 0)
+                return;
+
+            int clampedCount = Math.Min(followerCount, SquadObjective.MaxMembers);
+
+            // Get base roles from quest type
+            if (_config.UseQuestTypeRoles)
+                TacticalPositionCalculator.AssignRoles(leader.CurrentQuestAction, clampedCount, _roleBuffer);
+            else
+                TacticalPositionCalculator.AssignRoles(0, clampedCount, _roleBuffer);
+
+            if (squad.HasThreatDirection)
+            {
+                // Combat mode: reassign roles (Escort→Flanker) and use threat-oriented positions
+                CombatPositionAdjuster.ReassignRolesForCombat(_roleBuffer, clampedCount, _combatRoleBuffer);
+                CombatPositionAdjuster.ComputeCombatPositions(
+                    obj.ObjectiveX,
+                    obj.ObjectiveY,
+                    obj.ObjectiveZ,
+                    squad.ThreatDirectionX,
+                    squad.ThreatDirectionZ,
+                    _combatRoleBuffer,
+                    clampedCount,
+                    _config,
+                    _positionBuffer
+                );
+
+                // Copy combat roles into role buffer for distribution
+                Array.Copy(_combatRoleBuffer, _roleBuffer, clampedCount);
+            }
+            else
+            {
+                // No threat direction (combat cleared) — revert to standard geometric positions
+                float approachX = leader.CurrentPositionX;
+                float approachZ = leader.CurrentPositionZ;
+
+                // Try BSG cover positions first
+                bool usedCoverPositions = false;
+                if (_coverPositionSource != null && _config.EnableCoverPositionSource)
+                {
+                    int coverCount = _coverPositionSource(
+                        obj.ObjectiveX,
+                        obj.ObjectiveY,
+                        obj.ObjectiveZ,
+                        _config.CoverSearchRadius,
+                        _positionBuffer,
+                        clampedCount
+                    );
+                    if (coverCount >= clampedCount)
+                        usedCoverPositions = true;
+                }
+
+                if (!usedCoverPositions)
+                {
+                    TacticalPositionCalculator.ComputePositions(
+                        obj.ObjectiveX,
+                        obj.ObjectiveY,
+                        obj.ObjectiveZ,
+                        approachX,
+                        approachZ,
+                        _roleBuffer,
+                        clampedCount,
+                        _positionBuffer,
+                        _config
+                    );
+                }
+            }
+
+            // Validate positions if enabled
+            if (_positionValidator != null && _config.EnablePositionValidation)
+            {
+                ValidatePositions(clampedCount, obj.ObjectiveX, obj.ObjectiveY, obj.ObjectiveZ);
+            }
+
+            // Distribute to followers (same gating as AssignNewObjective)
+            int posIdx = 0;
+            for (int i = 0; i < squad.Members.Count; i++)
+            {
+                var member = squad.Members[i];
+                if (member == leader || !member.IsActive)
+                    continue;
+                if (posIdx >= clampedCount)
+                    break;
+
+                // Communication range gate
+                if (_config.EnableCommunicationRange)
+                {
+                    float dx = leader.CurrentPositionX - member.CurrentPositionX;
+                    float dy = leader.CurrentPositionY - member.CurrentPositionY;
+                    float dz = leader.CurrentPositionZ - member.CurrentPositionZ;
+                    float sqrDist = dx * dx + dy * dy + dz * dz;
+                    if (
+                        !CommunicationRange.IsInRange(
+                            leader.HasEarPiece,
+                            member.HasEarPiece,
+                            sqrDist,
+                            _config.CommunicationRangeNoEarpiece,
+                            _config.CommunicationRangeEarpiece
+                        )
+                    )
+                    {
+                        member.HasTacticalPosition = false;
+                        posIdx++;
+                        continue;
+                    }
+                }
+
+                // Check if position validation failed
+                if (float.IsNaN(_positionBuffer[posIdx * 3]))
+                {
+                    member.HasTacticalPosition = false;
+                    posIdx++;
+                    continue;
+                }
+
+                member.SquadRole = _roleBuffer[posIdx];
+                member.TacticalPositionX = _positionBuffer[posIdx * 3];
+                member.TacticalPositionY = _positionBuffer[posIdx * 3 + 1];
+                member.TacticalPositionZ = _positionBuffer[posIdx * 3 + 2];
+                member.HasTacticalPosition = true;
+
+                posIdx++;
+            }
         }
 
         internal void CheckArrivals(SquadEntity squad)

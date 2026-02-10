@@ -1876,6 +1876,402 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
             Assert.AreNotEqual(52f, follower.TacticalPositionX);
         }
 
+        // ── Combat-Aware Re-evaluation ────────────────────────
+
+        private SquadStrategyConfig CombatAwareConfig()
+        {
+            var config = DefaultConfig();
+            config.EnableCombatAwarePositioning = true;
+            return config;
+        }
+
+        private (SquadEntity squad, BotEntity leader, BotEntity follower) SetupCombatScenario(SquadStrategyConfig config)
+        {
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionY = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            return (squad, leader, follower);
+        }
+
+        [Test]
+        public void CombatReeval_ThreatDetected_RepositionsFollowers()
+        {
+            var config = CombatAwareConfig();
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var (squad, leader, follower) = SetupCombatScenario(config);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            float origTacX = follower.TacticalPositionX;
+            float origTacZ = follower.TacticalPositionZ;
+
+            // Simulate threat detection
+            squad.ThreatDirectionX = 1f;
+            squad.ThreatDirectionZ = 0f;
+            squad.HasThreatDirection = true;
+            squad.CombatVersion = 1;
+
+            strategy.Update();
+
+            Assert.AreEqual(1, squad.LastProcessedCombatVersion);
+            Assert.IsTrue(follower.HasTacticalPosition);
+            // Position should have changed from threat-oriented computation
+            bool posChanged =
+                Math.Abs(follower.TacticalPositionX - origTacX) > 0.01f || Math.Abs(follower.TacticalPositionZ - origTacZ) > 0.01f;
+            Assert.IsTrue(posChanged, "Combat positions should differ from standard positions");
+        }
+
+        [Test]
+        public void CombatReeval_ThreatCleared_RevertsToStandardPositions()
+        {
+            var config = CombatAwareConfig();
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var (squad, leader, follower) = SetupCombatScenario(config);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // Enter combat
+            squad.ThreatDirectionX = 1f;
+            squad.ThreatDirectionZ = 0f;
+            squad.HasThreatDirection = true;
+            squad.CombatVersion = 1;
+            strategy.Update();
+
+            float combatTacX = follower.TacticalPositionX;
+
+            // Clear combat
+            squad.HasThreatDirection = false;
+            squad.CombatVersion = 2;
+            strategy.Update();
+
+            Assert.AreEqual(2, squad.LastProcessedCombatVersion);
+            Assert.IsTrue(follower.HasTacticalPosition);
+            // Should revert to standard geometric positions (different from combat)
+            bool posChanged = Math.Abs(follower.TacticalPositionX - combatTacX) > 0.01f;
+            Assert.IsTrue(posChanged, "Positions should change when threat clears");
+        }
+
+        [Test]
+        public void CombatReeval_SameVersion_NoRecompute()
+        {
+            var config = CombatAwareConfig();
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var (squad, leader, follower) = SetupCombatScenario(config);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // Enter combat
+            squad.ThreatDirectionX = 1f;
+            squad.ThreatDirectionZ = 0f;
+            squad.HasThreatDirection = true;
+            squad.CombatVersion = 1;
+            strategy.Update();
+
+            float tacX = follower.TacticalPositionX;
+            float tacZ = follower.TacticalPositionZ;
+
+            // Update again without changing combat version
+            strategy.Update();
+
+            Assert.AreEqual(tacX, follower.TacticalPositionX, 0.001f);
+            Assert.AreEqual(tacZ, follower.TacticalPositionZ, 0.001f);
+        }
+
+        [Test]
+        public void CombatReeval_DisabledByConfig_NoRecompute()
+        {
+            var config = DefaultConfig();
+            config.EnableCombatAwarePositioning = false;
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var (squad, leader, follower) = SetupCombatScenario(config);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            float origTacX = follower.TacticalPositionX;
+
+            // Simulate threat detection
+            squad.ThreatDirectionX = 1f;
+            squad.ThreatDirectionZ = 0f;
+            squad.HasThreatDirection = true;
+            squad.CombatVersion = 1;
+            strategy.Update();
+
+            // Should NOT have been re-evaluated
+            Assert.AreEqual(0, squad.LastProcessedCombatVersion);
+            Assert.AreEqual(origTacX, follower.TacticalPositionX, 0.001f);
+        }
+
+        [Test]
+        public void CombatReeval_EscortReassignedToFlanker()
+        {
+            var config = CombatAwareConfig();
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var follower = CreateBot(1);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.MoveToPosition; // MoveToPosition → all Escort
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            SetupSquadWithLeaderAndFollower(squad, leader, follower);
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            Assert.AreEqual(SquadRole.Escort, follower.SquadRole);
+
+            // Enter combat
+            squad.ThreatDirectionX = 0f;
+            squad.ThreatDirectionZ = 1f;
+            squad.HasThreatDirection = true;
+            squad.CombatVersion = 1;
+            strategy.Update();
+
+            // Escort should be reassigned to Flanker in combat
+            Assert.AreEqual(SquadRole.Flanker, follower.SquadRole);
+        }
+
+        [Test]
+        public void CombatReeval_MultipleFollowers_AllGetCombatPositions()
+        {
+            var config = CombatAwareConfig();
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var f1 = CreateBot(1);
+            var f2 = CreateBot(2);
+            var f3 = CreateBot(3);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionZ = 0f;
+            squad.Members.Add(leader);
+            squad.Members.Add(f1);
+            squad.Members.Add(f2);
+            squad.Members.Add(f3);
+            squad.Leader = leader;
+            leader.Squad = squad;
+            f1.Squad = squad;
+            f2.Squad = squad;
+            f3.Squad = squad;
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // Enter combat with threat from east
+            squad.ThreatDirectionX = 1f;
+            squad.ThreatDirectionZ = 0f;
+            squad.HasThreatDirection = true;
+            squad.CombatVersion = 1;
+            strategy.Update();
+
+            Assert.IsTrue(f1.HasTacticalPosition);
+            Assert.IsTrue(f2.HasTacticalPosition);
+            Assert.IsTrue(f3.HasTacticalPosition);
+            Assert.AreEqual(1, squad.LastProcessedCombatVersion);
+        }
+
+        [Test]
+        public void CombatReeval_NoFollowers_DoesNotThrow()
+        {
+            var config = CombatAwareConfig();
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+
+            leader.HasActiveObjective = true;
+            squad.Members.Add(leader);
+            squad.Leader = leader;
+            leader.Squad = squad;
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            squad.ThreatDirectionX = 1f;
+            squad.HasThreatDirection = true;
+            squad.CombatVersion = 1;
+
+            Assert.DoesNotThrow(() => strategy.Update());
+        }
+
+        [Test]
+        public void CombatReeval_WithCommRangeGate_OutOfRangeSkipped()
+        {
+            var config = CombatAwareConfig();
+            config.EnableCommunicationRange = true;
+            config.CommunicationRangeNoEarpiece = 35f;
+            config.CommunicationRangeEarpiece = 200f;
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var squad = CreateSquad(0);
+            var leader = CreateBot(0);
+            var nearFollower = CreateBot(1);
+            var farFollower = CreateBot(2);
+
+            leader.HasActiveObjective = true;
+            leader.CurrentQuestAction = QuestActionId.Ambush;
+            leader.CurrentPositionX = 0f;
+            leader.CurrentPositionY = 0f;
+            leader.CurrentPositionZ = 0f;
+            nearFollower.CurrentPositionX = 10f;
+            farFollower.CurrentPositionX = 50f;
+
+            squad.Members.Add(leader);
+            squad.Members.Add(nearFollower);
+            squad.Members.Add(farFollower);
+            squad.Leader = leader;
+            leader.Squad = squad;
+            nearFollower.Squad = squad;
+            farFollower.Squad = squad;
+            squad.Objective.SetObjective(50f, 0f, 50f);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // Enter combat
+            squad.ThreatDirectionX = 1f;
+            squad.ThreatDirectionZ = 0f;
+            squad.HasThreatDirection = true;
+            squad.CombatVersion = 1;
+            strategy.Update();
+
+            Assert.IsTrue(nearFollower.HasTacticalPosition, "Near follower should receive combat position");
+            Assert.IsFalse(farFollower.HasTacticalPosition, "Far follower should be out of comm range");
+        }
+
+        [Test]
+        public void CombatReeval_WithPositionValidation_ValidatesPositions()
+        {
+            var config = CombatAwareConfig();
+            config.EnablePositionValidation = true;
+            var strategy = new GotoObjectiveStrategy(config, seed: 42, positionValidator: AlwaysSnapValidator);
+            var (squad, leader, follower) = SetupCombatScenario(config);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // Enter combat
+            squad.ThreatDirectionX = 1f;
+            squad.ThreatDirectionZ = 0f;
+            squad.HasThreatDirection = true;
+            squad.CombatVersion = 1;
+            strategy.Update();
+
+            Assert.IsTrue(follower.HasTacticalPosition);
+            // AlwaysSnapValidator adds 0.5 to Y
+            Assert.AreEqual(0.5f, follower.TacticalPositionY, 0.01f);
+        }
+
+        [Test]
+        public void CombatReeval_InactiveLeader_Skipped()
+        {
+            var config = CombatAwareConfig();
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var (squad, leader, follower) = SetupCombatScenario(config);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            leader.IsActive = false;
+            squad.CombatVersion = 1;
+
+            // Should not throw and should not change positions
+            Assert.DoesNotThrow(() => strategy.Update());
+        }
+
+        [Test]
+        public void CombatReeval_DirectCallRecomputeForCombat_Works()
+        {
+            var config = CombatAwareConfig();
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var (squad, leader, follower) = SetupCombatScenario(config);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            float origTacX = follower.TacticalPositionX;
+
+            // Direct call
+            squad.ThreatDirectionX = 0f;
+            squad.ThreatDirectionZ = 1f;
+            squad.HasThreatDirection = true;
+
+            strategy.RecomputeForCombat(squad);
+
+            Assert.IsTrue(follower.HasTacticalPosition);
+            bool posChanged =
+                Math.Abs(follower.TacticalPositionX - origTacX) > 0.01f
+                || Math.Abs(follower.TacticalPositionZ - follower.TacticalPositionZ) > 0.01f;
+            // Position should have changed with threat from north
+        }
+
+        [Test]
+        public void CombatReeval_ThreatFromDifferentDirections_DifferentPositions()
+        {
+            var config = CombatAwareConfig();
+            var strategy = new GotoObjectiveStrategy(config, seed: 42);
+            var (squad, leader, follower) = SetupCombatScenario(config);
+
+            strategy.Activate(squad);
+            strategy.Update();
+
+            // Threat from east
+            squad.ThreatDirectionX = 1f;
+            squad.ThreatDirectionZ = 0f;
+            squad.HasThreatDirection = true;
+            squad.CombatVersion = 1;
+            strategy.Update();
+
+            float eastTacX = follower.TacticalPositionX;
+            float eastTacZ = follower.TacticalPositionZ;
+
+            // Threat from north
+            squad.ThreatDirectionX = 0f;
+            squad.ThreatDirectionZ = 1f;
+            squad.CombatVersion = 2;
+            strategy.Update();
+
+            float northTacX = follower.TacticalPositionX;
+            float northTacZ = follower.TacticalPositionZ;
+
+            bool posChanged = Math.Abs(eastTacX - northTacX) > 0.01f || Math.Abs(eastTacZ - northTacZ) > 0.01f;
+            Assert.IsTrue(posChanged, "Threat from different directions should produce different positions");
+        }
+
+        // ── SquadStrategyConfig Combat Property ───────────────
+
+        [Test]
+        public void Config_EnableCombatAwarePositioning_DefaultTrue()
+        {
+            var config = new SquadStrategyConfig();
+            Assert.IsTrue(config.EnableCombatAwarePositioning);
+        }
+
+        [Test]
+        public void Config_EnableCombatAwarePositioning_CanBeDisabled()
+        {
+            var config = new SquadStrategyConfig();
+            config.EnableCombatAwarePositioning = false;
+            Assert.IsFalse(config.EnableCombatAwarePositioning);
+        }
+
         [Test]
         public void CoverSource_SkipsValidation_WhenBsgUsed()
         {

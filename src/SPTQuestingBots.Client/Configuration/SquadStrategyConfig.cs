@@ -93,6 +93,11 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("formation_switch_width")]
         public float FormationSwitchWidth { get; set; } = 8f;
 
+        // ── Combat-Aware Positioning ──────────────────────────────
+
+        [JsonProperty("enable_combat_aware_positioning")]
+        public bool EnableCombatAwarePositioning { get; set; } = true;
+
         // ── Voice Commands ─────────────────────────────────────────
 
         [JsonProperty("enable_voice_commands")]

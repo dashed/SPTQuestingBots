@@ -59,6 +59,38 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// <summary>Aggression level (1-5) from personality settings.</summary>
         public float AggressionLevel;
 
+        // ── Combat Threat Tracking ─────────────────────────────────
+
+        /// <summary>
+        /// Normalized X component of the direction from objective toward the detected threat.
+        /// Set by BotHiveMindMonitor when any squad member detects an enemy.
+        /// </summary>
+        public float ThreatDirectionX;
+
+        /// <summary>
+        /// Normalized Z component of the direction from objective toward the detected threat.
+        /// Set by BotHiveMindMonitor when any squad member detects an enemy.
+        /// </summary>
+        public float ThreatDirectionZ;
+
+        /// <summary>
+        /// Whether a valid threat direction has been computed for this squad.
+        /// Reset when threat clears (no members in combat).
+        /// </summary>
+        public bool HasThreatDirection;
+
+        /// <summary>
+        /// Monotonic counter bumped when combat state changes (threat detected or cleared).
+        /// Compared by GotoObjectiveStrategy to trigger combat position re-evaluation.
+        /// </summary>
+        public int CombatVersion;
+
+        /// <summary>
+        /// Last CombatVersion processed by GotoObjectiveStrategy.
+        /// When CombatVersion != LastProcessedCombatVersion, positions are re-computed.
+        /// </summary>
+        public int LastProcessedCombatVersion;
+
         // ── Formation Heading Tracking ──────────────────────────────
 
         /// <summary>Previous leader X position for heading computation.</summary>

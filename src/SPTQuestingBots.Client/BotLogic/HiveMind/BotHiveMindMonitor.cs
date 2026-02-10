@@ -212,6 +212,12 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                 }
             }
 
+            // Sync threat direction for squads with combat members
+            if (config.EnableCombatAwarePositioning)
+            {
+                updateSquadThreatDirections(config);
+            }
+
             // Run squad strategy manager (lazy-init)
             if (_squadStrategyManager == null)
             {
@@ -242,6 +248,84 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             if (config.EnableVoiceCommands)
             {
                 updateSquadVoiceCommands(config);
+            }
+        }
+
+        /// <summary>
+        /// Sync threat direction for each active squad from combat members' GoalEnemy positions.
+        /// Computes the average enemy direction relative to the squad's objective position.
+        /// Bumps CombatVersion when threat state transitions (detected ↔ cleared).
+        /// </summary>
+        private static void updateSquadThreatDirections(SquadStrategyConfig config)
+        {
+            var squads = ECS.BotEntityBridge.SquadRegistry.ActiveSquads;
+            for (int s = 0; s < squads.Count; s++)
+            {
+                var squad = squads[s];
+                if (squad.Leader == null || !squad.Leader.IsActive)
+                    continue;
+
+                var obj = squad.Objective;
+                if (!obj.HasObjective)
+                    continue;
+
+                // Accumulate enemy positions from combat members
+                float sumEnemyX = 0f;
+                float sumEnemyZ = 0f;
+                int combatMemberCount = 0;
+
+                for (int i = 0; i < squad.Members.Count; i++)
+                {
+                    var member = squad.Members[i];
+                    if (!member.IsActive || !member.IsInCombat)
+                        continue;
+
+                    var botOwner = ECS.BotEntityBridge.GetBotOwner(member);
+                    if (botOwner == null)
+                        continue;
+
+                    var goalEnemy = botOwner.Memory?.GoalEnemy;
+                    if (goalEnemy == null)
+                        continue;
+
+                    var enemyPos = goalEnemy.CurrPosition;
+                    sumEnemyX += enemyPos.x;
+                    sumEnemyZ += enemyPos.z;
+                    combatMemberCount++;
+                }
+
+                bool hadThreat = squad.HasThreatDirection;
+
+                if (combatMemberCount > 0)
+                {
+                    // Compute average enemy position
+                    float avgEnemyX = sumEnemyX / combatMemberCount;
+                    float avgEnemyZ = sumEnemyZ / combatMemberCount;
+
+                    // Direction from objective toward average enemy position
+                    float dirX = avgEnemyX - obj.ObjectiveX;
+                    float dirZ = avgEnemyZ - obj.ObjectiveZ;
+                    float len = (float)System.Math.Sqrt(dirX * dirX + dirZ * dirZ);
+
+                    if (len > 0.001f)
+                    {
+                        squad.ThreatDirectionX = dirX / len;
+                        squad.ThreatDirectionZ = dirZ / len;
+                        squad.HasThreatDirection = true;
+
+                        // Bump version on new threat or direction change
+                        if (!hadThreat)
+                            squad.CombatVersion++;
+                    }
+                }
+                else if (hadThreat)
+                {
+                    // No combat members — clear threat
+                    squad.ThreatDirectionX = 0f;
+                    squad.ThreatDirectionZ = 0f;
+                    squad.HasThreatDirection = false;
+                    squad.CombatVersion++;
+                }
             }
         }
 

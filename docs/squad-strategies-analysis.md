@@ -1690,14 +1690,24 @@ Config: `enable_voice_commands` (true), `voice_command_cooldown` (5.0s),
 
 Tests: ~40 new (5 SquadCalloutId + 25 SquadCalloutDecider + 7 config + 4 entity)
 
-### 12.4 Combat-Aware Tactical Positioning
+### 12.4 Combat-Aware Tactical Positioning ✅ IMPLEMENTED
 
-Currently, tactical positions are based on the quest objective only. Future
-work could adjust positions based on threat awareness:
+Tactical positions dynamically adjust based on threat awareness:
 
-- Shift guard positions toward detected enemy directions
-- Pull overwatch positions to cover known enemy approaches
-- Dynamically reassign roles when combat starts (escort→flanker)
+- **CombatPositionAdjuster** (`BotLogic/ECS/Systems/CombatPositionAdjuster.cs`): Pure-logic
+  static class. `ReassignRolesForCombat` (Escort→Flanker) + `ComputeCombatPositions`
+  (threat-oriented: Guard=180° arc toward threat, Flanker=perpendicular, Overwatch=opposite)
+- **SquadEntity**: 5 new fields — `ThreatDirectionX/Z`, `HasThreatDirection`, `CombatVersion`,
+  `LastProcessedCombatVersion`. CombatVersion is a monotonic counter bumped on combat state
+  transitions (threat detected or cleared)
+- **GotoObjectiveStrategy.RecomputeForCombat()**: Detects `CombatVersion != LastProcessedCombatVersion`,
+  calls combat adjuster for threat-oriented positions or reverts to standard geometric
+  positions when threat clears. Same validation + comm range gating pipeline as AssignNewObjective
+- **BotHiveMindMonitor.updateSquadThreatDirections()**: Syncs threat direction from combat
+  members' GoalEnemy positions — average enemy position → normalized direction from objective.
+  Bumps CombatVersion on state transitions
+- Config: `enable_combat_aware_positioning` (default: true)
+- Tests: 23 CombatPositionAdjuster + 16 strategy integration = 39 new tests
 
 ### 12.5 Zone Movement Integration
 
