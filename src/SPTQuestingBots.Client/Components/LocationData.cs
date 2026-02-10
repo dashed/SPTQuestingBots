@@ -40,7 +40,21 @@ namespace SPTQuestingBots.Components
         {
             gamePlayerOwner = FindObjectOfType<GamePlayerOwner>();
 
-            CurrentRaidSettings = FindObjectOfType<QuestingBotsPlugin>().GetComponent<TarkovData>().GetCurrentRaidSettings();
+            var plugin = FindObjectOfType<QuestingBotsPlugin>();
+            if (plugin == null)
+            {
+                LoggingController.LogError("Could not find QuestingBotsPlugin instance");
+                return;
+            }
+
+            var tarkovData = plugin.GetComponent<TarkovData>();
+            if (tarkovData == null)
+            {
+                LoggingController.LogError("Could not find TarkovData component on QuestingBotsPlugin");
+                return;
+            }
+
+            CurrentRaidSettings = tarkovData.GetCurrentRaidSettings();
             if (CurrentRaidSettings == null)
             {
                 LoggingController.LogError("Could not retrieve current raid settings");

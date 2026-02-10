@@ -40,7 +40,8 @@ namespace SPTQuestingBots.Patches
             }
 
             // Write all log files
-            if (Singleton<GameWorld>.Instance.GetComponent<Components.BotQuestBuilder>().HaveQuestsBeenBuilt)
+            var questBuilder = Singleton<GameWorld>.Instance.GetComponent<Components.BotQuestBuilder>();
+            if (questBuilder != null && questBuilder.HaveQuestsBeenBuilt)
             {
                 long timestamp = DateTime.Now.ToFileTimeUtc();
 

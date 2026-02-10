@@ -140,6 +140,71 @@ public class BugFixRegressionTests
 
     #endregion
 
+    #region BotsControllerStopPatch null-safety regression test
+
+    [Test]
+    public void BotsControllerStopPatch_HasNullCheckForBotQuestBuilder()
+    {
+        // Bug fix: GetComponent<BotQuestBuilder>() can return null if the component
+        // was never added (e.g. questing disabled) or its Awake failed.
+        // The old code directly accessed .HaveQuestsBeenBuilt on the result,
+        // which caused a NullReferenceException that blocked raid extraction.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Patches/BotsControllerStopPatch.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("questBuilder != null"),
+            "BotsControllerStopPatch should null-check the BotQuestBuilder component before accessing HaveQuestsBeenBuilt"
+        );
+    }
+
+    #endregion
+
+    #region LocationData.Awake null-safety regression tests
+
+    [Test]
+    public void LocationData_Awake_HasNullCheckForPlugin()
+    {
+        // Bug fix: FindObjectOfType<QuestingBotsPlugin>() can return null.
+        // The old code chained .GetComponent<TarkovData>().GetCurrentRaidSettings()
+        // directly, causing a NullReferenceException in Awake that prevented
+        // LocationData from initializing (cascading to BotHearingMonitor and extraction failures).
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Components/LocationData.cs");
+
+        Assert.That(source, Does.Contain("if (plugin == null)"), "LocationData.Awake should null-check the plugin instance");
+    }
+
+    [Test]
+    public void LocationData_Awake_HasNullCheckForTarkovData()
+    {
+        // Bug fix: GetComponent<TarkovData>() can return null if the component
+        // hasn't been added to the plugin GameObject.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Components/LocationData.cs");
+
+        Assert.That(source, Does.Contain("if (tarkovData == null)"), "LocationData.Awake should null-check the TarkovData component");
+    }
+
+    #endregion
+
+    #region BotHearingMonitor null-safety regression test
+
+    [Test]
+    public void BotHearingMonitor_UpdateMaxSuspiciousTime_HasNullCheckForLocationData()
+    {
+        // Bug fix: When LocationData.Awake fails, CurrentLocation is null.
+        // The old code accessed .CurrentLocation.Id directly, causing a
+        // NullReferenceException on every bot spawn (repeated ~20+ times per bot).
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/BotLogic/BotMonitor/Monitors/BotHearingMonitor.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("locationData?.CurrentLocation == null"),
+            "updateMaxSuspiciousTime should null-check LocationData and CurrentLocation before accessing .Id"
+        );
+    }
+
+    #endregion
+
     #region Helpers
 
     private static int CountOccurrences(string text, string pattern)

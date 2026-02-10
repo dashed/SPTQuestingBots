@@ -143,7 +143,16 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
 
         private void updateMaxSuspiciousTime()
         {
-            string locationId = Singleton<GameWorld>.Instance.GetComponent<Components.LocationData>().CurrentLocation.Id;
+            var locationData = Singleton<GameWorld>.Instance?.GetComponent<Components.LocationData>();
+            if (locationData?.CurrentLocation == null)
+            {
+                LoggingController.LogError(
+                    "Could not get location data for " + BotOwner.GetText() + ". Using default max suspicious time of 60s."
+                );
+                return;
+            }
+
+            string locationId = locationData.CurrentLocation.Id;
 
             if (ConfigController.Config.Questing.BotQuestingRequirements.HearingSensor.MaxSuspiciousTime.ContainsKey(locationId))
             {
