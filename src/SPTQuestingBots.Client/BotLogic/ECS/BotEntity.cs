@@ -261,6 +261,38 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// <summary>Frame counter for LOD skip logic, incremented each HiveMind tick.</summary>
         public int LodFrameCounter;
 
+        // ── Loot State ──────────────────────────────────────────────
+
+        /// <summary>Whether this bot has an active loot target to pursue.</summary>
+        public bool HasLootTarget;
+
+        /// <summary>Unique ID of the current loot target (item ID hash or instance ID).</summary>
+        public int LootTargetId;
+
+        /// <summary>Loot target world position X.</summary>
+        public float LootTargetX;
+
+        /// <summary>Loot target world position Y.</summary>
+        public float LootTargetY;
+
+        /// <summary>Loot target world position Z.</summary>
+        public float LootTargetZ;
+
+        /// <summary>Loot target type (see <see cref="Systems.LootTargetType"/>).</summary>
+        public byte LootTargetType;
+
+        /// <summary>Estimated value of the current loot target.</summary>
+        public float LootTargetValue;
+
+        /// <summary>Cached available inventory grid slots. Synced periodically from InventoryController.</summary>
+        public float InventorySpaceFree;
+
+        /// <summary>Whether this bot is currently in a loot interaction (opening container, picking up item).</summary>
+        public bool IsLooting;
+
+        /// <summary>Whether this bot is currently moving toward a loot target.</summary>
+        public bool IsApproachingLoot;
+
         // ── Constructor ─────────────────────────────────────────
 
         public BotEntity(int id)

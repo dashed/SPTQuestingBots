@@ -44,6 +44,19 @@ namespace SPTQuestingBots.BotLogic.ExternalMods
 
         public static MinMaxConfig GetSearchTimeAfterCombat(string _brainName) => SAINModInfo.GetSearchTimeAfterCombat(_brainName);
 
+        /// <summary>
+        /// Returns <c>true</c> when the native (internal) looting system should be active.
+        /// This is the case when LootingBots is not installed, or when the config
+        /// explicitly opts in to native looting even with LootingBots present.
+        /// </summary>
+        public static bool IsNativeLootingEnabled()
+        {
+            if (!LootingBotsModInfo.IsInstalled)
+                return true;
+
+            return !ConfigController.Config.Questing.Looting.DisableWhenLootingBotsDetected;
+        }
+
         public static void CheckForExternalMods()
         {
             if (!ConfigController.Config.Enabled)

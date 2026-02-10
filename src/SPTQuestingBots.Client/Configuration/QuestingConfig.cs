@@ -75,6 +75,9 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("bot_lod")]
         public BotLodConfig BotLod { get; set; } = new BotLodConfig();
 
+        [JsonProperty("looting")]
+        public LootingConfig Looting { get; set; } = new LootingConfig();
+
         public QuestingConfig() { }
     }
 }

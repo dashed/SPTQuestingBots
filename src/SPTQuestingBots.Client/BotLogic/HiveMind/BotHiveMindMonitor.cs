@@ -6,6 +6,7 @@ using Comfort.Common;
 using EFT;
 using SPTQuestingBots.BehaviorExtensions;
 using SPTQuestingBots.BotLogic.ECS.Systems;
+using SPTQuestingBots.BotLogic.ExternalMods;
 using SPTQuestingBots.Components.Spawning;
 using SPTQuestingBots.Configuration;
 using SPTQuestingBots.Controllers;
@@ -37,6 +38,7 @@ namespace SPTQuestingBots.BotLogic.HiveMind
         {
             ECS.BotEntityBridge.Clear();
             HumanPlayerCache.Clear();
+            _lastScanTime.Clear();
         }
 
         /// <summary>Scratch buffers for refreshing HumanPlayerCache.</summary>
@@ -51,8 +53,9 @@ namespace SPTQuestingBots.BotLogic.HiveMind
         ///   3. updatePullSensors()          — CanQuest + CanSprintToObjective via dense ECS iteration
         ///   4. ResetInactiveEntitySensors() — clear sensor state on dead/despawned entities
         ///   5. updateSquadStrategies()      — squad lifecycle, tactical positions, formations
-        ///   6. refreshHumanPlayerCache()    — snapshot human positions for LOD + SleepingLayer
-        ///   7. updateLodTiers()             — compute LOD tier + increment frame counter per entity
+        ///   6. updateLootScanning()         — loot target selection + squad coordination
+        ///   7. refreshHumanPlayerCache()    — snapshot human positions for LOD + SleepingLayer
+        ///   8. updateLodTiers()             — compute LOD tier + increment frame counter per entity
         ///
         /// Push sensors (InCombat, IsSuspicious, WantsToLoot) are event-driven via
         /// <see cref="UpdateValueForBot"/> and do not participate in the tick.
@@ -85,10 +88,13 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             // 5. Update squad strategies (position sync, objective sync, tactical positions)
             updateSquadStrategies();
 
-            // 6. Refresh human player position cache (used by LOD + SleepingLayer)
+            // 6. Loot target selection + squad coordination
+            updateLootScanning();
+
+            // 7. Refresh human player position cache (used by LOD + SleepingLayer)
             refreshHumanPlayerCache();
 
-            // 7. Compute LOD tiers for all active entities
+            // 8. Compute LOD tiers for all active entities
             updateLodTiers();
         }
 
@@ -897,6 +903,180 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                     }
                 }
             }
+        }
+
+        // ── Loot Scanning ────────────────────────────────────────────
+
+        /// <summary>Shared scan result buffer. 32 max results per scan pass.</summary>
+        private static readonly LootScanResult[] _lootScanResults = new LootScanResult[32];
+
+        /// <summary>Per-entity last scan time for rate limiting (using Time.time).</summary>
+        private static readonly Dictionary<int, float> _lastScanTime = new Dictionary<int, float>();
+
+        /// <summary>
+        /// Tick step 6: For each active bot, scan for loot if the scan interval has elapsed.
+        /// Uses LootTargetSelector to pick the best target and SquadLootCoordinator for
+        /// boss priority claims and follower shared-target picking.
+        /// Gated by looting config and LootingBots compat check.
+        /// </summary>
+        private static void updateLootScanning()
+        {
+            var lootingConfig = ConfigController.Config?.Questing?.Looting;
+            if (lootingConfig == null || !lootingConfig.Enabled)
+                return;
+
+            if (!ExternalMods.ExternalModHandler.IsNativeLootingEnabled())
+                return;
+
+            float now = Time.time;
+            float scanInterval = lootingConfig.ScanIntervalSeconds;
+
+            var scoringConfig = ECS.BotEntityBridge.BuildScoringConfig();
+            var claims = ECS.BotEntityBridge.LootClaims;
+            var entities = ECS.BotEntityBridge.Registry.Entities;
+
+            for (int i = 0; i < entities.Count; i++)
+            {
+                var entity = entities[i];
+                if (!entity.IsActive || entity.IsInCombat || entity.IsSleeping)
+                    continue;
+
+                // Rate limit: skip if scanned recently
+                if (_lastScanTime.TryGetValue(entity.Id, out float lastTime) && (now - lastTime) < scanInterval)
+                    continue;
+
+                _lastScanTime[entity.Id] = now;
+
+                // Skip if already has an active loot target they're pursuing
+                if (entity.HasLootTarget && (entity.IsApproachingLoot || entity.IsLooting))
+                    continue;
+
+                // Get BotOwner for physics scan
+                if (!ECS.BotEntityBridge.TryGetBotOwner(entity, out var bot))
+                    continue;
+
+                // Scan nearby loot
+                int scanCount = LootScanHelper.ScanForLoot(
+                    bot.Position,
+                    lootingConfig.DetectContainerDistance,
+                    lootingConfig.DetectItemDistance,
+                    lootingConfig.DetectCorpseDistance,
+                    lootingConfig.ContainerLootingEnabled,
+                    lootingConfig.LooseItemLootingEnabled,
+                    lootingConfig.CorpseLootingEnabled,
+                    null,
+                    _lootScanResults,
+                    _lootScanResults.Length
+                );
+
+                if (scanCount == 0)
+                    continue;
+
+                // Boss/follower coordination
+                bool isBoss = entity.Boss == null && entity.Followers.Count > 0;
+                bool isFollower = entity.Boss != null;
+
+                if (isBoss && lootingConfig.SquadLootCoordination)
+                {
+                    // Boss gets priority pick
+                    int bestIdx = SquadLootCoordinator.BossPriorityClaim(_lootScanResults, scanCount, claims, entity.Id);
+                    if (bestIdx >= 0)
+                    {
+                        setLootTargetFromScan(entity, _lootScanResults[bestIdx]);
+                    }
+
+                    // Share scan results with squad
+                    if (entity.Squad != null)
+                    {
+                        SquadLootCoordinator.ShareScanResults(entity.Squad, _lootScanResults, scanCount);
+                    }
+                }
+                else if (isFollower && lootingConfig.SquadLootCoordination)
+                {
+                    // Follower: check if allowed to loot
+                    float commRangeSqr = lootingConfig.DetectContainerDistance * lootingConfig.DetectContainerDistance;
+                    if (!SquadLootCoordinator.ShouldFollowerLoot(entity, entity.Boss, commRangeSqr))
+                        continue;
+
+                    // Try shared results from squad first
+                    if (entity.Squad != null && entity.Squad.SharedLootCount > 0)
+                    {
+                        int bossLootId = entity.Boss.HasLootTarget ? entity.Boss.LootTargetId : -1;
+                        int sharedIdx = SquadLootCoordinator.PickSharedTargetForFollower(entity.Squad, entity.Id, bossLootId, claims);
+                        if (sharedIdx >= 0)
+                        {
+                            var sq = entity.Squad;
+                            var sharedResult = new LootScanResult
+                            {
+                                Id = sq.SharedLootIds[sharedIdx],
+                                X = sq.SharedLootX[sharedIdx],
+                                Y = sq.SharedLootY[sharedIdx],
+                                Z = sq.SharedLootZ[sharedIdx],
+                                Type = sq.SharedLootTypes[sharedIdx],
+                                Value = sq.SharedLootValues[sharedIdx],
+                            };
+                            setLootTargetFromScan(entity, sharedResult);
+                            continue;
+                        }
+                    }
+
+                    // Fallback: own scan results
+                    float timeSinceLastLoot = (float)(DateTime.Now - entity.LastLootingTime).TotalSeconds;
+                    float objDistSqr = entity.HasActiveObjective ? entity.DistanceToObjective * entity.DistanceToObjective : 10000f;
+                    int bestIdx = LootTargetSelector.SelectBest(
+                        _lootScanResults,
+                        scanCount,
+                        entity.InventorySpaceFree,
+                        false,
+                        objDistSqr,
+                        timeSinceLastLoot,
+                        claims,
+                        entity.Id,
+                        scoringConfig
+                    );
+                    if (bestIdx >= 0)
+                    {
+                        setLootTargetFromScan(entity, _lootScanResults[bestIdx]);
+                    }
+                }
+                else
+                {
+                    // Solo bot: use scoring
+                    float timeSinceLastLoot = (float)(DateTime.Now - entity.LastLootingTime).TotalSeconds;
+                    float objDistSqr = entity.HasActiveObjective ? entity.DistanceToObjective * entity.DistanceToObjective : 10000f;
+                    int bestIdx = LootTargetSelector.SelectBest(
+                        _lootScanResults,
+                        scanCount,
+                        entity.InventorySpaceFree,
+                        false,
+                        objDistSqr,
+                        timeSinceLastLoot,
+                        claims,
+                        entity.Id,
+                        scoringConfig
+                    );
+                    if (bestIdx >= 0)
+                    {
+                        setLootTargetFromScan(entity, _lootScanResults[bestIdx]);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Set a loot target on an entity from a scan result and claim it.
+        /// </summary>
+        private static void setLootTargetFromScan(ECS.BotEntity entity, LootScanResult result)
+        {
+            entity.HasLootTarget = true;
+            entity.LootTargetId = result.Id;
+            entity.LootTargetX = result.X;
+            entity.LootTargetY = result.Y;
+            entity.LootTargetZ = result.Z;
+            entity.LootTargetType = result.Type;
+            entity.LootTargetValue = result.Value;
+
+            ECS.BotEntityBridge.LootClaims.TryClaim(entity.Id, result.Id);
         }
 
         /// <summary>

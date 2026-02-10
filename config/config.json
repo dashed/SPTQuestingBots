@@ -265,6 +265,30 @@
 				"max_bots_per_quest": 3,
 				"max_distance": 400
 			}
+		},
+		"looting": {
+			"enabled": true,
+			"detect_container_distance": 60,
+			"detect_item_distance": 40,
+			"detect_corpse_distance": 50,
+			"scan_interval_seconds": 5.0,
+			"min_item_value": 5000,
+			"max_concurrent_looters": 5,
+			"loot_during_combat": false,
+			"container_looting_enabled": true,
+			"loose_item_looting_enabled": true,
+			"corpse_looting_enabled": true,
+			"gear_swap_enabled": true,
+			"squad_loot_coordination": true,
+			"disable_when_lootingbots_detected": true,
+			"approach_distance": 0.85,
+			"approach_y_tolerance": 0.5,
+			"max_looting_time_seconds": 30,
+			"loot_cooldown_seconds": 15,
+			"value_score_cap": 50000,
+			"distance_penalty_factor": 0.001,
+			"quest_proximity_bonus": 0.15,
+			"gear_upgrade_score_bonus": 0.3
 		}
 	},
 	"bot_spawns": {

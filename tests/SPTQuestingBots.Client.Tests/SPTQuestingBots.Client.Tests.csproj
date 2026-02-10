@@ -274,6 +274,55 @@
       Link="LinkedSources/ECS/Systems/BotLodCalculator.cs"
     />
     <Compile Include="../../src/SPTQuestingBots.Client/Configuration/BotLodConfig.cs" Link="LinkedSources/Configuration/BotLodConfig.cs" />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Configuration/LootingConfig.cs"
+      Link="LinkedSources/Configuration/LootingConfig.cs"
+    />
+    <!-- Loot scoring: value estimation, scoring, claim deconfliction, target selection -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/LootScanResult.cs"
+      Link="LinkedSources/ECS/Systems/LootScanResult.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/LootTargetType.cs"
+      Link="LinkedSources/ECS/Systems/LootTargetType.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/ItemValueEstimator.cs"
+      Link="LinkedSources/ECS/Systems/ItemValueEstimator.cs"
+    />
+    <Compile Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/LootScorer.cs" Link="LinkedSources/ECS/Systems/LootScorer.cs" />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/LootClaimRegistry.cs"
+      Link="LinkedSources/ECS/Systems/LootClaimRegistry.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/LootTargetSelector.cs"
+      Link="LinkedSources/ECS/Systems/LootTargetSelector.cs"
+    />
+    <!-- Loot inventory: pure-logic gear comparison and planning -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/LootActionType.cs"
+      Link="LinkedSources/ECS/Systems/LootActionType.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/GearComparer.cs"
+      Link="LinkedSources/ECS/Systems/GearComparer.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/LootInventoryPlanner.cs"
+      Link="LinkedSources/ECS/Systems/LootInventoryPlanner.cs"
+    />
+    <!-- Squad loot coordination -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/SquadLootCoordinator.cs"
+      Link="LinkedSources/ECS/Systems/SquadLootCoordinator.cs"
+    />
+    <!-- Loot utility AI task -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/Tasks/LootTask.cs"
+      Link="LinkedSources/ECS/UtilityAI/Tasks/LootTask.cs"
+    />
   </ItemGroup>
 
   <!--

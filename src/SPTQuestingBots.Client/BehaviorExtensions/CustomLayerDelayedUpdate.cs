@@ -24,6 +24,7 @@ namespace SPTQuestingBots.BehaviorExtensions
         ToggleSwitch,
         UnlockDoor,
         CloseNearbyDoors,
+        Loot,
     }
 
     internal abstract class CustomLayerDelayedUpdate : CustomLayer
@@ -84,6 +85,8 @@ namespace SPTQuestingBots.BehaviorExtensions
                     return new Action(typeof(BotLogic.Objective.UnlockDoorAction), actionReason);
                 case BotActionType.CloseNearbyDoors:
                     return new Action(typeof(BotLogic.Objective.CloseNearbyDoorsAction), actionReason);
+                case BotActionType.Loot:
+                    return new Action(typeof(BotLogic.Objective.LootAction), actionReason);
             }
 
             throw new InvalidOperationException("Invalid action selected for layer");

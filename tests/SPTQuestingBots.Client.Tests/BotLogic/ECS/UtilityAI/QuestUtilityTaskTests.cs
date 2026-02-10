@@ -11,7 +11,7 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
     {
         /// <summary>
         /// Creates a BotEntity with quest state pre-set for scoring.
-        /// TaskScores allocated with 8 slots (matching QuestTaskFactory.TaskCount).
+        /// TaskScores allocated with QuestTaskFactory.TaskCount slots.
         /// </summary>
         public static BotEntity Create(
             int id,
@@ -23,7 +23,7 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
         )
         {
             var entity = new BotEntity(id);
-            entity.TaskScores = new float[8];
+            entity.TaskScores = new float[QuestTaskFactory.TaskCount];
             entity.CurrentQuestAction = questAction;
             entity.HasActiveObjective = hasActiveObjective;
             entity.IsCloseToObjective = isCloseToObjective;
@@ -861,16 +861,16 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
     public class QuestTaskFactoryTests
     {
         [Test]
-        public void TaskCount_Is8()
+        public void TaskCount_Is9()
         {
-            Assert.AreEqual(8, QuestTaskFactory.TaskCount);
+            Assert.AreEqual(9, QuestTaskFactory.TaskCount);
         }
 
         [Test]
-        public void Create_Returns8Tasks()
+        public void Create_Returns9Tasks()
         {
             var manager = QuestTaskFactory.Create();
-            Assert.AreEqual(8, manager.Tasks.Length);
+            Assert.AreEqual(9, manager.Tasks.Length);
         }
 
         [Test]
@@ -886,6 +886,7 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
             Assert.IsInstanceOf<UnlockDoorTask>(manager.Tasks[5]);
             Assert.IsInstanceOf<ToggleSwitchTask>(manager.Tasks[6]);
             Assert.IsInstanceOf<CloseDoorsTask>(manager.Tasks[7]);
+            Assert.IsInstanceOf<LootTask>(manager.Tasks[8]);
         }
 
         [Test]
@@ -893,6 +894,7 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI
         {
             var manager = QuestTaskFactory.Create();
             var bot = QuestEntityHelper.Create(0, QuestActionId.MoveToPosition);
+            bot.TaskScores = new float[QuestTaskFactory.TaskCount];
 
             manager.ScoreAndPick(bot);
 

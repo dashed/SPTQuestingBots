@@ -57,8 +57,17 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// <summary>Squad registry mapping BSG group IDs to squad entities.</summary>
         private static readonly SquadRegistry _squadRegistry = new SquadRegistry();
 
+        /// <summary>
+        /// Raid-scoped loot claim registry for deconflicting loot targets across bots.
+        /// One instance per raid, cleared at raid end.
+        /// </summary>
+        private static readonly LootClaimRegistry _lootClaims = new LootClaimRegistry();
+
         /// <summary>Public accessor for squad registry (used by strategy manager).</summary>
         public static SquadRegistry SquadRegistry => _squadRegistry;
+
+        /// <summary>Public accessor for the raid-scoped loot claim registry.</summary>
+        public static LootClaimRegistry LootClaims => _lootClaims;
 
         /// <summary>Dense entity registry for systems that need to iterate all bots.</summary>
         public static BotRegistry Registry => _registry;
@@ -131,6 +140,15 @@ namespace SPTQuestingBots.BotLogic.ECS
             if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
             {
                 entity.IsActive = false;
+
+                // Release loot claims on deactivation (death/despawn)
+                if (entity.HasLootTarget)
+                {
+                    _lootClaims.ReleaseAll(entity.Id);
+                    entity.HasLootTarget = false;
+                    entity.IsLooting = false;
+                    entity.IsApproachingLoot = false;
+                }
             }
         }
 
@@ -207,6 +225,19 @@ namespace SPTQuestingBots.BotLogic.ECS
             if (entity != null && _entityToOwner.TryGetValue(entity.Id, out var owner))
                 return owner;
             return null;
+        }
+
+        /// <summary>
+        /// Try-pattern accessor for entity → BotOwner reverse lookup.
+        /// Returns false if the entity is null or has no mapped BotOwner.
+        /// </summary>
+        public static bool TryGetBotOwner(BotEntity entity, out BotOwner owner)
+        {
+            if (entity != null && _entityToOwner.TryGetValue(entity.Id, out owner))
+                return true;
+
+            owner = null;
+            return false;
         }
 
         // ── Read Methods (replace BotHiveMindMonitor reads) ───
@@ -545,6 +576,7 @@ namespace SPTQuestingBots.BotLogic.ECS
             _profileIdToEntity.Clear();
             _entityFieldStates.Clear();
             _jobAssignments.Clear();
+            _lootClaims.Clear();
             _squadRegistry.Clear();
             _registry.Clear();
         }
@@ -628,6 +660,16 @@ namespace SPTQuestingBots.BotLogic.ECS
             entity.IsCloseToObjective = objectiveManager.IsCloseToObjective();
             entity.MustUnlockDoor = objectiveManager.MustUnlockDoor;
             entity.HasActiveObjective = objectiveManager.IsJobAssignmentActive;
+
+            // Sync inventory space for loot scoring
+            try
+            {
+                entity.InventorySpaceFree = Helpers.InventorySpaceHelper.ComputeFreeSlots(botOwner);
+            }
+            catch
+            {
+                // Inventory access can fail during bot initialization
+            }
         }
 
         // ── Movement State Access ────────────────────────────────
@@ -886,6 +928,86 @@ namespace SPTQuestingBots.BotLogic.ECS
                 default:
                     return Controllers.BotType.Undetermined;
             }
+        }
+
+        // ── Loot Wiring ──────────────────────────────────────────────
+
+        /// <summary>
+        /// Set a loot target on a bot entity. Claims the target in the registry.
+        /// </summary>
+        public static void SetLootTarget(BotOwner bot, int lootId, float x, float y, float z, byte type, float value)
+        {
+            if (!_ownerToEntity.TryGetValue(bot, out var entity))
+                return;
+
+            entity.HasLootTarget = true;
+            entity.LootTargetId = lootId;
+            entity.LootTargetX = x;
+            entity.LootTargetY = y;
+            entity.LootTargetZ = z;
+            entity.LootTargetType = type;
+            entity.LootTargetValue = value;
+
+            _lootClaims.TryClaim(entity.Id, lootId);
+        }
+
+        /// <summary>
+        /// Clear a bot's loot target and release the claim.
+        /// </summary>
+        public static void ClearLootTarget(BotOwner bot)
+        {
+            if (!_ownerToEntity.TryGetValue(bot, out var entity))
+                return;
+
+            if (entity.HasLootTarget)
+            {
+                _lootClaims.Release(entity.Id, entity.LootTargetId);
+            }
+
+            entity.HasLootTarget = false;
+            entity.LootTargetId = 0;
+            entity.LootTargetX = 0f;
+            entity.LootTargetY = 0f;
+            entity.LootTargetZ = 0f;
+            entity.LootTargetType = LootTargetType.None;
+            entity.LootTargetValue = 0f;
+            entity.IsLooting = false;
+            entity.IsApproachingLoot = false;
+        }
+
+        /// <summary>
+        /// Release all loot claims for a bot (call on bot death/despawn).
+        /// </summary>
+        public static void ReleaseLootClaims(BotOwner bot)
+        {
+            if (_ownerToEntity.TryGetValue(bot, out var entity))
+            {
+                _lootClaims.ReleaseAll(entity.Id);
+                entity.HasLootTarget = false;
+                entity.IsLooting = false;
+                entity.IsApproachingLoot = false;
+            }
+        }
+
+        /// <summary>
+        /// Build a LootScoringConfig from the current LootingConfig settings.
+        /// </summary>
+        public static LootScoringConfig BuildScoringConfig()
+        {
+            var looting = Controllers.ConfigController.Config?.Questing?.Looting;
+            if (looting == null)
+            {
+                return new LootScoringConfig(5000f, 50000f, 0.001f, 0.15f, 0.3f, 15f);
+            }
+
+            return new LootScoringConfig(
+                looting.MinItemValue,
+                looting.ValueScoreCap,
+                looting.DistancePenaltyFactor,
+                looting.QuestProximityBonus,
+                looting.GearUpgradeScoreBonus,
+                looting.LootCooldownSeconds
+            );
         }
 
         /// <summary>

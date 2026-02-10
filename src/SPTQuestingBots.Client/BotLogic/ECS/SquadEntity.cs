@@ -107,6 +107,29 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// </summary>
         public bool IsZoneObjective;
 
+        // ── Shared Loot State ────────────────────────────────────────
+
+        /// <summary>Number of valid shared loot targets from boss scan results.</summary>
+        public int SharedLootCount;
+
+        /// <summary>Shared loot target IDs (max 8). Distributed to followers within comm range.</summary>
+        public readonly int[] SharedLootIds = new int[8];
+
+        /// <summary>Shared loot target X positions (max 8).</summary>
+        public readonly float[] SharedLootX = new float[8];
+
+        /// <summary>Shared loot target Y positions (max 8).</summary>
+        public readonly float[] SharedLootY = new float[8];
+
+        /// <summary>Shared loot target Z positions (max 8).</summary>
+        public readonly float[] SharedLootZ = new float[8];
+
+        /// <summary>Shared loot target values (max 8).</summary>
+        public readonly float[] SharedLootValues = new float[8];
+
+        /// <summary>Shared loot target types (max 8).</summary>
+        public readonly byte[] SharedLootTypes = new byte[8];
+
         // ── Derived ─────────────────────────────────────────────────
 
         /// <summary>Current number of squad members.</summary>
