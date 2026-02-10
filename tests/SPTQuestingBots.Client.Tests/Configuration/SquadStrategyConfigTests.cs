@@ -43,6 +43,8 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(config.ColumnSpacing, Is.EqualTo(4f));
                 Assert.That(config.SpreadSpacing, Is.EqualTo(3f));
                 Assert.That(config.FormationSwitchWidth, Is.EqualTo(8f));
+                Assert.That(config.EnableZoneFollowerSpread, Is.True);
+                Assert.That(config.ZoneJitterRadius, Is.EqualTo(5f));
                 Assert.That(config.EnableVoiceCommands, Is.True);
                 Assert.That(config.VoiceCommandCooldown, Is.EqualTo(5.0f));
                 Assert.That(config.FollowerResponseDelay, Is.EqualTo(0.8f));
@@ -85,6 +87,8 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(config.ColumnSpacing, Is.EqualTo(4f));
                 Assert.That(config.SpreadSpacing, Is.EqualTo(3f));
                 Assert.That(config.FormationSwitchWidth, Is.EqualTo(8f));
+                Assert.That(config.EnableZoneFollowerSpread, Is.True);
+                Assert.That(config.ZoneJitterRadius, Is.EqualTo(5f));
                 Assert.That(config.EnableVoiceCommands, Is.True);
                 Assert.That(config.VoiceCommandCooldown, Is.EqualTo(5.0f));
                 Assert.That(config.FollowerResponseDelay, Is.EqualTo(0.8f));
@@ -158,6 +162,8 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 ColumnSpacing = 5f,
                 SpreadSpacing = 4f,
                 FormationSwitchWidth = 10f,
+                EnableZoneFollowerSpread = false,
+                ZoneJitterRadius = 8.5f,
                 EnableVoiceCommands = false,
                 VoiceCommandCooldown = 3.0f,
                 FollowerResponseDelay = 1.5f,
@@ -197,6 +203,8 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(deserialized.ColumnSpacing, Is.EqualTo(5f));
                 Assert.That(deserialized.SpreadSpacing, Is.EqualTo(4f));
                 Assert.That(deserialized.FormationSwitchWidth, Is.EqualTo(10f));
+                Assert.That(deserialized.EnableZoneFollowerSpread, Is.False);
+                Assert.That(deserialized.ZoneJitterRadius, Is.EqualTo(8.5f));
                 Assert.That(deserialized.EnableVoiceCommands, Is.False);
                 Assert.That(deserialized.VoiceCommandCooldown, Is.EqualTo(3.0f));
                 Assert.That(deserialized.FollowerResponseDelay, Is.EqualTo(1.5f));
@@ -240,6 +248,8 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(json, Does.Contain("column_spacing"));
                 Assert.That(json, Does.Contain("spread_spacing"));
                 Assert.That(json, Does.Contain("formation_switch_width"));
+                Assert.That(json, Does.Contain("enable_zone_follower_spread"));
+                Assert.That(json, Does.Contain("zone_jitter_radius"));
                 Assert.That(json, Does.Contain("enable_voice_commands"));
                 Assert.That(json, Does.Contain("voice_command_cooldown"));
                 Assert.That(json, Does.Contain("follower_response_delay"));
@@ -382,6 +392,31 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(config.VoiceCommandCooldown, Is.EqualTo(3.0f));
                 Assert.That(config.FollowerResponseDelay, Is.EqualTo(1.5f));
             });
+        }
+
+        // ── Zone Movement Integration ────────────────────────────────
+
+        [Test]
+        public void ZoneFollowerSpread_DefaultsTrue()
+        {
+            var config = new SquadStrategyConfig();
+            Assert.That(config.EnableZoneFollowerSpread, Is.True);
+        }
+
+        [Test]
+        public void ZoneJitterRadius_DefaultsFive()
+        {
+            var config = new SquadStrategyConfig();
+            Assert.That(config.ZoneJitterRadius, Is.EqualTo(5f));
+        }
+
+        [Test]
+        public void ZoneFollowerSpread_DeserializesFromJson()
+        {
+            string json = @"{ ""enable_zone_follower_spread"": false, ""zone_jitter_radius"": 8.5 }";
+            var config = Newtonsoft.Json.JsonConvert.DeserializeObject<SquadStrategyConfig>(json);
+            Assert.That(config.EnableZoneFollowerSpread, Is.False);
+            Assert.That(config.ZoneJitterRadius, Is.EqualTo(8.5f).Within(0.01f));
         }
     }
 }

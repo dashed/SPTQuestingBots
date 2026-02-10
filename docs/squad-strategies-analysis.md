@@ -1709,14 +1709,27 @@ Tactical positions dynamically adjust based on threat awareness:
 - Config: `enable_combat_aware_positioning` (default: true)
 - Tests: 23 CombatPositionAdjuster + 16 strategy integration = 39 new tests
 
-### 12.5 Zone Movement Integration
+### 12.5 Zone Movement Integration — IMPLEMENTED
 
-When a boss is doing zone-based movement (no quest assigned), followers could
-receive zone-derived tactical positions instead of simply following:
+When a boss is doing zone-based movement (zone quest assigned), followers receive
+zone-derived tactical positions instead of simply following:
 
-- Each follower gets a different neighboring grid cell
-- Spread across the zone field gradient
-- Creates a search-party pattern
+- Each follower gets a different neighboring grid cell (round-robin with seed offset)
+- Seed-based jitter prevents clustering at exact cell centers
+- Creates a search-party pattern across the zone field gradient
+
+**Implementation:**
+- `ZoneFollowerPositionCalculator` (`BotLogic/ECS/Systems/`): Pure-logic static class.
+  `DistributeFollowers(candidatePositions, candidateCount, followerSeeds, followerCount,
+  jitterRadius, outPositions)` — round-robin assignment with golden-angle jitter.
+- `SquadEntity.IsZoneObjective`: Bool field set by BotHiveMindMonitor when the boss's
+  current quest name matches `ZoneMovementConfig.QuestName` (default "Zone Movement").
+- `BotObjectiveManager.CurrentQuestName`: New property exposing `assignment.QuestAssignment.Name`.
+- `BotHiveMindMonitor.updateZoneFollowerPositions()`: Collects navigable neighbor cell centers
+  from WorldGridManager, calls ZoneFollowerPositionCalculator, overrides follower tactical
+  positions with zone-derived spread. Runs after strategy manager, before formation movement.
+- Config: `enable_zone_follower_spread` (true), `zone_jitter_radius` (5.0m)
+- Tests: 11 ZoneFollowerPositionCalculator + 1 SquadEntity + 3 SquadStrategyConfig = 15 new tests
 
 ### 12.6 Multi-Level Objective Sharing
 

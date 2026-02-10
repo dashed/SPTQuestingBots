@@ -231,5 +231,16 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS
             Assert.AreEqual(100f, squad.PreviousLeaderX);
             Assert.AreEqual(200f, squad.PreviousLeaderZ);
         }
+
+        // ── Zone Movement State ─────────────────────────────────────
+
+        [Test]
+        public void IsZoneObjective_DefaultsFalse_CanBeSet()
+        {
+            var squad = new SquadEntity(1, 1, 4);
+            Assert.That(squad.IsZoneObjective, Is.False);
+            squad.IsZoneObjective = true;
+            Assert.That(squad.IsZoneObjective, Is.True);
+        }
     }
 }

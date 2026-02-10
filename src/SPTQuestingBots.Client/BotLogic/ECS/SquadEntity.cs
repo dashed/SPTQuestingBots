@@ -99,6 +99,14 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// <summary>Previous leader Z position for heading computation.</summary>
         public float PreviousLeaderZ;
 
+        // ── Zone Movement State ───────────────────────────────────
+
+        /// <summary>
+        /// Whether the squad's current objective is from zone-based movement (no quest assigned).
+        /// Set by BotHiveMindMonitor when the boss's current quest name matches the zone movement quest.
+        /// </summary>
+        public bool IsZoneObjective;
+
         // ── Derived ─────────────────────────────────────────────────
 
         /// <summary>Current number of squad members.</summary>

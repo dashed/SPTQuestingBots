@@ -247,6 +247,11 @@
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/CombatPositionAdjuster.cs"
       Link="LinkedSources/ECS/Systems/CombatPositionAdjuster.cs"
     />
+    <!-- Zone follower distribution -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/ZoneFollowerPositionCalculator.cs"
+      Link="LinkedSources/ECS/Systems/ZoneFollowerPositionCalculator.cs"
+    />
     <!-- Squad voice commands: pure-logic callout IDs and decider -->
     <Compile
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/SquadCalloutId.cs"

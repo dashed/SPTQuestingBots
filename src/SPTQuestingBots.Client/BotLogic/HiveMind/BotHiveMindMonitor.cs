@@ -208,6 +208,15 @@ namespace SPTQuestingBots.BotLogic.HiveMind
 
                         // Sync boss objective into squad
                         ECS.BotEntityBridge.SyncSquadObjective(botOwner);
+
+                        // Detect zone-based movement quest
+                        var objectiveManager = botOwner.GetObjectiveManager();
+                        var zoneConfig = ConfigController.Config?.Questing?.ZoneMovement;
+                        squad.IsZoneObjective =
+                            zoneConfig != null
+                            && objectiveManager != null
+                            && objectiveManager.IsJobAssignmentActive
+                            && objectiveManager.CurrentQuestName == zoneConfig.QuestName;
                     }
                 }
             }
@@ -238,13 +247,19 @@ namespace SPTQuestingBots.BotLogic.HiveMind
 
             _squadStrategyManager.Update(ECS.BotEntityBridge.SquadRegistry.ActiveSquads);
 
-            // 6. Update formation positions and speed decisions for followers
+            // 6. Override tactical positions with zone-derived spread for zone movement squads
+            if (config.EnableZoneFollowerSpread)
+            {
+                updateZoneFollowerPositions(config);
+            }
+
+            // 7. Update formation positions and speed decisions for followers
             if (config.EnableFormationMovement)
             {
                 updateFormationMovement(config);
             }
 
-            // 7. Update squad voice commands (boss callouts, follower responses, combat warnings)
+            // 8. Update squad voice commands (boss callouts, follower responses, combat warnings)
             if (config.EnableVoiceCommands)
             {
                 updateSquadVoiceCommands(config);
@@ -325,6 +340,117 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                     squad.ThreatDirectionZ = 0f;
                     squad.HasThreatDirection = false;
                     squad.CombatVersion++;
+                }
+            }
+        }
+
+        /// <summary>Reusable buffer for zone candidate positions (max 4 neighbors × 3 floats).</summary>
+        private static readonly float[] _zoneCandidateBuffer = new float[4 * 3];
+
+        /// <summary>Reusable buffer for follower seeds (max 6 followers).</summary>
+        private static readonly int[] _zoneFollowerSeedBuffer = new int[ECS.SquadObjective.MaxMembers];
+
+        /// <summary>Reusable buffer for zone output positions (max 6 followers × 3 floats).</summary>
+        private static readonly float[] _zoneOutputBuffer = new float[ECS.SquadObjective.MaxMembers * 3];
+
+        /// <summary>
+        /// Override tactical positions for zone movement squads with zone-derived spread.
+        /// Each follower gets a different neighboring grid cell position with seed-based jitter,
+        /// creating a search-party pattern instead of everyone clustering on the same cell.
+        /// Runs after strategy manager assigns geometric positions, replacing them for zone squads.
+        /// </summary>
+        private static void updateZoneFollowerPositions(SquadStrategyConfig config)
+        {
+            var gridManager = Singleton<GameWorld>.Instance?.GetComponent<ZoneMovement.Integration.WorldGridManager>();
+            if (gridManager == null || !gridManager.IsInitialized)
+                return;
+
+            var squads = ECS.BotEntityBridge.SquadRegistry.ActiveSquads;
+            for (int s = 0; s < squads.Count; s++)
+            {
+                var squad = squads[s];
+                if (!squad.IsZoneObjective)
+                    continue;
+                if (squad.Leader == null || !squad.Leader.IsActive)
+                    continue;
+
+                var leader = squad.Leader;
+
+                // Get the boss's current grid cell
+                var bossCell = gridManager.GetCellForBot(
+                    new Vector3(leader.CurrentPositionX, leader.CurrentPositionY, leader.CurrentPositionZ)
+                );
+                if (bossCell == null)
+                    continue;
+
+                // Collect navigable neighboring cell centers into candidate buffer
+                var neighbors = bossCell.Neighbors;
+                int candidateCount = 0;
+                for (int n = 0; n < neighbors.Count; n++)
+                {
+                    var neighbor = neighbors[n];
+                    if (!neighbor.IsNavigable)
+                        continue;
+                    if (candidateCount >= _zoneCandidateBuffer.Length / 3)
+                        break;
+
+                    var center = neighbor.Center;
+                    _zoneCandidateBuffer[candidateCount * 3] = center.x;
+                    _zoneCandidateBuffer[candidateCount * 3 + 1] = center.y;
+                    _zoneCandidateBuffer[candidateCount * 3 + 2] = center.z;
+                    candidateCount++;
+                }
+
+                if (candidateCount == 0)
+                    continue;
+
+                // Collect follower seeds
+                int followerCount = 0;
+                for (int i = 0; i < squad.Members.Count; i++)
+                {
+                    var member = squad.Members[i];
+                    if (member == leader || !member.IsActive)
+                        continue;
+                    if (followerCount >= _zoneFollowerSeedBuffer.Length)
+                        break;
+
+                    _zoneFollowerSeedBuffer[followerCount] = member.FieldNoiseSeed;
+                    followerCount++;
+                }
+
+                if (followerCount == 0)
+                    continue;
+
+                // Distribute followers across candidate cells with jitter
+                ECS.Systems.ZoneFollowerPositionCalculator.DistributeFollowers(
+                    _zoneCandidateBuffer,
+                    candidateCount,
+                    _zoneFollowerSeedBuffer,
+                    followerCount,
+                    config.ZoneJitterRadius,
+                    _zoneOutputBuffer
+                );
+
+                // Override follower tactical positions with zone-derived positions
+                int posIdx = 0;
+                for (int i = 0; i < squad.Members.Count; i++)
+                {
+                    var member = squad.Members[i];
+                    if (member == leader || !member.IsActive)
+                        continue;
+                    if (posIdx >= followerCount)
+                        break;
+
+                    int off = posIdx * 3;
+                    if (!float.IsNaN(_zoneOutputBuffer[off]))
+                    {
+                        member.TacticalPositionX = _zoneOutputBuffer[off];
+                        member.TacticalPositionY = _zoneOutputBuffer[off + 1];
+                        member.TacticalPositionZ = _zoneOutputBuffer[off + 2];
+                        member.HasTacticalPosition = true;
+                        member.SquadRole = ECS.SquadRole.Guard;
+                    }
+                    posIdx++;
                 }
             }
         }

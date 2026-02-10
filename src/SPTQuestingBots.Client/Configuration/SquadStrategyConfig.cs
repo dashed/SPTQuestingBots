@@ -98,6 +98,14 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("enable_combat_aware_positioning")]
         public bool EnableCombatAwarePositioning { get; set; } = true;
 
+        // ── Zone Movement Integration ──────────────────────────────
+
+        [JsonProperty("enable_zone_follower_spread")]
+        public bool EnableZoneFollowerSpread { get; set; } = true;
+
+        [JsonProperty("zone_jitter_radius")]
+        public float ZoneJitterRadius { get; set; } = 5f;
+
         // ── Voice Commands ─────────────────────────────────────────
 
         [JsonProperty("enable_voice_commands")]
