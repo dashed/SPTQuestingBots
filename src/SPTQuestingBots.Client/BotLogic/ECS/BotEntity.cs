@@ -232,6 +232,20 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// </summary>
         public bool IsEnRouteFormation;
 
+        // ── Voice Command State ─────────────────────────────────
+
+        /// <summary>Time of last voice callout for cooldown tracking.</summary>
+        public float LastCalloutTime;
+
+        /// <summary>Previous IsInCombat value for edge detection.</summary>
+        public bool PreviousIsInCombat;
+
+        /// <summary>Pending callout to play after a delay (0 = none).</summary>
+        public int PendingCalloutId;
+
+        /// <summary>Game time at which to play the pending callout.</summary>
+        public float PendingCalloutTime;
+
         // ── Constructor ─────────────────────────────────────────
 
         public BotEntity(int id)

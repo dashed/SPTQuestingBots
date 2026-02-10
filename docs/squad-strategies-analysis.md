@@ -1656,13 +1656,39 @@ to the boss's current position and heading.
   `FormationSelector.SelectWithSpacing()` to dynamically choose formation
   type and spacing based on available lateral space.
 
-### 12.3 Squad Voice Commands
+### 12.3 Squad Voice Commands — **Implemented**
 
-SAIN's visible-member tracking could enable gesture/command decisions:
+Bosses and followers now trigger contextual voice lines during squad questing.
+Uses BSG's native `Player.Say()` API — compatible with both vanilla and SAIN.
 
-- Boss callouts when reaching objective ("hold position", "spread out")
-- Follower acknowledgment when reaching tactical position
-- Warning callouts when detecting enemies
+**Pure-logic layer** (fully testable, no Unity deps):
+- `SquadCalloutId`: 13 int constants mapping to EPhraseTrigger values
+- `SquadCalloutDecider`: Static decision methods — boss objective callouts
+  (Gogogo on new objective, HoldPosition on arrival), follower responses
+  (Roger/Going/OnPosition with ordinal-based variety), arrival callouts,
+  and directional enemy warnings (OnSix/LeftFlank/RightFlank/InTheFront)
+
+**Unity integration layer:**
+- `SquadVoiceHelper`: Bridges callout IDs to BSG's `Player.Say()` with proper
+  ETagStatus mask (Coop + awareness state). Checks `Speaker.Speaking`/`Busy`
+  to avoid interrupting ongoing speech
+- Wired into `BotHiveMindMonitor.updateSquadVoiceCommands()` (step 7, after
+  formation movement), processing 4 trigger types per tick:
+  1. **Pending callouts**: Delayed follower responses from previous ticks
+  2. **Boss objective callout**: Edge-triggered on SquadObjective.Version change
+  3. **Follower arrival**: Proximity check against tactical position
+  4. **Combat transition**: Dot-product directional callout on IsInCombat edge
+
+**Communication range gating**: All boss→follower callouts gated by
+`CommunicationRange.IsInRange()` (35m voice / 200m earpiece).
+
+**Delayed responses**: Follower responses use staggered pending callouts
+(0.8s + followerIndex × 0.3s) to avoid robotic simultaneous speech.
+
+Config: `enable_voice_commands` (true), `voice_command_cooldown` (5.0s),
+`follower_response_delay` (0.8s).
+
+Tests: ~40 new (5 SquadCalloutId + 25 SquadCalloutDecider + 7 config + 4 entity)
 
 ### 12.4 Combat-Aware Tactical Positioning
 

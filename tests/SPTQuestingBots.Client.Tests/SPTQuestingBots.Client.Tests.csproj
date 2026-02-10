@@ -242,6 +242,15 @@
       Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/UtilityAI/SquadTaskFactory.cs"
       Link="LinkedSources/ECS/UtilityAI/SquadTaskFactory.cs"
     />
+    <!-- Squad voice commands: pure-logic callout IDs and decider -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/SquadCalloutId.cs"
+      Link="LinkedSources/ECS/Systems/SquadCalloutId.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BotLogic/ECS/Systems/SquadCalloutDecider.cs"
+      Link="LinkedSources/ECS/Systems/SquadCalloutDecider.cs"
+    />
   </ItemGroup>
 
   <!--

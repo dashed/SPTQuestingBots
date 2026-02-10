@@ -499,5 +499,35 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS
 
             Assert.That(entity.ToString(), Does.Contain("Sleeping=True"));
         }
+
+        // ── Voice Command State ──────────────────────────────────
+
+        [Test]
+        public void LastCalloutTime_DefaultsToZero()
+        {
+            var entity = new BotEntity(0);
+            Assert.AreEqual(0f, entity.LastCalloutTime);
+        }
+
+        [Test]
+        public void PreviousIsInCombat_DefaultsFalse()
+        {
+            var entity = new BotEntity(0);
+            Assert.IsFalse(entity.PreviousIsInCombat);
+        }
+
+        [Test]
+        public void PendingCalloutId_DefaultsToZero()
+        {
+            var entity = new BotEntity(0);
+            Assert.AreEqual(0, entity.PendingCalloutId);
+        }
+
+        [Test]
+        public void PendingCalloutTime_DefaultsToZero()
+        {
+            var entity = new BotEntity(0);
+            Assert.AreEqual(0f, entity.PendingCalloutTime);
+        }
     }
 }

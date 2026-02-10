@@ -237,6 +237,12 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             {
                 updateFormationMovement(config);
             }
+
+            // 7. Update squad voice commands (boss callouts, follower responses, combat warnings)
+            if (config.EnableVoiceCommands)
+            {
+                updateSquadVoiceCommands(config);
+            }
         }
 
         /// <summary>
@@ -477,6 +483,194 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                     distToTacticalSqr,
                     formationConfig
                 );
+            }
+        }
+
+        private void updateSquadVoiceCommands(SquadStrategyConfig config)
+        {
+            float currentTime = Time.time;
+            float cooldown = config.VoiceCommandCooldown;
+            float responseDelay = config.FollowerResponseDelay;
+            bool useCommRange = config.EnableCommunicationRange;
+
+            var squads = ECS.BotEntityBridge.SquadRegistry.ActiveSquads;
+            for (int s = 0; s < squads.Count; s++)
+            {
+                var squad = squads[s];
+                if (squad.Leader == null || !squad.Leader.IsActive)
+                    continue;
+
+                var leader = squad.Leader;
+                var objective = squad.Objective;
+
+                // 1. Process pending callouts (delayed follower responses from previous ticks)
+                for (int i = 0; i < squad.Members.Count; i++)
+                {
+                    var member = squad.Members[i];
+                    if (!member.IsActive || member.PendingCalloutId == SquadCalloutId.None)
+                        continue;
+
+                    if (currentTime >= member.PendingCalloutTime)
+                    {
+                        var pendingBotOwner = ECS.BotEntityBridge.GetBotOwner(member);
+                        if (pendingBotOwner != null)
+                        {
+                            SquadVoiceHelper.TrySay(pendingBotOwner, member.PendingCalloutId);
+                            member.LastCalloutTime = currentTime;
+                        }
+                        member.PendingCalloutId = SquadCalloutId.None;
+                    }
+                }
+
+                // 2. Boss objective callout (edge-triggered on version change)
+                if (objective.HasObjective && leader.LastSeenObjectiveVersion != objective.Version)
+                {
+                    if (!SquadCalloutDecider.IsOnCooldown(leader.LastCalloutTime, currentTime, cooldown))
+                    {
+                        bool objectiveChanged = leader.LastSeenObjectiveVersion > 0;
+                        bool bossArrived = leader.IsCloseToObjective;
+                        int bossCallout = SquadCalloutDecider.DecideBossCallout(objectiveChanged, bossArrived);
+
+                        if (bossCallout != SquadCalloutId.None)
+                        {
+                            var bossBotOwner = ECS.BotEntityBridge.GetBotOwner(leader);
+                            if (bossBotOwner != null && SquadVoiceHelper.TrySay(bossBotOwner, bossCallout))
+                            {
+                                leader.LastCalloutTime = currentTime;
+
+                                // Queue follower responses with staggered delays
+                                int followerIdx = 0;
+                                for (int i = 0; i < squad.Members.Count; i++)
+                                {
+                                    var member = squad.Members[i];
+                                    if (member == leader || !member.IsActive)
+                                        continue;
+
+                                    // Communication range gate
+                                    if (useCommRange)
+                                    {
+                                        float dx = leader.CurrentPositionX - member.CurrentPositionX;
+                                        float dy = leader.CurrentPositionY - member.CurrentPositionY;
+                                        float dz = leader.CurrentPositionZ - member.CurrentPositionZ;
+                                        float sqrDist = dx * dx + dy * dy + dz * dz;
+                                        if (
+                                            !CommunicationRange.IsInRange(
+                                                leader.HasEarPiece,
+                                                member.HasEarPiece,
+                                                sqrDist,
+                                                config.CommunicationRangeNoEarpiece,
+                                                config.CommunicationRangeEarpiece
+                                            )
+                                        )
+                                        {
+                                            followerIdx++;
+                                            continue;
+                                        }
+                                    }
+
+                                    int response = SquadCalloutDecider.DecideFollowerResponse(bossCallout, followerIdx);
+                                    if (response != SquadCalloutId.None)
+                                    {
+                                        member.PendingCalloutId = response;
+                                        member.PendingCalloutTime = currentTime + responseDelay + followerIdx * 0.3f;
+                                    }
+                                    followerIdx++;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 3. Follower tactical arrival callout
+                float arrivalRadiusSqr = config.ArrivalRadius * config.ArrivalRadius;
+                for (int i = 0; i < squad.Members.Count; i++)
+                {
+                    var member = squad.Members[i];
+                    if (member == leader || !member.IsActive || !member.HasTacticalPosition)
+                        continue;
+
+                    if (SquadCalloutDecider.IsOnCooldown(member.LastCalloutTime, currentTime, cooldown))
+                        continue;
+
+                    float tdx = member.CurrentPositionX - member.TacticalPositionX;
+                    float tdy = member.CurrentPositionY - member.TacticalPositionY;
+                    float tdz = member.CurrentPositionZ - member.TacticalPositionZ;
+                    float distSqr = tdx * tdx + tdy * tdy + tdz * tdz;
+
+                    bool justArrived = distSqr < arrivalRadiusSqr;
+                    int arrivalCallout = SquadCalloutDecider.DecideArrivalCallout(justArrived);
+                    if (arrivalCallout != SquadCalloutId.None)
+                    {
+                        var memberBotOwner = ECS.BotEntityBridge.GetBotOwner(member);
+                        if (memberBotOwner != null && SquadVoiceHelper.TrySay(memberBotOwner, arrivalCallout))
+                        {
+                            member.LastCalloutTime = currentTime;
+                        }
+                    }
+                }
+
+                // 4. Combat transition callout (any member entering combat)
+                for (int i = 0; i < squad.Members.Count; i++)
+                {
+                    var member = squad.Members[i];
+                    if (!member.IsActive)
+                    {
+                        member.PreviousIsInCombat = false;
+                        continue;
+                    }
+
+                    bool wasInCombat = member.PreviousIsInCombat;
+                    member.PreviousIsInCombat = member.IsInCombat;
+
+                    if (!member.IsInCombat || wasInCombat)
+                        continue;
+
+                    if (SquadCalloutDecider.IsOnCooldown(member.LastCalloutTime, currentTime, cooldown))
+                        continue;
+
+                    // Compute enemy direction using dot products
+                    var memberBotOwner = ECS.BotEntityBridge.GetBotOwner(member);
+                    if (memberBotOwner == null)
+                        continue;
+
+                    var goalEnemy = memberBotOwner.Memory?.GoalEnemy;
+                    if (goalEnemy == null)
+                        continue;
+
+                    var enemyPos = goalEnemy.CurrPosition;
+                    var botPos = memberBotOwner.Position;
+                    var botFwd = memberBotOwner.LookDirection;
+
+                    float toEnemyX = enemyPos.x - botPos.x;
+                    float toEnemyZ = enemyPos.z - botPos.z;
+                    float toEnemyLen = (float)Math.Sqrt(toEnemyX * toEnemyX + toEnemyZ * toEnemyZ);
+                    if (toEnemyLen < 0.001f)
+                        continue;
+
+                    toEnemyX /= toEnemyLen;
+                    toEnemyZ /= toEnemyLen;
+
+                    // Normalize forward in XZ
+                    float fwdLen = (float)Math.Sqrt(botFwd.x * botFwd.x + botFwd.z * botFwd.z);
+                    if (fwdLen < 0.001f)
+                        continue;
+
+                    float fwdX = botFwd.x / fwdLen;
+                    float fwdZ = botFwd.z / fwdLen;
+
+                    float dotForward = fwdX * toEnemyX + fwdZ * toEnemyZ;
+                    // Right = (fwdZ, -fwdX) in XZ plane
+                    float dotRight = fwdZ * toEnemyX + (-fwdX) * toEnemyZ;
+
+                    int dirCallout = SquadCalloutDecider.DecideEnemyDirectionCallout(dotForward, dotRight);
+                    if (dirCallout != SquadCalloutId.None)
+                    {
+                        if (SquadVoiceHelper.TrySay(memberBotOwner, dirCallout, aggressive: true))
+                        {
+                            member.LastCalloutTime = currentTime;
+                        }
+                    }
+                }
             }
         }
 

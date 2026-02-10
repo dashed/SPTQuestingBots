@@ -93,6 +93,17 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("formation_switch_width")]
         public float FormationSwitchWidth { get; set; } = 8f;
 
+        // ── Voice Commands ─────────────────────────────────────────
+
+        [JsonProperty("enable_voice_commands")]
+        public bool EnableVoiceCommands { get; set; } = true;
+
+        [JsonProperty("voice_command_cooldown")]
+        public float VoiceCommandCooldown { get; set; } = 5.0f;
+
+        [JsonProperty("follower_response_delay")]
+        public float FollowerResponseDelay { get; set; } = 0.8f;
+
         public SquadStrategyConfig() { }
     }
 }

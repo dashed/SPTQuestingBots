@@ -43,6 +43,9 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(config.ColumnSpacing, Is.EqualTo(4f));
                 Assert.That(config.SpreadSpacing, Is.EqualTo(3f));
                 Assert.That(config.FormationSwitchWidth, Is.EqualTo(8f));
+                Assert.That(config.EnableVoiceCommands, Is.True);
+                Assert.That(config.VoiceCommandCooldown, Is.EqualTo(5.0f));
+                Assert.That(config.FollowerResponseDelay, Is.EqualTo(0.8f));
             });
         }
 
@@ -82,6 +85,9 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(config.ColumnSpacing, Is.EqualTo(4f));
                 Assert.That(config.SpreadSpacing, Is.EqualTo(3f));
                 Assert.That(config.FormationSwitchWidth, Is.EqualTo(8f));
+                Assert.That(config.EnableVoiceCommands, Is.True);
+                Assert.That(config.VoiceCommandCooldown, Is.EqualTo(5.0f));
+                Assert.That(config.FollowerResponseDelay, Is.EqualTo(0.8f));
             });
         }
 
@@ -152,6 +158,9 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 ColumnSpacing = 5f,
                 SpreadSpacing = 4f,
                 FormationSwitchWidth = 10f,
+                EnableVoiceCommands = false,
+                VoiceCommandCooldown = 3.0f,
+                FollowerResponseDelay = 1.5f,
             };
 
             var json = JsonConvert.SerializeObject(original);
@@ -188,6 +197,9 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(deserialized.ColumnSpacing, Is.EqualTo(5f));
                 Assert.That(deserialized.SpreadSpacing, Is.EqualTo(4f));
                 Assert.That(deserialized.FormationSwitchWidth, Is.EqualTo(10f));
+                Assert.That(deserialized.EnableVoiceCommands, Is.False);
+                Assert.That(deserialized.VoiceCommandCooldown, Is.EqualTo(3.0f));
+                Assert.That(deserialized.FollowerResponseDelay, Is.EqualTo(1.5f));
             });
         }
 
@@ -228,6 +240,9 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(json, Does.Contain("column_spacing"));
                 Assert.That(json, Does.Contain("spread_spacing"));
                 Assert.That(json, Does.Contain("formation_switch_width"));
+                Assert.That(json, Does.Contain("enable_voice_commands"));
+                Assert.That(json, Does.Contain("voice_command_cooldown"));
+                Assert.That(json, Does.Contain("follower_response_delay"));
             });
         }
 
@@ -331,6 +346,41 @@ namespace SPTQuestingBots.Client.Tests.Configuration
                 Assert.That(config.ColumnSpacing, Is.EqualTo(5f));
                 Assert.That(config.SpreadSpacing, Is.EqualTo(4f));
                 Assert.That(config.FormationSwitchWidth, Is.EqualTo(10f));
+            });
+        }
+
+        [Test]
+        public void EnableVoiceCommands_DefaultTrue()
+        {
+            var config = new SquadStrategyConfig();
+            Assert.IsTrue(config.EnableVoiceCommands);
+        }
+
+        [Test]
+        public void VoiceCommandCooldown_Default5()
+        {
+            var config = new SquadStrategyConfig();
+            Assert.AreEqual(5.0f, config.VoiceCommandCooldown, 0.01f);
+        }
+
+        [Test]
+        public void FollowerResponseDelay_Default08()
+        {
+            var config = new SquadStrategyConfig();
+            Assert.AreEqual(0.8f, config.FollowerResponseDelay, 0.01f);
+        }
+
+        [Test]
+        public void Deserialize_VoiceOverrides()
+        {
+            var json = """{ "enable_voice_commands": false, "voice_command_cooldown": 3.0, "follower_response_delay": 1.5 }""";
+            var config = JsonConvert.DeserializeObject<SquadStrategyConfig>(json);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(config.EnableVoiceCommands, Is.False);
+                Assert.That(config.VoiceCommandCooldown, Is.EqualTo(3.0f));
+                Assert.That(config.FollowerResponseDelay, Is.EqualTo(1.5f));
             });
         }
     }
