@@ -981,21 +981,13 @@ namespace SPTQuestingBots
                 ConfigSections.ZoneMovement,
                 "Show Debug Overlay",
                 false,
-                new ConfigDescription(
-                    "Show zone movement debug overlay with grid stats, player cell info, and field data",
-                    null,
-                    new ConfigurationManagerAttributes { IsAdvanced = true }
-                )
+                "Show zone movement debug overlay with grid stats, player cell info, and field data"
             );
             ZoneMovementDebugMinimap = Config.Bind(
                 ConfigSections.ZoneMovement,
                 "Show Debug Minimap",
                 false,
-                new ConfigDescription(
-                    "Show a 2D minimap overlay visualizing grid cells, field vectors, bot positions, and zone sources",
-                    null,
-                    new ConfigurationManagerAttributes { IsAdvanced = true }
-                )
+                "Show a 2D minimap overlay visualizing grid cells, field vectors, bot positions, and zone sources"
             );
 
             // ── 19. AI Limiter ──────────────────────────────────────
