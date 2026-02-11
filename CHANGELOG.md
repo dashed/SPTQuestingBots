@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.0] - 2026-02-10
+
+### Fixed
+- **Null-safe BotsController access in UpdateMaxTotalBots** — `Singleton<IBotGame>.Instance?.BotsController` null-conditional prevents NullRef during early `LocationData.Awake()` when bot game isn't fully initialized
+- **Null-safe GetComponent chains across 6 hot paths** — added null guards with LogWarning in `BotHiveMindMonitor`, `BotObjectiveManager`, `BotOwnerBrainActivatePatch`, `DebugData`, `AirdropLandPatch`, `BotPathData`
+- **Static singleton for QuestingBotsPlugin** — `QuestingBotsPlugin.Instance` replaces broken `FindObjectOfType<QuestingBotsPlugin>()` calls; null-safe `SleepingLayer` constructor prevents silent failures causing bot aggro
+- **Null-safe extraction flow** — `LocationData` init chain, `BotHearingMonitor`, and extraction point access all protected against early/null state
+- **5 additional runtime bugs** found via reflection/null-safety audit: field rename mismatches, unsafe casts, missing null checks
+- **SPT 4.x runtime crashes** — field renames (`GClass` updates), SAIN API namespace move, null raid settings guard
+- **Unhide debug overlay and minimap** — F12 advanced settings no longer hide these entries
+
+### Added
+- **Convergence field rebalance** — bot clustering replaces omniscient player position tracking
+  - Position-based attraction falloff changed from `1/sqrt(dist)` to `1/dist` (steeper, local-only grouping)
+  - Combat event attraction keeps `1/sqrt(dist)` for longer-range response to gunfire and explosions
+  - `convergence_weight`: 1.0 → 0.3 (gentle clustering bias, not dominant)
+  - `combat_convergence_force`: 0.5 → 0.8 (combat events are the primary convergence driver)
+  - `WorldGridManager` passes `cachedBotPositions` to convergence field (was `cachedPlayerPositions`)
+  - Parameter renamed: `playerPositions` → `attractionPositions` in `ConvergenceField` API
+  - Telemetry logging: bot count, player count, combat events, and raid time logged each convergence update
+- 15 new convergence balance tests: falloff math verification (1/dist vs 1/sqrt asymmetry), config regression (weight=0.3, force=0.8), source code guards (botPositions passed, parameter naming, falloff formulas)
+- `make install` target — wipes stale mod files before copying fresh build
+
+### Changed
+- Bots no longer track player position through convergence field — they converge on other bots (clustering) and combat events (gunfire/explosions) instead
+- 2054 tests total (66 server + 1988 client), was 2015
+
 ## [1.12.0] - 2026-02-10
 
 ### Added
