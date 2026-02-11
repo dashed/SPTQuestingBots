@@ -25,7 +25,11 @@ namespace SPTQuestingBots.Patches.Spawning
 
         protected override MethodBase GetTargetMethod()
         {
-            wavesSpawnScenarioField = AccessTools.Field(typeof(LocalGame), "wavesSpawnScenario_0");
+            wavesSpawnScenarioField = Helpers.ReflectionHelper.RequireField(
+                typeof(LocalGame),
+                "wavesSpawnScenario_0",
+                "LocalGame waves spawn scenario"
+            );
 
             return typeof(BaseLocalGame<EftGamePlayerOwner>).GetMethod("vmethod_5", BindingFlags.Public | BindingFlags.Instance);
         }

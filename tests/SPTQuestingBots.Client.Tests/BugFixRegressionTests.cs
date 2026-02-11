@@ -42,33 +42,33 @@ public class BugFixRegressionTests
     #region Reflection field name regression tests
 
     [Test]
-    public void TrySpawnFreeAndDelayPatch_UsesFloat2_WithCapitalF()
+    public void TrySpawnFreeAndDelayPatch_UsesFloat2_WithLowercaseF()
     {
-        // Bug fix: "float_2" was changed to "Float_2" to match BSG deobfuscator output.
-        // The field is on NonWavesSpawnScenario and controls retry delay.
+        // Bug fix: NonWavesSpawnScenario is a named EFT namespace type — deobfuscator uses
+        // camelCase for these (float_2, not Float_2). PascalCase is for GClass/abstract types.
         var source = ReadSourceFile("src/SPTQuestingBots.Client/Patches/Spawning/ScavLimits/TrySpawnFreeAndDelayPatch.cs");
 
-        Assert.That(source, Does.Contain("\"Float_2\""), "Field name should be Float_2 (capital F)");
-        Assert.That(source, Does.Not.Contain("\"float_2\""), "Old field name float_2 (lowercase f) should not be present");
+        Assert.That(source, Does.Contain("\"float_2\""), "Field name should be float_2 (camelCase, EFT namespace type)");
+        Assert.That(source, Does.Not.Contain("\"Float_2\""), "PascalCase Float_2 is wrong for EFT namespace types");
     }
 
     [Test]
-    public void BotPathingHelpers_UsesVector3_0_WithLowercaseV()
+    public void BotPathingHelpers_UsesVector3_0_WithPascalCase()
     {
-        // Bug fix: "Vector3_0" was changed to "vector3_0" to match BSG deobfuscator output.
-        // The field is on BotCurrentPathAbstractClass and holds path corner points.
+        // Bug fix: SPT 4.x deobfuscator uses PascalCase "Vector3_0" for obfuscated fields.
+        // The field is on BotCurrentPathAbstractClass and holds path corner points (Vector3[]).
         var source = ReadSourceFile("src/SPTQuestingBots.Client/Helpers/BotPathingHelpers.cs");
 
-        Assert.That(source, Does.Contain("\"vector3_0\""), "Field name should be vector3_0 (lowercase v)");
-        Assert.That(source, Does.Not.Contain("\"Vector3_0\""), "Old field name Vector3_0 (capital V) should not be present");
+        Assert.That(source, Does.Contain("\"Vector3_0\""), "Field name should be Vector3_0 (PascalCase)");
+        Assert.That(source, Does.Not.Contain("\"vector3_0\""), "Old field name vector3_0 (camelCase) should not be present");
     }
 
     [TestCase(
         "src/SPTQuestingBots.Client/Patches/Spawning/ScavLimits/TrySpawnFreeAndDelayPatch.cs",
-        "Float_2",
+        "float_2",
         "NonWavesSpawnScenario retry delay"
     )]
-    [TestCase("src/SPTQuestingBots.Client/Helpers/BotPathingHelpers.cs", "vector3_0", "BotCurrentPathAbstractClass path points")]
+    [TestCase("src/SPTQuestingBots.Client/Helpers/BotPathingHelpers.cs", "Vector3_0", "BotCurrentPathAbstractClass path points")]
     [TestCase("src/SPTQuestingBots.Client/BotLogic/LogicLayerMonitor.cs", "List_0", "AICoreStrategyAbstractClass brain layer list")]
     [TestCase("src/SPTQuestingBots.Client/Patches/PScavProfilePatch.cs", "List_0", "BotsPresets profile list")]
     [TestCase("src/SPTQuestingBots.Client/Patches/Spawning/GameStartPatch.cs", "wavesSpawnScenario_0", "LocalGame waves spawn scenario")]
@@ -83,6 +83,42 @@ public class BugFixRegressionTests
             Does.Contain($"\"{expectedFieldName}\""),
             $"Expected reflection field \"{expectedFieldName}\" ({description}) in {relPath}"
         );
+    }
+
+    [Test]
+    public void BotDiedPatch_UsesCorrectHarmonyFieldName_ForBots()
+    {
+        // Bug fix: BotSpawner has field "Bots" (no underscore), not "_bots".
+        // Harmony parameter "____bots" (4 underscores) resolved to field "_bots" which doesn't exist.
+        // Correct: "___Bots" (3 underscores + field name "Bots").
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Patches/Spawning/Advanced/BotDiedPatch.cs");
+
+        Assert.That(source, Does.Contain("___Bots"), "Harmony field parameter should be ___Bots (3 underscores + Bots)");
+        Assert.That(source, Does.Not.Contain("____bots"), "Old parameter ____bots resolved to non-existent field _bots");
+    }
+
+    [Test]
+    public void SetNewBossPatch_UsesCorrectHarmonyFieldName_ForBoss()
+    {
+        // Bug fix: BossGroup has field "Boss_1" (PascalCase obfuscated), not "_boss".
+        // Harmony parameter "____boss" (4 underscores) resolved to field "_boss" which doesn't exist.
+        // Correct: "___Boss_1" (3 underscores + field name "Boss_1").
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Patches/Spawning/SetNewBossPatch.cs");
+
+        Assert.That(source, Does.Contain("___Boss_1"), "Harmony field parameter should be ___Boss_1 (3 underscores + Boss_1)");
+        Assert.That(source, Does.Not.Contain("____boss"), "Old parameter ____boss resolved to non-existent field _boss");
+    }
+
+    [Test]
+    public void GetAllBossPlayersPatch_UsesCorrectHarmonyFieldName_ForAllPlayers()
+    {
+        // Bug fix: BotSpawner has field "AllPlayers" (PascalCase), not "_allPlayers".
+        // Harmony parameter "____allPlayers" (4 underscores) resolved to field "_allPlayers" which doesn't exist.
+        // Correct: "___AllPlayers" (3 underscores + field name "AllPlayers").
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Patches/Spawning/GetAllBossPlayersPatch.cs");
+
+        Assert.That(source, Does.Contain("___AllPlayers"), "Harmony field parameter should be ___AllPlayers (3 underscores + AllPlayers)");
+        Assert.That(source, Does.Not.Contain("____allPlayers"), "Old parameter ____allPlayers resolved to non-existent field _allPlayers");
     }
 
     #endregion

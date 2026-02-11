@@ -3,6 +3,7 @@ using BepInEx.Bootstrap;
 using SPTQuestingBots.Components;
 using SPTQuestingBots.Components.Spawning;
 using SPTQuestingBots.Controllers;
+using SPTQuestingBots.Helpers;
 
 namespace SPTQuestingBots
 {
@@ -144,6 +145,8 @@ namespace SPTQuestingBots
 
                 this.GetOrAddComponent<TarkovData>();
             }
+
+            ReflectionHelper.ValidateAllReflectionFields();
 
             Logger.LogInfo("Loading QuestingBots...done.");
         }

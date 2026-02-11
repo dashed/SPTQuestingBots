@@ -13,7 +13,11 @@ namespace SPTQuestingBots.Helpers
 {
     public static class BotPathingHelpers
     {
-        private static FieldInfo pathPointsField = AccessTools.Field(typeof(BotCurrentPathAbstractClass), "vector3_0");
+        private static FieldInfo pathPointsField = ReflectionHelper.RequireField(
+            typeof(BotCurrentPathAbstractClass),
+            "Vector3_0",
+            "Path corner points array"
+        );
 
         public static void FollowPath(this BotOwner bot, Models.Pathing.BotPathData botPath, bool slowAtTheEnd, bool getUpWithCheck)
         {
@@ -41,14 +45,14 @@ namespace SPTQuestingBots.Helpers
 
         public static Vector3[] GetCurrentPath(this BotMover botMover)
         {
-            if (botMover?.ActualPathController?.CurPath == null)
+            if (pathPointsField == null || botMover?.ActualPathController?.CurPath == null)
             {
                 return Array.Empty<Vector3>();
             }
 
             Vector3[] path = (Vector3[])pathPointsField.GetValue(botMover.ActualPathController.CurPath);
 
-            return path;
+            return path ?? Array.Empty<Vector3>();
         }
 
         public static bool HasSamePathTargetPosition(this BotOwner bot, Vector3 targetPosition)

@@ -173,10 +173,13 @@ namespace SPTQuestingBots.BotLogic
             // Find the field that stores the list of brain layers assigned to the bot
             Type aICoreStrategyClassType = typeof(AICoreStrategyAbstractClass<BotLogicDecision>);
 
-            FieldInfo layerListField = AccessTools.Field(aICoreStrategyClassType, "List_0");
+            FieldInfo layerListField = Helpers.ReflectionHelper.RequireField(
+                aICoreStrategyClassType,
+                "List_0",
+                "AICoreStrategyAbstractClass brain layer list"
+            );
             if (layerListField == null)
             {
-                LoggingController.LogError("Could not find brain layer list in type " + aICoreStrategyClassType.FullName);
                 return emptyCollection;
             }
 
@@ -255,10 +258,13 @@ namespace SPTQuestingBots.BotLogic
                 return null;
             }
 
-            FieldInfo customLayerField = AccessTools.Field(customLayerWrapperType, "customLayer");
+            FieldInfo customLayerField = Helpers.ReflectionHelper.RequireField(
+                customLayerWrapperType,
+                "customLayer",
+                "BigBrain CustomLayerWrapper inner field"
+            );
             if (customLayerField == null)
             {
-                LoggingController.LogError("Could not find customLayer field");
                 return null;
             }
 

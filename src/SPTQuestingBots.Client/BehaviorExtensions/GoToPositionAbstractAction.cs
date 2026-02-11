@@ -51,7 +51,11 @@ namespace SPTQuestingBots.BehaviorExtensions
         {
             if (botZoneField == null)
             {
-                botZoneField = AccessTools.Field(typeof(BotsGroup), "<BotZone>k__BackingField");
+                botZoneField = ReflectionHelper.RequireField(
+                    typeof(BotsGroup),
+                    "<BotZone>k__BackingField",
+                    "BotsGroup BotZone backing field"
+                );
             }
 
             var remedies = ConfigController.Config.Questing.StuckBotDetection.StuckBotRemedies;

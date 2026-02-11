@@ -9,13 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Static `updateInterval` bug in BigBrain layers and actions** — `CustomLayerDelayedUpdate` and `CustomLogicDelayedUpdate` both declared `protected static int updateInterval`, causing all layer/action instances across all bots to share a single throttle interval. Whichever constructor ran last would overwrite the value for every instance (e.g., SleepingLayer's 250ms vs BotObjectiveLayer's 25ms). Extracted per-instance `UpdateThrottle` class and replaced static fields with `readonly` instance composition in both base classes. Also fixed dead 2-param constructors in `CustomLayerForQuesting` and `GoToPositionAbstractAction` that referenced the removed static.
+- **`vector3_0` → `Vector3_0` field rename in `BotPathingHelpers`** — SPT 4.x deobfuscator uses PascalCase for GClass/abstract type fields. `AccessTools.Field(typeof(BotCurrentPathAbstractClass), "vector3_0")` returned null, causing `GetCurrentPath()` to throw NullReferenceException on every call. This crashed bot Update() each tick (BigBrain has no exception handling in Release builds), preventing bots from yielding to SAIN combat layers. Added null guard for `pathPointsField` and null coalescing on the return value.
+- **`Float_2` → `float_2` field rename in `TrySpawnFreeAndDelayPatch`** — Named EFT namespace types use camelCase obfuscated fields (unlike GClass types which use PascalCase). `AccessTools.Field(typeof(NonWavesSpawnScenario), "Float_2")` returned null, causing NullRef when scav spawn rate limiting triggered. Added null-conditional guard on SetValue call.
+- **`____bots` → `___Bots` Harmony field injection in `BotDiedPatch`** — `BotSpawner` has field `Bots` (no underscore), not `_bots`. The 4-underscore Harmony parameter resolved to non-existent field `_bots`, silently injecting null and causing NullRef on PMC death handling.
+- **`____boss` → `___Boss_1` Harmony field injection in `SetNewBossPatch`** — `BossGroup` has field `Boss_1` (PascalCase obfuscated), not `_boss`. Boss reassignment after death was silently broken.
+- **`____allPlayers` → `___AllPlayers` Harmony field injection in `GetAllBossPlayersPatch`** — `BotSpawner` has field `AllPlayers` (PascalCase), not `_allPlayers`. Boss player list retrieval was silently broken, falling back to default game behavior.
 
 ### Added
+- **`ReflectionHelper`** — centralized reflection validation with `RequireField()` (drop-in `AccessTools.Field` replacement with error logging) and `ValidateAllReflectionFields()` (startup validation of all 10 known obfuscated field lookups against loaded game assemblies). Documents BSG deobfuscator naming convention: PascalCase for GClass/abstract types, camelCase for named EFT namespace types.
+- **`ReflectionValidationTests`** — 4 new tests providing layered defense against field name mismatches:
+  - Source scan: ensures all `AccessTools.Field` calls use `RequireField` instead of raw API
+  - Source scan: ensures all Harmony `___param` field injections are registered in `ReflectionHelper.KnownFields`
+  - DLL metadata: validates all registered field names against `Assembly-CSharp.dll` using `System.Reflection.Metadata` (skipped when `libs/` absent)
+  - Registry completeness: sanity check that KnownFields has >= 10 entries
 - `UpdateThrottle` — pure C# per-instance throttle class encapsulating interval, update timer, and pause timer (no Unity/EFT dependencies)
 - 12 new `UpdateThrottleTests`: default interval, custom interval, independent instances, `CanUpdate()` timing, `Pause()` blocking, cross-instance isolation
+- 3 new regression tests for Harmony field injection names (`BotDiedPatch`, `SetNewBossPatch`, `GetAllBossPlayersPatch`)
 
 ### Changed
-- 2066 tests total (66 server + 2000 client), was 2054
+- All `AccessTools.Field` calls migrated to `ReflectionHelper.RequireField` (7 call sites across 6 files)
+- Startup validation logs `CRITICAL` errors for any field lookup failures, making game update renames immediately visible in BepInEx log
+- 2073 tests total (66 server + 2007 client), was 2054
 
 ## [1.13.0] - 2026-02-10
 

@@ -33,7 +33,11 @@ namespace SPTQuestingBots.Patches.Spawning.ScavLimits
 
         protected override MethodBase GetTargetMethod()
         {
-            nextRetryTimeDelayField = AccessTools.Field(typeof(NonWavesSpawnScenario), "Float_2");
+            nextRetryTimeDelayField = ReflectionHelper.RequireField(
+                typeof(NonWavesSpawnScenario),
+                "float_2",
+                "NonWavesSpawnScenario retry time delay"
+            );
 
             return typeof(BotSpawner).GetMethod(nameof(BotSpawner.TrySpawnFreeAndDelay), BindingFlags.Public | BindingFlags.Instance);
         }
@@ -123,7 +127,7 @@ namespace SPTQuestingBots.Patches.Spawning.ScavLimits
             logScavSpawnRate();
 
             float retryDelay = ConfigController.Config.BotSpawns.EftNewSpawnSystemAdjustments.NonWaveRetryDelayAfterBlocked;
-            nextRetryTimeDelayField.SetValue(NonWavesSpawnScenarioCreatePatch.MostRecentNonWavesSpawnScenario, retryDelay);
+            nextRetryTimeDelayField?.SetValue(NonWavesSpawnScenarioCreatePatch.MostRecentNonWavesSpawnScenario, retryDelay);
 
             return false;
         }
