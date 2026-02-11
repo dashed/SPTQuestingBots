@@ -444,6 +444,11 @@
       Link="LinkedSources/ECS/UtilityAI/Tasks/PatrolTask.cs"
     />
     <Compile Include="../../src/SPTQuestingBots.Client/Configuration/PatrolConfig.cs" Link="LinkedSources/Configuration/PatrolConfig.cs" />
+    <!-- BehaviorExtensions: per-instance update throttle (no Unity/EFT dependencies) -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/BehaviorExtensions/UpdateThrottle.cs"
+      Link="LinkedSources/BehaviorExtensions/UpdateThrottle.cs"
+    />
     <!-- ConfigSections: pure string constants for F12 menu section ordering -->
     <Compile Include="../../src/SPTQuestingBots.Client/ConfigSections.cs" Link="LinkedSources/ConfigSections.cs" />
   </ItemGroup>

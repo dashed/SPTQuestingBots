@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -34,23 +33,20 @@ namespace SPTQuestingBots.BehaviorExtensions
 
     internal abstract class CustomLayerDelayedUpdate : CustomLayer
     {
-        protected static int updateInterval { get; private set; } = 100;
         protected bool previousState { get; private set; } = false;
 
+        private readonly UpdateThrottle _throttle;
         private BotActionType nextAction = BotActionType.Undefined;
         private BotActionType previousAction = BotActionType.Undefined;
         private string actionReason = "???";
-        private Stopwatch updateTimer = Stopwatch.StartNew();
-        private Stopwatch pauseLayerTimer = Stopwatch.StartNew();
-        private float pauseLayerTime = 0;
 
         public CustomLayerDelayedUpdate(BotOwner _botOwner, int _priority)
-            : base(_botOwner, _priority) { }
+            : this(_botOwner, _priority, UpdateThrottle.DefaultIntervalMs) { }
 
         public CustomLayerDelayedUpdate(BotOwner _botOwner, int _priority, int delayInterval)
-            : this(_botOwner, _priority)
+            : base(_botOwner, _priority)
         {
-            updateInterval = delayInterval;
+            _throttle = new UpdateThrottle(delayInterval);
         }
 
         public override bool IsCurrentActionEnding()
@@ -115,18 +111,7 @@ namespace SPTQuestingBots.BehaviorExtensions
 
         protected bool canUpdate()
         {
-            if (updateTimer.ElapsedMilliseconds < updateInterval)
-            {
-                return false;
-            }
-
-            if (pauseLayerTimer.ElapsedMilliseconds < 1000 * pauseLayerTime)
-            {
-                return false;
-            }
-
-            updateTimer.Restart();
-            return true;
+            return _throttle.CanUpdate();
         }
 
         protected bool updatePreviousState(bool newState)
@@ -143,8 +128,7 @@ namespace SPTQuestingBots.BehaviorExtensions
         protected bool pauseLayer(float minTime)
         {
             previousState = false;
-            pauseLayerTime = minTime;
-            pauseLayerTimer.Restart();
+            _throttle.Pause(minTime);
 
             return false;
         }

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.1] - 2026-02-10
+
+### Fixed
+- **Static `updateInterval` bug in BigBrain layers and actions** — `CustomLayerDelayedUpdate` and `CustomLogicDelayedUpdate` both declared `protected static int updateInterval`, causing all layer/action instances across all bots to share a single throttle interval. Whichever constructor ran last would overwrite the value for every instance (e.g., SleepingLayer's 250ms vs BotObjectiveLayer's 25ms). Extracted per-instance `UpdateThrottle` class and replaced static fields with `readonly` instance composition in both base classes. Also fixed dead 2-param constructors in `CustomLayerForQuesting` and `GoToPositionAbstractAction` that referenced the removed static.
+
+### Added
+- `UpdateThrottle` — pure C# per-instance throttle class encapsulating interval, update timer, and pause timer (no Unity/EFT dependencies)
+- 12 new `UpdateThrottleTests`: default interval, custom interval, independent instances, `CanUpdate()` timing, `Pause()` blocking, cross-instance isolation
+
+### Changed
+- 2066 tests total (66 server + 2000 client), was 2054
+
 ## [1.13.0] - 2026-02-10
 
 ### Fixed

@@ -64,7 +64,7 @@ namespace SPTQuestingBots.BehaviorExtensions
         }
 
         public GoToPositionAbstractAction(BotOwner _BotOwner)
-            : this(_BotOwner, updateInterval) { }
+            : this(_BotOwner, UpdateThrottle.DefaultIntervalMs) { }
 
         public override void Start()
         {

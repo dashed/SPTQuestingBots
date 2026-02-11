@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -27,7 +26,7 @@ namespace SPTQuestingBots.BehaviorExtensions
         }
 
         public CustomLayerForQuesting(BotOwner _botOwner, int _priority)
-            : this(_botOwner, _priority, updateInterval) { }
+            : this(_botOwner, _priority, UpdateThrottle.DefaultIntervalMs) { }
 
         public override Action GetNextAction()
         {

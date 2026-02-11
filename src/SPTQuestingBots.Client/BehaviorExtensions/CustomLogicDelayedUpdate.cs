@@ -19,9 +19,8 @@ namespace SPTQuestingBots.BehaviorExtensions
     {
         protected Components.BotObjectiveManager ObjectiveManager { get; private set; }
         protected BotNodeAbstractClass baseAction { get; private set; } = null;
-        protected static int updateInterval { get; private set; } = 100;
 
-        private Stopwatch updateTimer = Stopwatch.StartNew();
+        private readonly UpdateThrottle _throttle;
         private Stopwatch actionElapsedTime = new Stopwatch();
         private Stopwatch sprintDelayTimer = Stopwatch.StartNew();
         private float sprintDelayTime = 0;
@@ -34,15 +33,13 @@ namespace SPTQuestingBots.BehaviorExtensions
         protected bool IsSprintDelayed => sprintDelayTimer.ElapsedMilliseconds / 1000.0 - sprintDelayTime < 0;
 
         public CustomLogicDelayedUpdate(BotOwner botOwner)
+            : this(botOwner, UpdateThrottle.DefaultIntervalMs) { }
+
+        public CustomLogicDelayedUpdate(BotOwner botOwner, int delayInterval)
             : base(botOwner)
         {
             ObjectiveManager = botOwner.GetOrAddObjectiveManager();
-        }
-
-        public CustomLogicDelayedUpdate(BotOwner botOwner, int delayInterval)
-            : this(botOwner)
-        {
-            updateInterval = delayInterval;
+            _throttle = new UpdateThrottle(delayInterval);
         }
 
         public override void Start()
@@ -300,13 +297,7 @@ namespace SPTQuestingBots.BehaviorExtensions
 
         protected bool canUpdate()
         {
-            if (updateTimer.ElapsedMilliseconds < updateInterval)
-            {
-                return false;
-            }
-
-            updateTimer.Restart();
-            return true;
+            return _throttle.CanUpdate();
         }
     }
 }
