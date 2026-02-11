@@ -273,6 +273,17 @@ public class WorldGridManager : MonoBehaviour
 
         // Gather combat events into pull points with linear decay
         RefreshCombatPullPoints(Time.time);
+
+        LoggingController.LogDebug(
+            "[WorldGridManager] Convergence update: bots="
+                + cachedBotPositions.Count
+                + " players="
+                + cachedPlayerPositions.Count
+                + " combatEvents="
+                + combatPullCount
+                + " raidTime="
+                + RaidTimeNormalized.ToString("F2")
+        );
     }
 
     /// <summary>
@@ -354,10 +365,10 @@ public class WorldGridManager : MonoBehaviour
         // Get advection (zone attraction + crowd repulsion)
         advectionField.GetAdvection(botPosition, cachedBotPositions, out float advX, out float advZ);
 
-        // Get convergence (player attraction + combat events)
+        // Get convergence (bot clustering + combat events)
         convergenceField.GetConvergence(
             botPosition,
-            cachedPlayerPositions,
+            cachedBotPositions,
             combatPullBuffer,
             combatPullCount,
             Time.time,
@@ -400,8 +411,8 @@ public class WorldGridManager : MonoBehaviour
     /// <param name="position">The bot's current position.</param>
     /// <param name="momentumX">X component of the bot's current travel direction.</param>
     /// <param name="momentumZ">Z component of the bot's current travel direction.</param>
-    /// <param name="botPositions">Positions of other bots (for crowd repulsion).</param>
-    /// <param name="playerPositions">Positions of human players (for convergence).</param>
+    /// <param name="botPositions">Positions of other bots (for crowd repulsion and convergence clustering).</param>
+    /// <param name="playerPositions">Positions of human players (unused, kept for API compatibility).</param>
     /// <param name="outX">X component of the composite direction.</param>
     /// <param name="outZ">Z component of the composite direction.</param>
     public void GetCompositeDirection(
@@ -423,10 +434,10 @@ public class WorldGridManager : MonoBehaviour
         // Get advection (zone attraction + crowd repulsion)
         advectionField.GetAdvection(position, botPositions, out float advX, out float advZ);
 
-        // Get convergence (player attraction + combat events)
+        // Get convergence (bot clustering + combat events)
         convergenceField.GetConvergence(
             position,
-            playerPositions,
+            botPositions,
             combatPullBuffer,
             combatPullCount,
             Time.time,

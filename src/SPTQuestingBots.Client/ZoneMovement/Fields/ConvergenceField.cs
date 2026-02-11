@@ -7,15 +7,15 @@ using UnityEngine;
 namespace SPTQuestingBots.ZoneMovement.Fields;
 
 /// <summary>
-/// Computes a dynamic convergence vector that pulls bots toward human players.
+/// Computes a dynamic convergence vector that pulls bots toward activity hotspots.
 /// The field is recomputed periodically (default: every 30 seconds) and cached
 /// between updates to avoid per-frame recalculation.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Inspired by Phobos's convergence field. Player attraction uses <c>1/sqrt(distance)</c>
-/// falloff, which means nearby players attract strongly but the effect doesn't vanish
-/// at long range — bots will still drift toward distant players, just more slowly.
+/// Position-based attraction (bot clustering) uses <c>1/distance</c> falloff for local
+/// grouping without cross-map tracking. Combat event attraction uses <c>1/sqrt(distance)</c>
+/// for longer-range response to gunfire and explosions.
 /// </para>
 /// <para>
 /// The output is always a normalized 2D direction vector on the XZ plane (Y is ignored).
@@ -44,8 +44,8 @@ public sealed class ConvergenceField
     /// direction is returned. Default is 30 seconds (matching Phobos).
     /// </param>
     /// <param name="radius">
-    /// Maximum distance (meters) at which players attract bots. Players beyond this
-    /// distance are ignored. Default is <c>float.MaxValue</c> (no limit).
+    /// Maximum distance (meters) at which attraction sources affect bots. Sources beyond
+    /// this distance are ignored. Default is <c>float.MaxValue</c> (no limit).
     /// </param>
     /// <param name="force">
     /// Multiplier applied to all attraction forces. Default is 1.0.
@@ -63,13 +63,19 @@ public sealed class ConvergenceField
     /// value if the update interval hasn't elapsed.
     /// </summary>
     /// <param name="position">Query position (world space).</param>
-    /// <param name="playerPositions">Current positions of human players.</param>
+    /// <param name="attractionPositions">Positions to attract toward (e.g. bot positions for clustering).</param>
     /// <param name="currentTime">
     /// Current game time (e.g. <c>Time.time</c>). Used to check if the cache is stale.
     /// </param>
     /// <param name="outX">X component of the normalized convergence direction.</param>
     /// <param name="outZ">Z component of the normalized convergence direction.</param>
-    public void GetConvergence(Vector3 position, IReadOnlyList<Vector3> playerPositions, float currentTime, out float outX, out float outZ)
+    public void GetConvergence(
+        Vector3 position,
+        IReadOnlyList<Vector3> attractionPositions,
+        float currentTime,
+        out float outX,
+        out float outZ
+    )
     {
         if (currentTime - lastUpdateTime < updateInterval)
         {
@@ -78,15 +84,15 @@ public sealed class ConvergenceField
             return;
         }
 
-        ComputeConvergence(position, playerPositions, out outX, out outZ);
+        ComputeConvergence(position, attractionPositions, out outX, out outZ);
         cachedX = outX;
         cachedZ = outZ;
         lastUpdateTime = currentTime;
         LoggingController.LogDebug(
             "[ConvergenceField] Recomputed at t="
                 + currentTime.ToString("F1")
-                + " players="
-                + (playerPositions?.Count ?? 0)
+                + " sources="
+                + (attractionPositions?.Count ?? 0)
                 + " dir=("
                 + outX.ToString("F2")
                 + ","
@@ -100,7 +106,7 @@ public sealed class ConvergenceField
     /// Uses the cached value if the update interval hasn't elapsed.
     /// </summary>
     /// <param name="position">Query position (world space).</param>
-    /// <param name="playerPositions">Current positions of human players.</param>
+    /// <param name="attractionPositions">Positions to attract toward (e.g. bot positions for clustering).</param>
     /// <param name="combatPull">Array of pre-computed combat pull points.</param>
     /// <param name="combatPullCount">Number of valid entries in <paramref name="combatPull"/>.</param>
     /// <param name="currentTime">
@@ -110,7 +116,7 @@ public sealed class ConvergenceField
     /// <param name="outZ">Z component of the normalized convergence direction.</param>
     public void GetConvergence(
         Vector3 position,
-        IReadOnlyList<Vector3> playerPositions,
+        IReadOnlyList<Vector3> attractionPositions,
         CombatPullPoint[] combatPull,
         int combatPullCount,
         float currentTime,
@@ -125,15 +131,15 @@ public sealed class ConvergenceField
             return;
         }
 
-        ComputeConvergence(position, playerPositions, combatPull, combatPullCount, out outX, out outZ);
+        ComputeConvergence(position, attractionPositions, combatPull, combatPullCount, out outX, out outZ);
         cachedX = outX;
         cachedZ = outZ;
         lastUpdateTime = currentTime;
         LoggingController.LogDebug(
             "[ConvergenceField] Recomputed at t="
                 + currentTime.ToString("F1")
-                + " players="
-                + (playerPositions?.Count ?? 0)
+                + " sources="
+                + (attractionPositions?.Count ?? 0)
                 + " combat="
                 + combatPullCount
                 + " dir=("
@@ -149,26 +155,26 @@ public sealed class ConvergenceField
     /// or when a fresh computation is always desired.
     /// </summary>
     /// <param name="position">Query position (world space).</param>
-    /// <param name="playerPositions">Current positions of human players.</param>
+    /// <param name="attractionPositions">Positions to attract toward (e.g. bot positions).</param>
     /// <param name="outX">X component of the normalized convergence direction.</param>
     /// <param name="outZ">Z component of the normalized convergence direction.</param>
-    public void ComputeConvergence(Vector3 position, IReadOnlyList<Vector3> playerPositions, out float outX, out float outZ)
+    public void ComputeConvergence(Vector3 position, IReadOnlyList<Vector3> attractionPositions, out float outX, out float outZ)
     {
-        ComputeConvergence(position, playerPositions, null, 0, out outX, out outZ);
+        ComputeConvergence(position, attractionPositions, null, 0, out outX, out outZ);
     }
 
     /// <summary>
     /// Computes the convergence direction with combat event pull, without caching.
     /// </summary>
     /// <param name="position">Query position (world space).</param>
-    /// <param name="playerPositions">Current positions of human players.</param>
+    /// <param name="attractionPositions">Positions to attract toward (e.g. bot positions).</param>
     /// <param name="combatPull">Array of pre-computed combat pull points (may be null).</param>
     /// <param name="combatPullCount">Number of valid entries in <paramref name="combatPull"/>.</param>
     /// <param name="outX">X component of the normalized convergence direction.</param>
     /// <param name="outZ">Z component of the normalized convergence direction.</param>
     public void ComputeConvergence(
         Vector3 position,
-        IReadOnlyList<Vector3> playerPositions,
+        IReadOnlyList<Vector3> attractionPositions,
         CombatPullPoint[] combatPull,
         int combatPullCount,
         out float outX,
@@ -178,26 +184,28 @@ public sealed class ConvergenceField
         float ax = 0f;
         float az = 0f;
 
-        if (playerPositions != null)
+        // Position-based attraction: 1/dist falloff for local clustering
+        // (steeper than 1/sqrt — prevents cross-map tracking, only nearby grouping)
+        if (attractionPositions != null)
         {
-            for (int i = 0; i < playerPositions.Count; i++)
+            for (int i = 0; i < attractionPositions.Count; i++)
             {
-                float dx = playerPositions[i].x - position.x;
-                float dz = playerPositions[i].z - position.z;
+                float dx = attractionPositions[i].x - position.x;
+                float dz = attractionPositions[i].z - position.z;
                 float distSq = dx * dx + dz * dz;
                 if (distSq < 0.01f)
                     continue;
                 if (distSq > radiusSq)
                     continue;
                 float dist = (float)Math.Sqrt(distSq);
-                // sqrt falloff: closer players attract more strongly
-                float w = force / (float)Math.Sqrt(dist);
+                // 1/dist falloff: local clustering, fast decay with distance
+                float w = force / dist;
                 ax += (dx / dist) * w;
                 az += (dz / dist) * w;
             }
         }
 
-        // Add combat event pull
+        // Combat event pull: 1/sqrt(dist) falloff for longer-range response to gunfire
         if (combatPull != null)
         {
             for (int i = 0; i < combatPullCount; i++)
@@ -210,7 +218,7 @@ public sealed class ConvergenceField
                 if (distSq > radiusSq)
                     continue;
                 float dist = (float)Math.Sqrt(distSq);
-                // Same sqrt falloff as player attraction, scaled by combat event strength
+                // 1/sqrt(dist) falloff: gunfire attracts from further away than clustering
                 float w = (force * combatPull[i].Strength) / (float)Math.Sqrt(dist);
                 ax += (dx / dist) * w;
                 az += (dz / dist) * w;

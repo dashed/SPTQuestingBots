@@ -273,7 +273,7 @@
 			"enabled": true,
 			"target_cell_count": 150,
 			"convergence_update_interval_sec": 30,
-			"convergence_weight": 1.0,
+			"convergence_weight": 0.3,
 			"advection_weight": 0.5,
 			"momentum_weight": 0.5,
 			"noise_weight": 0.3,
@@ -298,7 +298,7 @@
 			},
 			"combat_convergence_decay_sec": 30,
 			"combat_convergence_radius": 300,
-			"combat_convergence_force": 0.5,
+			"combat_convergence_force": 0.8,
 			"advection_zones_per_map": {}
 		},
 		"looting": {
