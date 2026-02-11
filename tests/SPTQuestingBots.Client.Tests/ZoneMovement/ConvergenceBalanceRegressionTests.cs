@@ -17,7 +17,9 @@ public class ConvergenceBalanceRegressionTests
     {
         var dir = TestContext.CurrentContext.TestDirectory;
         while (dir != null && !File.Exists(Path.Combine(dir, "SPTQuestingBots.sln")))
+        {
             dir = Directory.GetParent(dir)?.FullName;
+        }
 
         Assert.That(dir, Is.Not.Null, "Could not find repo root (SPTQuestingBots.sln)");
         return dir;

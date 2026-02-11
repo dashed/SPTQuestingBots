@@ -57,10 +57,16 @@ public sealed class AdvectionField
     }
 
     /// <summary>Number of registered simple zone sources.</summary>
-    public int ZoneCount => zoneSources.Count;
+    public int ZoneCount
+    {
+        get { return zoneSources.Count; }
+    }
 
     /// <summary>Number of registered bounded zone sources.</summary>
-    public int BoundedZoneCount => boundedZoneSources.Count;
+    public int BoundedZoneCount
+    {
+        get { return boundedZoneSources.Count; }
+    }
 
     /// <summary>
     /// Registers a bounded geographic zone with radius-limited falloff.
@@ -110,7 +116,10 @@ public sealed class AdvectionField
             float dz = zoneSources[i].Position.z - position.z;
             float distSq = dx * dx + dz * dz;
             if (distSq < 0.01f)
+            {
                 continue;
+            }
+
             float dist = (float)Math.Sqrt(distSq);
             float w = zoneSources[i].Strength / dist;
             ax += (dx / dist) * w;
@@ -124,11 +133,17 @@ public sealed class AdvectionField
             float dz = boundedZoneSources[i].Position.z - position.z;
             float distSq = dx * dx + dz * dz;
             if (distSq < 0.01f)
+            {
                 continue;
+            }
+
             float dist = (float)Math.Sqrt(distSq);
             float radius = boundedZoneSources[i].Radius;
             if (dist >= radius)
+            {
                 continue;
+            }
+
             float normalized = 1f - dist / radius;
             float falloff = (float)Math.Pow(normalized, boundedZoneSources[i].Decay);
             float w = boundedZoneSources[i].Strength * falloff;
@@ -145,7 +160,10 @@ public sealed class AdvectionField
                 float dz = position.z - botPositions[i].z;
                 float distSq = dx * dx + dz * dz;
                 if (distSq < 0.01f)
+                {
                     continue;
+                }
+
                 float dist = (float)Math.Sqrt(distSq);
                 float w = crowdRepulsionStrength / distSq;
                 ax += (dx / dist) * w;

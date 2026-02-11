@@ -13,14 +13,16 @@ public class RollingAverage(int windowSize, int recalcInterval = 1000)
     public float Value
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _count > 0 ? _sum / _count : 0f;
+        get { return _count > 0 ? _sum / _count : 0f; }
     }
 
     public void Update(float value)
     {
         // Only subtract evicted value if buffer is full
         if (_count >= _buffer.Length)
+        {
             _sum -= _buffer[_writeIndex];
+        }
 
         // Add new value
         _buffer[_writeIndex] = value;
@@ -31,7 +33,9 @@ public class RollingAverage(int windowSize, int recalcInterval = 1000)
 
         // Track actual count until buffer fills
         if (_count < _buffer.Length)
+        {
             _count++;
+        }
 
         // Periodically recalculate to prevent drift
         if (_updatesSinceRecalc < recalcInterval)

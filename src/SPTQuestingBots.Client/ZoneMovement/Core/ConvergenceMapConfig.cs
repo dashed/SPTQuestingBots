@@ -58,11 +58,15 @@ public sealed class ConvergenceMapConfig
     public static ConvergenceMapConfig GetForMap(string mapId, Dictionary<string, ConvergenceMapConfig> overrides)
     {
         if (overrides != null && overrides.TryGetValue(mapId, out var cfg))
+        {
             return cfg;
+        }
 
         var defaults = GetDefaults();
         if (defaults.TryGetValue(mapId, out var def))
+        {
             return def;
+        }
 
         return Default;
     }

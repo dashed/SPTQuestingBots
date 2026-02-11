@@ -64,10 +64,14 @@ public static class MinimapProjection
     public static (float r, float g, float b, float a) GetCellColor(PoiCategory? dominant, bool isNavigable)
     {
         if (!isNavigable)
+        {
             return (0.1f, 0.1f, 0.1f, 0.8f); // Black — non-navigable
+        }
 
         if (!dominant.HasValue)
+        {
             return (0.2f, 0.2f, 0.2f, 0.5f); // Dark gray — empty navigable
+        }
 
         return dominant.Value switch
         {

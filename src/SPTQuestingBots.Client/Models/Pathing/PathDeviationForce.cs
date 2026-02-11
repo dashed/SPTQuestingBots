@@ -84,7 +84,9 @@ public static class PathDeviationForce
         float len = (float)Math.Sqrt(bx * bx + bz * bz);
 
         if (len < 1e-6f)
+        {
             return moveDirection;
+        }
 
         return new Vector3(bx / len, 0f, bz / len);
     }

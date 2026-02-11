@@ -41,9 +41,14 @@ public static class MapBoundsDetector
     public static (Vector3 min, Vector3 max) DetectBounds(Vector3[] positions, float padding = 50f)
     {
         if (positions == null)
+        {
             throw new ArgumentNullException(nameof(positions));
+        }
+
         if (positions.Length == 0)
+        {
             throw new ArgumentException("At least one position is required.", nameof(positions));
+        }
 
         float minX = positions[0].x;
         float maxX = positions[0].x;
@@ -56,13 +61,24 @@ public static class MapBoundsDetector
             float z = positions[i].z;
 
             if (x < minX)
+            {
                 minX = x;
+            }
+
             if (x > maxX)
+            {
                 maxX = x;
+            }
+
             if (z < minZ)
+            {
                 minZ = z;
+            }
+
             if (z > maxZ)
+            {
                 maxZ = z;
+            }
         }
 
         var result = (new Vector3(minX - padding, -10000f, minZ - padding), new Vector3(maxX + padding, 10000f, maxZ + padding));

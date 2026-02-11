@@ -28,7 +28,10 @@ public class SoftStuckDetector
     private bool _initialized;
 
     public SoftStuckStatus Status { get; private set; }
-    public float Timer => _timer;
+    public float Timer
+    {
+        get { return _timer; }
+    }
 
     public SoftStuckDetector(float vaultDelay = 1.5f, float jumpDelay = 3f, float failDelay = 6f)
     {

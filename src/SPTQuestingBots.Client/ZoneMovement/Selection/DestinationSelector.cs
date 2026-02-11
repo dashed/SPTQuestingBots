@@ -55,7 +55,9 @@ public sealed class DestinationSelector
     {
         IReadOnlyList<GridCell> neighbors = currentCell.Neighbors;
         if (neighbors.Count == 0)
+        {
             return currentCell;
+        }
 
         float maxDensity = grid.MaxPoiDensity;
 
@@ -66,7 +68,9 @@ public sealed class DestinationSelector
         {
             GridCell candidate = neighbors[i];
             if (!candidate.IsNavigable)
+            {
                 continue;
+            }
 
             float score = scorer.Score(candidate, compositeDirX, compositeDirZ, botPosition, maxDensity);
 

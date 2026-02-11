@@ -29,7 +29,9 @@ public static class PathSmoother
     public static Vector3[] ChaikinSmooth(Vector3[] corners, int iterations)
     {
         if (corners == null || corners.Length < 3 || iterations <= 0)
+        {
             return corners;
+        }
 
         var current = corners;
 
@@ -54,11 +56,15 @@ public static class PathSmoother
 
                 // Skip Q for the first segment (start is already preserved)
                 if (i > 0)
+                {
                     next.Add(q);
+                }
 
                 // Skip R for the last segment (end will be preserved)
                 if (i < n - 2)
+                {
                     next.Add(r);
+                }
             }
 
             // Preserve end point
@@ -81,7 +87,9 @@ public static class PathSmoother
     public static Vector3[] InsertIntermediatePoints(Vector3[] corners, float minSegmentLength)
     {
         if (corners == null || corners.Length < 2 || minSegmentLength <= 0f)
+        {
             return corners;
+        }
 
         var result = new List<Vector3>(corners.Length * 2) { corners[0] };
 

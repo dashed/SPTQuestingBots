@@ -1,35 +1,45 @@
 using SPTQuestingBots.Controllers;
 
-namespace SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks
+namespace SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks;
+
+/// <summary>
+/// Scores high when <c>CurrentQuestAction == CloseNearbyDoors</c>.
+/// This action handles its own movement.
+/// </summary>
+public sealed class CloseDoorsTask : QuestUtilityTask
 {
-    /// <summary>
-    /// Scores high when <c>CurrentQuestAction == CloseNearbyDoors</c>.
-    /// This action handles its own movement.
-    /// </summary>
-    public sealed class CloseDoorsTask : QuestUtilityTask
+    public const float BaseScore = 0.70f;
+
+    public override int BotActionTypeId
     {
-        public const float BaseScore = 0.70f;
+        get { return UtilityAI.BotActionTypeId.CloseNearbyDoors; }
+    }
 
-        public override int BotActionTypeId => UtilityAI.BotActionTypeId.CloseNearbyDoors;
-        public override string ActionReason => "CloseNearbyDoors";
+    public override string ActionReason
+    {
+        get { return "CloseNearbyDoors"; }
+    }
 
-        public CloseDoorsTask(float hysteresis = 0.10f)
-            : base(hysteresis) { }
+    public CloseDoorsTask(float hysteresis = 0.10f)
+        : base(hysteresis) { }
 
-        public override void ScoreEntity(int ordinal, BotEntity entity)
+    public override void ScoreEntity(int ordinal, BotEntity entity)
+    {
+        entity.TaskScores[ordinal] = Score(entity);
+    }
+
+    internal static float Score(BotEntity entity)
+    {
+        if (!entity.HasActiveObjective)
         {
-            entity.TaskScores[ordinal] = Score(entity);
+            return 0f;
         }
 
-        internal static float Score(BotEntity entity)
+        if (entity.CurrentQuestAction != QuestActionId.CloseNearbyDoors)
         {
-            if (!entity.HasActiveObjective)
-                return 0f;
-
-            if (entity.CurrentQuestAction != QuestActionId.CloseNearbyDoors)
-                return 0f;
-
-            return BaseScore;
+            return 0f;
         }
+
+        return BaseScore;
     }
 }

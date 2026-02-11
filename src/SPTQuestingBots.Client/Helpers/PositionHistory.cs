@@ -25,13 +25,17 @@ public class PositionHistory
         _writeIndex = (_writeIndex + 1) % _bufferSize;
 
         if (_validCount < _bufferSize)
+        {
             _validCount++;
+        }
     }
 
     public float GetDistanceSqr()
     {
         if (_validCount < 2)
+        {
             return 0f;
+        }
 
         // Most recent sample is one position behind write index
         var mostRecentIndex = (_writeIndex - 1 + _bufferSize) % _bufferSize;
@@ -45,7 +49,9 @@ public class PositionHistory
         var observedDistSqr = (mostRecentPosition - oldestPosition).sqrMagnitude;
 
         if (_validCount >= _bufferSize)
+        {
             return observedDistSqr;
+        }
 
         // During warmup: project velocity to full buffer duration
         var scaleFactor = (_bufferSize - 1f) / (_validCount - 1);

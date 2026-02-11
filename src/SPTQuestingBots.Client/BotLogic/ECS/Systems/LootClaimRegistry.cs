@@ -1,133 +1,125 @@
 using System.Collections.Generic;
 using SPTQuestingBots.Controllers;
 
-namespace SPTQuestingBots.BotLogic.ECS.Systems
+namespace SPTQuestingBots.BotLogic.ECS.Systems;
+
+/// <summary>
+/// Multi-bot loot deconfliction. One instance per raid.
+/// Tracks which bot has claimed which loot item to prevent contention.
+/// Pure C# — no Unity or EFT dependencies.
+/// </summary>
+public class LootClaimRegistry
 {
+    private readonly Dictionary<int, int> _lootToBotId = new Dictionary<int, int>();
+    private readonly Dictionary<int, List<int>> _botToLootIds = new Dictionary<int, List<int>>();
+
     /// <summary>
-    /// Multi-bot loot deconfliction. One instance per raid.
-    /// Tracks which bot has claimed which loot item to prevent contention.
-    /// Pure C# — no Unity or EFT dependencies.
+    /// Try to claim a loot item for a bot.
+    /// Returns false if already claimed by a different bot.
+    /// Returns true if unclaimed or already claimed by the same bot.
     /// </summary>
-    public class LootClaimRegistry
+    public bool TryClaim(int botId, int lootId)
     {
-        private readonly Dictionary<int, int> _lootToBotId = new Dictionary<int, int>();
-        private readonly Dictionary<int, List<int>> _botToLootIds = new Dictionary<int, List<int>>();
-
-        /// <summary>
-        /// Try to claim a loot item for a bot.
-        /// Returns false if already claimed by a different bot.
-        /// Returns true if unclaimed or already claimed by the same bot.
-        /// </summary>
-        public bool TryClaim(int botId, int lootId)
+        if (_lootToBotId.TryGetValue(lootId, out int existingBotId))
         {
-            if (_lootToBotId.TryGetValue(lootId, out int existingBotId))
+            if (existingBotId != botId)
             {
-                if (existingBotId != botId)
-                {
-                    LoggingController.LogDebug(
-                        "[LootClaimRegistry] Entity " + botId + " claim denied for loot " + lootId + " (owned by " + existingBotId + ")"
-                    );
-                }
-                return existingBotId == botId;
+                LoggingController.LogDebug(
+                    "[LootClaimRegistry] Entity " + botId + " claim denied for loot " + lootId + " (owned by " + existingBotId + ")"
+                );
             }
+            return existingBotId == botId;
+        }
 
-            _lootToBotId[lootId] = botId;
+        _lootToBotId[lootId] = botId;
 
-            if (!_botToLootIds.TryGetValue(botId, out var lootIds))
+        if (!_botToLootIds.TryGetValue(botId, out var lootIds))
+        {
+            lootIds = new List<int>();
+            _botToLootIds[botId] = lootIds;
+        }
+        lootIds.Add(lootId);
+
+        LoggingController.LogInfo(
+            "[LootClaimRegistry] Entity " + botId + " claimed loot " + lootId + " (total claims=" + _lootToBotId.Count + ")"
+        );
+
+        return true;
+    }
+
+    /// <summary>
+    /// Release a specific claim.
+    /// </summary>
+    public void Release(int botId, int lootId)
+    {
+        if (_lootToBotId.TryGetValue(lootId, out int existingBotId) && existingBotId == botId)
+        {
+            _lootToBotId.Remove(lootId);
+            LoggingController.LogInfo(
+                "[LootClaimRegistry] Entity " + botId + " released loot " + lootId + " (total claims=" + _lootToBotId.Count + ")"
+            );
+        }
+
+        if (_botToLootIds.TryGetValue(botId, out var lootIds))
+        {
+            lootIds.Remove(lootId);
+        }
+    }
+
+    /// <summary>
+    /// Release all claims for a bot (e.g., on bot death or despawn).
+    /// </summary>
+    public void ReleaseAll(int botId)
+    {
+        if (_botToLootIds.TryGetValue(botId, out var lootIds))
+        {
+            int count = lootIds.Count;
+            for (int i = 0; i < lootIds.Count; i++)
             {
-                lootIds = new List<int>();
-                _botToLootIds[botId] = lootIds;
+                _lootToBotId.Remove(lootIds[i]);
             }
-            lootIds.Add(lootId);
+            lootIds.Clear();
+            _botToLootIds.Remove(botId);
 
             LoggingController.LogInfo(
-                "[LootClaimRegistry] Entity " + botId + " claimed loot " + lootId + " (total claims=" + _lootToBotId.Count + ")"
+                "[LootClaimRegistry] Entity " + botId + " released all " + count + " claims" + " (total claims=" + _lootToBotId.Count + ")"
             );
-
-            return true;
         }
+    }
 
-        /// <summary>
-        /// Release a specific claim.
-        /// </summary>
-        public void Release(int botId, int lootId)
+    /// <summary>
+    /// Check if loot is claimed by a bot other than the given one.
+    /// </summary>
+    public bool IsClaimedByOther(int botId, int lootId)
+    {
+        if (_lootToBotId.TryGetValue(lootId, out int existingBotId))
         {
-            if (_lootToBotId.TryGetValue(lootId, out int existingBotId) && existingBotId == botId)
-            {
-                _lootToBotId.Remove(lootId);
-                LoggingController.LogInfo(
-                    "[LootClaimRegistry] Entity " + botId + " released loot " + lootId + " (total claims=" + _lootToBotId.Count + ")"
-                );
-            }
-
-            if (_botToLootIds.TryGetValue(botId, out var lootIds))
-            {
-                lootIds.Remove(lootId);
-            }
+            return existingBotId != botId;
         }
+        return false;
+    }
 
-        /// <summary>
-        /// Release all claims for a bot (e.g., on bot death or despawn).
-        /// </summary>
-        public void ReleaseAll(int botId)
+    /// <summary>
+    /// Get total number of active claims.
+    /// </summary>
+    public int GetClaimCount()
+    {
+        return _lootToBotId.Count;
+    }
+
+    /// <summary>
+    /// Reset all claims (e.g., at raid end).
+    /// </summary>
+    public void Clear()
+    {
+        int totalClaims = _lootToBotId.Count;
+        int totalBots = _botToLootIds.Count;
+        _lootToBotId.Clear();
+        _botToLootIds.Clear();
+
+        if (totalClaims > 0)
         {
-            if (_botToLootIds.TryGetValue(botId, out var lootIds))
-            {
-                int count = lootIds.Count;
-                for (int i = 0; i < lootIds.Count; i++)
-                {
-                    _lootToBotId.Remove(lootIds[i]);
-                }
-                lootIds.Clear();
-                _botToLootIds.Remove(botId);
-
-                LoggingController.LogInfo(
-                    "[LootClaimRegistry] Entity "
-                        + botId
-                        + " released all "
-                        + count
-                        + " claims"
-                        + " (total claims="
-                        + _lootToBotId.Count
-                        + ")"
-                );
-            }
-        }
-
-        /// <summary>
-        /// Check if loot is claimed by a bot other than the given one.
-        /// </summary>
-        public bool IsClaimedByOther(int botId, int lootId)
-        {
-            if (_lootToBotId.TryGetValue(lootId, out int existingBotId))
-            {
-                return existingBotId != botId;
-            }
-            return false;
-        }
-
-        /// <summary>
-        /// Get total number of active claims.
-        /// </summary>
-        public int GetClaimCount()
-        {
-            return _lootToBotId.Count;
-        }
-
-        /// <summary>
-        /// Reset all claims (e.g., at raid end).
-        /// </summary>
-        public void Clear()
-        {
-            int totalClaims = _lootToBotId.Count;
-            int totalBots = _botToLootIds.Count;
-            _lootToBotId.Clear();
-            _botToLootIds.Clear();
-
-            if (totalClaims > 0)
-            {
-                LoggingController.LogInfo("[LootClaimRegistry] Cleared all claims: " + totalClaims + " claims from " + totalBots + " bots");
-            }
+            LoggingController.LogInfo("[LootClaimRegistry] Cleared all claims: " + totalClaims + " claims from " + totalBots + " bots");
         }
     }
 }

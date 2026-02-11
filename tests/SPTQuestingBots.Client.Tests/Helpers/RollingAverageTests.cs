@@ -65,7 +65,9 @@ public class RollingAverageTests
         var avg = new RollingAverage(3);
         // Fill buffer twice over
         for (int i = 1; i <= 9; i++)
+        {
             avg.Update(i);
+        }
 
         // Last 3 values: 7, 8, 9 -> avg = 8
         Assert.That(avg.Value, Is.EqualTo(8f));
@@ -106,7 +108,9 @@ public class RollingAverageTests
         float[] values = { 1.1f, 2.2f, 3.3f, 4.4f, 5.5f, 6.6f, 7.7f, 8.8f, 9.9f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f };
 
         foreach (var v in values)
+        {
             avg.Update(v);
+        }
 
         // Last 4 values: 4.0, 5.0, 6.0, 7.0 -> avg = 5.5
         float expected = (4.0f + 5.0f + 6.0f + 7.0f) / 4f;
@@ -120,7 +124,9 @@ public class RollingAverageTests
 
         // Push 1000 values through
         for (int i = 0; i < 1000; i++)
+        {
             avg.Update(i);
+        }
 
         // Last 10 values: 990..999, avg = 994.5
         float expected = (990 + 991 + 992 + 993 + 994 + 995 + 996 + 997 + 998 + 999) / 10f;

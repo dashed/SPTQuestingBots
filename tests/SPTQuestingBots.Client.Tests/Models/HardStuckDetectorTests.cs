@@ -56,7 +56,9 @@ public class HardStuckDetectorTests
             if (detector.Update(pos, speed, time))
             {
                 if (detector.Status == HardStuckStatus.Retrying)
+                {
                     sawRetryTransition = true;
+                }
             }
         }
 
@@ -80,7 +82,9 @@ public class HardStuckDetectorTests
             if (detector.Update(pos, speed, time))
             {
                 if (detector.Status == HardStuckStatus.Teleport)
+                {
                     sawTeleportTransition = true;
+                }
             }
         }
 
@@ -104,7 +108,9 @@ public class HardStuckDetectorTests
             if (detector.Update(pos, speed, time))
             {
                 if (detector.Status == HardStuckStatus.Failed)
+                {
                     sawFailedTransition = true;
+                }
             }
         }
 
@@ -240,7 +246,9 @@ public class HardStuckDetectorTests
         {
             time += dt;
             if (detector.Update(pos, speed, time))
+            {
                 transitionCount++;
+            }
         }
 
         // Should transition exactly 3 times: None->Retrying, Retrying->Teleport, Teleport->Failed

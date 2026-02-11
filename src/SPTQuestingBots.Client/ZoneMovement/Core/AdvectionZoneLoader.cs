@@ -34,14 +34,20 @@ public static class AdvectionZoneLoader
     )
     {
         if (field == null)
+        {
             return 0;
+        }
 
         var zones = AdvectionZoneConfig.GetForMap(mapId, overrides);
         if (zones.BuiltinZones.Count == 0 && zones.CustomZones.Count == 0)
+        {
             return 0;
+        }
 
         if (random == null)
+        {
             random = new System.Random();
+        }
 
         int injected = 0;
 
@@ -54,7 +60,9 @@ public static class AdvectionZoneLoader
                 var entry = kvp.Value;
 
                 if (!builtinZoneCentroids.TryGetValue(zoneName, out var centroid))
+                {
                     continue;
+                }
 
                 float force = SampleForce(entry, random);
                 float timeMultiplier = ComputeTimeMultiplier(entry, raidTimeNormalized);
@@ -86,7 +94,9 @@ public static class AdvectionZoneLoader
     internal static float SampleForce(AdvectionZoneEntry entry, System.Random random)
     {
         if (entry.ForceMin >= entry.ForceMax)
+        {
             return entry.ForceMin;
+        }
 
         float t = (float)random.NextDouble();
         return entry.ForceMin + (entry.ForceMax - entry.ForceMin) * t;

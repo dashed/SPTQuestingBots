@@ -92,7 +92,9 @@ public class PathSmootherTests
         for (int i = 1; i < result.Length - 1; i++)
         {
             if (Math.Abs(result[i].x - 10f) < Epsilon && Math.Abs(result[i].z) < Epsilon)
+            {
                 hasExactCorner = true;
+            }
         }
         Assert.IsFalse(hasExactCorner, "Corner should be cut, not preserved exactly");
     }

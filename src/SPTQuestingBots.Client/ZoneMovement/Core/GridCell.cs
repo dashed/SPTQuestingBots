@@ -35,13 +35,19 @@ public sealed class GridCell
     public Vector3 Center { get; }
 
     /// <summary>Points of interest contained within this cell.</summary>
-    public IReadOnlyList<PointOfInterest> POIs => pois;
+    public IReadOnlyList<PointOfInterest> POIs
+    {
+        get { return pois; }
+    }
 
     /// <summary>
     /// Adjacent cells (4-connected: left, right, up, down).
     /// Set by the parent <see cref="WorldGrid"/> during construction.
     /// </summary>
-    public IReadOnlyList<GridCell> Neighbors => neighbors;
+    public IReadOnlyList<GridCell> Neighbors
+    {
+        get { return neighbors; }
+    }
 
     /// <summary>
     /// Sum of all POI weights in this cell. Used by <see cref="Selection.CellScorer"/>
@@ -53,7 +59,10 @@ public sealed class GridCell
         {
             float sum = 0f;
             for (int i = 0; i < pois.Count; i++)
+            {
                 sum += pois[i].Weight;
+            }
+
             return sum;
         }
     }
@@ -62,7 +71,10 @@ public sealed class GridCell
     /// Whether this cell has at least one POI, indicating a NavMesh-valid
     /// position exists here and bots can navigate to it.
     /// </summary>
-    public bool IsNavigable => pois.Count > 0;
+    public bool IsNavigable
+    {
+        get { return pois.Count > 0; }
+    }
 
     /// <summary>
     /// Creates a new grid cell at the specified grid coordinates and world-space center.

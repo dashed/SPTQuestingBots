@@ -77,7 +77,9 @@ public class ZoneMathUtilsTests
         // 5 spawn points (5 * 0.3 = 1.5) > 1 quest (1 * 1.2 = 1.2)
         cell.AddPoi(new PointOfInterest(new Vector3(1, 0, 1), PoiCategory.Quest));
         for (int i = 0; i < 5; i++)
+        {
             cell.AddPoi(new PointOfInterest(new Vector3(i, 0, i), PoiCategory.SpawnPoint));
+        }
 
         var result = ZoneMathUtils.GetDominantCategory(cell);
 

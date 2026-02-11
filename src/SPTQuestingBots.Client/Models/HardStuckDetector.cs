@@ -28,7 +28,10 @@ public class HardStuckDetector
     private bool _initialized;
 
     public HardStuckStatus Status { get; private set; }
-    public float Timer => _timer;
+    public float Timer
+    {
+        get { return _timer; }
+    }
 
     public HardStuckDetector(int historySize = 50, float pathRetryDelay = 5f, float teleportDelay = 10f, float failDelay = 15f)
     {

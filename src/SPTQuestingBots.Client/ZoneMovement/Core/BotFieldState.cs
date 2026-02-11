@@ -44,8 +44,10 @@ public sealed class BotFieldState
     /// </summary>
     /// <param name="currentPosition">The bot's current world position.</param>
     /// <returns>Normalized (momX, momZ) tuple, or (0, 0) if positions are coincident.</returns>
-    public (float momX, float momZ) ComputeMomentum(Vector3 currentPosition) =>
-        ZoneMathUtils.ComputeMomentum(PreviousDestination, currentPosition);
+    public (float momX, float momZ) ComputeMomentum(Vector3 currentPosition)
+    {
+        return ZoneMathUtils.ComputeMomentum(PreviousDestination, currentPosition);
+    }
 
     /// <summary>
     /// Returns a per-bot noise angle in the range [-PI, PI].

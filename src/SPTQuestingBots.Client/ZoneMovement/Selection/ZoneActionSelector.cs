@@ -94,7 +94,9 @@ public static class ZoneActionSelector
     public static int SelectActionIndex(PoiCategory category, Random rng)
     {
         if (rng == null)
+        {
             throw new ArgumentNullException(nameof(rng));
+        }
 
         var weights = GetWeightsForCategory(category);
         int roll = rng.Next(0, 100); // [0, 99]

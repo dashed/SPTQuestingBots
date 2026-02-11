@@ -49,10 +49,14 @@ public static class SprintAngleJitter
     public static float ComputeAngleJitter(Vector3[] corners, int startIndex, float lookaheadDistance)
     {
         if (corners == null || corners.Length < 2)
+        {
             return 0f;
+        }
 
         if (startIndex < 0 || startIndex >= corners.Length)
+        {
             return 0f;
+        }
 
         float maxAngle = 0f;
         float accumulatedDistance = 0f;
@@ -73,13 +77,17 @@ public static class SprintAngleJitter
             accumulatedDistance += segALen;
 
             if (accumulatedDistance > lookaheadDistance)
+            {
                 break;
+            }
 
             float segBLen = (float)Math.Sqrt(segBx * segBx + segBz * segBz);
 
             // Skip degenerate segments
             if (segALen < 1e-6f || segBLen < 1e-6f)
+            {
                 continue;
+            }
 
             // Angle via dot product: cos(theta) = (A · B) / (|A| * |B|)
             float dot = segAx * segBx + segAz * segBz;
@@ -91,7 +99,9 @@ public static class SprintAngleJitter
             float angle = (float)Math.Acos(cosAngle) * (180f / (float)Math.PI);
 
             if (angle > maxAngle)
+            {
                 maxAngle = angle;
+            }
         }
 
         return maxAngle;

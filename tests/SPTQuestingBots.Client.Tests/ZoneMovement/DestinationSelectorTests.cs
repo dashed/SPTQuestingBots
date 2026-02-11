@@ -116,7 +116,9 @@ public class DestinationSelectorTests
         if (eastCell != null)
         {
             for (int i = 0; i < 5; i++)
+            {
                 eastCell.AddPoi(new PointOfInterest(eastCell.Center, PoiCategory.Container));
+            }
         }
 
         // Add minimal POI to other neighbors to make them navigable

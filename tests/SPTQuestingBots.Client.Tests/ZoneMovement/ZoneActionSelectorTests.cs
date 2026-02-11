@@ -117,7 +117,9 @@ public class ZoneActionSelectorTests
         {
             int action = ZoneActionSelector.SelectActionIndex(PoiCategory.SpawnPoint, rng);
             if (action == ZoneActionSelector.Actions.MoveToPosition)
+            {
                 moveCount++;
+            }
         }
 
         // SpawnPoint: 90% MoveToPosition

@@ -194,9 +194,15 @@ public sealed class ConvergenceField
                 float dz = attractionPositions[i].z - position.z;
                 float distSq = dx * dx + dz * dz;
                 if (distSq < 0.01f)
+                {
                     continue;
+                }
+
                 if (distSq > radiusSq)
+                {
                     continue;
+                }
+
                 float dist = (float)Math.Sqrt(distSq);
                 // 1/dist falloff: local clustering, fast decay with distance
                 float w = force / dist;
@@ -214,9 +220,15 @@ public sealed class ConvergenceField
                 float dz = combatPull[i].Z - position.z;
                 float distSq = dx * dx + dz * dz;
                 if (distSq < 0.01f)
+                {
                     continue;
+                }
+
                 if (distSq > radiusSq)
+                {
                     continue;
+                }
+
                 float dist = (float)Math.Sqrt(distSq);
                 // 1/sqrt(dist) falloff: gunfire attracts from further away than clustering
                 float w = (force * combatPull[i].Strength) / (float)Math.Sqrt(dist);

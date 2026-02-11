@@ -26,7 +26,10 @@ public static class ZoneMathUtils
         float dz = to.z - from.z;
         float mag = (float)Math.Sqrt(dx * dx + dz * dz);
         if (mag < 0.001f)
+        {
             return (0f, 0f);
+        }
+
         return (dx / mag, dz / mag);
     }
 
@@ -42,7 +45,9 @@ public static class ZoneMathUtils
     public static PoiCategory GetDominantCategory(GridCell cell)
     {
         if (cell.POIs.Count == 0)
+        {
             return PoiCategory.Synthetic;
+        }
 
         // Accumulate weights per category
         float containerWeight = 0f;

@@ -215,11 +215,15 @@ public static class AdvectionZoneConfig
     public static AdvectionMapZones GetForMap(string mapId, Dictionary<string, AdvectionMapZones> overrides)
     {
         if (overrides != null && overrides.TryGetValue(mapId, out var cfg))
+        {
             return cfg;
+        }
 
         var defaults = GetDefaults();
         if (defaults.TryGetValue(mapId, out var def))
+        {
             return def;
+        }
 
         return Default;
     }

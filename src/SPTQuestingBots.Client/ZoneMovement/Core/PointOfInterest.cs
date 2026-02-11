@@ -52,8 +52,9 @@ public sealed class PointOfInterest
     /// Quest triggers are weighted highest (1.2) to encourage bots to visit
     /// quest-relevant areas; synthetic points are weighted lowest (0.2).
     /// </summary>
-    public static float DefaultWeight(PoiCategory category) =>
-        category switch
+    public static float DefaultWeight(PoiCategory category)
+    {
+        return category switch
         {
             PoiCategory.Container => 1.0f,
             PoiCategory.LooseLoot => 0.8f,
@@ -63,4 +64,5 @@ public sealed class PointOfInterest
             PoiCategory.Synthetic => 0.2f,
             _ => 0.5f,
         };
+    }
 }

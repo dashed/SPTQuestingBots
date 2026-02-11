@@ -59,31 +59,58 @@ public class CustomPathFollower
     }
 
     /// <summary>Current path corners (null if no path).</summary>
-    public Vector3[] Corners => _corners;
+    public Vector3[] Corners
+    {
+        get { return _corners; }
+    }
 
     /// <summary>Index of the corner currently being navigated toward.</summary>
-    public int CurrentCorner => _currentCorner;
+    public int CurrentCorner
+    {
+        get { return _currentCorner; }
+    }
 
     /// <summary>Total number of corners in the current path.</summary>
-    public int TotalCorners => _corners?.Length ?? 0;
+    public int TotalCorners
+    {
+        get { return _corners?.Length ?? 0; }
+    }
 
     /// <summary>Current movement target position.</summary>
-    public Vector3 Target => _target;
+    public Vector3 Target
+    {
+        get { return _target; }
+    }
 
     /// <summary>Current status of the path follower.</summary>
-    public PathFollowerStatus Status => _status;
+    public PathFollowerStatus Status
+    {
+        get { return _status; }
+    }
 
     /// <summary>Number of path retry attempts.</summary>
-    public int RetryCount => _retryCount;
+    public int RetryCount
+    {
+        get { return _retryCount; }
+    }
 
     /// <summary>Configuration in use.</summary>
-    public CustomMoverConfig Config => _config;
+    public CustomMoverConfig Config
+    {
+        get { return _config; }
+    }
 
     /// <summary>Whether a path is loaded and active.</summary>
-    public bool HasPath => _corners != null && _corners.Length > 0;
+    public bool HasPath
+    {
+        get { return _corners != null && _corners.Length > 0; }
+    }
 
     /// <summary>Whether we're on the last corner of the path.</summary>
-    public bool IsOnLastCorner => _corners != null && _currentCorner >= _corners.Length - 1;
+    public bool IsOnLastCorner
+    {
+        get { return _corners != null && _currentCorner >= _corners.Length - 1; }
+    }
 
     // ── Path Lifecycle ────────────────────────────────────────
 
@@ -151,7 +178,9 @@ public class CustomPathFollower
     public bool HasReachedCorner(Vector3 position, bool isSprinting)
     {
         if (_corners == null || _currentCorner >= _corners.Length)
+        {
             return false;
+        }
 
         float sqrDist = SqrDistanceXZ(position, _corners[_currentCorner]);
         float eps = isSprinting ? _sprintEpsSqr : _walkEpsSqr;
@@ -167,7 +196,9 @@ public class CustomPathFollower
     public bool IsCloseEnoughForCornerCut(Vector3 position)
     {
         if (_corners == null || _currentCorner >= _corners.Length)
+        {
             return false;
+        }
 
         return SqrDistanceXZ(position, _corners[_currentCorner]) < 1f;
     }
@@ -184,16 +215,24 @@ public class CustomPathFollower
     public bool TryCornerCut(Vector3 position, bool canSeeNextCorner)
     {
         if (_status != PathFollowerStatus.Following || _corners == null)
+        {
             return false;
+        }
 
         if (IsOnLastCorner)
+        {
             return false;
+        }
 
         if (!IsCloseEnoughForCornerCut(position))
+        {
             return false;
+        }
 
         if (!canSeeNextCorner)
+        {
             return false;
+        }
 
         int skippedIndex = _currentCorner;
         AdvanceCorner();
@@ -207,7 +246,9 @@ public class CustomPathFollower
     public bool AdvanceCorner()
     {
         if (_corners == null)
+        {
             return false;
+        }
 
         _currentCorner++;
 
@@ -237,7 +278,9 @@ public class CustomPathFollower
     public bool DoesPathReachTarget()
     {
         if (_corners == null || _corners.Length == 0)
+        {
             return false;
+        }
 
         return SqrDistanceXZ(_corners[_corners.Length - 1], _target) <= _destinationEpsSqr;
     }
@@ -266,7 +309,9 @@ public class CustomPathFollower
     public Vector3 ComputeMoveDirection(Vector3 position)
     {
         if (_corners == null || _currentCorner >= _corners.Length)
+        {
             return Vector3.zero;
+        }
 
         // Raw direction toward current corner
         Vector3 cornerDir = _corners[_currentCorner] - position;
@@ -288,7 +333,9 @@ public class CustomPathFollower
     public Vector3 ComputeRawDirection(Vector3 position)
     {
         if (_corners == null || _currentCorner >= _corners.Length)
+        {
             return Vector3.zero;
+        }
 
         return _corners[_currentCorner] - position;
     }
@@ -329,7 +376,9 @@ public class CustomPathFollower
     public PathFollowerStatus Tick(Vector3 position, bool isSprinting)
     {
         if (_status != PathFollowerStatus.Following || _corners == null)
+        {
             return _status;
+        }
 
         bool isLastCorner = _currentCorner >= _corners.Length - 1;
 

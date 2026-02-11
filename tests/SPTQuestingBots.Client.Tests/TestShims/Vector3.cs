@@ -17,11 +17,20 @@ public struct Vector3
         this.z = z;
     }
 
-    public static Vector3 zero => new Vector3(0, 0, 0);
+    public static Vector3 zero
+    {
+        get { return new Vector3(0, 0, 0); }
+    }
 
-    public float sqrMagnitude => x * x + y * y + z * z;
+    public float sqrMagnitude
+    {
+        get { return x * x + y * y + z * z; }
+    }
 
-    public float magnitude => (float)System.Math.Sqrt(sqrMagnitude);
+    public float magnitude
+    {
+        get { return (float)System.Math.Sqrt(sqrMagnitude); }
+    }
 
     public static Vector3 operator -(Vector3 a, Vector3 b)
     {

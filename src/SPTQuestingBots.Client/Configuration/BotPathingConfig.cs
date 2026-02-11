@@ -5,22 +5,21 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
-namespace SPTQuestingBots.Configuration
+namespace SPTQuestingBots.Configuration;
+
+public class BotPathingConfig
 {
-    public class BotPathingConfig
-    {
-        [JsonProperty("max_start_position_discrepancy")]
-        public float MaxStartPositionDiscrepancy { get; set; } = 0.5f;
+    [JsonProperty("max_start_position_discrepancy")]
+    public float MaxStartPositionDiscrepancy { get; set; } = 0.5f;
 
-        [JsonProperty("incomplete_path_retry_interval")]
-        public float IncompletePathRetryInterval { get; set; } = 5;
+    [JsonProperty("incomplete_path_retry_interval")]
+    public float IncompletePathRetryInterval { get; set; } = 5;
 
-        [JsonProperty("use_custom_mover")]
-        public bool UseCustomMover { get; set; } = true;
+    [JsonProperty("use_custom_mover")]
+    public bool UseCustomMover { get; set; } = true;
 
-        [JsonProperty("bypass_door_colliders")]
-        public bool BypassDoorColliders { get; set; } = true;
+    [JsonProperty("bypass_door_colliders")]
+    public bool BypassDoorColliders { get; set; } = true;
 
-        public BotPathingConfig() { }
-    }
+    public BotPathingConfig() { }
 }

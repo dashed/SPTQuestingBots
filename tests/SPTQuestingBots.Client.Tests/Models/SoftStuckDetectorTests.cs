@@ -66,7 +66,9 @@ public class SoftStuckDetectorTests
             if (detector.Update(pos, speed, time))
             {
                 if (detector.Status == SoftStuckStatus.Vaulting)
+                {
                     sawVaultTransition = true;
+                }
             }
         }
 
@@ -92,7 +94,9 @@ public class SoftStuckDetectorTests
             if (detector.Update(pos, speed, time))
             {
                 if (detector.Status == SoftStuckStatus.Jumping)
+                {
                     sawJumpTransition = true;
+                }
             }
         }
 
@@ -118,7 +122,9 @@ public class SoftStuckDetectorTests
             if (detector.Update(pos, speed, time))
             {
                 if (detector.Status == SoftStuckStatus.Failed)
+                {
                     sawFailedTransition = true;
+                }
             }
         }
 
@@ -275,7 +281,9 @@ public class SoftStuckDetectorTests
         {
             time += dt;
             if (detector.Update(pos, speed, time))
+            {
                 transitionCount++;
+            }
         }
 
         // Should transition exactly 3 times: None->Vaulting, Vaulting->Jumping, Jumping->Failed

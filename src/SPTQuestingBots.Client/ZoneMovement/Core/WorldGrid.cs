@@ -59,7 +59,9 @@ public sealed class WorldGrid
     public WorldGrid(Vector3 minBounds, Vector3 maxBounds, int targetCellCount = 150)
     {
         if (targetCellCount < 1)
+        {
             throw new ArgumentOutOfRangeException(nameof(targetCellCount), "Must be at least 1");
+        }
 
         MinBounds = minBounds;
         MaxBounds = maxBounds;
@@ -68,13 +70,17 @@ public sealed class WorldGrid
         float depth = maxBounds.z - minBounds.z;
 
         if (width <= 0 || depth <= 0)
+        {
             throw new ArgumentException("MaxBounds must be greater than MinBounds on X and Z axes");
+        }
 
         // Auto-compute cell size: sqrt(area / target) gives roughly square cells
         float area = width * depth;
         CellSize = (float)Math.Sqrt(area / targetCellCount);
         if (CellSize < 1f)
+        {
             CellSize = 1f;
+        }
 
         Cols = Math.Max(1, (int)Math.Ceiling(width / CellSize));
         Rows = Math.Max(1, (int)Math.Ceiling(depth / CellSize));
@@ -105,7 +111,10 @@ public sealed class WorldGrid
     public GridCell GetCell(int col, int row)
     {
         if (col < 0 || col >= Cols || row < 0 || row >= Rows)
+        {
             return null;
+        }
+
         return cells[col, row];
     }
 
@@ -149,7 +158,9 @@ public sealed class WorldGrid
                 {
                     float d = cells[col, row].PoiDensity;
                     if (d > max)
+                    {
                         max = d;
+                    }
                 }
             }
             return max;
@@ -168,13 +179,25 @@ public sealed class WorldGrid
             {
                 var list = new List<GridCell>(4);
                 if (col > 0)
+                {
                     list.Add(cells[col - 1, row]);
+                }
+
                 if (col < Cols - 1)
+                {
                     list.Add(cells[col + 1, row]);
+                }
+
                 if (row > 0)
+                {
                     list.Add(cells[col, row - 1]);
+                }
+
                 if (row < Rows - 1)
+                {
                     list.Add(cells[col, row + 1]);
+                }
+
                 cells[col, row].SetNeighbors(list.ToArray());
             }
         }

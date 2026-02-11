@@ -94,7 +94,9 @@ public class PositionHistoryTests
 
         // Wrap around multiple times
         for (int i = 0; i < 10; i++)
+        {
             history.Update(new Vector3(i, 0, 0));
+        }
 
         // After 10 updates with buffer size 3:
         // writeIndex = 10 % 3 = 1, buffer = [9, 7, 8]
@@ -152,7 +154,9 @@ public class PositionHistoryTests
         var pos = new Vector3(5, 10, 15);
 
         for (int i = 0; i < 10; i++)
+        {
             history.Update(pos);
+        }
 
         Assert.That(history.GetDistanceSqr(), Is.EqualTo(0f));
     }
