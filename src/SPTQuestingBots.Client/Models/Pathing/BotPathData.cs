@@ -222,45 +222,52 @@ namespace SPTQuestingBots.Models.Pathing
             {
                 // Check if any static paths exist to the target position and sort them based on the approximate total path length for the bot
                 BotQuestBuilder botQuestBuilder = Singleton<GameWorld>.Instance.GetComponent<BotQuestBuilder>();
-                IEnumerable<StaticPathData> staticPaths = botQuestBuilder
-                    .GetStaticPaths(target)
-                    .OrderBy(p => p.PathLength + Vector3.Distance(bot.Position, p.StartPosition));
-
-                /*if (staticPaths.Any())
+                if (botQuestBuilder == null)
                 {
-                    LoggingController.LogInfo("Testing " + staticPaths.Count() + " static paths for " + bot.GetText() + "...");
-                }*/
-
-                foreach (StaticPathData staticPath in staticPaths)
+                    LoggingController.LogWarning("Cannot check static paths for " + bot.GetText() + ": BotQuestBuilder not initialized");
+                }
+                else
                 {
-                    // Check if Unity can form a complete path from the bot to the static path's endpoint
-                    UnityEngine.AI.NavMeshPathStatus staticPathStatus = CreatePathSegment(
-                        bot.Position,
-                        staticPath.StartPosition,
-                        out Vector3[] staticPathCorners
-                    );
-                    if (staticPathStatus == UnityEngine.AI.NavMeshPathStatus.PathComplete)
+                    IEnumerable<StaticPathData> staticPaths = botQuestBuilder
+                        .GetStaticPaths(target)
+                        .OrderBy(p => p.PathLength + Vector3.Distance(bot.Position, p.StartPosition));
+
+                    /*if (staticPaths.Any())
                     {
-                        Corners = staticPathCorners;
-                        Status = UnityEngine.AI.NavMeshPathStatus.PathComplete;
+                        LoggingController.LogInfo("Testing " + staticPaths.Count() + " static paths for " + bot.GetText() + "...");
+                    }*/
 
-                        // Merge the paths and instruct the bot to use the combination
-                        StaticPathData combinedPath = Append(staticPath);
-                        SetCorners(combinedPath.Corners);
-
-                        LoggingController.LogInfo(
-                            "Using static path from "
-                                + staticPath.StartPosition
-                                + " to "
-                                + staticPath.TargetPosition
-                                + " for "
-                                + bot.GetText()
+                    foreach (StaticPathData staticPath in staticPaths)
+                    {
+                        // Check if Unity can form a complete path from the bot to the static path's endpoint
+                        UnityEngine.AI.NavMeshPathStatus staticPathStatus = CreatePathSegment(
+                            bot.Position,
+                            staticPath.StartPosition,
+                            out Vector3[] staticPathCorners
                         );
-                        //LoggingController.LogInfo("Path to Static Path: " + string.Join(", ", staticPathCorners));
-                        //LoggingController.LogInfo("Static Path: " + string.Join(", ", staticPath.Corners));
-                        //LoggingController.LogInfo("Combined Path: " + string.Join(", ", Corners));
+                        if (staticPathStatus == UnityEngine.AI.NavMeshPathStatus.PathComplete)
+                        {
+                            Corners = staticPathCorners;
+                            Status = UnityEngine.AI.NavMeshPathStatus.PathComplete;
 
-                        return;
+                            // Merge the paths and instruct the bot to use the combination
+                            StaticPathData combinedPath = Append(staticPath);
+                            SetCorners(combinedPath.Corners);
+
+                            LoggingController.LogInfo(
+                                "Using static path from "
+                                    + staticPath.StartPosition
+                                    + " to "
+                                    + staticPath.TargetPosition
+                                    + " for "
+                                    + bot.GetText()
+                            );
+                            //LoggingController.LogInfo("Path to Static Path: " + string.Join(", ", staticPathCorners));
+                            //LoggingController.LogInfo("Static Path: " + string.Join(", ", staticPath.Corners));
+                            //LoggingController.LogInfo("Combined Path: " + string.Join(", ", Corners));
+
+                            return;
+                        }
                     }
                 }
             }

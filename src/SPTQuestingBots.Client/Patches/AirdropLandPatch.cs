@@ -44,7 +44,15 @@ namespace SPTQuestingBots.Patches
                     + airdropPosition.z.ToString("F0")
                     + ")"
             );
-            Singleton<GameWorld>.Instance.GetComponent<Components.BotQuestBuilder>().AddAirdropChaserQuest(airdropPosition);
+            var questBuilder = Singleton<GameWorld>.Instance.GetComponent<Components.BotQuestBuilder>();
+            if (questBuilder != null)
+            {
+                questBuilder.AddAirdropChaserQuest(airdropPosition);
+            }
+            else
+            {
+                LoggingController.LogWarning("Cannot create airdrop chaser quest: BotQuestBuilder not initialized");
+            }
 
             CombatEventRegistry.RecordEvent(
                 new CombatEvent

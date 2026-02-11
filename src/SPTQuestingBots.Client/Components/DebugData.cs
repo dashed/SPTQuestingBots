@@ -52,7 +52,7 @@ namespace SPTQuestingBots.Components
 
         protected void Update()
         {
-            if (!Singleton<GameWorld>.Instance.GetComponent<BotQuestBuilder>().HaveQuestsBeenBuilt)
+            if (Singleton<GameWorld>.Instance.GetComponent<BotQuestBuilder>()?.HaveQuestsBeenBuilt != true)
             {
                 return;
             }

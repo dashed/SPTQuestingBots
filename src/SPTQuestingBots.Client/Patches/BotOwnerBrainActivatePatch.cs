@@ -58,7 +58,7 @@ namespace SPTQuestingBots.Patches
             Controllers.BotRegistrationManager.WriteMessageForNewBotSpawn(__instance);
 
             BotLogic.ECS.BotEntityBridge.RegisterBot(__instance, Controllers.BotRegistrationManager.GetBotType(__instance));
-            Singleton<GameWorld>.Instance.GetComponent<Components.DebugData>().RegisterBot(__instance);
+            Singleton<GameWorld>.Instance.GetComponent<Components.DebugData>()?.RegisterBot(__instance);
 
             if (BotLogic.ECS.BotEntityBridge.IsBotAPMC(__instance) || __instance.WillBeAPlayerScav())
             {

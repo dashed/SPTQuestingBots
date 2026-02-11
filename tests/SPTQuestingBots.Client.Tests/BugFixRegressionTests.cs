@@ -273,6 +273,102 @@ public class BugFixRegressionTests
 
     #endregion
 
+    #region GetComponent null-safety regression tests (batch 2)
+
+    [Test]
+    public void BotHiveMindMonitor_Update_HasNullSafeLocationDataAccess()
+    {
+        // Bug fix: BotHiveMindMonitor.Update() accessed GetComponent<LocationData>().CurrentLocation
+        // without checking if GetComponent returned null. If LocationData wasn't added to GameWorld,
+        // this NullRef'd on every HiveMind tick — a hot path.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/BotLogic/HiveMind/BotHiveMindMonitor.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("locationData?.CurrentLocation == null"),
+            "BotHiveMindMonitor.Update should null-safe access LocationData and CurrentLocation"
+        );
+    }
+
+    [Test]
+    public void BotObjectiveManager_SetInitialObjective_HasNullSafeBotQuestBuilderAccess()
+    {
+        // Bug fix: GetComponent<BotQuestBuilder>().HaveQuestsBeenBuilt NullRef'd if
+        // BotQuestBuilder wasn't on GameWorld. Runs per-bot initialization.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Components/BotObjectiveManager.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("GetComponent<Components.BotQuestBuilder>()?.HaveQuestsBeenBuilt"),
+            "BotObjectiveManager.setInitialObjective should use null-conditional on GetComponent<BotQuestBuilder>()"
+        );
+    }
+
+    [Test]
+    public void BotOwnerBrainActivatePatch_HasNullSafeDebugDataAccess()
+    {
+        // Bug fix: GetComponent<DebugData>().RegisterBot() NullRef'd if DebugData component
+        // wasn't on GameWorld (e.g. LocationData.Awake failed before adding it).
+        // Runs on every bot spawn.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Patches/BotOwnerBrainActivatePatch.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("GetComponent<Components.DebugData>()?.RegisterBot"),
+            "BotOwnerBrainActivatePatch should use null-conditional on GetComponent<DebugData>()"
+        );
+    }
+
+    [Test]
+    public void DebugData_Update_HasNullSafeBotQuestBuilderAccess()
+    {
+        // Bug fix: DebugData.Update() accessed GetComponent<BotQuestBuilder>().HaveQuestsBeenBuilt
+        // without null-conditional.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Components/DebugData.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("GetComponent<BotQuestBuilder>()?.HaveQuestsBeenBuilt"),
+            "DebugData.Update should use null-conditional on GetComponent<BotQuestBuilder>()"
+        );
+    }
+
+    [Test]
+    public void AirdropLandPatch_HasNullSafeBotQuestBuilderAccess()
+    {
+        // Bug fix: AirdropLandPatch accessed GetComponent<BotQuestBuilder>().AddAirdropChaserQuest()
+        // without null-check. NullRef'd if questing wasn't initialized.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Patches/AirdropLandPatch.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("questBuilder != null"),
+            "AirdropLandPatch should null-check BotQuestBuilder before calling AddAirdropChaserQuest"
+        );
+    }
+
+    [Test]
+    public void BotPathData_HasNullCheckForBotQuestBuilder()
+    {
+        // Bug fix: BotPathData accessed GetComponent<BotQuestBuilder>() then called
+        // .GetStaticPaths() without checking for null. NullRef'd during pathfinding
+        // if questing wasn't initialized.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Models/Pathing/BotPathData.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("if (botQuestBuilder == null)"),
+            "BotPathData should null-check BotQuestBuilder before calling GetStaticPaths"
+        );
+        Assert.That(
+            source,
+            Does.Not.Contain("break;"),
+            "BotPathData should not use break (invalid outside loop/switch) — use else block instead"
+        );
+    }
+
+    #endregion
+
     #region Helpers
 
     private static int CountOccurrences(string text, string pattern)

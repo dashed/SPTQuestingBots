@@ -478,7 +478,7 @@ namespace SPTQuestingBots.Components
         private void setInitialObjective()
         {
             // Only set an objective for the bot if its type is allowed to spawn and all quests have been loaded and generated
-            if (IsQuestingAllowed && Singleton<GameWorld>.Instance.GetComponent<Components.BotQuestBuilder>().HaveQuestsBeenBuilt)
+            if (IsQuestingAllowed && Singleton<GameWorld>.Instance.GetComponent<Components.BotQuestBuilder>()?.HaveQuestsBeenBuilt == true)
             {
                 LoggingController.LogInfo(
                     "Setting objective for " + botOwner.GetText() + " (Brain type: " + botOwner.Brain.BaseBrain.ShortName() + ")..."

@@ -70,8 +70,10 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                 return;
             }
 
-            if (Singleton<GameWorld>.Instance.GetComponent<Components.LocationData>().CurrentLocation == null)
+            var locationData = Singleton<GameWorld>.Instance?.GetComponent<Components.LocationData>();
+            if (locationData?.CurrentLocation == null)
             {
+                LoggingController.LogWarning("BotHiveMindMonitor: LocationData or CurrentLocation is null, skipping update");
                 Clear();
                 return;
             }
