@@ -369,6 +369,30 @@ public class BugFixRegressionTests
 
     #endregion
 
+    #region UpdateMaxTotalBots null-safety regression test
+
+    [Test]
+    public void LocationData_UpdateMaxTotalBots_HasNullSafeBotsControllerAccess()
+    {
+        // Bug fix: Singleton<IBotGame>.Instance.BotsController NullRef'd during
+        // LocationData.Awake() because BotsController may not be initialized yet
+        // when the component is first added by BotsControllerSetSettingsPatch.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Components/LocationData.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("Singleton<IBotGame>.Instance?.BotsController"),
+            "UpdateMaxTotalBots should use null-conditional on Singleton<IBotGame>.Instance"
+        );
+        Assert.That(
+            source,
+            Does.Contain("if (botControllerClass == null)"),
+            "UpdateMaxTotalBots should null-check botControllerClass before accessing MaxCount"
+        );
+    }
+
+    #endregion
+
     #region Helpers
 
     private static int CountOccurrences(string text, string pattern)

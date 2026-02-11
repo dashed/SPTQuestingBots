@@ -106,7 +106,13 @@ namespace SPTQuestingBots.Components
 
         public void UpdateMaxTotalBots()
         {
-            BotsController botControllerClass = Singleton<IBotGame>.Instance.BotsController;
+            BotsController botControllerClass = Singleton<IBotGame>.Instance?.BotsController;
+            if (botControllerClass == null)
+            {
+                LoggingController.LogWarning("UpdateMaxTotalBots: BotsController not available yet, using default MaxTotalBots");
+                return;
+            }
+
             int botmax = botControllerClass.MaxCount;
             if (botmax > 0)
             {
