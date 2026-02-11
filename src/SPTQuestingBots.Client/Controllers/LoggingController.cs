@@ -101,6 +101,7 @@ namespace SPTQuestingBots.Controllers
                 }
 
                 _logFilePath = logDir + "QuestingBots.log";
+                RotateLogFile(_logFilePath);
                 _fileWriter = new StreamWriter(_logFilePath, append: false, encoding: Encoding.UTF8) { AutoFlush = true };
                 _fileLoggingEnabled = true;
 
@@ -113,6 +114,46 @@ namespace SPTQuestingBots.Controllers
                 Logger?.LogWarning(
                     "[LoggingController] Failed to initialize dedicated log file, continuing without file logging: " + e.Message
                 );
+            }
+        }
+
+        /// <summary>
+        /// Rotates the log file by renaming the existing file with a timestamp suffix.
+        /// Keeps the most recent <c>MaxRotatedLogs</c> previous logs and deletes older ones.
+        /// Called automatically at the start of each game session before creating a new log.
+        /// </summary>
+        private static void RotateLogFile(string logPath)
+        {
+            const int MaxRotatedLogs = 5;
+
+            try
+            {
+                if (!File.Exists(logPath))
+                    return;
+
+                string dir = Path.GetDirectoryName(logPath);
+                string timestamp = File.GetLastWriteTime(logPath).ToString("yyyy-MM-dd_HH-mm-ss");
+                string rotatedPath = Path.Combine(dir, "QuestingBots_" + timestamp + ".log");
+
+                // Avoid overwriting if same timestamp already exists
+                if (!File.Exists(rotatedPath))
+                    File.Move(logPath, rotatedPath);
+                else
+                    File.Delete(logPath);
+
+                // Clean up old rotated logs, keeping only the most recent ones
+                var rotatedFiles = Directory.GetFiles(dir, "QuestingBots_*.log");
+                if (rotatedFiles.Length > MaxRotatedLogs)
+                {
+                    Array.Sort(rotatedFiles);
+                    for (int i = 0; i < rotatedFiles.Length - MaxRotatedLogs; i++)
+                        File.Delete(rotatedFiles[i]);
+                }
+            }
+            catch (Exception e)
+            {
+                // Non-fatal — worst case we truncate instead of rotating
+                Logger?.LogWarning("[LoggingController] Log rotation failed, truncating: " + e.Message);
             }
         }
 
