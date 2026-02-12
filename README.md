@@ -348,9 +348,22 @@ Build output goes to `build/`. The `deploy` target creates a ready-to-copy direc
 make test            # Run all tests
 make test-server     # Server tests only
 make test-client     # Client tests only
+make test-inspector  # AssemblyInspector tests only
 ```
 
-### 5. Code formatting and linting
+### 5. Inspect game assemblies
+
+The AssemblyInspector CLI tool uses Mono.Cecil to inspect obfuscated fields in game DLLs — replacing the need to open dnSpy or ILSpy for field name lookups.
+
+```bash
+make inspect TYPE=BotSpawner      # List all fields on a type (name, type, visibility)
+make inspect TYPE=BossGroup       # Works with any type in Assembly-CSharp.dll
+make validate-fields              # Check all KnownFields against DLL, suggest renames on failure
+```
+
+After a game update, run `make validate-fields` to immediately see which obfuscated field names changed and what they were renamed to.
+
+### 6. Code formatting and linting
 
 ```bash
 make format          # Auto-format with CSharpier
@@ -359,7 +372,7 @@ make lint            # Check code style against .editorconfig
 make lint-fix        # Auto-fix code style issues
 ```
 
-### 6. Full CI pipeline
+### 7. Full CI pipeline
 
 ```bash
 make ci              # restore -> format-check -> build-client-tests -> test-client (no game DLLs needed)
@@ -413,9 +426,12 @@ SPTQuestingBots/
 │           ├── Spawning/            #   Spawn system patches
 │           ├── Lighthouse/          #   Lighthouse-specific patches
 │           └── Debug/               #   Debug visualization patches
+├── tools/
+│   └── AssemblyInspector/           # CLI tool for inspecting game assembly fields (Mono.Cecil)
 ├── tests/
 │   ├── SPTQuestingBots.Server.Tests/  # Server unit tests (NUnit + NSubstitute)
-│   └── SPTQuestingBots.Client.Tests/  # Client unit tests (NUnit + NSubstitute)
+│   ├── SPTQuestingBots.Client.Tests/  # Client unit tests (NUnit + NSubstitute)
+│   └── AssemblyInspector.Tests/       # AssemblyInspector unit + integration tests
 ├── config/                          # JSON configuration files
 │   ├── config.json                  # Main mod configuration
 │   ├── eftQuestSettings.json        # EFT quest integration settings

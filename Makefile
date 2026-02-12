@@ -10,6 +10,8 @@ SERVER_PROJECT  := src/SPTQuestingBots.Server/SPTQuestingBots.Server.csproj
 CLIENT_PROJECT  := src/SPTQuestingBots.Client/SPTQuestingBots.Client.csproj
 SERVER_TEST     := tests/SPTQuestingBots.Server.Tests/SPTQuestingBots.Server.Tests.csproj
 CLIENT_TEST     := tests/SPTQuestingBots.Client.Tests/SPTQuestingBots.Client.Tests.csproj
+INSPECTOR       := tools/AssemblyInspector/AssemblyInspector.csproj
+INSPECTOR_TEST  := tests/AssemblyInspector.Tests/AssemblyInspector.Tests.csproj
 CONFIGURATION   ?= Release
 
 # ─── Directories ──────────────────────────────────────────────────────
@@ -79,7 +81,8 @@ CLIENT_PLUGIN_DIR    := $(DEPLOY_DIR)/BepInEx/plugins/DanW-SPTQuestingBots
 .DEFAULT_GOAL := help
 .PHONY: help all ci ci-full restore build build-server build-client \
 	build-tests test test-server test-client deploy install clean format \
-	format-check lint lint-fix copy-libs check-libs
+	format-check lint lint-fix copy-libs check-libs inspect validate-fields \
+	test-inspector
 
 # ─── Meta ─────────────────────────────────────────────────────────────
 
@@ -215,6 +218,17 @@ lint: ## Check code style against .editorconfig
 lint-fix: ## Auto-fix code style issues
 	$(DOTNET) format $(SERVER_TEST) --no-restore -v diag
 	$(DOTNET) format $(CLIENT_TEST) --no-restore -v diag
+
+# ─── Assembly Inspector ──────────────────────────────────────────────
+
+inspect: ## Inspect a type's fields in Assembly-CSharp.dll (TYPE=BotSpawner)
+	$(DOTNET) run --project $(INSPECTOR) -- inspect $(TYPE)
+
+validate-fields: ## Validate KnownFields against Assembly-CSharp.dll
+	$(DOTNET) run --project $(INSPECTOR) -- validate
+
+test-inspector: ## Run AssemblyInspector unit and integration tests
+	$(DOTNET) test $(INSPECTOR_TEST) -c $(CONFIGURATION) --nologo
 
 # ─── Clean ────────────────────────────────────────────────────────────
 

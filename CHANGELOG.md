@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.2] - 2026-02-11
+
+### Added
+- **AssemblyInspector CLI tool** (`tools/AssemblyInspector/`) — Mono.Cecil-based tool for inspecting obfuscated .NET game assemblies without opening a GUI decompiler
+  - `make inspect TYPE=BotSpawner` — dumps all fields of a type with resolved type names, generics, and visibility
+  - `make validate-fields` — validates all 10 KnownFields registry entries against Assembly-CSharp.dll, suggests candidate renames on failure (exit code 0/1 for CI)
+  - `make test-inspector` — 41 tests (8 parser, 28 type formatting, 5 integration)
+  - Handles `Nullable<T>` → `T?` formatting and multi-dimensional arrays (`T[,]`, `T[,,]`)
+  - Replaces needing to open dnSpy/ILSpy for field name lookups during game update migrations
+- **Assembly inspector analysis document** (`docs/assembly-inspector-analysis.md`) — research findings from dnSpy (dnlib) and ILSpy (ICSharpCode.Decompiler) source code analysis, library comparison, tool design specification, and integration plan
+
+### Changed
+- 2114 tests total (66 server + 2007 client + 41 inspector)
+
 ## [1.13.1] - 2026-02-10
 
 ### Fixed
