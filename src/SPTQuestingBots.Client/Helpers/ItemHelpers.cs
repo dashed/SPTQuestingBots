@@ -30,15 +30,14 @@ namespace SPTQuestingBots.Helpers
 
     public static class ItemHelpers
     {
+        private static readonly FieldInfo _inventoryControllerField =
+            ReflectionHelper.RequireField(typeof(Player), "_inventoryController", "ItemHelpers — bot inventory controller");
+
         public static InventoryController GetInventoryController(this BotOwner bot)
         {
-            Type playerType = typeof(Player);
-
-            FieldInfo inventoryControllerField = playerType.GetField(
-                "_inventoryController",
-                BindingFlags.NonPublic | BindingFlags.Instance
-            );
-            return (InventoryController)inventoryControllerField.GetValue(bot.GetPlayer);
+            return _inventoryControllerField != null
+                ? (InventoryController)_inventoryControllerField.GetValue(bot.GetPlayer)
+                : null;
         }
 
         public static IEnumerable<WeaponClass> ToWeaponClasses(this IEnumerable<string> weaponClassNames)

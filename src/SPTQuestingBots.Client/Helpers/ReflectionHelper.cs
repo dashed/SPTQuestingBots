@@ -42,6 +42,8 @@ namespace SPTQuestingBots.Helpers
             (typeof(BotSpawner), "AllPlayers", "GetAllBossPlayersPatch ___AllPlayers"),
             (typeof(AirdropLogicClass), "AirdropSynchronizableObject_0", "AirdropLandPatch ___AirdropSynchronizableObject_0"),
             (typeof(LighthouseTraderZone), "physicsTriggerHandler_0", "LighthouseTraderZone patches ___physicsTriggerHandler_0"),
+            // Additional field lookups (raw reflection or dynamic base type)
+            (typeof(Player), "_inventoryController", "ItemHelpers — bot inventory controller access"),
         };
 
         /// <summary>
