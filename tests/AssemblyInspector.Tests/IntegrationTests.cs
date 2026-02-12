@@ -17,13 +17,7 @@ public class IntegrationTests
     // so we walk up to find the repo root.
     private static readonly string RepoRoot = FindRepoRoot();
     private static readonly string DllPath = Path.Combine(RepoRoot, "libs", "Assembly-CSharp.dll");
-    private static readonly string SourcePath = Path.Combine(
-        RepoRoot,
-        "src",
-        "SPTQuestingBots.Client",
-        "Helpers",
-        "ReflectionHelper.cs"
-    );
+    private static readonly string SourcePath = Path.Combine(RepoRoot, "src", "SPTQuestingBots.Client", "Helpers", "ReflectionHelper.cs");
 
     private static string FindRepoRoot()
     {
@@ -56,33 +50,18 @@ public class IntegrationTests
             Assert.Ignore($"Assembly-CSharp.dll not found at {DllPath}. Run 'make copy-libs'.");
         }
 
-        using var assembly = AssemblyDefinition.ReadAssembly(
-            DllPath,
-            new ReaderParameters { ReadSymbols = false }
-        );
+        using var assembly = AssemblyDefinition.ReadAssembly(DllPath, new ReaderParameters { ReadSymbols = false });
 
-        var allTypes = assembly.MainModule.Types
-            .SelectMany(FlattenNestedTypes)
-            .ToList();
+        var allTypes = assembly.MainModule.Types.SelectMany(FlattenNestedTypes).ToList();
 
-        var botSpawner = allTypes.FirstOrDefault(
-            t => t.Name.Equals("BotSpawner", StringComparison.OrdinalIgnoreCase)
-        );
+        var botSpawner = allTypes.FirstOrDefault(t => t.Name.Equals("BotSpawner", StringComparison.OrdinalIgnoreCase));
         Assert.That(botSpawner, Is.Not.Null, "BotSpawner type should exist in Assembly-CSharp.dll");
 
         // Verify the known fields we reference in ReflectionHelper.cs
         var fieldNames = botSpawner!.Fields.Select(f => f.Name).ToList();
         Assert.That(fieldNames, Does.Contain("Bots"), "BotSpawner should have 'Bots' field");
-        Assert.That(
-            fieldNames,
-            Does.Contain("OnBotRemoved"),
-            "BotSpawner should have 'OnBotRemoved' field"
-        );
-        Assert.That(
-            fieldNames,
-            Does.Contain("AllPlayers"),
-            "BotSpawner should have 'AllPlayers' field"
-        );
+        Assert.That(fieldNames, Does.Contain("OnBotRemoved"), "BotSpawner should have 'OnBotRemoved' field");
+        Assert.That(fieldNames, Does.Contain("AllPlayers"), "BotSpawner should have 'AllPlayers' field");
     }
 
     [Test]
@@ -190,11 +169,7 @@ public class IntegrationTests
         var entries = ValidateCommand.ParseKnownFields(SourcePath);
 
         Assert.That(entries.Count, Is.GreaterThanOrEqualTo(10), "Should parse at least 10 entries");
-        Assert.That(
-            entries.Any(e => e.TypeName == "BotSpawner" && e.FieldName == "Bots"),
-            Is.True,
-            "Should find BotSpawner.Bots entry"
-        );
+        Assert.That(entries.Any(e => e.TypeName == "BotSpawner" && e.FieldName == "Bots"), Is.True, "Should find BotSpawner.Bots entry");
     }
 
     private static IEnumerable<TypeDefinition> FlattenNestedTypes(TypeDefinition type)

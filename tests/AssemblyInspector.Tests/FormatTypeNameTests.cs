@@ -81,12 +81,7 @@ public class FormatTypeNameTests
     public void FormatsGenericInstanceType()
     {
         // Create a List<string> type reference
-        var listType = new TypeReference(
-            "System.Collections.Generic",
-            "List`1",
-            _module,
-            _module.TypeSystem.CoreLibrary
-        );
+        var listType = new TypeReference("System.Collections.Generic", "List`1", _module, _module.TypeSystem.CoreLibrary);
         listType.GenericParameters.Add(new GenericParameter("T", listType));
 
         var genericInstance = new GenericInstanceType(listType);
@@ -100,12 +95,7 @@ public class FormatTypeNameTests
     public void FormatsGenericWithNonPrimitiveArgument()
     {
         // Create a List<BotOwner> type reference
-        var listType = new TypeReference(
-            "System.Collections.Generic",
-            "List`1",
-            _module,
-            _module.TypeSystem.CoreLibrary
-        );
+        var listType = new TypeReference("System.Collections.Generic", "List`1", _module, _module.TypeSystem.CoreLibrary);
         listType.GenericParameters.Add(new GenericParameter("T", listType));
 
         var botOwnerType = new TypeReference("EFT", "BotOwner", _module, _module.TypeSystem.CoreLibrary);
@@ -120,12 +110,7 @@ public class FormatTypeNameTests
     public void FormatsDictionaryType()
     {
         // Create Dictionary<string, int>
-        var dictType = new TypeReference(
-            "System.Collections.Generic",
-            "Dictionary`2",
-            _module,
-            _module.TypeSystem.CoreLibrary
-        );
+        var dictType = new TypeReference("System.Collections.Generic", "Dictionary`2", _module, _module.TypeSystem.CoreLibrary);
         dictType.GenericParameters.Add(new GenericParameter("TKey", dictType));
         dictType.GenericParameters.Add(new GenericParameter("TValue", dictType));
 
@@ -141,12 +126,7 @@ public class FormatTypeNameTests
     public void FormatsNullableIntAsQuestionMark()
     {
         // Nullable<int> should display as int?
-        var nullableType = new TypeReference(
-            "System",
-            "Nullable`1",
-            _module,
-            _module.TypeSystem.CoreLibrary
-        );
+        var nullableType = new TypeReference("System", "Nullable`1", _module, _module.TypeSystem.CoreLibrary);
         nullableType.GenericParameters.Add(new GenericParameter("T", nullableType));
 
         var genericInstance = new GenericInstanceType(nullableType);
@@ -160,12 +140,7 @@ public class FormatTypeNameTests
     public void FormatsNullableCustomTypeAsQuestionMark()
     {
         // Nullable<Vector3> should display as Vector3?
-        var nullableType = new TypeReference(
-            "System",
-            "Nullable`1",
-            _module,
-            _module.TypeSystem.CoreLibrary
-        );
+        var nullableType = new TypeReference("System", "Nullable`1", _module, _module.TypeSystem.CoreLibrary);
         nullableType.GenericParameters.Add(new GenericParameter("T", nullableType));
 
         var vector3Type = new TypeReference("UnityEngine", "Vector3", _module, _module.TypeSystem.CoreLibrary);

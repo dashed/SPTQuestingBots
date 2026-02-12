@@ -8,7 +8,8 @@ public class ParseKnownFieldsTests
     [Test]
     public void ParsesStandardEntry()
     {
-        string source = @"
+        string source =
+            @"
             private static readonly (Type Type, string FieldName, string Context)[] KnownFields = new[]
             {
                 (typeof(BotSpawner), ""Bots"", ""BotDiedPatch ___Bots""),
@@ -27,7 +28,8 @@ public class ParseKnownFieldsTests
     [Test]
     public void ParsesMultipleEntries()
     {
-        string source = @"
+        string source =
+            @"
             (typeof(BotSpawner), ""Bots"", ""context1""),
             (typeof(BossGroup), ""Boss_1"", ""context2""),
             (typeof(LocalGame), ""wavesSpawnScenario_0"", ""context3""),
@@ -45,7 +47,8 @@ public class ParseKnownFieldsTests
     [Test]
     public void ParsesBackingFieldName()
     {
-        string source = @"
+        string source =
+            @"
             (typeof(BotsGroup), ""<BotZone>k__BackingField"", ""GoToPositionAbstractAction""),
         ";
 
@@ -59,7 +62,8 @@ public class ParseKnownFieldsTests
     [Test]
     public void ParsesObfuscatedFieldNames()
     {
-        string source = @"
+        string source =
+            @"
             (typeof(NonWavesSpawnScenario), ""float_2"", ""retry time delay""),
             (typeof(BotCurrentPathAbstractClass), ""Vector3_0"", ""path corners""),
         ";
@@ -75,7 +79,8 @@ public class ParseKnownFieldsTests
     [Test]
     public void ReturnsEmptyForNoMatches()
     {
-        string source = @"
+        string source =
+            @"
             // No KnownFields entries here
             public class Foo { }
         ";
@@ -89,7 +94,8 @@ public class ParseKnownFieldsTests
     [Test]
     public void IgnoresComments()
     {
-        string source = @"
+        string source =
+            @"
             // (typeof(Commented), ""field"", ""context""),
             (typeof(Real), ""field"", ""context""),
         ";
@@ -106,7 +112,8 @@ public class ParseKnownFieldsTests
     [Test]
     public void ParsesContextWithSpecialCharacters()
     {
-        string source = @"
+        string source =
+            @"
             (typeof(BotCurrentPathAbstractClass), ""Vector3_0"", ""BotPathingHelpers — path corner points""),
         ";
 
@@ -114,17 +121,15 @@ public class ParseKnownFieldsTests
         var entries = ValidateCommand.ParseKnownFields(tmpFile);
 
         Assert.That(entries, Has.Count.EqualTo(1));
-        Assert.That(
-            entries[0].Context,
-            Is.EqualTo("BotPathingHelpers — path corner points")
-        );
+        Assert.That(entries[0].Context, Is.EqualTo("BotPathingHelpers — path corner points"));
     }
 
     [Test]
     public void ParsesActualReflectionHelperFormat()
     {
         // Exact copy of a few lines from ReflectionHelper.cs
-        string source = @"
+        string source =
+            @"
         private static readonly (Type Type, string FieldName, string Context)[] KnownFields = new[]
         {
             // AccessTools.Field lookups
