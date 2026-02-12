@@ -145,6 +145,36 @@ namespace SPTQuestingBots.BehaviorExtensions
                 return false;
             }
 
+            // Disable sprinting during post-combat cooldown
+            var cooldown = ConfigController.Config.Questing.SprintingLimitations.PostCombatCooldownSeconds;
+            if (cooldown > 0f && CombatStateHelper.IsPostCombat(BotOwner, cooldown))
+            {
+                return false;
+            }
+
+            // Disable sprinting when the bot is in a danger zone (nearby gunfire, explosions)
+            if (CombatStateHelper.IsInDangerZone(BotOwner))
+            {
+                return false;
+            }
+
+            // Disable sprinting in the final portion of the raid
+            var lateRaidThreshold = ConfigController.Config.Questing.SprintingLimitations.LateRaidNoSprintThreshold;
+            if (lateRaidThreshold > 0f)
+            {
+                float? remainingFraction = RaidTimeHelper.GetRemainingRaidFraction();
+                if (remainingFraction.HasValue && remainingFraction.Value < lateRaidThreshold)
+                {
+                    return false;
+                }
+            }
+
+            // Disable sprinting when the bot has heard a nearby threat
+            if (HearingSensorHelper.IsSuspicious(BotOwner))
+            {
+                return false;
+            }
+
             // Disable sprinting if the bot is very close to its current destination point to prevent it from sliding into staircase corners, etc.
             if (IsNearPathCorner(ConfigController.Config.Questing.SprintingLimitations.SharpPathCorners))
             {

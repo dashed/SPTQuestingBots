@@ -196,7 +196,9 @@
 			"approaching_closed_doors" : {
 				"distance": 3,
 				"angle": 60
-			}
+			},
+			"post_combat_cooldown_seconds": 20,
+			"late_raid_no_sprint_threshold": 0.15
 		},
 		"bot_quests": {
 			"distance_randomness": 30,

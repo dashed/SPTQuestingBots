@@ -238,14 +238,18 @@ namespace SPTQuestingBots.BehaviorExtensions
             Vector3 currentPos = BotOwner.Position;
             float moveSpeed = BotOwner.GetPlayer.MovementContext.CharacterMovementSpeed;
 
+            // Read BotMover signals for enhanced stuck detection (null-safe)
+            bool? isMoving = BotOwner.Mover?.IsMoving;
+            float? sDistDest = BotOwner.Mover?.SDistDestination;
+
             // Update soft stuck detector
-            if (_softStuck.Update(currentPos, moveSpeed, currentTime))
+            if (_softStuck.Update(currentPos, moveSpeed, currentTime, isMoving))
             {
                 handleSoftStuckTransition();
             }
 
             // Update hard stuck detector
-            if (_hardStuck.Update(currentPos, moveSpeed, currentTime))
+            if (_hardStuck.Update(currentPos, moveSpeed, currentTime, sDistDest))
             {
                 handleHardStuckTransition();
             }

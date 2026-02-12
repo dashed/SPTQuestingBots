@@ -17,6 +17,11 @@ public class HardStuckDetector
     private const float StuckRadiusSqr = 3f * 3f;
     private const float StaleThreshold = 0.2f;
 
+    /// <summary>
+    /// Timer multiplier when bot is far from its destination (faster escalation).
+    /// </summary>
+    private const float FarFromDestMultiplier = 1.5f;
+
     private readonly float _pathRetryDelay;
     private readonly float _teleportDelay;
     private readonly float _failDelay;
@@ -45,7 +50,11 @@ public class HardStuckDetector
     /// <summary>
     /// Returns true if a state transition occurred (caller should check Status for the action).
     /// </summary>
-    public bool Update(Vector3 currentPosition, float currentMoveSpeed, float currentTime)
+    /// <param name="currentPosition">Bot's current world position.</param>
+    /// <param name="currentMoveSpeed">Bot's current movement speed.</param>
+    /// <param name="currentTime">Current game time (Time.time).</param>
+    /// <param name="squaredDistToDestination">Optional BotMover.SDistDestination. When far from destination, stuck escalation is faster.</param>
+    public bool Update(Vector3 currentPosition, float currentMoveSpeed, float currentTime, float? squaredDistToDestination = null)
     {
         _positionHistory.Update(currentPosition);
         _averageSpeed.Update(currentMoveSpeed);
@@ -89,8 +98,11 @@ public class HardStuckDetector
             return false;
         }
 
-        // Bot appears stuck -- increment timer
-        _timer += deltaTime;
+        // Bot appears stuck -- increment timer.
+        // If bot is far from its destination, escalate faster.
+        var timerMultiplier =
+            squaredDistToDestination.HasValue && squaredDistToDestination.Value > StuckRadiusSqr ? FarFromDestMultiplier : 1.0f;
+        _timer += deltaTime * timerMultiplier;
         var previousStatus = Status;
 
         switch (Status)

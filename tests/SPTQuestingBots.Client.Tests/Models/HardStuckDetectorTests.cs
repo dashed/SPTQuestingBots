@@ -295,4 +295,77 @@ public class HardStuckDetectorTests
 
         Assert.That(detector.Status, Is.EqualTo(HardStuckStatus.Retrying));
     }
+
+    [Test]
+    public void Update_LargeSquaredDistToDestination_EscalatesToRetryFaster()
+    {
+        var detector = new HardStuckDetector(10, PathRetryDelay, TeleportDelay, FailDelay);
+        float time = 0f;
+        float dt = 0.1f;
+        float speed = 0.5f;
+        var pos = new Vector3(5, 0, 5);
+
+        // squaredDistToDestination=100 > StuckRadiusSqr(9) -> 1.5x multiplier
+        // PathRetryDelay=5s, with 1.5x multiplier effective time is 0.15s per tick.
+        // Should reach Retrying in ~34 ticks (34 * 0.15 = 5.1) instead of ~51.
+        int ticksToRetry = 0;
+        for (int i = 0; i < 60; i++)
+        {
+            time += dt;
+            detector.Update(pos, speed, time, squaredDistToDestination: 100f);
+            ticksToRetry++;
+            if (detector.Status == HardStuckStatus.Retrying)
+            {
+                break;
+            }
+        }
+
+        Assert.That(detector.Status, Is.EqualTo(HardStuckStatus.Retrying));
+        // With 1.5x multiplier, should reach retry faster than normal (~51 ticks)
+        Assert.That(ticksToRetry, Is.LessThan(45));
+    }
+
+    [Test]
+    public void Update_NullSquaredDist_PreservesExistingBehavior()
+    {
+        var detectorWithNull = new HardStuckDetector(10, PathRetryDelay, TeleportDelay, FailDelay);
+        var detectorWithout = new HardStuckDetector(10, PathRetryDelay, TeleportDelay, FailDelay);
+        float time = 0f;
+        float dt = 0.1f;
+        float speed = 0.5f;
+        var pos = new Vector3(5, 0, 5);
+
+        // Run both for same duration
+        for (int i = 0; i < 60; i++)
+        {
+            time += dt;
+            detectorWithNull.Update(pos, speed, time, squaredDistToDestination: null);
+            detectorWithout.Update(pos, speed, time);
+        }
+
+        Assert.That(detectorWithNull.Status, Is.EqualTo(detectorWithout.Status));
+        Assert.That(detectorWithNull.Timer, Is.EqualTo(detectorWithout.Timer).Within(0.001f));
+    }
+
+    [Test]
+    public void Update_SmallSquaredDist_DoesNotEscalateFaster()
+    {
+        var detectorSmallDist = new HardStuckDetector(10, PathRetryDelay, TeleportDelay, FailDelay);
+        var detectorDefault = new HardStuckDetector(10, PathRetryDelay, TeleportDelay, FailDelay);
+        float time = 0f;
+        float dt = 0.1f;
+        float speed = 0.5f;
+        var pos = new Vector3(5, 0, 5);
+
+        // squaredDistToDestination=1.0 < StuckRadiusSqr(9) -> no multiplier
+        for (int i = 0; i < 60; i++)
+        {
+            time += dt;
+            detectorSmallDist.Update(pos, speed, time, squaredDistToDestination: 1.0f);
+            detectorDefault.Update(pos, speed, time);
+        }
+
+        Assert.That(detectorSmallDist.Status, Is.EqualTo(detectorDefault.Status));
+        Assert.That(detectorSmallDist.Timer, Is.EqualTo(detectorDefault.Timer).Within(0.001f));
+    }
 }

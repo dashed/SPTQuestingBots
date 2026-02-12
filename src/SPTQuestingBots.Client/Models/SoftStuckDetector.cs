@@ -17,6 +17,11 @@ public class SoftStuckDetector
     private const float SpeedThreshold = 3.5f / 2f;
     private const float StaleThreshold = 0.2f;
 
+    /// <summary>
+    /// Timer multiplier when BotMover reports not moving but speed > 0 (faster escalation).
+    /// </summary>
+    private const float NotMovingMultiplier = 2.0f;
+
     private readonly float _vaultDelay;
     private readonly float _jumpDelay;
     private readonly float _failDelay;
@@ -43,7 +48,11 @@ public class SoftStuckDetector
     /// <summary>
     /// Returns true if a state transition occurred (caller should check Status for the action).
     /// </summary>
-    public bool Update(Vector3 currentPosition, float currentMoveSpeed, float currentTime)
+    /// <param name="currentPosition">Bot's current world position.</param>
+    /// <param name="currentMoveSpeed">Bot's current movement speed.</param>
+    /// <param name="currentTime">Current game time (Time.time).</param>
+    /// <param name="isMoving">Optional BotMover.IsMoving value. When false and speed > 0, stuck escalation is faster.</param>
+    public bool Update(Vector3 currentPosition, float currentMoveSpeed, float currentTime, bool? isMoving = null)
     {
         if (!_initialized)
         {
@@ -94,8 +103,10 @@ public class SoftStuckDetector
             return false;
         }
 
-        // Bot appears stuck -- increment timer
-        _timer += deltaTime;
+        // Bot appears stuck -- increment timer.
+        // If BotMover reports not moving while we expect movement, escalate faster.
+        var timerMultiplier = isMoving == false && moveSpeed > 0.01f ? NotMovingMultiplier : 1.0f;
+        _timer += deltaTime * timerMultiplier;
         var previousStatus = Status;
 
         switch (Status)

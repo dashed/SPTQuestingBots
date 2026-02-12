@@ -44,6 +44,22 @@ namespace SPTQuestingBots.Helpers
             (typeof(LighthouseTraderZone), "physicsTriggerHandler_0", "LighthouseTraderZone patches ___physicsTriggerHandler_0"),
             // Additional field lookups (raw reflection or dynamic base type)
             (typeof(Player), "_inventoryController", "ItemHelpers — bot inventory controller access"),
+            // BotsGroup combat state fields
+            (typeof(BotsGroup), "<EnemyLastSeenTimeSence>k__BackingField", "CombatStateHelper — perceived time of last enemy sighting"),
+            (typeof(BotsGroup), "<EnemyLastSeenTimeReal>k__BackingField", "CombatStateHelper — real time of last enemy sighting"),
+            (typeof(BotsGroup), "<EnemyLastSeenPositionReal>k__BackingField", "CombatStateHelper — real position of last enemy sighting"),
+            (typeof(BotsGroup), "<EnemyLastSeenPositionSence>k__BackingField", "CombatStateHelper — perceived enemy position"),
+            // BotOwner danger and hearing fields
+            (typeof(BotOwner), "<DangerArea>k__BackingField", "GoToPositionAbstractAction — danger area awareness"),
+            (typeof(BotOwner), "<BotAvoidDangerPlaces>k__BackingField", "GoToPositionAbstractAction — danger place avoidance"),
+            (typeof(BotOwner), "<HearingSensor>k__BackingField", "HearingSensorHelper — bot hearing sensor access"),
+            // BotOwner extraction fields
+            (typeof(BotOwner), "<Exfiltration>k__BackingField", "ExtractionHelper — bot exfiltration data"),
+            (typeof(BotOwner), "<LeaveData>k__BackingField", "ExtractionHelper — bot leave/extract decision data"),
+            // Player plant zone field
+            (typeof(Player), "<PlaceItemZone>k__BackingField", "PlantZoneHelper — quest item plant zone trigger"),
+            // AbstractGame timer field
+            (typeof(AbstractGame), "gameTimerClass", "RaidTimeHelper — raid timer access"),
         };
 
         /// <summary>

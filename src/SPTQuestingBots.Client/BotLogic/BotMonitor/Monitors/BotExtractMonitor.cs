@@ -56,7 +56,20 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
 
         public override void Update()
         {
+            bool wasTrying = IsTryingToExtract;
             IsTryingToExtract = extractFunction.IsTryingToExtract();
+
+            if (IsTryingToExtract && !wasTrying)
+            {
+                LoggingController.LogDebug(
+                    BotOwner.GetText()
+                        + " extraction state changed: IsTryingToExtract=true"
+                        + ", HasExfiltrationAssigned="
+                        + ExtractionHelper.HasExfiltrationAssigned(BotOwner)
+                        + ", IsLeaving="
+                        + ExtractionHelper.IsLeaving(BotOwner)
+                );
+            }
         }
 
         public bool TryInstructBotToExtract() => extractFunction.TryInstructBotToExtract();

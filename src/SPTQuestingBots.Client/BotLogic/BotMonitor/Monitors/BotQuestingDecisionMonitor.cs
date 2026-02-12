@@ -219,6 +219,15 @@ namespace SPTQuestingBots.BotLogic.BotMonitor
                 return BotQuestingDecision.None;
             }
 
+            // Supplementary check: if the game's own leave-data has triggered independently
+            if (allowedToTakeABreak() && ExtractionHelper.IsLeaving(BotOwner))
+            {
+                ObjectiveManager.StopQuesting();
+
+                LoggingController.LogWarning("Bot " + BotOwner.GetText() + " game leave-data triggered; stopping questing.");
+                return BotQuestingDecision.None;
+            }
+
             if (allowedToTakeABreak() && BotMonitor.GetMonitor<BotCombatMonitor>().IsInCombat)
             {
                 return BotQuestingDecision.Fight;

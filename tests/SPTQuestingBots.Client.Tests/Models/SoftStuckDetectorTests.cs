@@ -289,4 +289,87 @@ public class SoftStuckDetectorTests
         // Should transition exactly 3 times: None->Vaulting, Vaulting->Jumping, Jumping->Failed
         Assert.That(transitionCount, Is.EqualTo(3));
     }
+
+    [Test]
+    public void Update_IsMovingFalse_EscalatesToVaultFaster()
+    {
+        var detector = new SoftStuckDetector(VaultDelay, JumpDelay, FailDelay);
+        float time = 0f;
+        float dt = 0.1f;
+        float speed = 0.5f;
+        var pos = new Vector3(5, 0, 5);
+
+        // Initialize
+        detector.Update(pos, speed, time);
+
+        // With isMoving=false and 2x multiplier, effective time accumulates at 0.2s per tick.
+        // VaultDelay=1.5s should be reached in ~8 ticks (8 * 0.2 = 1.6) instead of ~16.
+        int ticksToVault = 0;
+        for (int i = 0; i < 20; i++)
+        {
+            time += dt;
+            detector.Update(pos, speed, time, isMoving: false);
+            ticksToVault++;
+            if (detector.Status == SoftStuckStatus.Vaulting)
+            {
+                break;
+            }
+        }
+
+        Assert.That(detector.Status, Is.EqualTo(SoftStuckStatus.Vaulting));
+        // With 2x multiplier, should reach vault in roughly half the ticks vs normal (16 ticks)
+        Assert.That(ticksToVault, Is.LessThanOrEqualTo(10));
+    }
+
+    [Test]
+    public void Update_IsMovingNull_PreservesExistingBehavior()
+    {
+        var detectorWithNull = new SoftStuckDetector(VaultDelay, JumpDelay, FailDelay);
+        var detectorWithout = new SoftStuckDetector(VaultDelay, JumpDelay, FailDelay);
+        float time = 0f;
+        float dt = 0.1f;
+        float speed = 0.5f;
+        var pos = new Vector3(5, 0, 5);
+
+        // Initialize both
+        detectorWithNull.Update(pos, speed, time);
+        detectorWithout.Update(pos, speed, time);
+
+        // Run both for same duration
+        for (int i = 0; i < 20; i++)
+        {
+            time += dt;
+            detectorWithNull.Update(pos, speed, time, isMoving: null);
+            detectorWithout.Update(pos, speed, time);
+        }
+
+        Assert.That(detectorWithNull.Status, Is.EqualTo(detectorWithout.Status));
+        Assert.That(detectorWithNull.Timer, Is.EqualTo(detectorWithout.Timer).Within(0.001f));
+    }
+
+    [Test]
+    public void Update_IsMovingTrue_DoesNotEscalateFaster()
+    {
+        var detectorMoving = new SoftStuckDetector(VaultDelay, JumpDelay, FailDelay);
+        var detectorDefault = new SoftStuckDetector(VaultDelay, JumpDelay, FailDelay);
+        float time = 0f;
+        float dt = 0.1f;
+        float speed = 0.5f;
+        var pos = new Vector3(5, 0, 5);
+
+        // Initialize both
+        detectorMoving.Update(pos, speed, time);
+        detectorDefault.Update(pos, speed, time);
+
+        // Run both for same duration
+        for (int i = 0; i < 20; i++)
+        {
+            time += dt;
+            detectorMoving.Update(pos, speed, time, isMoving: true);
+            detectorDefault.Update(pos, speed, time);
+        }
+
+        Assert.That(detectorMoving.Status, Is.EqualTo(detectorDefault.Status));
+        Assert.That(detectorMoving.Timer, Is.EqualTo(detectorDefault.Timer).Within(0.001f));
+    }
 }

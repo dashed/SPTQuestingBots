@@ -5,6 +5,7 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks;
 /// <summary>
 /// Scores high when the bot is close to a plant-item position.
 /// Only active when <c>CurrentQuestAction == PlantItem</c> and <c>IsCloseToObjective</c>.
+/// Plant zone verification is handled by PlantItemAction at execution time.
 /// </summary>
 public sealed class PlantItemTask : QuestUtilityTask
 {

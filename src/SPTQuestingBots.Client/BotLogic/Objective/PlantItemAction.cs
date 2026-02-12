@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using EFT;
+using SPTQuestingBots.Helpers;
 
 namespace SPTQuestingBots.BotLogic.Objective
 {
@@ -69,7 +70,16 @@ namespace SPTQuestingBots.BotLogic.Objective
             }
 
             restartStuckTimer();
-            CheckMinElapsedActionTime();
+
+            if (PlantZoneHelper.IsInPlantZone(BotOwner))
+            {
+                CheckMinElapsedActionTime();
+            }
+            else if (ActionElpasedTime >= ObjectiveManager.MinElapsedActionTime)
+            {
+                // Not in plant zone but min elapsed time passed — complete anyway (graceful degradation)
+                CheckMinElapsedActionTime();
+            }
         }
     }
 }

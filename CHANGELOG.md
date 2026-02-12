@@ -5,12 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.3] - 2026-02-11
+
+### Added
+- **Game field integration helpers** — 5 new helper classes exposing high-priority game fields for smarter bot behavior, all wired into behavioral code:
+  - `CombatStateHelper` — post-combat timestamps (`GetTimeSinceLastCombat`), last enemy position (`GetLastEnemyPosition`), danger zone detection (`IsInDangerZone`), combat cooldown check (`IsPostCombat`)
+  - `RaidTimeHelper` — raid timer access (`GetRemainingRaidFraction`, `GetRemainingSeconds`)
+  - `ExtractionHelper` — bot extraction state (`HasExfiltrationAssigned`, `IsLeaving`)
+  - `PlantZoneHelper` — plant trigger zone verification (`IsInPlantZone`, `GetPlantZone`)
+  - `HearingSensorHelper` — hearing sensor access (`GetHearingSensor`, `IsSuspicious`)
+- **Post-combat sprint cooldown** — bots disable sprinting for a configurable period after combat ends (default: 20s), preventing instant full-speed questing after firefights. Configurable via `questing.bot_questing_requirements.sprinting_limitations.post_combat_cooldown_seconds` in config.json
+- **Danger area awareness** — bots disable sprinting when in danger zones (areas with blocked cover points from recent gunfire/explosions). Automatic, no configuration needed
+- **Late-raid sprint caution** — bots disable sprinting in the final portion of the raid (default: last 15%), moving more cautiously as extraction approaches. Configurable via `questing.bot_questing_requirements.sprinting_limitations.late_raid_no_sprint_threshold` in config.json
+- **Suspicion-aware sprint** — bots disable sprinting when they've heard a nearby enemy sound (leverages existing `BotHearingMonitor` suspicion pipeline). Automatic, no configuration needed
+- **Extraction-aware questing** — `BotQuestingDecisionMonitor` checks `ExtractionHelper.IsLeaving()` as a supplementary exit condition, catching cases where the game's internal leave system triggers independently of `BotExtractMonitor`. `BotExtractMonitor` logs extraction state diagnostics on state transitions
+- **PlantItem zone verification** — `PlantItemAction` now checks `Player.PlaceItemZone` before completing plant objectives, reducing failed plant attempts. Falls back to timer-based completion if zone data is unavailable
+- **Enhanced stuck detection** — `SoftStuckDetector` and `HardStuckDetector` now use `BotMover.IsMoving` and `BotMover.SDistDestination` for faster stuck signal detection. When BotMover reports not moving, soft stuck timer accumulates at 2× rate; when bot is far from destination, hard stuck timer accumulates at 1.5× rate. Existing position-based detection preserved as fallback
+- 11 new entries in `ReflectionHelper.KnownFields` (now 22 total): BotsGroup combat timestamps/positions, BotOwner danger/hearing/extraction/leave data, Player plant zone, AbstractGame timer
+- `HelperFieldRegistrationTests` — source-scanning tests verifying all helper files use `RequireField`, all field names are registered in `KnownFields`, and all helpers have consumers outside the Helpers/ directory
+
+### Changed
+- 4 sprint-limiting checks integrated into `IsAllowedToSprint()` in `CustomLogicDelayedUpdate` base class — post-combat cooldown, danger zone, late-raid caution, and suspicion awareness automatically apply to all 10+ action subclasses
+- `make validate-fields` now validates 22 field lookups (was 11)
+- 2131 tests total (66 server + 2024 client + 41 inspector)
+
 ## [1.13.2] - 2026-02-11
 
 ### Added
 - **AssemblyInspector CLI tool** (`tools/AssemblyInspector/`) — Mono.Cecil-based tool for inspecting obfuscated .NET game assemblies without opening a GUI decompiler
   - `make inspect TYPE=BotSpawner` — dumps all fields of a type with resolved type names, generics, and visibility
-  - `make validate-fields` — validates all 11 KnownFields registry entries against Assembly-CSharp.dll, suggests candidate renames on failure (exit code 0/1 for CI)
+  - `make validate-fields` — validates all 22 KnownFields registry entries against Assembly-CSharp.dll, suggests candidate renames on failure (exit code 0/1 for CI)
   - `make test-inspector` — 41 tests (8 parser, 28 type formatting, 5 integration)
   - Handles `Nullable<T>` → `T?` formatting and multi-dimensional arrays (`T[,]`, `T[,,]`)
   - Replaces needing to open dnSpy/ILSpy for field name lookups during game update migrations

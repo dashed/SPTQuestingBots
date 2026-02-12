@@ -101,6 +101,23 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - Context-aware speed/posture approaching objectives: indoor areas (crouch, no sprint), combat/suspicious (deep crouch), near objective (<30m slow approach, <15m no sprint)
 - Variable wait times between objectives: random sampling from configurable range (5–15s) instead of flat 5s
 
+### Combat Awareness
+- **Post-combat cooldown**: after a firefight ends, bots disable sprinting for a configurable period (default: 20s) before resuming full-speed questing — prevents robotic instant-resume behavior
+- **Danger zone awareness**: bots moving through areas with recent gunfire or explosions automatically switch to cautious (no sprint) movement
+- **Late-raid caution**: bots disable sprinting in the final portion of the raid (default: last 15%), moving more cautiously as extraction approaches
+- **Suspicion-aware movement**: bots disable sprinting when they've heard a nearby enemy sound, leveraging the existing hearing/suspicion pipeline
+- **Extraction-aware questing**: bots stop questing when the game's internal leave system triggers, supplementing the existing `BotExtractMonitor` extraction decision
+- **PlantItem zone verification**: bots verify they've entered the game's plant trigger zone before completing plant-item quest objectives — reduces failed plant attempts
+- 4 sprint-limiting checks integrated into `IsAllowedToSprint()` in the base action class — applies to all movement actions automatically
+- 5 helper classes (`CombatStateHelper`, `RaidTimeHelper`, `ExtractionHelper`, `PlantZoneHelper`, `HearingSensorHelper`) provide null-safe access to game state fields, all wired into behavioral code
+- Configurable via `sprinting_limitations` in config.json: `post_combat_cooldown_seconds` (default: 20), `late_raid_no_sprint_threshold` (default: 0.15)
+
+### Enhanced Stuck Detection
+- `SoftStuckDetector` and `HardStuckDetector` now leverage `BotMover.IsMoving` and `BotMover.SDistDestination` for faster stuck signal detection
+- When BotMover reports not moving but the bot should be, soft stuck timer accumulates at 2× rate (faster escalation through vault → jump → fail)
+- When bot is far from its movement destination, hard stuck timer accumulates at 1.5× rate
+- Existing position-based detection preserved as fallback — new signals are additive improvements
+
 ### Spawn Entry Behavior
 - Bots pause and scan surroundings for 3–5 seconds on first spawn instead of instantly beelining to objectives
 - 360° look rotation during pause, pose 0.85, sprint disabled
@@ -414,7 +431,7 @@ SPTQuestingBots/
 │       │   └── Spawning/            #   PMC, PScav, Bot generators
 │       ├── Configuration/           # 30+ configuration model classes
 │       ├── Controllers/             # Bot management (jobs, objectives, config, logging)
-│       ├── Helpers/                 # NavMesh, pathing, items, quests, debug utilities
+│       ├── Helpers/                 # NavMesh, pathing, items, quests, game state, debug utilities
 │       ├── Models/                  # Data models (questing, pathing, debug gizmos)
 │       ├── ZoneMovement/            # Grid + vector-field movement system
 │       │   ├── Core/                #   WorldGrid, GridCell, PointOfInterest
