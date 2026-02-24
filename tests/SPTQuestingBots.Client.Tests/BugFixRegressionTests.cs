@@ -592,14 +592,10 @@ public class BugFixRegressionTests
 
         Assert.That(
             source,
-            Does.Contain("random.Next(1, 101)"),
-            "shouldMakeBotGroupHostileTowardAllBosses should use random.Next(1, 101) for correct 1-100 range"
+            Does.Contain("_sharedRandom.Next(1, 101)"),
+            "shouldMakeBotGroupHostileTowardAllBosses should use _sharedRandom.Next(1, 101) for correct 1-100 range"
         );
-        Assert.That(
-            source,
-            Does.Not.Contain("random.Next(1, 100)"),
-            "random.Next(1, 100) gives 1-99 range (off-by-one), should be random.Next(1, 101)"
-        );
+        Assert.That(source, Does.Not.Contain(".Next(1, 100)"), ".Next(1, 100) gives 1-99 range (off-by-one), should be .Next(1, 101)");
     }
 
     #endregion

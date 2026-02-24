@@ -47,6 +47,11 @@ namespace SPTQuestingBots.Controllers
 
             string fieldName = "SerializerSettings";
             Type targetType = Helpers.TarkovTypeHelpers.FindTargetTypeByField(fieldName);
+            if (targetType == null)
+            {
+                LoggingController.LogError("Could not find any type containing field '" + fieldName + "'");
+                return;
+            }
             LoggingController.LogInfo("Found type for " + fieldName + ": " + targetType.FullName, true);
 
             FieldInfo field = targetType.GetField(fieldName, BindingFlags.Public | BindingFlags.Static);
@@ -123,7 +128,10 @@ namespace SPTQuestingBots.Controllers
             string errorMessage = "Cannot read scav-raid settings.";
             string json = GetJson("/QuestingBots/GetScavRaidSettings", errorMessage);
 
-            TryDeserializeObject(json, errorMessage, out Configuration.ScavRaidSettingsResponse _response);
+            if (!TryDeserializeObject(json, errorMessage, out Configuration.ScavRaidSettingsResponse _response) || _response.Maps == null)
+            {
+                return ScavRaidSettings;
+            }
             ScavRaidSettings = _response.Maps;
 
             return ScavRaidSettings;
@@ -134,7 +142,10 @@ namespace SPTQuestingBots.Controllers
             string errorMessage = "Cannot read quest templates.";
             string json = GetJson("/QuestingBots/GetAllQuestTemplates", errorMessage);
 
-            TryDeserializeObject(json, errorMessage, out Configuration.QuestDataConfig _templates);
+            if (!TryDeserializeObject(json, errorMessage, out Configuration.QuestDataConfig _templates) || _templates.Templates == null)
+            {
+                return new RawQuestClass[0];
+            }
             return _templates.Templates;
         }
 
@@ -143,7 +154,10 @@ namespace SPTQuestingBots.Controllers
             string errorMessage = "Cannot retrieve EFT quest settings.";
             string json = GetJson("/QuestingBots/GetEFTQuestSettings", errorMessage);
 
-            TryDeserializeObject(json, errorMessage, out Configuration.QuestDataConfig _settings);
+            if (!TryDeserializeObject(json, errorMessage, out Configuration.QuestDataConfig _settings) || _settings.Settings == null)
+            {
+                return new Dictionary<string, Dictionary<string, object>>();
+            }
             return _settings.Settings;
         }
 
@@ -152,7 +166,13 @@ namespace SPTQuestingBots.Controllers
             string errorMessage = "Cannot retrieve positions for quest zones and items.";
             string json = GetJson("/QuestingBots/GetZoneAndItemQuestPositions", errorMessage);
 
-            TryDeserializeObject(json, errorMessage, out Configuration.QuestDataConfig _positions);
+            if (
+                !TryDeserializeObject(json, errorMessage, out Configuration.QuestDataConfig _positions)
+                || _positions.ZoneAndItemPositions == null
+            )
+            {
+                return new Dictionary<string, ZoneAndItemPositionInfoConfig>();
+            }
             return _positions.ZoneAndItemPositions;
         }
 

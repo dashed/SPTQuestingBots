@@ -15,6 +15,8 @@ namespace SPTQuestingBots.Patches
 {
     public class BotOwnerBrainActivatePatch : ModulePatch
     {
+        private static readonly System.Random _sharedRandom = new System.Random();
+
         protected override MethodBase GetTargetMethod()
         {
             return typeof(BotOwner).GetMethod("method_10", BindingFlags.Public | BindingFlags.Instance);
@@ -100,8 +102,7 @@ namespace SPTQuestingBots.Patches
 
             float chance = ConfigController.Config.ChanceOfBeingHostileTowardBosses.GetValue(botType) ?? 0;
 
-            System.Random random = new System.Random();
-            if (random.Next(1, 101) <= chance)
+            if (_sharedRandom.Next(1, 101) <= chance)
             {
                 return true;
             }

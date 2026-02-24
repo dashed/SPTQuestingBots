@@ -121,22 +121,29 @@ namespace SPTQuestingBots.Models.Pathing
             {
                 if (Status == UnityEngine.AI.NavMeshPathStatus.PathInvalid)
                 {
-                    Vector3? navMeshPosition = Singleton<GameWorld>
-                        .Instance.GetComponent<Components.LocationData>()
-                        .FindNearestNavMeshPosition(bot.Position, 2);
-                    if (!navMeshPosition.HasValue)
+                    var gameWorld = Singleton<GameWorld>.Instance;
+                    var locationData = gameWorld?.GetComponent<Components.LocationData>();
+                    if (locationData == null)
                     {
-                        LoggingController.LogError("Cannot find NavMesh position for " + bot.GetText());
+                        LoggingController.LogError("Cannot find LocationData for " + bot.GetText() + " path recovery");
                     }
                     else
                     {
-                        float distance = Vector3.Distance(bot.Position, navMeshPosition.Value);
-                        LoggingController.LogError(bot.GetText() + " has an invalid path and is " + distance + "m from the NavMesh");
-
-                        if (distance > 0.05)
+                        Vector3? navMeshPosition = locationData.FindNearestNavMeshPosition(bot.Position, 2);
+                        if (!navMeshPosition.HasValue)
                         {
-                            LoggingController.LogError("Teleporting " + bot.GetText() + " to nearest NavMesh position...");
-                            bot.GetPlayer.Teleport(navMeshPosition.Value);
+                            LoggingController.LogError("Cannot find NavMesh position for " + bot.GetText());
+                        }
+                        else
+                        {
+                            float distance = Vector3.Distance(bot.Position, navMeshPosition.Value);
+                            LoggingController.LogError(bot.GetText() + " has an invalid path and is " + distance + "m from the NavMesh");
+
+                            if (distance > 0.05)
+                            {
+                                LoggingController.LogError("Teleporting " + bot.GetText() + " to nearest NavMesh position...");
+                                bot.GetPlayer.Teleport(navMeshPosition.Value);
+                            }
                         }
                     }
 

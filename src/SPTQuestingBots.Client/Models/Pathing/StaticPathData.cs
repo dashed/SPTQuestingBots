@@ -112,6 +112,11 @@ namespace SPTQuestingBots.Models.Pathing
                 return this;
             }
 
+            if (Corners.Length == 0)
+            {
+                return pathToAppend;
+            }
+
             StaticPathData newPath = (StaticPathData)Clone();
 
             Vector3[] newCorners;
@@ -139,6 +144,11 @@ namespace SPTQuestingBots.Models.Pathing
             if (pathToPrepend.Corners.Length == 0)
             {
                 return this;
+            }
+
+            if (Corners.Length == 0)
+            {
+                return pathToPrepend;
             }
 
             StaticPathData newPath = (StaticPathData)Clone();

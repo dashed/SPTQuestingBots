@@ -246,7 +246,10 @@ namespace SPTQuestingBots.BotLogic.Objective
         private bool trySetNextActionUtility()
         {
             if (_taskManager == null)
+            {
                 _taskManager = QuestTaskFactory.Create();
+                WireTaskConfigValues(_taskManager);
+            }
 
             if (!BotEntityBridge.TryGetEntity(BotOwner, out var entity))
                 return false;
@@ -277,6 +280,35 @@ namespace SPTQuestingBots.BotLogic.Objective
             // Map BotActionTypeId back to BotActionType and dispatch
             setNextAction((BotActionType)task.BotActionTypeId, task.ActionReason);
             return true;
+        }
+
+        /// <summary>
+        /// Wire task scorer properties from config so config.json values take effect.
+        /// Called once when the task manager is created.
+        /// </summary>
+        private static void WireTaskConfigValues(UtilityTaskManager manager)
+        {
+            var vultureCfg = ConfigController.Config?.Questing?.Vulture;
+            var lingerCfg = ConfigController.Config?.Questing?.Linger;
+            var investigateCfg = ConfigController.Config?.Questing?.Investigate;
+
+            foreach (var task in manager.Tasks)
+            {
+                if (task is UtilityAI.Tasks.VultureTask vt && vultureCfg != null)
+                {
+                    vt.CourageThreshold = vultureCfg.CourageThreshold;
+                    vt.DetectionRange = vultureCfg.BaseDetectionRange;
+                }
+                else if (task is UtilityAI.Tasks.LingerTask lt && lingerCfg != null)
+                {
+                    lt.BaseScore = lingerCfg.BaseScore;
+                }
+                else if (task is UtilityAI.Tasks.InvestigateTask it && investigateCfg != null)
+                {
+                    it.IntensityThreshold = investigateCfg.IntensityThreshold;
+                    it.DetectionRange = investigateCfg.DetectionRange;
+                }
+            }
         }
     }
 }

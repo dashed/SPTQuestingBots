@@ -14,7 +14,15 @@ namespace SPTQuestingBots.Patches.Spawning
     {
         protected override MethodBase GetTargetMethod()
         {
-            MethodInfo methodInfo = typeof(BossSpawnScenario).GetMethods(BindingFlags.Public | BindingFlags.Static).First();
+            MethodInfo methodInfo = typeof(BossSpawnScenario)
+                .GetMethods(BindingFlags.Public | BindingFlags.Static)
+                .First(m =>
+                {
+                    var parameters = m.GetParameters();
+                    return parameters.Length >= 2
+                        && parameters[0].ParameterType == typeof(BossLocationSpawn[])
+                        && parameters[1].ParameterType == typeof(Action<BossLocationSpawn>);
+                });
 
             LoggingController.LogInfo("Found method for InitBossSpawnLocationPatch: " + methodInfo.Name);
 
