@@ -24,6 +24,7 @@ namespace SPTQuestingBots.BehaviorExtensions
         private Stopwatch actionElapsedTime = new Stopwatch();
         private Stopwatch sprintDelayTimer = Stopwatch.StartNew();
         private float sprintDelayTime = 0;
+        private bool _wasSprintAllowed = true;
 
         // Find by CreateNode(BotLogicDecision type, BotOwner bot) -> case BotLogicDecision.simplePatrol -> private gclass object
         private GClass395 baseSteeringLogic = new GClass395();
@@ -145,49 +146,64 @@ namespace SPTQuestingBots.BehaviorExtensions
                 return false;
             }
 
-            // Disable sprinting during post-combat cooldown
-            var cooldown = ConfigController.Config.Questing.SprintingLimitations.PostCombatCooldownSeconds;
-            if (cooldown > 0f && CombatStateHelper.IsPostCombat(BotOwner, cooldown))
-            {
-                return false;
-            }
+            var sprintConfig = ConfigController.Config.Questing.SprintingLimitations;
+            string blockReason = null;
 
-            // Disable sprinting when the bot is in a danger zone (nearby gunfire, explosions)
-            if (CombatStateHelper.IsInDangerZone(BotOwner))
+            // Disable sprinting during post-combat cooldown
+            if (sprintConfig.EnablePostCombatSprintBlock)
             {
-                return false;
+                var cooldown = sprintConfig.PostCombatCooldownSeconds;
+                if (cooldown > 0f && CombatStateHelper.IsPostCombat(BotOwner, cooldown))
+                {
+                    blockReason = "post-combat cooldown";
+                }
             }
 
             // Disable sprinting in the final portion of the raid
-            var lateRaidThreshold = ConfigController.Config.Questing.SprintingLimitations.LateRaidNoSprintThreshold;
-            if (lateRaidThreshold > 0f)
+            if (blockReason == null && sprintConfig.EnableLateRaidSprintBlock)
             {
-                float? remainingFraction = RaidTimeHelper.GetRemainingRaidFraction();
-                if (remainingFraction.HasValue && remainingFraction.Value < lateRaidThreshold)
+                var lateRaidThreshold = sprintConfig.LateRaidNoSprintThreshold;
+                if (lateRaidThreshold > 0f)
                 {
-                    return false;
+                    float? remainingFraction = RaidTimeHelper.GetRemainingRaidFraction();
+                    if (remainingFraction.HasValue && remainingFraction.Value < lateRaidThreshold)
+                    {
+                        blockReason = "late raid";
+                    }
                 }
             }
 
             // Disable sprinting when the bot has heard a nearby threat
-            if (HearingSensorHelper.IsSuspicious(BotOwner))
+            if (blockReason == null && sprintConfig.EnableSuspicionSprintBlock)
             {
-                return false;
+                if (HearingSensorHelper.IsSuspicious(BotOwner))
+                {
+                    blockReason = "hearing suspicion";
+                }
             }
 
             // Disable sprinting if the bot is very close to its current destination point to prevent it from sliding into staircase corners, etc.
-            if (IsNearPathCorner(ConfigController.Config.Questing.SprintingLimitations.SharpPathCorners))
+            if (blockReason == null && IsNearPathCorner(sprintConfig.SharpPathCorners))
             {
-                return false;
+                blockReason = "sharp path corner";
             }
 
             // Prevent bots from sliding into doors
-            if (IsNearAndMovingTowardClosedDoor(ConfigController.Config.Questing.SprintingLimitations.ApproachingClosedDoors))
+            if (blockReason == null && IsNearAndMovingTowardClosedDoor(sprintConfig.ApproachingClosedDoors))
             {
-                return false;
+                blockReason = "approaching closed door";
             }
 
-            return true;
+            bool allowed = blockReason == null;
+
+            // Log only on transition from allowed to blocked
+            if (_wasSprintAllowed && !allowed)
+            {
+                LoggingController.LogDebug("[Sprint] " + BotOwner.GetText() + " sprint blocked: " + blockReason);
+            }
+            _wasSprintAllowed = allowed;
+
+            return allowed;
         }
 
         public bool IsNearPathCorner(Configuration.DistanceAngleConfig maxDistanceMinAngle)

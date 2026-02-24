@@ -103,12 +103,11 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 
 ### Combat Awareness
 - **Post-combat cooldown**: after a firefight ends, bots disable sprinting for a configurable period (default: 20s) before resuming full-speed questing — prevents robotic instant-resume behavior
-- **Danger zone awareness**: bots moving through areas with recent gunfire or explosions automatically switch to cautious (no sprint) movement
 - **Late-raid caution**: bots disable sprinting in the final portion of the raid (default: last 15%), moving more cautiously as extraction approaches
 - **Suspicion-aware movement**: bots disable sprinting when they've heard a nearby enemy sound, leveraging the existing hearing/suspicion pipeline
 - **Extraction-aware questing**: bots stop questing when the game's internal leave system triggers, supplementing the existing `BotExtractMonitor` extraction decision
 - **PlantItem zone verification**: bots verify they've entered the game's plant trigger zone before completing plant-item quest objectives — reduces failed plant attempts
-- 4 sprint-limiting checks integrated into `IsAllowedToSprint()` in the base action class — applies to all movement actions automatically
+- 3 sprint-limiting checks integrated into `IsAllowedToSprint()` in the base action class — each with a config toggle (`enable_post_combat_sprint_block`, `enable_late_raid_sprint_block`, `enable_suspicion_sprint_block`)
 - 5 helper classes (`CombatStateHelper`, `RaidTimeHelper`, `ExtractionHelper`, `PlantZoneHelper`, `HearingSensorHelper`) provide null-safe access to game state fields, all wired into behavioral code
 - Configurable via `sprinting_limitations` in config.json: `post_combat_cooldown_seconds` (default: 20), `late_raid_no_sprint_threshold` (default: 0.15)
 

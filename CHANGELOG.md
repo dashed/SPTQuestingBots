@@ -25,9 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `HelperFieldRegistrationTests` — source-scanning tests verifying all helper files use `RequireField`, all field names are registered in `KnownFields`, and all helpers have consumers outside the Helpers/ directory
 
 ### Changed
-- 4 sprint-limiting checks integrated into `IsAllowedToSprint()` in `CustomLogicDelayedUpdate` base class — post-combat cooldown, danger zone, late-raid caution, and suspicion awareness automatically apply to all 10+ action subclasses
+- 3 sprint-limiting checks integrated into `IsAllowedToSprint()` in `CustomLogicDelayedUpdate` base class — post-combat cooldown, late-raid caution, and suspicion awareness automatically apply to all 10+ action subclasses
 - `make validate-fields` now validates 22 field lookups (was 11)
 - 2131 tests total (66 server + 2024 client + 41 inspector)
+
+### Fixed
+- Removed danger zone sprint block from `IsAllowedToSprint()` — `BotDangerArea.BlockedCovers` has unknown BSG lifecycle and could block sprint permanently
+- Added per-check config toggles (`enable_post_combat_sprint_block`, `enable_late_raid_sprint_block`, `enable_suspicion_sprint_block`) for remaining sprint blocks under `sprinting_limitations`
 
 ## [1.13.2] - 2026-02-11
 

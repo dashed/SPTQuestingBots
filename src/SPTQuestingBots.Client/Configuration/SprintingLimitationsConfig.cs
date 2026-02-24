@@ -27,6 +27,15 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("late_raid_no_sprint_threshold")]
         public float LateRaidNoSprintThreshold { get; set; } = 0.15f;
 
+        [JsonProperty("enable_post_combat_sprint_block")]
+        public bool EnablePostCombatSprintBlock { get; set; } = true;
+
+        [JsonProperty("enable_late_raid_sprint_block")]
+        public bool EnableLateRaidSprintBlock { get; set; } = true;
+
+        [JsonProperty("enable_suspicion_sprint_block")]
+        public bool EnableSuspicionSprintBlock { get; set; } = true;
+
         public SprintingLimitationsConfig() { }
     }
 }

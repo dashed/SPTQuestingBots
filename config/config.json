@@ -198,7 +198,10 @@
 				"angle": 60
 			},
 			"post_combat_cooldown_seconds": 20,
-			"late_raid_no_sprint_threshold": 0.15
+			"late_raid_no_sprint_threshold": 0.15,
+			"enable_post_combat_sprint_block": true,
+			"enable_late_raid_sprint_block": true,
+			"enable_suspicion_sprint_block": true
 		},
 		"bot_quests": {
 			"distance_randomness": 30,

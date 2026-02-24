@@ -452,6 +452,16 @@
     />
     <!-- ConfigSections: pure string constants for F12 menu section ordering -->
     <Compile Include="../../src/SPTQuestingBots.Client/ConfigSections.cs" Link="LinkedSources/ConfigSections.cs" />
+    <!-- Sprinting config: POCO classes for sprint limitation settings -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Configuration/SprintingLimitationsConfig.cs"
+      Link="LinkedSources/Configuration/SprintingLimitationsConfig.cs"
+    />
+    <Compile Include="../../src/SPTQuestingBots.Client/Configuration/MinMaxConfig.cs" Link="LinkedSources/Configuration/MinMaxConfig.cs" />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Configuration/DistanceAngleConfig.cs"
+      Link="LinkedSources/Configuration/DistanceAngleConfig.cs"
+    />
   </ItemGroup>
 
   <!--
