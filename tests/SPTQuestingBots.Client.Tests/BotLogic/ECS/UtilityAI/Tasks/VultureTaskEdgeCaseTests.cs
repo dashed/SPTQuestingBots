@@ -186,6 +186,94 @@ public class VultureTaskEdgeCaseTests
         Assert.That(float.IsNaN(score), Is.False);
     }
 
+    // ── Cooldown expiry (Bug fix: was permanent, now time-based) ──
+
+    [Test]
+    public void Score_CooldownExpired_AllowsVulturing()
+    {
+        // BUG FIX: VultureTask cooldown was permanent — compared > 0f instead of > CurrentGameTime.
+        // After fix, once CurrentGameTime passes VultureCooldownUntil, the bot can vulture again.
+        var entity = MakeVultureEntity();
+        entity.VultureCooldownUntil = 200f; // Cooldown set at game time 200
+        entity.CurrentGameTime = 300f; // Game time is now 300 — cooldown expired
+
+        float score = VultureTask.Score(entity, 15, 150f);
+
+        Assert.That(
+            score,
+            Is.GreaterThan(0f),
+            "Bot should be able to vulture after cooldown expires (CurrentGameTime > VultureCooldownUntil)"
+        );
+    }
+
+    [Test]
+    public void Score_CooldownActive_ReturnsZero()
+    {
+        // Cooldown is still active — VultureCooldownUntil > CurrentGameTime
+        var entity = MakeVultureEntity();
+        entity.VultureCooldownUntil = 500f;
+        entity.CurrentGameTime = 300f; // Still on cooldown
+
+        float score = VultureTask.Score(entity, 15, 150f);
+
+        Assert.That(score, Is.EqualTo(0f), "Bot should not vulture while cooldown is active");
+    }
+
+    [Test]
+    public void Score_CooldownExactlyAtGameTime_AllowsVulturing()
+    {
+        // Edge case: VultureCooldownUntil == CurrentGameTime
+        // The check is >, so equal means NOT on cooldown — bot can vulture.
+        var entity = MakeVultureEntity();
+        entity.VultureCooldownUntil = 300f;
+        entity.CurrentGameTime = 300f;
+
+        float score = VultureTask.Score(entity, 15, 150f);
+
+        Assert.That(score, Is.GreaterThan(0f), "When cooldown exactly equals game time (not >), bot should be allowed to vulture");
+    }
+
+    [Test]
+    public void Score_CooldownZero_GameTimePositive_NotBlocked()
+    {
+        // Default VultureCooldownUntil=0, CurrentGameTime=100 → 0 > 100 = false → not blocked
+        var entity = MakeVultureEntity();
+        entity.VultureCooldownUntil = 0f;
+        entity.CurrentGameTime = 100f;
+
+        float score = VultureTask.Score(entity, 15, 150f);
+
+        Assert.That(score, Is.GreaterThan(0f), "Zero cooldown should never block vulturing");
+    }
+
+    [Test]
+    public void Score_E2E_CooldownLifecycle_SetThenExpires()
+    {
+        // End-to-end: simulate a complete cooldown lifecycle.
+        // Phase 1: Bot encounters event, scores normally.
+        // Phase 2: Cooldown is set (e.g., rejected), bot is blocked.
+        // Phase 3: Time passes, cooldown expires, bot can vulture again.
+        var entity = MakeVultureEntity();
+        entity.CurrentGameTime = 100f;
+
+        // Phase 1: No cooldown, should score
+        float phase1Score = VultureTask.Score(entity, 15, 150f);
+        Assert.That(phase1Score, Is.GreaterThan(0f), "Phase 1: should score without cooldown");
+
+        // Phase 2: Cooldown set (reject happened at time 100, cooldown 180s)
+        entity.VultureCooldownUntil = 100f + 180f; // 280
+        entity.CurrentGameTime = 150f; // Time advanced but still in cooldown
+
+        float phase2Score = VultureTask.Score(entity, 15, 150f);
+        Assert.That(phase2Score, Is.EqualTo(0f), "Phase 2: should be blocked during cooldown");
+
+        // Phase 3: Time passes cooldown
+        entity.CurrentGameTime = 290f; // Past 280
+
+        float phase3Score = VultureTask.Score(entity, 15, 150f);
+        Assert.That(phase3Score, Is.GreaterThan(0f), "Phase 3: should score after cooldown expires");
+    }
+
     // ── ScoreEntity with modifiers ───────────────────────────
 
     [Test]

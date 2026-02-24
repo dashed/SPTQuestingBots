@@ -13,6 +13,7 @@ namespace SPTQuestingBots.BotLogic.Objective
     /// </summary>
     internal class InvestigateAction : BehaviorExtensions.GoToPositionAbstractAction
     {
+        private static readonly System.Random SharedRandom = new System.Random();
         private Vector3 _targetPosition;
         private bool _hasTarget;
         private Stopwatch _timer = Stopwatch.StartNew();
@@ -188,15 +189,13 @@ namespace SPTQuestingBots.BotLogic.Objective
             // Random head scan
             if (Time.time >= _nextScanTime)
             {
-                float angle = (float)(new System.Random().NextDouble() * 2 - 1) * 120f;
+                float angle = (float)(SharedRandom.NextDouble() * 2 - 1) * 120f;
                 Vector3 lookDir = Quaternion.Euler(0, angle, 0) * BotOwner.LookDirection;
                 Vector3 lookPoint = BotOwner.Position + lookDir * 20f;
                 BotOwner.Steering.LookToPoint(lookPoint);
 
                 _nextScanTime =
-                    Time.time
-                    + _headScanIntervalMin
-                    + (float)(new System.Random().NextDouble() * (_headScanIntervalMax - _headScanIntervalMin));
+                    Time.time + _headScanIntervalMin + (float)(SharedRandom.NextDouble() * (_headScanIntervalMax - _headScanIntervalMin));
             }
         }
 

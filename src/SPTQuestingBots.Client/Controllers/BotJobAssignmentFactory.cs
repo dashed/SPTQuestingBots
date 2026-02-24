@@ -29,6 +29,7 @@ namespace SPTQuestingBots.Controllers
         private static float[] _questMinDistBuffer = new float[64];
         private static float[] _questMaxDistBuffer = new float[64];
         private static float[] _questMinAngleBuffer = new float[64];
+        private static readonly System.Random _sharedRandom = new System.Random();
 
         // Phase 8: Job assignment lists now stored on BotEntityBridge, keyed by entity ID.
         // Access via BotLogic.ECS.BotEntityBridge.GetJobAssignments() / EnsureJobAssignments().
@@ -823,7 +824,6 @@ namespace SPTQuestingBots.Controllers
                 Math.Ceiling(maxOverallDistance * ConfigController.Config.Questing.BotQuests.DistanceRandomness / 100.0);
 
             // Score all quests using QuestScorer (O(n) — replaces 5 dictionary allocations + OrderBy)
-            System.Random random = new System.Random();
             for (int qi = 0; qi < questCount; qi++)
             {
                 _questScoreBuffer[qi] = QuestScorer.ScoreQuest(
@@ -834,7 +834,7 @@ namespace SPTQuestingBots.Controllers
                     _zoneQuestsBuffer[qi].IsActiveForPlayer,
                     _questMinAngleBuffer[qi],
                     scoringConfig,
-                    random
+                    _sharedRandom
                 );
             }
 

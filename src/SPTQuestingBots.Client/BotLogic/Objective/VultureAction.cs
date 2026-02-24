@@ -14,6 +14,7 @@ namespace SPTQuestingBots.BotLogic.Objective
     /// </summary>
     internal class VultureAction : BehaviorExtensions.GoToPositionAbstractAction
     {
+        private static readonly System.Random SharedRandom = new System.Random();
         private Vector3 _targetPosition;
         private bool _hasTarget;
         private Stopwatch _phaseTimer = Stopwatch.StartNew();
@@ -266,9 +267,7 @@ namespace SPTQuestingBots.BotLogic.Objective
                 );
                 entity.VulturePhase = VulturePhase.Paranoia;
                 _nextParanoiaTime =
-                    Time.time
-                    + _paranoiaIntervalMin
-                    + (float)(new System.Random().NextDouble() * (_paranoiaIntervalMax - _paranoiaIntervalMin));
+                    Time.time + _paranoiaIntervalMin + (float)(SharedRandom.NextDouble() * (_paranoiaIntervalMax - _paranoiaIntervalMin));
                 return;
             }
 
@@ -307,7 +306,7 @@ namespace SPTQuestingBots.BotLogic.Objective
         private void UpdateParanoia(BotEntity entity)
         {
             // Random look direction — scan around for threats
-            float angle = (float)(new System.Random().NextDouble() * 2 - 1) * _paranoiaAngleRange;
+            float angle = (float)(SharedRandom.NextDouble() * 2 - 1) * _paranoiaAngleRange;
             Vector3 lookDir = Quaternion.Euler(0, angle, 0) * (BotOwner.LookDirection);
             Vector3 lookPoint = BotOwner.Position + lookDir * 20f;
             BotOwner.Steering.LookToPoint(lookPoint);

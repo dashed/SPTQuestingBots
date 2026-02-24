@@ -477,6 +477,128 @@ public class SquadStrategyManagerTests
         Assert.DoesNotThrow(() => manager.RemoveSquad(squad));
     }
 
+    // ── NaN Guard (Bug fix: was missing, causing NaN poisoning) ──
+
+    [Test]
+    public void PickStrategy_NaNScore_DoesNotWinSelection()
+    {
+        // BUG FIX: SquadStrategyManager.PickStrategy() lacked NaN guards.
+        // NaN comparisons return false in IEEE 754, so `NaN <= highestScore`
+        // is false — NaN would bypass the guard and win selection.
+        var stratA = new TestSquadStrategy(0f);
+        var stratB = new TestSquadStrategy(0f);
+        var manager = new SquadStrategyManager(new SquadStrategy[] { stratA, stratB });
+        var squad = CreateSquad(0, 2);
+
+        stratA.SetScore(0, float.NaN);
+        stratB.SetScore(0, 0.5f);
+        manager.UpdateScores(new[] { squad });
+        manager.PickStrategy(squad);
+
+        // NaN must be skipped; stratB should win
+        Assert.AreSame(stratB, (SquadStrategy)squad.StrategyAssignment.Strategy);
+        Assert.AreEqual(1, squad.StrategyAssignment.Ordinal);
+    }
+
+    [Test]
+    public void PickStrategy_AllNaNScores_NoStrategyAssigned()
+    {
+        var stratA = new TestSquadStrategy(0f);
+        var stratB = new TestSquadStrategy(0f);
+        var manager = new SquadStrategyManager(new SquadStrategy[] { stratA, stratB });
+        var squad = CreateSquad(0, 2);
+
+        stratA.SetScore(0, float.NaN);
+        stratB.SetScore(0, float.NaN);
+        manager.UpdateScores(new[] { squad });
+        manager.PickStrategy(squad);
+
+        // All NaN → nothing should be assigned
+        Assert.IsNull(squad.StrategyAssignment.Strategy);
+    }
+
+    [Test]
+    public void PickStrategy_CurrentStrategyScoreNaN_WithHysteresis_HandledGracefully()
+    {
+        // When the current strategy's score is NaN, the seed (NaN + hysteresis = NaN)
+        // must be reset to 0 so other valid strategies can win.
+        var stratA = new TestSquadStrategy(0.2f);
+        var stratB = new TestSquadStrategy(0f);
+        var manager = new SquadStrategyManager(new SquadStrategy[] { stratA, stratB });
+        var squad = CreateSquad(0, 2);
+
+        // Phase 1: stratA wins normally
+        stratA.SetScore(0, 0.5f);
+        stratB.SetScore(0, 0.3f);
+        manager.UpdateScores(new[] { squad });
+        manager.PickStrategy(squad);
+        Assert.AreSame(stratA, (SquadStrategy)squad.StrategyAssignment.Strategy);
+
+        // Phase 2: stratA's score becomes NaN (poisoned by bad data)
+        // Without NaN guard: highestScore = NaN + 0.2 = NaN
+        // NaN comparisons always return false → stratB's 0.3 doesn't beat NaN
+        // → stuck on stratA forever. With guard: resets to 0, stratB wins.
+        stratA.SetScore(0, float.NaN);
+        stratB.SetScore(0, 0.3f);
+        manager.UpdateScores(new[] { squad });
+        manager.PickStrategy(squad);
+
+        Assert.AreSame(stratB, (SquadStrategy)squad.StrategyAssignment.Strategy);
+        Assert.AreEqual(1, squad.StrategyAssignment.Ordinal);
+    }
+
+    [Test]
+    public void PickStrategy_NaNMixedWithValidScores_SkipsNaN()
+    {
+        // Three strategies: first NaN, second valid low, third valid high.
+        // NaN must be skipped; third should win.
+        var stratA = new TestSquadStrategy(0f);
+        var stratB = new TestSquadStrategy(0f);
+        var stratC = new TestSquadStrategy(0f);
+        var manager = new SquadStrategyManager(new SquadStrategy[] { stratA, stratB, stratC });
+        var squad = CreateSquad(0, 3);
+
+        stratA.SetScore(0, float.NaN);
+        stratB.SetScore(0, 0.2f);
+        stratC.SetScore(0, 0.8f);
+        manager.UpdateScores(new[] { squad });
+        manager.PickStrategy(squad);
+
+        Assert.AreSame(stratC, (SquadStrategy)squad.StrategyAssignment.Strategy);
+        Assert.AreEqual(2, squad.StrategyAssignment.Ordinal);
+    }
+
+    [Test]
+    public void PickStrategy_E2E_NaNPoisonRecovery()
+    {
+        // End-to-end: valid → NaN poison → recovery when data fixes.
+        var stratA = new TestSquadStrategy(0.1f);
+        var stratB = new TestSquadStrategy(0f);
+        var manager = new SquadStrategyManager(new SquadStrategy[] { stratA, stratB });
+        var squad = CreateSquad(0, 2);
+
+        // Phase 1: Normal operation — stratA wins
+        stratA.SetScore(0, 0.6f);
+        stratB.SetScore(0, 0.3f);
+        manager.UpdateScores(new[] { squad });
+        manager.PickStrategy(squad);
+        Assert.AreSame(stratA, (SquadStrategy)squad.StrategyAssignment.Strategy);
+
+        // Phase 2: stratA goes NaN, stratB takes over
+        stratA.SetScore(0, float.NaN);
+        stratB.SetScore(0, 0.4f);
+        manager.UpdateScores(new[] { squad });
+        manager.PickStrategy(squad);
+        Assert.AreSame(stratB, (SquadStrategy)squad.StrategyAssignment.Strategy);
+
+        // Phase 3: stratA recovers and scores high enough to overcome hysteresis
+        stratA.SetScore(0, 0.8f);
+        stratB.SetScore(0, 0.4f); // stratB is current, no hysteresis (0f)
+        manager.UpdateScores(new[] { squad });
+        manager.PickStrategy(squad);
+        Assert.AreSame(stratA, (SquadStrategy)squad.StrategyAssignment.Strategy);
+    }
+
     // ── Multi-Squad ─────────────────────────────────
 
     [Test]

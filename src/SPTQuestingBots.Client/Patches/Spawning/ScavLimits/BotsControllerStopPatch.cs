@@ -20,6 +20,8 @@ namespace SPTQuestingBots.Patches.Spawning.ScavLimits
         protected static void PatchPrefix()
         {
             NonWavesSpawnScenarioCreatePatch.Clear();
+            GameStartPatch.ClearMissedWaves();
+            TryLoadBotsProfilesOnStartPatch.Clear();
         }
     }
 }

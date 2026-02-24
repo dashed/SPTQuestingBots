@@ -42,7 +42,7 @@ namespace SPTQuestingBots.Components.Spawning
 
             // Determine how many total PMC's to spawn (reduced for Scav raids)
             Configuration.MinMaxConfig pmcCountRange = getPMCCount();
-            int pmcCount = random.Next((int)pmcCountRange.Min, (int)pmcCountRange.Max);
+            int pmcCount = random.Next((int)pmcCountRange.Min, (int)pmcCountRange.Max + 1);
 
             // There must be at least 1 PMC still in the map or PScavs will not be allowed to join in live Tarkov
             pmcCount = Math.Max(1, pmcCount);
@@ -83,7 +83,7 @@ namespace SPTQuestingBots.Components.Spawning
 
             // Randomly select the PMC faction (BEAR or USEC) for all of the bots in the group
             WildSpawnType spawnType = WildSpawnType.pmcBEAR;
-            if (random.Next(1, 100) <= ConfigController.GetUSECChance())
+            if (random.Next(1, 101) <= ConfigController.GetUSECChance())
             {
                 spawnType = WildSpawnType.pmcUSEC;
             }

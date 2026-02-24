@@ -111,6 +111,13 @@ public class SquadStrategyManager
             var currentStrategy = (SquadStrategy)assignment.Strategy;
             nextOrdinal = assignment.Ordinal;
             highestScore = squad.StrategyScores[assignment.Ordinal] + currentStrategy.Hysteresis;
+
+            // Guard against NaN poisoning: NaN comparisons always return false in IEEE 754,
+            // which causes every strategy to bypass the <= guard. Reset to 0 so selection works.
+            if (float.IsNaN(highestScore))
+            {
+                highestScore = 0f;
+            }
         }
 
         SquadStrategy nextStrategy = null;
@@ -118,7 +125,7 @@ public class SquadStrategyManager
         for (int j = 0; j < Strategies.Length; j++)
         {
             float score = squad.StrategyScores[j];
-            if (score <= highestScore)
+            if (float.IsNaN(score) || score <= highestScore)
             {
                 continue;
             }

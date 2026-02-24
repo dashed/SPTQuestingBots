@@ -81,7 +81,7 @@ public sealed class VultureTask : QuestUtilityTask
         }
 
         // On cooldown → recently rejected
-        if (entity.VultureCooldownUntil > 0f)
+        if (entity.VultureCooldownUntil > entity.CurrentGameTime)
         {
             LoggingController.LogDebug(
                 "[VultureTask] Entity " + entity.Id + ": on cooldown until " + entity.VultureCooldownUntil.ToString("F1") + ", score=0"

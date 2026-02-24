@@ -88,15 +88,16 @@ namespace SPTQuestingBots.BotLogic.Objective
             // This doesn't really need to be updated every frame
             CanSprint = IsAllowedToSprint();
 
-            CheckMinElapsedActionTime();
-
             if (!ObjectiveManager.IsCloseToObjective())
             {
                 RecalculatePath(ObjectiveManager.Position.Value);
                 isIgnoringHearing = false;
+                RestartActionElapsedTime();
 
                 return;
             }
+
+            CheckMinElapsedActionTime();
 
             // Needed in case somebody drops the layer priorities of this mod. Without doing this, SAIN will prevent bots from staying in their ambush spots.
             if (allowedToIgnoreHearing && !isIgnoringHearing)

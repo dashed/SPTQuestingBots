@@ -16,6 +16,7 @@ namespace SPTQuestingBots.BotLogic.Objective
 {
     public class UnlockDoorAction : BehaviorExtensions.GoToPositionAbstractAction
     {
+        private static readonly System.Random SharedRandom = new System.Random();
         private WorldInteractiveObject worldInteractiveObject = null;
         private Vector3? interactionPosition = null;
         private IResult keyGenerationResult = null;
@@ -91,8 +92,7 @@ namespace SPTQuestingBots.BotLogic.Objective
             }
 
             // If the bot does not have the key, roll the dice to see if it should be given the key
-            System.Random random = new System.Random();
-            if (random.Next(1, 100) > ObjectiveManager.ChanceOfHavingKey)
+            if (SharedRandom.Next(1, 100) > ObjectiveManager.ChanceOfHavingKey)
             {
                 LoggingController.LogInfo(
                     BotOwner.GetText() + " does not have the key for door " + worldInteractiveObject.Id + ". Selecting another objective..."

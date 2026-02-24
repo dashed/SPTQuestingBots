@@ -12,6 +12,7 @@ namespace SPTQuestingBots.BotLogic.Objective
     /// </summary>
     internal class LingerAction : BehaviorExtensions.CustomLogicDelayedUpdate
     {
+        private static readonly System.Random SharedRandom = new System.Random();
         private float _pose;
         private float _headScanIntervalMin;
         private float _headScanIntervalMax;
@@ -84,15 +85,13 @@ namespace SPTQuestingBots.BotLogic.Objective
             // Random head scan
             if (Time.time >= _nextScanTime)
             {
-                float angle = (float)(new System.Random().NextDouble() * 2 - 1) * 90f;
+                float angle = (float)(SharedRandom.NextDouble() * 2 - 1) * 90f;
                 Vector3 lookDir = Quaternion.Euler(0, angle, 0) * BotOwner.LookDirection;
                 Vector3 lookPoint = BotOwner.Position + lookDir * 15f;
                 UpdateBotSteering(lookPoint);
 
                 _nextScanTime =
-                    Time.time
-                    + _headScanIntervalMin
-                    + (float)(new System.Random().NextDouble() * (_headScanIntervalMax - _headScanIntervalMin));
+                    Time.time + _headScanIntervalMin + (float)(SharedRandom.NextDouble() * (_headScanIntervalMax - _headScanIntervalMin));
             }
 
             // Maintain pose

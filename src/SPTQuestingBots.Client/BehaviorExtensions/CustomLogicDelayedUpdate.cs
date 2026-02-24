@@ -252,13 +252,8 @@ namespace SPTQuestingBots.BehaviorExtensions
         {
             Vector3 botMovingDirection = BotOwner.GetPlayer.MovementContext.TransformForwardVector;
 
-            foreach (Door door in FindNearbyDoors(maxDistanceMaxAngle.Distance))
+            foreach (Door door in FindNearbyDoors(maxDistanceMaxAngle.Distance, EDoorState.Shut))
             {
-                if (door.DoorState == EDoorState.Open)
-                {
-                    continue;
-                }
-
                 Vector3 doorDirection = door.transform.position - BotOwner.Position;
 
                 // Check if the bot is moving (almost) directly toward the door
@@ -275,11 +270,11 @@ namespace SPTQuestingBots.BehaviorExtensions
             return false;
         }
 
-        public IEnumerable<Door> FindNearbyDoors(float distance)
+        public IEnumerable<Door> FindNearbyDoors(float distance, EDoorState doorState = EDoorState.Open)
         {
             return Singleton<GameWorld>
                 .Instance.GetComponent<Components.LocationData>()
-                .FindAllDoorsNearPosition(BotOwner.Position, distance, EDoorState.Open);
+                .FindAllDoorsNearPosition(BotOwner.Position, distance, doorState);
         }
 
         public bool TryLookToLastCorner()

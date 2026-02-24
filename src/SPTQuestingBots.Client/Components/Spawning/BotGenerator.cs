@@ -50,7 +50,7 @@ namespace SPTQuestingBots.Components.Spawning
         public IReadOnlyCollection<Models.BotSpawnInfo> GetBotGroups() => BotGroups.ToArray();
 
         public int MaxBotsToGenerate => Math.Min(MaxAliveBots, MaxGeneratedBots - GeneratedBotCount);
-        public int GeneratorProgress => 100 * GeneratedBotCount / MaxGeneratedBots;
+        public int GeneratorProgress => MaxGeneratedBots == 0 ? 0 : 100 * GeneratedBotCount / MaxGeneratedBots;
 
         public BotGenerator(string _botTypeName)
         {

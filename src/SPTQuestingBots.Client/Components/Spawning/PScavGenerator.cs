@@ -53,12 +53,8 @@ namespace SPTQuestingBots.Components.Spawning
                 return true;
             }
 
+            // Wait for all PMC groups to finish spawning before allowing PScavs
             if (pmcGenerator.HasRemainingSpawns)
-            {
-                return false;
-            }
-
-            if (!pmcGenerator.CanSpawnAdditionalBots())
             {
                 return false;
             }
@@ -232,7 +228,7 @@ namespace SPTQuestingBots.Components.Spawning
             // Create the spawn schedule
             for (int pScav = 0; pScav < totalPScavs; pScav++)
             {
-                float randomSpawnTime = possibleSpawnTimes[random.Next(0, possibleSpawnTimes.Count - 1)];
+                float randomSpawnTime = possibleSpawnTimes[random.Next(0, possibleSpawnTimes.Count)];
                 float adjustedRandomSpawnTime = randomSpawnTime + random.Next(-1 * maxSpawnTimeAdjustment, maxSpawnTimeAdjustment);
 
                 botSpawnSchedule.Add(

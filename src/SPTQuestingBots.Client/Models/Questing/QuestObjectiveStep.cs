@@ -28,6 +28,8 @@ namespace SPTQuestingBots.Models.Questing
 
     public class QuestObjectiveStep
     {
+        private static readonly System.Random SharedRandom = new System.Random();
+
         [JsonProperty("waitTimeAfterCompleting")]
         public double WaitTimeAfterCompleting { get; set; } = SampleWaitTime();
 
@@ -47,7 +49,7 @@ namespace SPTQuestingBots.Models.Questing
             if (max <= min)
                 return config.DefaultWaitTimeAfterObjectiveCompletion;
 
-            return min + new System.Random().NextDouble() * (max - min);
+            return min + SharedRandom.NextDouble() * (max - min);
         }
 
         [JsonProperty("position")]
@@ -174,8 +176,7 @@ namespace SPTQuestingBots.Models.Questing
 
         public double GetRandomMinElapsedTime()
         {
-            System.Random random = new System.Random();
-            double selectedTime = MinElapsedTime.Min + ((MinElapsedTime.Max - MinElapsedTime.Min) * random.NextDouble());
+            double selectedTime = MinElapsedTime.Min + ((MinElapsedTime.Max - MinElapsedTime.Min) * SharedRandom.NextDouble());
             return Math.Round(selectedTime, 1);
         }
     }
