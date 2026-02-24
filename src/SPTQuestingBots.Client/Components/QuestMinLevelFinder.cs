@@ -39,9 +39,10 @@ namespace SPTQuestingBots.Components
             }
 
             // If this is an EFT quest, check if a cached value exists
-            if (cachedMinLevelsForQuestIds.ContainsKey(quest.Template?.Id))
+            string templateId = quest.Template?.Id;
+            if (templateId != null && cachedMinLevelsForQuestIds.ContainsKey(templateId))
             {
-                return cachedMinLevelsForQuestIds[quest.Template.Id];
+                return cachedMinLevelsForQuestIds[templateId];
             }
 
             UpdateMinLevelFromQuestRequirements(quest);

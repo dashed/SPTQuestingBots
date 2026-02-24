@@ -263,38 +263,44 @@ namespace SPTQuestingBots.Components
                 return;
             }
 
-            foreach (IPlayer ally in playerGroup.Allies.ToArray())
+            if (originalAllies.TryGetValue(player, out IPlayer[] allies))
             {
-                if ((otherPlayer != null) && (ally?.Profile?.Id != otherPlayer.Profile.Id))
+                foreach (IPlayer ally in playerGroup.Allies.ToArray())
                 {
-                    continue;
-                }
-
-                if (!originalAllies[player].Contains(ally))
-                {
-                    LoggingController.LogDebug(player.GetText() + "'s group is no longer allied with " + ally.GetText());
-
-                    BotOwner allyOwner = ally.GetBotOwner();
-                    if (allyOwner != null)
+                    if ((otherPlayer != null) && (ally?.Profile?.Id != otherPlayer.Profile.Id))
                     {
-                        playerGroup.RemoveAlly(allyOwner);
+                        continue;
                     }
 
-                    playerGroup.Allies.Remove(ally);
+                    if (!allies.Contains(ally))
+                    {
+                        LoggingController.LogDebug(player.GetText() + "'s group is no longer allied with " + ally.GetText());
+
+                        BotOwner allyOwner = ally.GetBotOwner();
+                        if (allyOwner != null)
+                        {
+                            playerGroup.RemoveAlly(allyOwner);
+                        }
+
+                        playerGroup.Allies.Remove(ally);
+                    }
                 }
             }
 
-            foreach (IPlayer enemy in originalEnemies[player])
+            if (originalEnemies.TryGetValue(player, out IPlayer[] enemies))
             {
-                if ((otherPlayer != null) && (enemy?.Profile?.Id != otherPlayer.Profile.Id))
+                foreach (IPlayer enemy in enemies)
                 {
-                    continue;
-                }
+                    if ((otherPlayer != null) && (enemy?.Profile?.Id != otherPlayer.Profile.Id))
+                    {
+                        continue;
+                    }
 
-                if (!playerGroup.Enemies.ContainsKey(enemy))
-                {
-                    LoggingController.LogDebug(player.GetText() + "'s group has restored their hostility with " + enemy.GetText());
-                    playerGroup.AddEnemy(enemy, EBotEnemyCause.initCauseEnemy);
+                    if (!playerGroup.Enemies.ContainsKey(enemy))
+                    {
+                        LoggingController.LogDebug(player.GetText() + "'s group has restored their hostility with " + enemy.GetText());
+                        playerGroup.AddEnemy(enemy, EBotEnemyCause.initCauseEnemy);
+                    }
                 }
             }
         }

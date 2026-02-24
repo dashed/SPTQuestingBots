@@ -720,6 +720,125 @@ public class BugFixRegressionTests
 
     #endregion
 
+    #region LocationData FindLockedDoorsNearPosition null-key crash regression test
+
+    [Test]
+    public void LocationData_FindLockedDoorsNearPosition_HasContinueAfterNullRemoval()
+    {
+        // Bug fix: When a WorldInteractiveObject is destroyed (e.g. Backdoor Bandit),
+        // the key becomes null. The code removes the null key from the dictionary but
+        // was missing a 'continue' statement, causing the loop to proceed with the
+        // null object on the next line — NullReferenceException on accessing .DoorState.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Components/LocationData.cs");
+
+        // Verify the null check + remove + continue pattern exists
+        Assert.That(
+            source,
+            Does.Contain("areLockedDoorsUnlocked.Remove(worldInteractiveObject);\n                    continue;"),
+            "FindLockedDoorsNearPosition must have 'continue' immediately after removing null key from areLockedDoorsUnlocked"
+        );
+    }
+
+    #endregion
+
+    #region QuestMinLevelFinder null templateId cache lookup regression test
+
+    [Test]
+    public void QuestMinLevelFinder_FindMinLevel_NullSafeTemplateIdCacheLookup()
+    {
+        // Bug fix: Dictionary.ContainsKey(null) throws ArgumentNullException.
+        // quest.Template?.Id can be null for custom quests (no EFT template).
+        // The old code passed quest.Template?.Id directly to ContainsKey without
+        // null-checking, crashing on any custom quest without a template.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Components/QuestMinLevelFinder.cs");
+
+        // Verify templateId is extracted and null-checked before cache lookup
+        Assert.That(
+            source,
+            Does.Contain("string templateId = quest.Template?.Id;"),
+            "FindMinLevel should extract templateId before using it in ContainsKey"
+        );
+        Assert.That(
+            source,
+            Does.Contain("if (templateId != null && cachedMinLevelsForQuestIds.ContainsKey(templateId))"),
+            "FindMinLevel should null-check templateId before passing to ContainsKey"
+        );
+    }
+
+    #endregion
+
+    #region ConfigController GetJson null lastException regression test
+
+    [Test]
+    public void ConfigController_GetJson_NullChecksLastExceptionBeforeAccess()
+    {
+        // Bug fix: If all 5 retry attempts return null without throwing an exception
+        // (e.g. RequestHandler.GetJson returns null directly), lastException remains null.
+        // The old code accessed lastException.Message unconditionally, causing an NRE.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Controllers/ConfigController.cs");
+
+        // Verify the null check wraps the exception logging
+        Assert.That(
+            source,
+            Does.Contain("if (lastException != null)"),
+            "GetJson should null-check lastException before accessing .Message/.StackTrace"
+        );
+    }
+
+    #endregion
+
+    #region LightkeeperIslandMonitor revertAlliances KeyNotFoundException regression test
+
+    [Test]
+    public void LightkeeperIslandMonitor_RevertAlliances_UsesTryGetValueForAllies()
+    {
+        // Bug fix: revertAlliances accessed originalAllies[player] directly, which throws
+        // KeyNotFoundException if the player was never added to originalAllies. This happens
+        // when a player is added to playersOnIsland but their BotsGroup was null during
+        // setTemporaryAlliances, causing setOriginalAllies to early-return without adding
+        // the player to the dictionary.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Components/LightkeeperIslandMonitor.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("originalAllies.TryGetValue(player, out IPlayer[] allies)"),
+            "revertAlliances should use TryGetValue for originalAllies instead of direct indexer access"
+        );
+        Assert.That(
+            source,
+            Does.Contain("originalEnemies.TryGetValue(player, out IPlayer[] enemies)"),
+            "revertAlliances should use TryGetValue for originalEnemies instead of direct indexer access"
+        );
+    }
+
+    #endregion
+
+    #region LocationData OnDestroy event handler leak regression test
+
+    [Test]
+    public void LocationData_HasOnDestroyThatUnsubscribesSwitchEvents()
+    {
+        // Bug fix: LocationData subscribes to OnDoorStateChanged for each switch in
+        // FindAllSwitches but never unsubscribes. When the GameWorld is destroyed between
+        // raids, the event delegates keep the LocationData instance alive (GC root via
+        // the switch's event invocation list), leaking the entire component and all its
+        // referenced data structures.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Components/LocationData.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("protected void OnDestroy()"),
+            "LocationData should have an OnDestroy method to clean up event subscriptions"
+        );
+        Assert.That(
+            source,
+            Does.Contain("OnDoorStateChanged -= reportSwitchChange"),
+            "LocationData.OnDestroy should unsubscribe from OnDoorStateChanged events"
+        );
+    }
+
+    #endregion
+
     #region Helpers
 
     private static int CountOccurrences(string text, string pattern)

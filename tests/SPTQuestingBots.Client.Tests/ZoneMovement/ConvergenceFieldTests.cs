@@ -50,57 +50,39 @@ public class ConvergenceFieldTests
     }
 
     [Test]
-    public void CachingReturnsSameValue_WithinInterval()
+    public void GetConvergence_DifferentPositions_ProduceDifferentResults()
     {
-        var field = new ConvergenceField(updateIntervalSec: 30f);
+        var field = new ConvergenceField();
+        // Single attraction source at (100, 0, 0)
         var players = new List<Vector3> { new Vector3(100, 0, 0) };
 
-        // First call: computes and caches
-        field.GetConvergence(new Vector3(0, 0, 0), players, 0f, out float x1, out float z1);
+        // Bot A at origin: attraction source is to the east (+X)
+        field.GetConvergence(new Vector3(0, 0, 0), players, 0f, out float xA, out float zA);
 
-        // Second call with different position but within interval: returns cached
-        var differentPlayers = new List<Vector3> { new Vector3(-100, 0, 0) };
-        field.GetConvergence(new Vector3(0, 0, 0), differentPlayers, 10f, out float x2, out float z2);
+        // Bot B at (200, 0, 0): attraction source is to the west (-X)
+        field.GetConvergence(new Vector3(200, 0, 0), players, 0f, out float xB, out float zB);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(x2, Is.EqualTo(x1));
-            Assert.That(z2, Is.EqualTo(z1));
-        });
+        // Directions must be opposite since bots are on opposite sides of the source
+        Assert.That(xA, Is.GreaterThan(0.9f), "Bot A should be pulled toward +X");
+        Assert.That(xB, Is.LessThan(-0.9f), "Bot B should be pulled toward -X");
     }
 
     [Test]
-    public void CacheExpires_AfterInterval()
+    public void GetConvergence_DifferentAttractionPositions_ProduceDifferentResults()
     {
-        var field = new ConvergenceField(updateIntervalSec: 5f);
-        var players1 = new List<Vector3> { new Vector3(100, 0, 0) };
+        var field = new ConvergenceField();
 
+        // First call with attraction at +X
+        var players1 = new List<Vector3> { new Vector3(100, 0, 0) };
         field.GetConvergence(new Vector3(0, 0, 0), players1, 0f, out float x1, out float _);
 
-        // After interval: should recompute with new player position
+        // Second call with attraction at -X (same query position, same time)
         var players2 = new List<Vector3> { new Vector3(-100, 0, 0) };
-        field.GetConvergence(new Vector3(0, 0, 0), players2, 10f, out float x2, out float _2);
+        field.GetConvergence(new Vector3(0, 0, 0), players2, 0f, out float x2, out float _2);
 
-        // First pointed +X, second should point -X
+        // First pointed +X, second should point -X (no caching)
         Assert.That(x1, Is.GreaterThan(0f));
         Assert.That(x2, Is.LessThan(0f));
-    }
-
-    [Test]
-    public void InvalidateCache_ForcesRecomputation()
-    {
-        var field = new ConvergenceField(updateIntervalSec: 1000f);
-        var players1 = new List<Vector3> { new Vector3(100, 0, 0) };
-
-        field.GetConvergence(new Vector3(0, 0, 0), players1, 0f, out float _, out float _2);
-
-        field.InvalidateCache();
-
-        var players2 = new List<Vector3> { new Vector3(0, 0, 100) };
-        field.GetConvergence(new Vector3(0, 0, 0), players2, 0.1f, out float x, out float z);
-
-        // After invalidation, should point toward new player (+Z direction)
-        Assert.That(z, Is.GreaterThan(0.9f));
     }
 
     [Test]

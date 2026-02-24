@@ -58,18 +58,21 @@ namespace SPTQuestingBots.Models.Questing
             : this()
         {
             questObjectiveSteps = steps;
+            UpdateQuestObjectiveStepNumbers();
         }
 
         public QuestObjective(QuestObjectiveStep step)
             : this()
         {
             questObjectiveSteps = new QuestObjectiveStep[1] { step };
+            UpdateQuestObjectiveStepNumbers();
         }
 
         public QuestObjective(Vector3 position)
             : this()
         {
             questObjectiveSteps = new QuestObjectiveStep[1] { new QuestObjectiveStep(position) };
+            UpdateQuestObjectiveStepNumbers();
         }
 
         public override string ToString()

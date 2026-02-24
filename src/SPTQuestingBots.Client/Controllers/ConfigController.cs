@@ -226,8 +226,12 @@ namespace SPTQuestingBots.Controllers
 
             if (json == null)
             {
-                LoggingController.LogError(lastException.Message);
-                LoggingController.LogError(lastException.StackTrace);
+                if (lastException != null)
+                {
+                    LoggingController.LogError(lastException.Message);
+                    LoggingController.LogError(lastException.StackTrace);
+                }
+
                 LoggingController.LogErrorToServerConsole(errorMessage);
             }
 

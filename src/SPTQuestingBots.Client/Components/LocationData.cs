@@ -99,6 +99,18 @@ namespace SPTQuestingBots.Components
             BotObjectiveManagerFactory.Clear();
         }
 
+        protected void OnDestroy()
+        {
+            // Unsubscribe from switch events to prevent event handler leaks
+            foreach (var sw in switches.Values)
+            {
+                if (sw != null)
+                {
+                    sw.OnDoorStateChanged -= reportSwitchChange;
+                }
+            }
+        }
+
         protected void Update()
         {
             handleCustomQuestKeypress();
@@ -331,6 +343,7 @@ namespace SPTQuestingBots.Components
                 if (worldInteractiveObject == null)
                 {
                     areLockedDoorsUnlocked.Remove(worldInteractiveObject);
+                    continue;
                 }
 
                 // Check if the door has been unlocked since this method was previously called

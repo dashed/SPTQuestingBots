@@ -148,6 +148,7 @@ public sealed class SquadRegistry
 
         squad.Members.Clear();
         squad.Leader = null;
+        squad.IsActive = false;
 
         // Clean BSG group mapping
         CleanBsgMapping(squad.Id);

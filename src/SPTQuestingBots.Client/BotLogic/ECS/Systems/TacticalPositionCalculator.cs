@@ -272,8 +272,8 @@ public static class TacticalPositionCalculator
 
         float nx = dx / len;
         float nz = dz / len;
-        x = bossX + nx * trailDist + (-nz) * lateralOffset;
+        x = bossX - nx * trailDist + (-nz) * lateralOffset;
         y = bossY;
-        z = bossZ + nz * trailDist + nx * lateralOffset;
+        z = bossZ - nz * trailDist + nx * lateralOffset;
     }
 }

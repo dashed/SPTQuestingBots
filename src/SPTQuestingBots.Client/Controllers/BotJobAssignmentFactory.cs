@@ -255,6 +255,7 @@ namespace SPTQuestingBots.Controllers
                     continue;
 
                 var assignments = BotLogic.ECS.BotEntityBridge.GetJobAssignments(owner);
+                bool botCounted = false;
                 for (int i = 0; i < assignments.Count; i++)
                 {
                     var a = assignments[i];
@@ -267,8 +268,14 @@ namespace SPTQuestingBots.Controllers
                         && a.QuestAssignment == quest
                     )
                     {
-                        num++;
+                        botCounted = true;
+                        break;
                     }
+                }
+
+                if (botCounted)
+                {
+                    num++;
                 }
             }
 
@@ -513,7 +520,7 @@ namespace SPTQuestingBots.Controllers
         public static bool HasBotBeingDoingQuestTooLong(this Quest quest, BotOwner bot, out double? time)
         {
             time = quest.ElapsedTimeSinceBotStarted(bot);
-            if (time.HasValue && (time >= ConfigController.Config.Questing.BotQuestingRequirements.MaxTimePerQuest))
+            if (time.HasValue && (time >= quest.MaxTimeOnQuest))
             {
                 return true;
             }

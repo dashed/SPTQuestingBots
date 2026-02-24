@@ -234,10 +234,10 @@ public class TacticalPositionCalculatorTests
     {
         // Boss at (0,0,0), objective at (10,0,0)
         // Direction to obj = (1,0,0), trail dist = 5
-        // Position = boss + (1,0,0)*5 + perp*lateral
+        // Escort trails BEHIND boss: boss - direction * trailDist = (0,0,0) - (1,0,0)*5 = (-5,0,0)
         TacticalPositionCalculator.ComputeEscortPosition(0f, 0f, 0f, 10f, 0f, 5f, 0f, out float x, out float y, out float z);
 
-        Assert.AreEqual(5f, x, 0.01f);
+        Assert.AreEqual(-5f, x, 0.01f);
         Assert.AreEqual(0f, y, 0.01f);
         Assert.AreEqual(0f, z, 0.01f);
     }
@@ -246,14 +246,33 @@ public class TacticalPositionCalculatorTests
     public void ComputeEscortPosition_WithLateralOffset()
     {
         // Boss at (0,0,0), objective at (10,0,0)
-        // Direction (1,0,0), perp (-0, 1) → lateral offset of 2
+        // Direction (1,0,0), trail BEHIND = boss - dir * 5 = (-5, 0, 0)
+        // Perp lateral: (-nz) * lateral on X, nx * lateral on Z = (0)*2, (1)*2 = (0, 2)
+        // Final: (-5 + 0, 0, 0 + 2) = (-5, 0, 2)
         TacticalPositionCalculator.ComputeEscortPosition(0f, 0f, 0f, 10f, 0f, 5f, 2f, out float x, out float y, out float z);
 
-        Assert.AreEqual(5f, x, 0.01f);
+        Assert.AreEqual(-5f, x, 0.01f);
         Assert.AreEqual(0f, y, 0.01f);
-        // (-nz) * lateral = -(0) * 2 = 0 for z, plus nz * lateral = 0
-        // Actually: z = bossZ + nz * trail + nx * lateral = 0 + 0*5 + 1*2 = 2
         Assert.AreEqual(2f, z, 0.01f);
+    }
+
+    [Test]
+    public void ComputeEscortPosition_DiagonalDirection_TrailsBehind()
+    {
+        // Boss at (10,0,10), objective at (20,0,20)
+        // Direction to obj = normalized (10,0,10) = (0.707,0,0.707)
+        // Escort trails BEHIND: boss - dir * 5 = (10 - 3.535, 0, 10 - 3.535) = (6.465, 0, 6.465)
+        TacticalPositionCalculator.ComputeEscortPosition(10f, 0f, 10f, 20f, 20f, 5f, 0f, out float x, out float y, out float z);
+
+        float expected = 10f - 5f * 0.7071f;
+        Assert.AreEqual(expected, x, 0.05f);
+        Assert.AreEqual(0f, y, 0.01f);
+        Assert.AreEqual(expected, z, 0.05f);
+
+        // Escort should be farther from objective than boss is
+        float bossDistSq = (20f - 10f) * (20f - 10f) + (20f - 10f) * (20f - 10f);
+        float escortDistSq = (20f - x) * (20f - x) + (20f - z) * (20f - z);
+        Assert.Greater(escortDistSq, bossDistSq, "Escort must be farther from objective than boss (trailing behind)");
     }
 
     [Test]

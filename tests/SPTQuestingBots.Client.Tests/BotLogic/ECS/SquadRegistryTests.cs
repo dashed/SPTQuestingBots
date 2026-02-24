@@ -132,6 +132,17 @@ public class SquadRegistryTests
     }
 
     [Test]
+    public void Remove_SetsIsActiveToFalse()
+    {
+        var squad = _registry.Add(2, 4);
+        Assert.IsTrue(squad.IsActive);
+
+        _registry.Remove(squad);
+
+        Assert.IsFalse(squad.IsActive);
+    }
+
+    [Test]
     public void Remove_AlreadyRemoved_ReturnsFalse()
     {
         var squad = _registry.Add(2, 4);

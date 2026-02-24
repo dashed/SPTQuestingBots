@@ -8,8 +8,8 @@ namespace SPTQuestingBots.ZoneMovement.Fields;
 
 /// <summary>
 /// Computes a dynamic convergence vector that pulls bots toward activity hotspots.
-/// The field is recomputed periodically (default: every 30 seconds) and cached
-/// between updates to avoid per-frame recalculation.
+/// Each query is position-dependent (different bots at different positions get
+/// different directions), so the result is always freshly computed.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -28,21 +28,14 @@ namespace SPTQuestingBots.ZoneMovement.Fields;
 /// </remarks>
 public sealed class ConvergenceField
 {
-    private readonly float updateInterval;
     private readonly float radius;
     private readonly float radiusSq;
     private readonly float force;
-    private float lastUpdateTime = float.NegativeInfinity;
-    private float cachedX;
-    private float cachedZ;
 
     /// <summary>
     /// Creates a new convergence field with the specified parameters.
     /// </summary>
-    /// <param name="updateIntervalSec">
-    /// Minimum seconds between recomputations. Between updates, the cached
-    /// direction is returned. Default is 30 seconds (matching Phobos).
-    /// </param>
+    /// <param name="updateIntervalSec">Kept for API compatibility (no longer used).</param>
     /// <param name="radius">
     /// Maximum distance (meters) at which attraction sources affect bots. Sources beyond
     /// this distance are ignored. Default is <c>float.MaxValue</c> (no limit).
@@ -52,21 +45,17 @@ public sealed class ConvergenceField
     /// </param>
     public ConvergenceField(float updateIntervalSec = 30f, float radius = float.MaxValue, float force = 1.0f)
     {
-        updateInterval = updateIntervalSec;
         this.radius = radius;
         this.radiusSq = radius < float.MaxValue / 2f ? radius * radius : float.MaxValue;
         this.force = force;
     }
 
     /// <summary>
-    /// Returns the convergence direction at a given position, using the cached
-    /// value if the update interval hasn't elapsed.
+    /// Returns the convergence direction at a given position.
     /// </summary>
     /// <param name="position">Query position (world space).</param>
     /// <param name="attractionPositions">Positions to attract toward (e.g. bot positions for clustering).</param>
-    /// <param name="currentTime">
-    /// Current game time (e.g. <c>Time.time</c>). Used to check if the cache is stale.
-    /// </param>
+    /// <param name="currentTime">Current game time (kept for API compatibility).</param>
     /// <param name="outX">X component of the normalized convergence direction.</param>
     /// <param name="outZ">Z component of the normalized convergence direction.</param>
     public void GetConvergence(
@@ -77,41 +66,17 @@ public sealed class ConvergenceField
         out float outZ
     )
     {
-        if (currentTime - lastUpdateTime < updateInterval)
-        {
-            outX = cachedX;
-            outZ = cachedZ;
-            return;
-        }
-
         ComputeConvergence(position, attractionPositions, out outX, out outZ);
-        cachedX = outX;
-        cachedZ = outZ;
-        lastUpdateTime = currentTime;
-        LoggingController.LogDebug(
-            "[ConvergenceField] Recomputed at t="
-                + currentTime.ToString("F1")
-                + " sources="
-                + (attractionPositions?.Count ?? 0)
-                + " dir=("
-                + outX.ToString("F2")
-                + ","
-                + outZ.ToString("F2")
-                + ")"
-        );
     }
 
     /// <summary>
     /// Returns the convergence direction at a given position, including combat event pull.
-    /// Uses the cached value if the update interval hasn't elapsed.
     /// </summary>
     /// <param name="position">Query position (world space).</param>
     /// <param name="attractionPositions">Positions to attract toward (e.g. bot positions for clustering).</param>
     /// <param name="combatPull">Array of pre-computed combat pull points.</param>
     /// <param name="combatPullCount">Number of valid entries in <paramref name="combatPull"/>.</param>
-    /// <param name="currentTime">
-    /// Current game time (e.g. <c>Time.time</c>). Used to check if the cache is stale.
-    /// </param>
+    /// <param name="currentTime">Current game time (kept for API compatibility).</param>
     /// <param name="outX">X component of the normalized convergence direction.</param>
     /// <param name="outZ">Z component of the normalized convergence direction.</param>
     public void GetConvergence(
@@ -124,30 +89,7 @@ public sealed class ConvergenceField
         out float outZ
     )
     {
-        if (currentTime - lastUpdateTime < updateInterval)
-        {
-            outX = cachedX;
-            outZ = cachedZ;
-            return;
-        }
-
         ComputeConvergence(position, attractionPositions, combatPull, combatPullCount, out outX, out outZ);
-        cachedX = outX;
-        cachedZ = outZ;
-        lastUpdateTime = currentTime;
-        LoggingController.LogDebug(
-            "[ConvergenceField] Recomputed at t="
-                + currentTime.ToString("F1")
-                + " sources="
-                + (attractionPositions?.Count ?? 0)
-                + " combat="
-                + combatPullCount
-                + " dir=("
-                + outX.ToString("F2")
-                + ","
-                + outZ.ToString("F2")
-                + ")"
-        );
     }
 
     /// <summary>
@@ -249,15 +191,5 @@ public sealed class ConvergenceField
             outX = 0f;
             outZ = 0f;
         }
-    }
-
-    /// <summary>
-    /// Forces the next call to <see cref="GetConvergence(Vector3, IReadOnlyList{Vector3}, float, out float, out float)"/>
-    /// to recompute rather than returning the cached value.
-    /// </summary>
-    public void InvalidateCache()
-    {
-        lastUpdateTime = float.NegativeInfinity;
-        LoggingController.LogDebug("[ConvergenceField] Cache invalidated");
     }
 }

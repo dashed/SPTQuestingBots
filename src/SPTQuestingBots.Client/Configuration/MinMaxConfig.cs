@@ -41,7 +41,9 @@ namespace SPTQuestingBots.Configuration
 
         public static MinMaxConfig operator /(MinMaxConfig a, MinMaxConfig b)
         {
-            return new MinMaxConfig(Math.Round(a.Min / b.Min), Math.Round(a.Max / b.Max));
+            double min = b.Min == 0 ? 0 : Math.Round(a.Min / b.Min);
+            double max = b.Max == 0 ? 0 : Math.Round(a.Max / b.Max);
+            return new MinMaxConfig(min, max);
         }
 
         public static MinMaxConfig operator +(MinMaxConfig a, double b)
@@ -61,6 +63,8 @@ namespace SPTQuestingBots.Configuration
 
         public static MinMaxConfig operator /(MinMaxConfig a, double b)
         {
+            if (b == 0)
+                return new MinMaxConfig(0, 0);
             return new MinMaxConfig(Math.Round(a.Min / b), Math.Round(a.Max / b));
         }
     }
