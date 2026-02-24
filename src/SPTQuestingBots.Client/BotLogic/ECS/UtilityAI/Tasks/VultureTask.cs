@@ -59,37 +59,16 @@ public sealed class VultureTask : QuestUtilityTask
 
     internal static float Score(BotEntity entity, int courageThreshold, float detectionRange)
     {
-        // No nearby combat event → no score
-        if (!entity.HasNearbyEvent)
-        {
-            LoggingController.LogDebug("[VultureTask] Entity " + entity.Id + ": no nearby event, score=0");
-            return 0f;
-        }
-
-        // In combat → don't vulture (already fighting)
+        // In combat → don't vulture (already fighting). Cancels even active phases.
         if (entity.IsInCombat)
         {
             LoggingController.LogDebug("[VultureTask] Entity " + entity.Id + ": in combat, score=0");
             return 0f;
         }
 
-        // In a boss zone → too dangerous
-        if (entity.IsInBossZone)
-        {
-            LoggingController.LogDebug("[VultureTask] Entity " + entity.Id + ": in boss zone, score=0");
-            return 0f;
-        }
-
-        // On cooldown → recently rejected
-        if (entity.VultureCooldownUntil > entity.CurrentGameTime)
-        {
-            LoggingController.LogDebug(
-                "[VultureTask] Entity " + entity.Id + ": on cooldown until " + entity.VultureCooldownUntil.ToString("F1") + ", score=0"
-            );
-            return 0f;
-        }
-
-        // Already vulturing → maintain current phase with high score
+        // Already vulturing → maintain current phase with high score.
+        // Must check BEFORE HasNearbyEvent: the nearby event may expire while
+        // the bot is mid-approach, but the committed phase should persist.
         if (entity.VulturePhase != Systems.VulturePhase.None && entity.VulturePhase != Systems.VulturePhase.Complete)
         {
             LoggingController.LogDebug(
@@ -101,6 +80,29 @@ public sealed class VultureTask : QuestUtilityTask
                     + MaxBaseScore.ToString("F2")
             );
             return MaxBaseScore;
+        }
+
+        // No nearby combat event → no score (only blocks NEW activation)
+        if (!entity.HasNearbyEvent)
+        {
+            LoggingController.LogDebug("[VultureTask] Entity " + entity.Id + ": no nearby event, score=0");
+            return 0f;
+        }
+
+        // In a boss zone → too dangerous (only blocks NEW activation)
+        if (entity.IsInBossZone)
+        {
+            LoggingController.LogDebug("[VultureTask] Entity " + entity.Id + ": in boss zone, score=0");
+            return 0f;
+        }
+
+        // On cooldown → recently rejected (only blocks NEW activation)
+        if (entity.VultureCooldownUntil > entity.CurrentGameTime)
+        {
+            LoggingController.LogDebug(
+                "[VultureTask] Entity " + entity.Id + ": on cooldown until " + entity.VultureCooldownUntil.ToString("F1") + ", score=0"
+            );
+            return 0f;
         }
 
         // Intensity must meet courage threshold

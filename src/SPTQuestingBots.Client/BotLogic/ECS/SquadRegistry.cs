@@ -298,6 +298,7 @@ public sealed class SquadRegistry
                 // Fall back to first member if all are inactive
                 squad.Leader = newLeader ?? squad.Members[0];
                 squad.Leader.SquadRole = SquadRole.Leader;
+                squad.Leader.HasTacticalPosition = false;
                 LoggingController.LogInfo("[SquadRegistry] Squad " + squad.Id + " leader reassigned to entity " + squad.Leader.Id);
             }
             else
