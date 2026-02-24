@@ -154,10 +154,9 @@ public class BsgBotRegistryTests
     }
 
     [Test]
-    public void GetByBsgId_AfterDenseRemove_StillReturnsSameEntity()
+    public void GetByBsgId_AfterDenseRemove_IsCleared()
     {
-        // Remove from dense list does NOT auto-clear the BsgId sparse array.
-        // The BsgId mapping persists until explicitly cleared via ClearBsgId.
+        // Remove() now auto-clears the BsgId sparse array using entity.BsgId.
         var entity = _registry.Add(42);
         entity.BotType = BotType.PMC;
 
@@ -165,8 +164,8 @@ public class BsgBotRegistryTests
 
         // Entity removed from dense list
         Assert.That(_registry.Count, Is.EqualTo(0));
-        // But BsgId mapping still points to the object
-        Assert.That(_registry.GetByBsgId(42), Is.SameAs(entity));
+        // BsgId mapping is auto-cleared by Remove()
+        Assert.That(_registry.GetByBsgId(42), Is.Null);
     }
 
     [Test]

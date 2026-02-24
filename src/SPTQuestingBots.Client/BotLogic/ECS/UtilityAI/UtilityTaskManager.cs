@@ -115,6 +115,13 @@ public class UtilityTaskManager
         {
             nextTaskOrdinal = assignment.Ordinal;
             highestScore = entity.TaskScores[assignment.Ordinal] + assignment.Task.Hysteresis;
+
+            // Guard against NaN poisoning: NaN comparisons always return false in IEEE 754,
+            // which causes every task to bypass the <= guard. Reset to 0 so selection works.
+            if (float.IsNaN(highestScore))
+            {
+                highestScore = 0f;
+            }
         }
 
         UtilityTask nextTask = null;
@@ -122,7 +129,7 @@ public class UtilityTaskManager
         for (int j = 0; j < Tasks.Length; j++)
         {
             float score = entity.TaskScores[j];
-            if (score <= highestScore)
+            if (float.IsNaN(score) || score <= highestScore)
             {
                 continue;
             }

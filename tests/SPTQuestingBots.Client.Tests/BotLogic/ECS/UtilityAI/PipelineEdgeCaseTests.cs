@@ -298,11 +298,10 @@ public class CrossTaskManagerAssignmentTests
     }
 
     [Test]
-    public void StaleAssignment_FromLargerTaskManager_MayReadOldScore()
+    public void StaleAssignment_FromLargerTaskManager_FixedByRemoveEntity()
     {
-        // Bug scenario: entity switches from a 14-task manager to a 2-task manager.
-        // The TaskAssignment from the old manager has ordinal > 1, and the
-        // TaskScores array is still 14 elements. PickTask reads the stale score.
+        // Fixed scenario: entity switches from a 14-task manager to a 2-task manager.
+        // The caller (BotObjectiveLayer) now clears the stale assignment before switching.
         var questTaskA = new TestTask(0.0f);
         var questTaskB = new TestTask(0.0f);
         var questTaskC = new TestTask(0.0f); // ordinal=2
@@ -318,7 +317,12 @@ public class CrossTaskManagerAssignmentTests
         Assert.AreSame(questTaskC, entity.TaskAssignment.Task);
         Assert.AreEqual(2, entity.TaskAssignment.Ordinal);
 
-        // Now switch to a 2-task "follower" manager WITHOUT clearing assignment
+        // FIX: clear stale assignment before switching managers
+        // (BotObjectiveLayer does this when _lastManagerWasFollower changes)
+        questManager.RemoveEntity(entity);
+        Assert.IsNull(entity.TaskAssignment.Task);
+
+        // Now switch to a 2-task "follower" manager
         var followerTask1 = new TestTask(0.0f);
         var followerTask2 = new TestTask(0.0f);
         var followerManager = new UtilityTaskManager(new UtilityTask[] { followerTask1, followerTask2 });
@@ -327,29 +331,11 @@ public class CrossTaskManagerAssignmentTests
         followerTask1.SetScore(0, 0.4f);
         followerTask2.SetScore(0, 0.5f);
 
-        // Note: entity.TaskScores still has 3 slots. The stale score at [2] = 0.9
-        // PickTask will seed highestScore from TaskScores[2] + questTaskC.Hysteresis
-        // Since questTaskC has hysteresis=0, highestScore = 0.9
-        // followerTask2 scores 0.5 which is < 0.9, so NO follower task gets picked.
+        // Score and pick — no stale assignment to interfere
+        followerManager.ScoreAndPick(entity);
 
-        // Score ordinals 0 and 1 only (follower manager has 2 tasks)
-        for (int i = 0; i < followerManager.Tasks.Length; i++)
-        {
-            followerManager.Tasks[i].ScoreEntity(i, entity);
-        }
-
-        // PickTask reads the stale assignment
-        followerManager.PickTask(entity);
-
-        // Document the bug: the stale quest assignment persists because
-        // the follower scores (0.4, 0.5) can't beat the stale score (0.9)
-        // This test documents the behavior — it's a known issue.
-        // The current task is still questTaskC even though we're in "follower" mode.
-        Assert.AreSame(
-            questTaskC,
-            entity.TaskAssignment.Task,
-            "Bug: Stale quest assignment persists when switching to follower task manager"
-        );
+        // followerTask2 wins with highest score 0.5
+        Assert.AreSame(followerTask2, entity.TaskAssignment.Task, "After clearing stale assignment, follower task manager picks correctly");
     }
 
     [Test]
@@ -438,7 +424,7 @@ public class UtilityTaskManagerEdgeCaseTests
     [Test]
     public void PickTask_NaNScore_DoesNotWinSelection()
     {
-        // NaN comparisons always return false, so NaN should not "win"
+        // NaN scores are explicitly skipped by the IsNaN guard
         var taskA = new TestTask(0f);
         var taskB = new TestTask(0f);
         var manager = new UtilityTaskManager(new UtilityTask[] { taskA, taskB });
@@ -450,18 +436,33 @@ public class UtilityTaskManagerEdgeCaseTests
 
         manager.ScoreAndPick(entity);
 
-        // TaskB should win because NaN > 0 returns false
+        // TaskB should win because NaN is explicitly skipped
         Assert.AreSame(taskB, entity.TaskAssignment.Task);
     }
 
     [Test]
-    public void PickTask_CurrentTaskScoreNaN_WithHysteresis_NaNPoisonsGuard()
+    public void PickTask_AllNaNScores_NoTaskAssigned()
     {
-        // IEEE 754: NaN comparisons always return false.
-        // PickTask guard: `score <= highestScore` — when highestScore = NaN,
-        // the guard is false for every finite score, so every finite-scored
-        // task bypasses the guard and overwrites the leader.
-        // The last finite-scored task in array order wins.
+        // When all scores are NaN, no task should be assigned
+        var taskA = new TestTask(0f);
+        var taskB = new TestTask(0f);
+        var manager = new UtilityTaskManager(new UtilityTask[] { taskA, taskB });
+        var entity = new BotEntity(0);
+        entity.TaskScores = new float[2];
+
+        taskA.SetScore(0, float.NaN);
+        taskB.SetScore(0, float.NaN);
+
+        manager.ScoreAndPick(entity);
+
+        Assert.IsNull(entity.TaskAssignment.Task, "All-NaN scores should leave no task assigned");
+    }
+
+    [Test]
+    public void PickTask_CurrentTaskScoreNaN_WithHysteresis_HandledGracefully()
+    {
+        // Fixed: NaN in current task score is guarded — highestScore resets to 0,
+        // and NaN scores in the loop are skipped. The highest finite-scored task wins.
         var taskA = new TestTask(0.2f);
         var taskB = new TestTask(0f);
         var manager = new UtilityTaskManager(new UtilityTask[] { taskA, taskB });
@@ -474,18 +475,17 @@ public class UtilityTaskManagerEdgeCaseTests
         manager.ScoreAndPick(entity);
         Assert.AreSame(taskA, entity.TaskAssignment.Task);
 
-        // Now taskA's score becomes NaN (entity.TaskScores[1] stays 0.3 from first pass)
+        // Now taskA's score becomes NaN
         entity.TaskScores[0] = float.NaN;
 
-        // PickTask trace:
-        //   highestScore = NaN + 0.2 = NaN, nextTaskOrdinal = 0
-        //   j=0: NaN <= NaN → false → nextTask=taskA, highestScore=NaN
-        //   j=1: 0.3 <= NaN → false → nextTask=taskB, highestScore=0.3
-        // Result: taskB wins because NaN poisons the <= guard
+        // PickTask trace (fixed):
+        //   highestScore = NaN + 0.2 = NaN → reset to 0
+        //   j=0: NaN → skipped (IsNaN guard)
+        //   j=1: 0.3 > 0 → nextTask=taskB, highestScore=0.3
+        // Result: taskB correctly wins as the highest finite-scored task
         manager.PickTask(entity);
 
-        // Bug: NaN in current score causes unconditional switch to last finite task
-        Assert.AreSame(taskB, entity.TaskAssignment.Task, "NaN poisons the <= guard — last finite-scored task wins");
+        Assert.AreSame(taskB, entity.TaskAssignment.Task, "NaN-scored task should be skipped; highest finite task wins");
     }
 
     [Test]
@@ -620,22 +620,42 @@ public class BotRegistryEdgeCaseTests
         var entity = registry.Add(0);
 
         Assert.AreSame(entity, registry.GetByBsgId(0));
+        Assert.AreEqual(0, entity.BsgId);
     }
 
     [Test]
-    public void Remove_DoesNotClearBsgId()
+    public void Add_WithoutBsgId_HasNegativeBsgId()
     {
-        // BotRegistry.Remove() does NOT clear the BSG ID mapping.
-        // BotEntityBridge is responsible for calling ClearBsgId() separately.
+        var registry = new BotRegistry();
+        var entity = registry.Add();
+
+        Assert.AreEqual(-1, entity.BsgId, "Entities added without BSG ID should have BsgId=-1");
+    }
+
+    [Test]
+    public void Remove_WithoutBsgId_DoesNotThrow()
+    {
+        var registry = new BotRegistry();
+        var entity = registry.Add();
+        Assert.AreEqual(-1, entity.BsgId);
+
+        Assert.DoesNotThrow(() => registry.Remove(entity));
+        Assert.AreEqual(0, registry.Count);
+    }
+
+    [Test]
+    public void Remove_AutoClearsBsgId()
+    {
+        // Fixed: BotRegistry.Remove() now auto-clears the BSG ID mapping
+        // using the BsgId field stored on the entity.
         var registry = new BotRegistry();
         var entity = registry.Add(42);
+        Assert.AreEqual(42, entity.BsgId);
 
         registry.Remove(entity);
 
-        // The sparse array still has a reference to the removed entity
-        // This is by design — ClearBsgId must be called explicitly
-        var staleRef = registry.GetByBsgId(42);
-        Assert.AreSame(entity, staleRef, "Remove() intentionally does not clear BSG ID mapping");
+        // The BSG ID mapping is cleared automatically
+        Assert.IsNull(registry.GetByBsgId(42), "Remove() should auto-clear BSG ID mapping");
     }
 
     [Test]
@@ -657,7 +677,7 @@ public class BotRegistryEdgeCaseTests
         var registry = new BotRegistry();
         var e1 = registry.Add(42);
         registry.Remove(e1);
-        registry.ClearBsgId(42);
+        // No need to call ClearBsgId manually — Remove() does it automatically
 
         var e2 = registry.Add(42);
         Assert.AreSame(e2, registry.GetByBsgId(42));

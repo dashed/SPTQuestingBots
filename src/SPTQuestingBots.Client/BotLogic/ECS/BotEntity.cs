@@ -16,6 +16,12 @@ public sealed class BotEntity : IEquatable<BotEntity>
     /// <summary>Stable slot ID assigned by BotRegistry. Recycled on removal.</summary>
     public readonly int Id;
 
+    /// <summary>
+    /// External BSG ID (e.g. BotOwner.Id) for sparse-array reverse lookup.
+    /// Set by <see cref="BotRegistry.Add(int)"/>. -1 means no BSG ID assigned.
+    /// </summary>
+    public int BsgId = -1;
+
     /// <summary>Whether this entity is currently active in the world.</summary>
     public bool IsActive;
 

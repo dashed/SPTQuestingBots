@@ -20,6 +20,13 @@ namespace SPTQuestingBots.BotLogic.Objective
         private static UtilityTaskManager _taskManager;
         private static UtilityTaskManager _followerTaskManager;
 
+        /// <summary>
+        /// Tracks which task manager last assigned a task to the current entity.
+        /// Prevents stale TaskAssignment from a larger manager poisoning PickTask
+        /// when switching to a smaller manager (ordinal out of range, stale scores).
+        /// </summary>
+        private bool _lastManagerWasFollower;
+
         public BotObjectiveLayer(BotOwner _botOwner, int _priority)
             : base(_botOwner, _priority, 25) { }
 
@@ -199,6 +206,14 @@ namespace SPTQuestingBots.BotLogic.Objective
             if (!BotEntityBridge.TryGetEntity(BotOwner, out var entity))
                 return false;
 
+            // Clear stale assignment from quest manager to prevent ordinal/score mismatch
+            if (!_lastManagerWasFollower && entity.TaskAssignment.Task != null)
+            {
+                entity.TaskAssignment.Task.Deactivate(entity);
+                entity.TaskAssignment = default;
+            }
+            _lastManagerWasFollower = true;
+
             // Ensure TaskScores array is allocated for follower tasks
             if (entity.TaskScores == null || entity.TaskScores.Length < SquadTaskFactory.TaskCount)
                 entity.TaskScores = new float[SquadTaskFactory.TaskCount];
@@ -235,6 +250,14 @@ namespace SPTQuestingBots.BotLogic.Objective
 
             if (!BotEntityBridge.TryGetEntity(BotOwner, out var entity))
                 return false;
+
+            // Clear stale assignment from follower manager to prevent ordinal/score mismatch
+            if (_lastManagerWasFollower && entity.TaskAssignment.Task != null)
+            {
+                entity.TaskAssignment.Task.Deactivate(entity);
+                entity.TaskAssignment = default;
+            }
+            _lastManagerWasFollower = false;
 
             // Ensure TaskScores array is allocated and correctly sized
             if (entity.TaskScores == null || entity.TaskScores.Length < QuestTaskFactory.TaskCount)

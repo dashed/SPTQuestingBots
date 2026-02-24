@@ -73,6 +73,7 @@ public sealed class BotRegistry
     public BotEntity Add(int bsgId)
     {
         var entity = Add();
+        entity.BsgId = bsgId;
 
         // Grow sparse array if needed
         while (_bsgIdToEntity.Count <= bsgId)
@@ -158,6 +159,12 @@ public sealed class BotRegistry
         if (!slot.HasValue)
         {
             return false;
+        }
+
+        // Clear BSG ID sparse array mapping if one was assigned
+        if (entity.BsgId >= 0)
+        {
+            ClearBsgId(entity.BsgId);
         }
 
         var removedIndex = slot.Value;
