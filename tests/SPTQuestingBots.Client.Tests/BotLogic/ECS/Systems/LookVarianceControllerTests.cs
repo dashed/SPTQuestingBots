@@ -62,7 +62,7 @@ public class LookVarianceControllerTests
         _entity.NextPoiGlanceTime = 0f;
         float currentTime = 10f;
 
-        LookVarianceController.TryGetLookTarget(_entity, currentTime, 5f, 15f, 8f, 20f, 225f, out _, out _);
+        LookVarianceController.TryGetLookTarget(_entity, currentTime, 5f, 15f, 8f, 20f, 225f, 1.0f, out _, out _);
 
         // Timer should have been reset to currentTime + interval (between 8 and 20)
         Assert.That(_entity.NextPoiGlanceTime, Is.GreaterThanOrEqualTo(currentTime + 8f));
@@ -81,7 +81,18 @@ public class LookVarianceControllerTests
 
         float squadRangeSqr = 15f * 15f; // 225
 
-        bool result = LookVarianceController.TryGetLookTarget(_entity, 10f, 5f, 15f, 8f, 20f, squadRangeSqr, out float tx, out float tz);
+        bool result = LookVarianceController.TryGetLookTarget(
+            _entity,
+            10f,
+            5f,
+            15f,
+            8f,
+            20f,
+            squadRangeSqr,
+            1.0f,
+            out float tx,
+            out float tz
+        );
 
         Assert.That(result, Is.True);
         Assert.That(tx, Is.EqualTo(105f));
@@ -102,7 +113,18 @@ public class LookVarianceControllerTests
 
         float squadRangeSqr = 15f * 15f;
 
-        bool result = LookVarianceController.TryGetLookTarget(_entity, 10f, 5f, 15f, 8f, 20f, squadRangeSqr, out float tx, out float tz);
+        bool result = LookVarianceController.TryGetLookTarget(
+            _entity,
+            10f,
+            5f,
+            15f,
+            8f,
+            20f,
+            squadRangeSqr,
+            1.0f,
+            out float tx,
+            out float tz
+        );
 
         Assert.That(result, Is.False);
     }
@@ -148,7 +170,7 @@ public class LookVarianceControllerTests
         _entity.NextFlankCheckTime = 0f;
         float currentTime = 10f;
 
-        LookVarianceController.TryGetLookTarget(_entity, currentTime, 5f, 15f, 8f, 20f, 225f, out _, out _);
+        LookVarianceController.TryGetLookTarget(_entity, currentTime, 5f, 15f, 8f, 20f, 225f, 1.0f, out _, out _);
 
         Assert.That(_entity.NextFlankCheckTime, Is.GreaterThanOrEqualTo(currentTime + 5f));
         Assert.That(_entity.NextFlankCheckTime, Is.LessThanOrEqualTo(currentTime + 15f));
@@ -211,6 +233,55 @@ public class LookVarianceControllerTests
         // Should be combat event position, not boss position
         Assert.That(tx, Is.EqualTo(200f));
         Assert.That(tz, Is.EqualTo(200f));
+    }
+
+    [Test]
+    public void TryGetLookTarget_CombatEventGlance_ZeroChanceNeverGlances()
+    {
+        _entity.HasNearbyEvent = true;
+        _entity.NearbyEventX = 200f;
+        _entity.NearbyEventZ = 200f;
+        _entity.NextPoiGlanceTime = 0f;
+        // Disable flank/squad so we can isolate the chance check
+        _entity.NextFlankCheckTime = 999f;
+
+        // With chance=0, combat event glance should never fire
+        bool result = LookVarianceController.TryGetLookTarget(_entity, 10f, 5f, 15f, 8f, 20f, 225f, 0.0f, out float tx, out float tz);
+
+        Assert.That(result, Is.False);
+    }
+
+    [Test]
+    public void TryGetLookTarget_CombatEventGlance_FullChanceAlwaysGlances()
+    {
+        _entity.HasNearbyEvent = true;
+        _entity.NearbyEventX = 200f;
+        _entity.NearbyEventZ = 200f;
+        _entity.NextPoiGlanceTime = 0f;
+
+        // With chance=1, combat event glance should always fire
+        bool result = LookVarianceController.TryGetLookTarget(_entity, 10f, 5f, 15f, 8f, 20f, 225f, 1.0f, out float tx, out float tz);
+
+        Assert.That(result, Is.True);
+        Assert.That(tx, Is.EqualTo(200f));
+        Assert.That(tz, Is.EqualTo(200f));
+    }
+
+    [Test]
+    public void TryGetLookTarget_CombatEventGlance_TimerAdvancesEvenOnChanceFailure()
+    {
+        _entity.HasNearbyEvent = true;
+        _entity.NearbyEventX = 200f;
+        _entity.NearbyEventZ = 200f;
+        _entity.NextPoiGlanceTime = 0f;
+        _entity.NextFlankCheckTime = 999f;
+        float currentTime = 10f;
+
+        // Chance=0 so glance won't happen, but timer should still advance
+        LookVarianceController.TryGetLookTarget(_entity, currentTime, 5f, 15f, 8f, 20f, 225f, 0.0f, out _, out _);
+
+        Assert.That(_entity.NextPoiGlanceTime, Is.GreaterThanOrEqualTo(currentTime + 8f));
+        Assert.That(_entity.NextPoiGlanceTime, Is.LessThanOrEqualTo(currentTime + 20f));
     }
 
     [Test]

@@ -70,7 +70,7 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 ### Squad Strategies (Optional)
 - Phobos-style coordinated group questing — enabled by default (`squad_strategy.enabled`, default: true; F12 toggle `Enable Squad Strategies`)
 - Followers receive tactical positions computed from their boss's quest objective instead of standing idle
-- Quest-type-aware formations: Ambush quests use flanking positions (120° spread), Snipe quests use overwatch (150° spread), PlantItem quests use perimeter guard, HoldAtPosition uses circular spread, MoveToPosition uses trail formation
+- Quest-type-aware formations: Ambush quests use flanking positions perpendicular to approach direction, Snipe quests use overwatch positions behind approach direction, PlantItem quests use perimeter guard, HoldAtPosition uses circular spread, MoveToPosition uses trail formation
 - Two follower utility tasks: GoToTacticalPosition (score=0.70, travel phase) and HoldTacticalPosition (score=0.65, hold phase) with hysteresis to prevent flip-flopping
 - Squad strategy framework with GotoObjectiveStrategy: observes boss objective, computes tactical positions, tracks arrivals, adjusts hold duration with Gaussian sampling
 - Three follower gates conditionally unlocked for bots with tactical positions — combat, healing, and investigation decisions still take priority
@@ -85,8 +85,8 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 
 ### Hybrid Looting System
 - Utility AI decides WHEN to loot, dedicated controller handles HOW — enabled by default (`questing.looting.enabled`, default: true)
-- `LootScorer`: pure-logic scoring evaluates value, distance, proximity to threats, gear relevance, and cooldown
-- `LootInventoryPlanner`: plans gear upgrades comparing armor class, weapon ergonomics, container sizes, and available inventory space
+- `LootScorer`: pure-logic scoring evaluates value, distance, combat state, gear relevance, and cooldown
+- `LootInventoryPlanner`: plans gear upgrades comparing armor class, weapon value, container sizes, and available inventory space
 - Squad coordination: bosses get priority loot claims, followers receive timed loot windows, scan results are shared within communication range
 - `LootClaimRegistry`: multi-bot loot deconfliction prevents multiple bots targeting the same item
 - `LootAction`: BigBrain action with Approach → Interact → Complete state machine
@@ -121,7 +121,7 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - Bots pause and scan surroundings for 3–5 seconds on first spawn instead of instantly beelining to objectives
 - 360° look rotation during pause, pose 0.85, sprint disabled
 - Direction bias: first objective biased toward spawn facing direction for 30s (linear decay), preventing immediate U-turns
-- Squad stagger: 0.5s extra per member index for natural departure spread
+- Squad stagger: 1.5s extra per member index for natural departure spread
 - Gating task (score=0.80) that overrides all other tasks during spawn duration
 - Configurable via `questing.spawn_entry` in config.json
 
@@ -135,7 +135,7 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 ### Room Clearing
 - Bots slow down, lower posture, and pause at corners when entering buildings (outdoor→indoor transition)
 - Environment transition detection via BSG `EnvironmentId` (0=indoor)
-- Room clear duration: random 3–8s of slow walk + reduced pose after entering
+- Room clear duration: random 15–30s of slow walk + reduced pose after entering
 - Corner pauses: brief pauses at sharp path angles for door/corner-checking behavior
 - Configurable via `questing.room_clear` in config.json (duration, pose, corner angle threshold, per-bot-type toggles)
 
@@ -216,7 +216,7 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - Frame-stamped log lines: `[yyyy-MM-dd HH:mm:ss.fff] [LEVEL] F{frame}: message` for timing correlation with game events
 - Dual-destination logging: all messages go to both BepInEx's shared `LogOutput.log` and the dedicated file
 - Thread-safe via lock, auto-flushed, truncated fresh each session
-- 720 logging calls across 166 files covering all major systems (ECS, utility AI, squads, formations, looting, vulture, zone movement, pathing)
+- 790+ logging calls across 175+ files covering all major systems (ECS, utility AI, squads, formations, looting, vulture, zone movement, pathing)
 - Toggle via `debug.dedicated_log_file` in config.json (default: enabled)
 
 ---

@@ -456,6 +456,7 @@ namespace SPTQuestingBots.BehaviorExtensions
                     lookCfg.PoiGlanceIntervalMin,
                     lookCfg.PoiGlanceIntervalMax,
                     squadRangeSqr,
+                    lookCfg.CombatEventLookChance,
                     out float targetX,
                     out float targetZ
                 )

@@ -22,6 +22,8 @@ public static class LookVarianceController
     /// Uses hardcoded defaults matching <c>LookVarianceConfig</c> defaults.
     /// Returns true and sets targetX/targetZ if a look target was chosen.
     /// </summary>
+    private const float DefaultCombatEventLookChance = 0.7f;
+
     public static bool TryGetLookTarget(BotEntity entity, float currentTime, out float targetX, out float targetZ)
     {
         return TryGetLookTarget(
@@ -32,6 +34,7 @@ public static class LookVarianceController
             DefaultPoiMin,
             DefaultPoiMax,
             DefaultSquadRangeSqr,
+            DefaultCombatEventLookChance,
             out targetX,
             out targetZ
         );
@@ -49,6 +52,7 @@ public static class LookVarianceController
         float poiMin,
         float poiMax,
         float squadRangeSqr,
+        float combatEventLookChance,
         out float targetX,
         out float targetZ
     )
@@ -62,13 +66,18 @@ public static class LookVarianceController
             return false;
         }
 
-        // Priority 1: combat event glance (if HasNearbyEvent and timer expired)
+        // Priority 1: combat event glance (if HasNearbyEvent, timer expired, and chance roll passes)
         if (entity.HasNearbyEvent && currentTime >= entity.NextPoiGlanceTime)
         {
-            targetX = entity.NearbyEventX;
-            targetZ = entity.NearbyEventZ;
+            // Always advance the timer so we don't re-roll every frame
             entity.NextPoiGlanceTime = currentTime + SampleInterval(poiMin, poiMax);
-            return true;
+
+            if (Rng.NextDouble() < combatEventLookChance)
+            {
+                targetX = entity.NearbyEventX;
+                targetZ = entity.NearbyEventZ;
+                return true;
+            }
         }
 
         // Priority 2: squad member glance (if has boss and close enough)
