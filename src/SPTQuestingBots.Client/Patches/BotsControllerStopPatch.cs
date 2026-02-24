@@ -52,6 +52,9 @@ namespace SPTQuestingBots.Patches
             // Clear door collision cache
             Helpers.DoorCollisionHelper.Clear();
 
+            // Clear stale bot generation tasks from previous raids
+            Spawning.TryLoadBotsProfilesOnStartPatch.Clear();
+
             // Erase all bot and bot-assignment tracking data
             BotJobAssignmentFactory.Clear();
             Controllers.BotRegistrationManager.Clear();

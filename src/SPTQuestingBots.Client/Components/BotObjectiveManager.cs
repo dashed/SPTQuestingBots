@@ -38,7 +38,7 @@ namespace SPTQuestingBots.Components
         public Vector3? Position => assignment?.Position;
         public Vector3? LookToPosition => assignment?.LookToPosition;
         public bool IsJobAssignmentActive => assignment?.IsActive == true;
-        public bool HasCompletePath => assignment.HasCompletePath;
+        public bool HasCompletePath => assignment?.HasCompletePath ?? true;
         public string DoorIDToUnlockForObjective => assignment?.QuestObjectiveAssignment?.DoorIDToUnlock ?? "";
         public Vector3? InteractionPositionForDoorToUnlockForObjective =>
             assignment?.QuestObjectiveAssignment?.InteractionPositionToUnlockDoor?.ToUnityVector3();
@@ -58,15 +58,23 @@ namespace SPTQuestingBots.Components
 
         public bool IsCloseToObjective() => IsCloseToObjective(ConfigController.Config.Questing.BotSearchDistances.OjectiveReachedIdeal);
 
-        public void StartJobAssigment() => assignment.Start();
+        public void StartJobAssigment() => assignment?.Start();
 
-        public void ReportIncompletePath() => assignment.HasCompletePath = false;
+        public void ReportIncompletePath()
+        {
+            if (assignment != null)
+                assignment.HasCompletePath = false;
+        }
 
-        public void RetryPath() => assignment.HasCompletePath = true;
+        public void RetryPath()
+        {
+            if (assignment != null)
+                assignment.HasCompletePath = true;
+        }
 
         public override string ToString()
         {
-            if (assignment.QuestAssignment != null)
+            if (assignment?.QuestAssignment != null)
             {
                 return assignment.ToString();
             }

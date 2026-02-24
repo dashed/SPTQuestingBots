@@ -88,7 +88,7 @@ namespace SPTQuestingBots.Patches.Spawning.ScavLimits
             // The bot cap for Factory is sometimes set at 0, in which case the Scav spawn rate limit cannot be used (assuming the new spawning system is enabled)
             if (locationData.MaxTotalBots == 0)
             {
-                allowSpawn(pendingScavCount);
+                return allowSpawn(pendingScavCount);
             }
 
             float timeWindow = ConfigController.Config.BotSpawns.EftNewSpawnSystemAdjustments.ScavSpawnRateTimeWindow;

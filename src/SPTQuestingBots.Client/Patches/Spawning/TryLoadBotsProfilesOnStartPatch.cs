@@ -17,6 +17,11 @@ namespace SPTQuestingBots.Patches.Spawning
 
         public static int RemainingBotGenerationTasks => GenerateBotsTasks.Count(t => !t.IsCompleted);
 
+        public static void Clear()
+        {
+            GenerateBotsTasks.Clear();
+        }
+
         protected override MethodBase GetTargetMethod()
         {
             MethodInfo[] matchingMethods = typeof(BotsPresets)

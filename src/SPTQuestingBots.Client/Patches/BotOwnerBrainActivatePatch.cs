@@ -101,7 +101,7 @@ namespace SPTQuestingBots.Patches
             float chance = ConfigController.Config.ChanceOfBeingHostileTowardBosses.GetValue(botType) ?? 0;
 
             System.Random random = new System.Random();
-            if (random.Next(1, 100) <= chance)
+            if (random.Next(1, 101) <= chance)
             {
                 return true;
             }

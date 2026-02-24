@@ -84,8 +84,8 @@ public sealed class LootTask : QuestUtilityTask
 
         float score = valueScore + proximityBonus - distancePenalty;
 
-        // Clamp to [0, MaxBaseScore]
-        if (score < 0f)
+        // Clamp to [0, MaxBaseScore], treating NaN as 0
+        if (float.IsNaN(score) || score < 0f)
         {
             return 0f;
         }

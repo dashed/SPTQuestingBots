@@ -238,6 +238,13 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
                         return false;
                     }
                     break;
+                default:
+                    // Non-standard sounds (explosions, airdrops, etc.) use gunfire distance
+                    if (distance < ConfigController.Config.Questing.BotQuestingRequirements.HearingSensor.MaxDistanceGunfire)
+                    {
+                        return false;
+                    }
+                    break;
             }
 
             return true;

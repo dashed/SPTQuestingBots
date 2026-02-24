@@ -55,7 +55,13 @@ namespace SPTQuestingBots.Patches.Spawning.ScavLimits
                 .MaxDistanceBetweenSpawnPoints;
             float exclusionRadius = maxDistanceBetweenSpawnPoints * QuestingBotsPluginConfig.ScavSpawningExclusionRadiusMapFraction.Value;
 
-            float minDistanceFromPlayers = players.HumanAndSimulatedPlayers().Min(p => Vector3.Distance(spawnPoint.Position, p.Position));
+            IEnumerable<IPlayer> humanPlayers = players.HumanAndSimulatedPlayers();
+            if (!humanPlayers.Any())
+            {
+                return;
+            }
+
+            float minDistanceFromPlayers = humanPlayers.Min(p => Vector3.Distance(spawnPoint.Position, p.Position));
 
             // In SPT 3.10, distanceSqr is 3m, so this should never happen. However, we should check to be safe.
             if (minDistanceFromPlayers * minDistanceFromPlayers < distanceSqr)

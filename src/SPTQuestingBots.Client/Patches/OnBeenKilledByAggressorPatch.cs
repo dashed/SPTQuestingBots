@@ -33,8 +33,12 @@ namespace SPTQuestingBots.Patches
             if ((pmcGenerator != null) && pmcGenerator.HasGeneratedBots)
             {
                 BotOwner[] aliveInitialPMCs = pmcGenerator.AliveBots()?.ToArray();
-                message +=
-                    ". Initial PMC's remaining: " + (aliveInitialPMCs.Length - (aliveInitialPMCs.Any(p => p.Id == __instance.Id) ? 1 : 0));
+                if (aliveInitialPMCs != null)
+                {
+                    message +=
+                        ". Initial PMC's remaining: "
+                        + (aliveInitialPMCs.Length - (aliveInitialPMCs.Any(p => p.Id == __instance.Id) ? 1 : 0));
+                }
             }
 
             LoggingController.LogInfo(message);

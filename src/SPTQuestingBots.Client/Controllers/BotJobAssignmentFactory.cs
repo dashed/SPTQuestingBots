@@ -187,13 +187,13 @@ namespace SPTQuestingBots.Controllers
                             }
                         }
                     }
+                }
 
-                    // If there are no remaining objectives, remove the quest too
-                    if (quest.NumberOfObjectives == 0)
-                    {
-                        LoggingController.LogInfo("Removing quest with no valid objectives: " + quest + "...");
-                        allQuests.Remove(quest);
-                    }
+                // If there are no remaining objectives, remove the quest too
+                if (quest.NumberOfObjectives == 0)
+                {
+                    LoggingController.LogInfo("Removing quest with no valid objectives: " + quest + "...");
+                    allQuests.Remove(quest);
                 }
             }
         }
@@ -366,7 +366,7 @@ namespace SPTQuestingBots.Controllers
                 return null;
             }
 
-            return matchingAssignments.Last().EndTime;
+            return matchingAssignments.Last().StartTime;
         }
 
         public static double? ElapsedTimeSinceBotStarted(this Quest quest, BotOwner bot)
@@ -998,7 +998,13 @@ namespace SPTQuestingBots.Controllers
 
                 foreach (QuestObjective objective in quest.ValidObjectives)
                 {
-                    if (Vector3.Distance(position, objective.GetFirstStepPosition().Value) > distance)
+                    Vector3? firstPos = objective.GetFirstStepPosition();
+                    if (!firstPos.HasValue)
+                    {
+                        continue;
+                    }
+
+                    if (Vector3.Distance(position, firstPos.Value) > distance)
                     {
                         continue;
                     }

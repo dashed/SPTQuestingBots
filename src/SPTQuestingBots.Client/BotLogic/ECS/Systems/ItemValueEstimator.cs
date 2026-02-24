@@ -61,7 +61,7 @@ public static class ItemValueEstimator
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static float NormalizeValue(float rawValue, float cap)
     {
-        if (cap <= 0f || rawValue <= 0f)
+        if (float.IsNaN(rawValue) || float.IsNaN(cap) || cap <= 0f || rawValue <= 0f)
         {
             return 0f;
         }

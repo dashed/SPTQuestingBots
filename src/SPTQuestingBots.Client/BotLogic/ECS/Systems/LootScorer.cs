@@ -95,7 +95,7 @@ public static class LootScorer
 
         float score = (valueScore + proximityBonus + gearBonus - distancePenalty) * cooldownFactor;
 
-        if (score < 0f)
+        if (float.IsNaN(score) || score < 0f)
         {
             return 0f;
         }

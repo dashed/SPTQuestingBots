@@ -52,7 +52,9 @@ namespace SPTQuestingBots.Patches.Spawning
         {
             if (instance == null)
             {
-                throw new InvalidOperationException("An instance of " + instance.GetType().Name + " has not been discovered yet");
+                throw new InvalidOperationException(
+                    "An instance of " + nameof(MatchmakerPlayerControllerClass) + " has not been discovered yet"
+                );
             }
         }
 

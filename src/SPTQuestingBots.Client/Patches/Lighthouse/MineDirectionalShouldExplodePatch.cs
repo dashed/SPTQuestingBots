@@ -53,7 +53,7 @@ namespace SPTQuestingBots.Patches.Lighthouse
 
             if (lightkeeperIslandMonitor.BotsWithQuestsOnLightkeeperIsland.Any(b => b.Id == playerByCollider.Id))
             {
-                __result = true;
+                __result = false;
                 return false;
             }
 

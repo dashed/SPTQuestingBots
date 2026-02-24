@@ -106,8 +106,10 @@ namespace SPTQuestingBots.Controllers
             string errorMessage = "Cannot retrieve chance to make PMC's USEC's.";
             string json = GetJson("/QuestingBots/GetUSECChance", errorMessage);
 
-            TryDeserializeObject(json, errorMessage, out Configuration.USECChanceResponse _usecChance);
-            USECChance = _usecChance.USECChance;
+            if (TryDeserializeObject(json, errorMessage, out Configuration.USECChanceResponse _usecChance))
+            {
+                USECChance = _usecChance.USECChance;
+            }
             return USECChance;
         }
 
@@ -236,9 +238,11 @@ namespace SPTQuestingBots.Controllers
         {
             try
             {
-                if (json.Length == 0)
+                if (string.IsNullOrEmpty(json))
                 {
-                    throw new InvalidCastException("Could deserialize an empty string to an object of type " + typeof(T).FullName);
+                    throw new InvalidCastException(
+                        "Could not deserialize a null or empty string to an object of type " + typeof(T).FullName
+                    );
                 }
 
                 // Check if the server failed to provide a valid response

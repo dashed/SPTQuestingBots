@@ -110,7 +110,7 @@ namespace SPTQuestingBots.Helpers
                     // Get the ID of the item used for the quest, if applicable
                     string target = "";
                     ConditionFindItem conditionFindItem = condition as ConditionFindItem;
-                    if (conditionFindItem != null)
+                    if (conditionFindItem?.target != null && conditionFindItem.target.Length > 0)
                     {
                         target = conditionFindItem.target[0];
                     }

@@ -34,7 +34,7 @@ namespace SPTQuestingBots.Models.Questing
                 + " for objective "
                 + (QuestObjectiveAssignment?.ToString() ?? "???")
                 + " in quest "
-                + QuestAssignment.Name;
+                + (QuestAssignment?.Name ?? "???");
         }
 
         public object Clone()

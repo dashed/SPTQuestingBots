@@ -539,6 +539,187 @@ public class BugFixRegressionTests
 
     #endregion
 
+    #region TrySpawnFreeAndDelayPatch missing return regression test
+
+    [Test]
+    public void TrySpawnFreeAndDelayPatch_MaxTotalBots0_ReturnsAllowSpawn()
+    {
+        // Bug fix: When locationData.MaxTotalBots == 0, the code called
+        // allowSpawn(pendingScavCount) without a 'return' keyword, causing
+        // the method to fall through to the rate-limiting code below.
+        // This meant Factory (which can have MaxTotalBots=0) would incorrectly
+        // rate-limit scav spawns even when rate limiting should be skipped.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Patches/Spawning/ScavLimits/TrySpawnFreeAndDelayPatch.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("return allowSpawn(pendingScavCount);"),
+            "TrySpawnFreeAndDelayPatch should return the result of allowSpawn when MaxTotalBots == 0"
+        );
+    }
+
+    #endregion
+
+    #region TimeHasComeScreenClassChangeStatusPatch NRE regression test
+
+    [Test]
+    public void TimeHasComeScreenClassChangeStatusPatch_CheckForInstances_DoesNotDereferenceNullInstance()
+    {
+        // Bug fix: checkForInstances() threw NullReferenceException when instance was null
+        // because it called instance.GetType().Name inside the null check.
+        // Fixed to use nameof(MatchmakerPlayerControllerClass) instead.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Patches/Spawning/TimeHasComeScreenClassChangeStatusPatch.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("nameof(MatchmakerPlayerControllerClass)"),
+            "checkForInstances should use nameof() instead of instance.GetType().Name to avoid NRE"
+        );
+        Assert.That(source, Does.Not.Contain("instance.GetType().Name"), "checkForInstances must not dereference instance when it is null");
+    }
+
+    #endregion
+
+    #region BotOwnerBrainActivatePatch random range regression test
+
+    [Test]
+    public void BotOwnerBrainActivatePatch_HostileChance_UsesCorrectRandomRange()
+    {
+        // Bug fix: random.Next(1, 100) produces values 1-99, so a chance of 80
+        // yields 79/99 = 79.8% instead of 80/100 = 80%. The upper bound is exclusive
+        // in Random.Next, so it should be random.Next(1, 101) for a 1-100 range.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Patches/BotOwnerBrainActivatePatch.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("random.Next(1, 101)"),
+            "shouldMakeBotGroupHostileTowardAllBosses should use random.Next(1, 101) for correct 1-100 range"
+        );
+        Assert.That(
+            source,
+            Does.Not.Contain("random.Next(1, 100)"),
+            "random.Next(1, 100) gives 1-99 range (off-by-one), should be random.Next(1, 101)"
+        );
+    }
+
+    #endregion
+
+    #region MineDirectionalShouldExplodePatch result inversion regression test
+
+    [Test]
+    public void MineDirectionalShouldExplodePatch_QuestBots_MinesDoNotExplode()
+    {
+        // Bug fix: The patch set __result = true for bots with quests on Lightkeeper Island,
+        // meaning "should explode = true". This is the opposite of the intended behavior --
+        // bots going to the island for quests should pass through mines safely.
+        // Fixed to __result = false so mines do NOT explode for quest bots.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Patches/Lighthouse/MineDirectionalShouldExplodePatch.cs");
+
+        // After the check for BotsWithQuestsOnLightkeeperIsland, __result should be false
+        Assert.That(
+            source,
+            Does.Contain("__result = false;"),
+            "MineDirectionalShouldExplodePatch should set __result = false to prevent mines from exploding for quest bots"
+        );
+        Assert.That(
+            source,
+            Does.Not.Contain("__result = true;"),
+            "__result = true would cause mines to explode FOR quest bots — the opposite of intent"
+        );
+    }
+
+    #endregion
+
+    #region LighthouseTraderZonePlayerAttackPatch null-safety regression test
+
+    [Test]
+    public void LighthouseTraderZonePlayerAttackPatch_HasNullCheckForAggressor()
+    {
+        // Bug fix: GetAlivePlayerByProfileID can return null if the aggressor died
+        // between the attack event and the lookup. The code then called
+        // .HasAGreenOrYellowDSP() on the null reference, causing an NRE.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Patches/Lighthouse/LighthouseTraderZonePlayerAttackPatch.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("lastAgressorPlayer == null"),
+            "LighthouseTraderZonePlayerAttackPatch should null-check lastAgressorPlayer before calling methods on it"
+        );
+    }
+
+    #endregion
+
+    #region OnBeenKilledByAggressorPatch null-safety regression test
+
+    [Test]
+    public void OnBeenKilledByAggressorPatch_HasNullCheckForAliveInitialPMCs()
+    {
+        // Bug fix: AliveBots()?.ToArray() can return null if AliveBots() returns null.
+        // The code then accessed .Length on the null array, causing an NRE.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Patches/OnBeenKilledByAggressorPatch.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("if (aliveInitialPMCs != null)"),
+            "OnBeenKilledByAggressorPatch should null-check aliveInitialPMCs before accessing .Length"
+        );
+    }
+
+    #endregion
+
+    #region TryLoadBotsProfilesOnStartPatch static state cleanup regression test
+
+    [Test]
+    public void TryLoadBotsProfilesOnStartPatch_HasClearMethod()
+    {
+        // Bug fix: GenerateBotsTasks is static and was never cleared between raids,
+        // accumulating stale task references that leak memory and cause
+        // RemainingBotGenerationTasks to report incorrect counts.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Patches/Spawning/TryLoadBotsProfilesOnStartPatch.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("public static void Clear()"),
+            "TryLoadBotsProfilesOnStartPatch should have a Clear() method to reset static state between raids"
+        );
+        Assert.That(source, Does.Contain("GenerateBotsTasks.Clear()"), "Clear() should clear the GenerateBotsTasks list");
+    }
+
+    [Test]
+    public void BotsControllerStopPatch_ClearsTryLoadBotsProfilesTasks()
+    {
+        // Verify that BotsControllerStopPatch calls TryLoadBotsProfilesOnStartPatch.Clear()
+        // during raid cleanup to prevent static state leaking between raids.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Patches/BotsControllerStopPatch.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("TryLoadBotsProfilesOnStartPatch.Clear()"),
+            "BotsControllerStopPatch should clear TryLoadBotsProfilesOnStartPatch static state during raid cleanup"
+        );
+    }
+
+    #endregion
+
+    #region SpawnPointIsValidPatch empty sequence regression test
+
+    [Test]
+    public void SpawnPointIsValidPatch_HandlesEmptyPlayerList()
+    {
+        // Bug fix: .Min() on an empty IEnumerable throws InvalidOperationException.
+        // HumanAndSimulatedPlayers() can return an empty sequence before any players
+        // are registered. The code now checks .Any() first.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Patches/Spawning/ScavLimits/SpawnPointIsValidPatch.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("if (!humanPlayers.Any())"),
+            "SpawnPointIsValidPatch should check for empty player collection before calling .Min()"
+        );
+    }
+
+    #endregion
+
     #region Helpers
 
     private static int CountOccurrences(string text, string pattern)

@@ -77,7 +77,7 @@ public static class SquadLootCoordinator
         float dx = follower.CurrentPositionX - boss.CurrentPositionX;
         float dz = follower.CurrentPositionZ - boss.CurrentPositionZ;
         float distSqr = dx * dx + dz * dz;
-        if (distSqr > commRangeSqr)
+        if (float.IsNaN(distSqr) || distSqr > commRangeSqr)
         {
             LoggingController.LogDebug(
                 "[SquadLootCoordinator] Follower " + follower.Id + ": denied loot — out of comm range from boss " + boss.Id
@@ -111,7 +111,7 @@ public static class SquadLootCoordinator
             float tdz = follower.CurrentPositionZ - follower.TacticalPositionZ;
             float tactDistSqr = tdx * tdx + tdz * tdz;
             // Within 5m of tactical position
-            if (tactDistSqr < 25f)
+            if (!float.IsNaN(tactDistSqr) && tactDistSqr < 25f)
             {
                 LoggingController.LogDebug("[SquadLootCoordinator] Follower " + follower.Id + ": allowed to loot — at tactical position");
                 return true;

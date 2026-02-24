@@ -45,7 +45,9 @@ namespace SPTQuestingBots.Helpers
                     int used = 0;
                     foreach (var _ in grid.Items)
                         used++;
-                    free += total - used;
+                    int gridFree = total - used;
+                    if (gridFree > 0)
+                        free += gridFree;
                 }
                 return free;
             }
