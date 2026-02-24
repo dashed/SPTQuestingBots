@@ -483,8 +483,8 @@ public class LingerVsGoToObjectiveTests
     {
         float lingerMod = ScoringModifiers.CombinedModifier(0.1f, 1.0f, BotActionTypeId.Linger);
         // Lerp(1.3,0.7,0.1) = 1.24, Lerp(0.7,1.3,1.0) = 1.3
-        // Combined = 1.612
-        Assert.AreEqual(1.24f * 1.3f, lingerMod, 0.01f, "Linger timid+late combined modifier");
+        // Combined = 1.612 → clamped to MaxCombinedModifier (1.5)
+        Assert.AreEqual(ScoringModifiers.MaxCombinedModifier, lingerMod, 0.01f, "Linger timid+late combined modifier (clamped)");
     }
 }
 

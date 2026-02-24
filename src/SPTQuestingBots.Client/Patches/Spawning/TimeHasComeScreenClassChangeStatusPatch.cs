@@ -15,6 +15,14 @@ namespace SPTQuestingBots.Patches.Spawning
         private static float? previousProgress = null;
         private static bool isOverridingText = false;
 
+        public static void Clear()
+        {
+            instance = null;
+            previousText = "???";
+            previousProgress = null;
+            isOverridingText = false;
+        }
+
         protected override MethodBase GetTargetMethod()
         {
             return typeof(MatchmakerPlayerControllerClass).GetMethod(

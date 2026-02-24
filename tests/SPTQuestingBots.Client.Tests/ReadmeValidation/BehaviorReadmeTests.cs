@@ -525,7 +525,7 @@ public class BehaviorReadmeTests
     public void SpawnEntry_MaxBaseScore080()
     {
         var src = ReadSource("BotLogic/ECS/UtilityAI/Tasks/SpawnEntryTask.cs");
-        Assert.That(src, Does.Contain("public const float MaxBaseScore = 0.80f;"));
+        Assert.That(src, Does.Contain("public const float MaxBaseScore = 1.0f;"));
     }
 
     [Test]

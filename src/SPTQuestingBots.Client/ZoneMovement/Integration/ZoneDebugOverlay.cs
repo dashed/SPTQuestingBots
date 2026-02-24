@@ -338,8 +338,8 @@ public class ZoneDebugOverlay : MonoBehaviour
 
         var advField = gridManager.Advection;
         var convField = gridManager.Convergence;
-        var botPositions = gridManager.CachedBotPositions as List<Vector3>;
-        var playerPositions = gridManager.CachedPlayerPositions as List<Vector3>;
+        var botPositions = gridManager.CachedBotPositions;
+        var playerPositions = gridManager.CachedPlayerPositions;
 
         for (int col = 0; col < grid.Cols; col++)
         {

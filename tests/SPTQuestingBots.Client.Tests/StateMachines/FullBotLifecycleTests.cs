@@ -25,7 +25,7 @@ public class FullBotLifecycleTests
 
         // Phase 1: Spawn Entry — bot pauses and scans
         Assert.That(entity.IsSpawnEntryComplete, Is.False);
-        Assert.That(SpawnEntryTask.Score(entity), Is.EqualTo(0.80f));
+        Assert.That(SpawnEntryTask.Score(entity), Is.EqualTo(1.0f));
 
         // Phase 2: Spawn entry completes
         entity.CurrentGameTime = 5f;
@@ -508,7 +508,7 @@ public class FullBotLifecycleTests
         Assert.Multiple(() =>
         {
             Assert.That(earlyScore, Is.EqualTo(0f), "Early bot should have completed spawn entry");
-            Assert.That(lateScore, Is.EqualTo(0.80f), "Late bot should still be in spawn entry");
+            Assert.That(lateScore, Is.EqualTo(1.0f), "Late bot should still be in spawn entry");
         });
     }
 

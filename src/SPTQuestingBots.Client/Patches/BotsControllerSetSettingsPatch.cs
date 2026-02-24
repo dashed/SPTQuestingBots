@@ -21,6 +21,9 @@ namespace SPTQuestingBots.Patches
         [PatchPostfix]
         protected static void PatchPostfix()
         {
+            // Re-initialize the dedicated log file for this raid (DisposeFileLogger closes it at raid end)
+            LoggingController.InitFileLogger();
+
             if (Singleton<GameWorld>.Instance.gameObject.TryGetComponent(out Components.LocationData oldLocationData))
             {
                 LoggingController.LogError("There is already a LocationData component added to the current GameWorld instance.");

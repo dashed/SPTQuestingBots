@@ -20,6 +20,10 @@ namespace SPTQuestingBots.Components
 
         private List<AbstractDebugGizmo> gizmos = new List<AbstractDebugGizmo>();
 
+        // Named delegates so we can unsubscribe in OnDestroy (anonymous lambdas cannot be unsubscribed)
+        private EventHandler _fontSizeChangedHandler;
+        private EventHandler _botFilterChangedHandler;
+
         private int jobAssignmentGizmoCount => gizmos.Count(gizmo => gizmo is Models.Debug.JobAssignmentGizmo);
 
         public void RegisterBot(BotOwner bot)
@@ -33,19 +37,28 @@ namespace SPTQuestingBots.Components
 
         protected void Awake()
         {
-            QuestingBotsPluginConfig.QuestOverlayFontSize.SettingChanged += (object sender, EventArgs e) =>
-            {
-                updateGuiStyles(sender, e);
-            };
-            QuestingBotsPluginConfig.BotFilter.SettingChanged += (object sender, EventArgs e) =>
-            {
-                ValidateBotFilter(QuestingBotsPluginConfig.BotFilter.Value);
-            };
+            _fontSizeChangedHandler = (object sender, EventArgs e) => updateGuiStyles(sender, e);
+            _botFilterChangedHandler = (object sender, EventArgs e) => ValidateBotFilter(QuestingBotsPluginConfig.BotFilter.Value);
+
+            QuestingBotsPluginConfig.QuestOverlayFontSize.SettingChanged += _fontSizeChangedHandler;
+            QuestingBotsPluginConfig.BotFilter.SettingChanged += _botFilterChangedHandler;
 
             // Reset to default since filter from previous raid won't matter in the next
             QuestingBotsPluginConfig.BotFilter.BoxedValue = "";
 
             gizmos.Add(new PlayerCoordinatesGizmo());
+        }
+
+        protected void OnDestroy()
+        {
+            if (_fontSizeChangedHandler != null)
+            {
+                QuestingBotsPluginConfig.QuestOverlayFontSize.SettingChanged -= _fontSizeChangedHandler;
+            }
+            if (_botFilterChangedHandler != null)
+            {
+                QuestingBotsPluginConfig.BotFilter.SettingChanged -= _botFilterChangedHandler;
+            }
         }
 
         private void updateGuiStyles(object sender, EventArgs e) => gizmos.ForEach(gizmo => gizmo.UpdateGUIStyle());

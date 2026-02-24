@@ -76,12 +76,20 @@ public static class ScoringModifiers
     /// <summary>
     /// Combined personality + raid time modifier for a single task.
     /// </summary>
+    /// <summary>Upper bound for CombinedModifier to prevent score overflow.</summary>
+    public const float MaxCombinedModifier = 1.5f;
+
     public static float CombinedModifier(float aggression, float raidTimeNormalized, int actionTypeId)
     {
         float result = PersonalityModifier(aggression, actionTypeId) * RaidTimeModifier(raidTimeNormalized, actionTypeId);
         if (float.IsNaN(result) || result < 0f)
         {
             return 1.0f;
+        }
+
+        if (result > MaxCombinedModifier)
+        {
+            return MaxCombinedModifier;
         }
 
         return result;

@@ -13,8 +13,12 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks;
 /// </summary>
 public sealed class SpawnEntryTask : QuestUtilityTask
 {
-    /// <summary>Maximum base score during spawn entry (higher than GoToObjective's 0.65).</summary>
-    public const float MaxBaseScore = 0.80f;
+    /// <summary>
+    /// Maximum base score during spawn entry. Set to 1.0 so no other task can override
+    /// the spawn pause — GoToObjective with max personality + raid-time modifier can reach
+    /// ~0.97, which would bypass a 0.80 spawn entry score on the first tick.
+    /// </summary>
+    public const float MaxBaseScore = 1.0f;
 
     public override int BotActionTypeId
     {

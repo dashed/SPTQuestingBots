@@ -282,7 +282,7 @@ public class SpawnEntryTaskTests
     [Test]
     public void MaxBaseScore_IsCorrect()
     {
-        Assert.That(SpawnEntryTask.MaxBaseScore, Is.EqualTo(0.80f));
+        Assert.That(SpawnEntryTask.MaxBaseScore, Is.EqualTo(1.0f));
     }
 
     // ── QuestTaskFactory integration ────────────────────────

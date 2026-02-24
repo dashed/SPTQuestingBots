@@ -738,9 +738,9 @@ public class SpawningMovementReadmeTests
     [Test]
     public void SpawnEntryTask_MaxBaseScore_Is_080()
     {
-        // README (Spawn Entry): "Gating task (score=0.80)"
+        // SpawnEntry MaxBaseScore raised to 1.0 so no other task can bypass the spawn pause
         var src = ReadSource("BotLogic/ECS/UtilityAI/Tasks/SpawnEntryTask.cs");
-        Assert.That(src, Does.Contain("MaxBaseScore = 0.80f"), "SpawnEntryTask MaxBaseScore should be 0.80");
+        Assert.That(src, Does.Contain("MaxBaseScore = 1.0f"), "SpawnEntryTask MaxBaseScore should be 1.0");
     }
 
     [Test]

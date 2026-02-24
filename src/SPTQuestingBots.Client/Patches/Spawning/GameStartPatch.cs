@@ -62,6 +62,8 @@ namespace SPTQuestingBots.Patches.Spawning
         public static void ClearMissedWaves()
         {
             missedBossWaves.Clear();
+            localGameObj = null;
+            IsDelayingGameStart = false;
         }
 
         public static void AddMissedBossWave(BossLocationSpawn wave)
