@@ -256,6 +256,44 @@ public class SquadLootCoordinatorTests
     }
 
     [Test]
+    public void ShouldFollowerLoot_SameXZ_DifferentFloor_OutOfRange_ReturnsFalse()
+    {
+        // Regression: previously used XZ-only distance, so a follower directly
+        // above the boss on a different floor would appear in range.
+        var follower = CreateEntity(1);
+        var boss = CreateEntity(2);
+        // Same XZ position but 100m vertical separation
+        follower.CurrentPositionX = 10f;
+        follower.CurrentPositionY = 100f;
+        follower.CurrentPositionZ = 10f;
+        boss.CurrentPositionX = 10f;
+        boss.CurrentPositionY = 0f;
+        boss.CurrentPositionZ = 10f;
+        boss.IsLooting = true;
+
+        // commRangeSqr = 35*35 = 1225; vertical dist squared = 100*100 = 10000
+        Assert.IsFalse(SquadLootCoordinator.ShouldFollowerLoot(follower, boss, 1225f));
+    }
+
+    [Test]
+    public void ShouldFollowerLoot_SameXZ_SameFloor_InRange_ReturnsTrue()
+    {
+        // Verify 3D distance works correctly when Y is close
+        var follower = CreateEntity(1);
+        var boss = CreateEntity(2);
+        follower.CurrentPositionX = 10f;
+        follower.CurrentPositionY = 2f;
+        follower.CurrentPositionZ = 10f;
+        boss.CurrentPositionX = 10f;
+        boss.CurrentPositionY = 0f;
+        boss.CurrentPositionZ = 10f;
+        boss.IsLooting = true;
+
+        // 3D dist squared = 4 (just Y diff of 2m); commRangeSqr = 1225
+        Assert.IsTrue(SquadLootCoordinator.ShouldFollowerLoot(follower, boss, 1225f));
+    }
+
+    [Test]
     public void ShouldFollowerLoot_NoneOfTheConditions_ReturnsFalse()
     {
         var (follower, boss) = CreateNearbyPair();

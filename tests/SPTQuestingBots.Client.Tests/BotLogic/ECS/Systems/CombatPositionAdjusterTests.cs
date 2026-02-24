@@ -261,23 +261,23 @@ public class CombatPositionAdjusterTests
         // Threat from north: threatDir = (0, 1)
         CombatPositionAdjuster.ComputeCombatPositions(0f, 0f, 0f, 0f, 1f, roles, 4, config, positions);
 
-        // Guard 0 (i=0, count=4): baseAngle = atan2(1,0)*180/PI = 90
-        // spread = 180/4 = 45, angle = 90 + (0-1.5)*45 = 90 - 67.5 = 22.5
-        float rad0 = 22.5f * (float)(Math.PI / 180.0);
+        // Guard 0 (guardIdx=0, guardCount=2): baseAngle = 90
+        // spread = 180/2 = 90, angle = 90 + (0-0.5)*90 = 90 - 45 = 45
+        float rad0 = 45f * (float)(Math.PI / 180.0);
         Assert.AreEqual(8f * (float)Math.Cos(rad0), positions[0], 0.1f);
         Assert.AreEqual(8f * (float)Math.Sin(rad0), positions[2], 0.1f);
 
-        // Flanker 1 (i=1): perp of (0,1) = (-1,0), side = -1 (odd index)
-        // x = 0 + (-1)*15*(-1) = 15, z = 0 + 0*15*(-1) = 0
-        Assert.AreEqual(15f, positions[3], 0.01f);
+        // Flanker 1 (flankerIdx=0, even): perp of (0,1) = (-1,0), side = +1
+        // x = 0 + (-1)*15*(1) = -15, z = 0 + 0*15*1 = 0
+        Assert.AreEqual(-15f, positions[3], 0.01f);
         Assert.AreEqual(0f, positions[5], 0.01f);
 
         // Overwatch (i=2): opposite threat → (0, -25)
         Assert.AreEqual(0f, positions[6], 0.01f);
         Assert.AreEqual(-25f, positions[8], 0.01f);
 
-        // Guard 3 (i=3, count=4): angle = 90 + (3-1.5)*45 = 90 + 67.5 = 157.5
-        float rad3 = 157.5f * (float)(Math.PI / 180.0);
+        // Guard 3 (guardIdx=1, guardCount=2): angle = 90 + (1-0.5)*90 = 90 + 45 = 135
+        float rad3 = 135f * (float)(Math.PI / 180.0);
         Assert.AreEqual(8f * (float)Math.Cos(rad3), positions[9], 0.1f);
         Assert.AreEqual(8f * (float)Math.Sin(rad3), positions[11], 0.1f);
     }
@@ -292,15 +292,16 @@ public class CombatPositionAdjusterTests
         // Threat from east: threatDir = (1, 0)
         CombatPositionAdjuster.ComputeCombatPositions(0f, 0f, 0f, 1f, 0f, roles, 3, config, positions);
 
-        // Guard 0 (i=0, count=3): base=0, spread=60, angle = 0 + (0-1)*60 = -60
-        float rad0 = -60f * (float)(Math.PI / 180.0);
+        // Guard 0 (guardIdx=0, guardCount=1): base=0, spread=180/1=180
+        // angle = 0 + (0 - 0)*180 = 0 — single guard faces the threat directly
+        float rad0 = 0f * (float)(Math.PI / 180.0);
         Assert.AreEqual(8f * (float)Math.Cos(rad0), positions[0], 0.1f);
         Assert.AreEqual(8f * (float)Math.Sin(rad0), positions[2], 0.1f);
 
-        // Flanker 1 (i=1): perp of (1,0) = (0,1), side = -1 (odd)
-        // x = 0, z = 0 + 1*15*(-1) = -15
+        // Flanker 1 (flankerIdx=0, even): perp of (1,0) = (0,1), side = +1
+        // x = 0, z = 0 + 1*15*(1) = 15
         Assert.AreEqual(0f, positions[3], 0.01f);
-        Assert.AreEqual(-15f, positions[5], 0.01f);
+        Assert.AreEqual(15f, positions[5], 0.01f);
 
         // Overwatch 2: opposite threat → (-25, 0)
         Assert.AreEqual(-25f, positions[6], 0.01f);
@@ -321,6 +322,48 @@ public class CombatPositionAdjusterTests
         // Overwatch: opposite threat → +d * 25 in both axes
         Assert.AreEqual(d * 25f, positions[0], 0.1f);
         Assert.AreEqual(d * 25f, positions[2], 0.1f);
+    }
+
+    [Test]
+    public void Guard_SingleGuardMixedRoles_FacesThreatDirectly()
+    {
+        // Regression: previously guard used global index (0 out of 3) which offset it
+        // -60 degrees from threat. Now with guard-specific indexing, the single guard
+        // should face the threat directly (angle = baseAngle).
+        var config = DefaultConfig();
+        var roles = new[] { SquadRole.Guard, SquadRole.Flanker, SquadRole.Overwatch };
+        var positions = new float[9];
+
+        // Threat from +X: baseAngle = 0
+        CombatPositionAdjuster.ComputeCombatPositions(0f, 0f, 0f, 1f, 0f, roles, 3, config, positions);
+
+        // Guard (guardIdx=0, guardCount=1): should be at angle 0 (directly toward threat)
+        // x = 8*cos(0) = 8, z = 8*sin(0) = 0
+        Assert.AreEqual(8f, positions[0], 0.01f, "Guard X should be at +8 (directly toward threat)");
+        Assert.AreEqual(0f, positions[2], 0.01f, "Guard Z should be at 0 (directly toward threat)");
+    }
+
+    [Test]
+    public void Flanker_FlankerSpecificIndex_AlternatesCorrectly()
+    {
+        // Verify flankers use their own index for side alternation,
+        // independent of their position in the roles array
+        var config = DefaultConfig();
+        var roles = new[] { SquadRole.Guard, SquadRole.Flanker, SquadRole.Guard, SquadRole.Flanker };
+        var positions = new float[12];
+
+        // Threat from +X
+        CombatPositionAdjuster.ComputeCombatPositions(0f, 0f, 0f, 1f, 0f, roles, 4, config, positions);
+
+        // Flanker at index 1 (flankerIdx=0, even): side=+1, perp=(0,1)
+        // z = +15
+        Assert.AreEqual(0f, positions[3], 0.01f);
+        Assert.AreEqual(15f, positions[5], 0.01f);
+
+        // Flanker at index 3 (flankerIdx=1, odd): side=-1, perp=(0,1)
+        // z = -15
+        Assert.AreEqual(0f, positions[9], 0.01f);
+        Assert.AreEqual(-15f, positions[11], 0.01f);
     }
 
     // ── Edge Cases ────────────────────────────────────

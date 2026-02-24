@@ -95,7 +95,7 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
                 totalSuspiciousTimer.Start();
                 notSuspiciousTimer.Reset();
 
-                BotMonitor.GetMonitor<BotHealthMonitor>().PauseHealthMonitoring();
+                BotMonitor.GetMonitor<BotHealthMonitor>().PauseHealthMonitoring(BotHealthMonitor.PauseReason.Suspicious);
 
                 BotHiveMindMonitor.UpdateValueForBot(BotHiveMindSensorType.IsSuspicious, BotOwner, true);
                 return true;
@@ -120,7 +120,7 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
 
             notSuspiciousTimer.Start();
 
-            BotMonitor.GetMonitor<BotHealthMonitor>().ResumeHealthMonitoring();
+            BotMonitor.GetMonitor<BotHealthMonitor>().ResumeHealthMonitoring(BotHealthMonitor.PauseReason.Suspicious);
 
             BotHiveMindMonitor.UpdateValueForBot(BotHiveMindSensorType.IsSuspicious, BotOwner, false);
             return false;

@@ -88,16 +88,56 @@ public static class CombatPositionAdjuster
             return;
         }
 
+        // Count guards and flankers first so each role uses its own index/count
+        int guardCount = 0;
+        int flankerCount = 0;
+        for (int i = 0; i < count; i++)
+        {
+            if (roles[i] == SquadRole.Guard)
+            {
+                guardCount++;
+            }
+            else if (roles[i] == SquadRole.Flanker)
+            {
+                flankerCount++;
+            }
+        }
+
+        int guardIdx = 0;
+        int flankerIdx = 0;
         for (int i = 0; i < count; i++)
         {
             int offset = i * 3;
             switch (roles[i])
             {
                 case SquadRole.Guard:
-                    ComputeGuardPosition(objX, objY, objZ, config.GuardDistance, i, count, threatDirX, threatDirZ, outPositions, offset);
+                    ComputeGuardPosition(
+                        objX,
+                        objY,
+                        objZ,
+                        config.GuardDistance,
+                        guardIdx,
+                        guardCount,
+                        threatDirX,
+                        threatDirZ,
+                        outPositions,
+                        offset
+                    );
+                    guardIdx++;
                     break;
                 case SquadRole.Flanker:
-                    ComputeFlankerPosition(objX, objY, objZ, config.FlankDistance, i, threatDirX, threatDirZ, outPositions, offset);
+                    ComputeFlankerPosition(
+                        objX,
+                        objY,
+                        objZ,
+                        config.FlankDistance,
+                        flankerIdx,
+                        threatDirX,
+                        threatDirZ,
+                        outPositions,
+                        offset
+                    );
+                    flankerIdx++;
                     break;
                 case SquadRole.Overwatch:
                     ComputeOverwatchPosition(objX, objY, objZ, config.OverwatchDistance, threatDirX, threatDirZ, outPositions, offset);

@@ -109,6 +109,7 @@ namespace SPTQuestingBots.BotLogic.Objective
                     "[VultureAction] Bot " + BotOwner.GetText() + ": stopped, phase " + entity.VulturePhase + " -> Complete"
                 );
                 entity.VulturePhase = VulturePhase.Complete;
+                entity.HasNearbyEvent = false;
             }
         }
 

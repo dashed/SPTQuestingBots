@@ -13,7 +13,7 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
 {
     public class BotHealthMonitor : AbstractBotMonitor
     {
-        public bool IsMonitoringPaused { get; private set; } = false;
+        public bool IsMonitoringPaused => _pauseFlags != PauseReason.None;
         public bool NeedsToHeal { get; private set; } = false;
         public bool NeedsToEatOrDrink { get; private set; } = false;
         public bool HasLowHealth { get; private set; } = false;
@@ -22,6 +22,20 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
 
         private Stopwatch notAbleBodiedTimer = new Stopwatch();
         private Stopwatch mustHealTimer = new Stopwatch();
+
+        /// <summary>
+        /// Flag-based pause tracking. Multiple monitors (combat, hearing) can independently
+        /// request a pause. Monitoring resumes only when ALL flags are cleared.
+        /// </summary>
+        [System.Flags]
+        public enum PauseReason
+        {
+            None = 0,
+            Combat = 1 << 0,
+            Suspicious = 1 << 1,
+        }
+
+        private PauseReason _pauseFlags = PauseReason.None;
 
         public float NotAbleBodiedTime => notAbleBodiedTimer.ElapsedMilliseconds / 1000;
         public float NeedsToHealTime => mustHealTimer.ElapsedMilliseconds / 1000;
@@ -92,14 +106,24 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
 
         public void PauseHealthMonitoring()
         {
+            PauseHealthMonitoring(PauseReason.Combat);
+        }
+
+        public void PauseHealthMonitoring(PauseReason reason)
+        {
+            _pauseFlags |= reason;
             notAbleBodiedTimer.Stop();
             mustHealTimer.Stop();
-            IsMonitoringPaused = true;
         }
 
         public void ResumeHealthMonitoring()
         {
-            IsMonitoringPaused = false;
+            ResumeHealthMonitoring(PauseReason.Combat);
+        }
+
+        public void ResumeHealthMonitoring(PauseReason reason)
+        {
+            _pauseFlags &= ~reason;
         }
 
         private bool isAbleBodied()

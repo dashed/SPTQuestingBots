@@ -94,11 +94,11 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
         {
             if (inCombat)
             {
-                BotMonitor.GetMonitor<BotHealthMonitor>().PauseHealthMonitoring();
+                BotMonitor.GetMonitor<BotHealthMonitor>().PauseHealthMonitoring(BotHealthMonitor.PauseReason.Combat);
             }
             else
             {
-                BotMonitor.GetMonitor<BotHealthMonitor>().ResumeHealthMonitoring();
+                BotMonitor.GetMonitor<BotHealthMonitor>().ResumeHealthMonitoring(BotHealthMonitor.PauseReason.Combat);
             }
 
             BotHiveMindMonitor.UpdateValueForBot(BotHiveMindSensorType.InCombat, BotOwner, inCombat);

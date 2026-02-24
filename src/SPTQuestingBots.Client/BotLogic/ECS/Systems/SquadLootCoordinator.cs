@@ -73,10 +73,12 @@ public static class SquadLootCoordinator
             return false;
         }
 
-        // Must be within communication range
+        // Must be within communication range (3D distance for consistency with
+        // CommunicationRange.IsInRange and ObjectiveSharingCalculator)
         float dx = follower.CurrentPositionX - boss.CurrentPositionX;
+        float dy = follower.CurrentPositionY - boss.CurrentPositionY;
         float dz = follower.CurrentPositionZ - boss.CurrentPositionZ;
-        float distSqr = dx * dx + dz * dz;
+        float distSqr = dx * dx + dy * dy + dz * dz;
         if (float.IsNaN(distSqr) || distSqr > commRangeSqr)
         {
             LoggingController.LogDebug(

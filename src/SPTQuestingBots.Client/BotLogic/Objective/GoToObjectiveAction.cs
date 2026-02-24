@@ -41,8 +41,6 @@ namespace SPTQuestingBots.BotLogic.Objective
             // Execute custom mover every frame (before throttled updates)
             if (UseCustomMover)
             {
-                PathFollowerStatus status = TickCustomMover(CanSprint);
-
                 // Context-aware pose for custom mover
                 // Personality baseline: aggressive bots stand taller (1.0), cautious crouch more (0.8)
                 float pose = 1.0f;
@@ -76,6 +74,9 @@ namespace SPTQuestingBots.BotLogic.Objective
                         }
                     }
                 }
+
+                // Tick custom mover AFTER sprint overrides so it uses the corrected value
+                PathFollowerStatus status = TickCustomMover(CanSprint);
 
                 // Room clear: detect indoor transition and apply movement instructions
                 var roomClearConfig = Controllers.ConfigController.Config.Questing?.RoomClear;
