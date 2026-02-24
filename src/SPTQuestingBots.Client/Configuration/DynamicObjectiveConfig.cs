@@ -26,7 +26,7 @@ public class DynamicObjectiveConfig
 
     /// <summary>Minimum combat intensity to trigger a firefight objective.</summary>
     [JsonProperty("firefight_min_intensity")]
-    public int FirefightMinIntensity { get; set; } = 20;
+    public int FirefightMinIntensity { get; set; } = 3;
 
     /// <summary>Desirability score for firefight investigation quests.</summary>
     [JsonProperty("firefight_desirability")]

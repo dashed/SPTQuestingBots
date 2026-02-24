@@ -24,7 +24,7 @@ namespace SPTQuestingBots.Helpers
 
         public static IEnumerable<Vector3> GetNavMeshTestPoints(this Bounds bounds, float radius, float densityFactor)
         {
-            float minExtent = Math.Min(Math.Min(bounds.size.x, bounds.size.x), bounds.size.x) / 2;
+            float minExtent = Math.Min(Math.Min(bounds.size.x, bounds.size.y), bounds.size.z) / 2;
             if (minExtent < radius)
             {
                 LoggingController.LogInfo(

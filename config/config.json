@@ -419,7 +419,7 @@
 			"scan_interval_sec": 30,
 			"max_active_quests": 10,
 			"firefight_enabled": true,
-			"firefight_min_intensity": 20,
+			"firefight_min_intensity": 3,
 			"firefight_desirability": 8,
 			"firefight_max_age_sec": 120,
 			"firefight_cluster_radius": 50,

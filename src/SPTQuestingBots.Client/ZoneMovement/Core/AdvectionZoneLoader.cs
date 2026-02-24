@@ -22,6 +22,7 @@ public static class AdvectionZoneLoader
     /// <param name="mapId">BSG location ID (case-insensitive).</param>
     /// <param name="overrides">Per-map zone overrides from user config. May be null.</param>
     /// <param name="raidTimeNormalized">Raid progress from 0.0 (start) to 1.0 (end).</param>
+    /// <param name="isBossAlive">Whether the map boss is currently alive. Applies BossAliveMultiplier when true.</param>
     /// <param name="random">Random instance for force sampling. If null, a new instance is created.</param>
     /// <returns>Number of bounded zones injected.</returns>
     public static int LoadAndInjectZones(
@@ -30,6 +31,7 @@ public static class AdvectionZoneLoader
         string mapId,
         Dictionary<string, AdvectionMapZones> overrides,
         float raidTimeNormalized,
+        bool isBossAlive = false,
         System.Random random = null
     )
     {
@@ -66,7 +68,8 @@ public static class AdvectionZoneLoader
 
                 float force = SampleForce(entry, random);
                 float timeMultiplier = ComputeTimeMultiplier(entry, raidTimeNormalized);
-                float finalForce = force * timeMultiplier;
+                float bossMultiplier = isBossAlive ? entry.BossAliveMultiplier : 1f;
+                float finalForce = force * timeMultiplier * bossMultiplier;
 
                 field.AddBoundedZone(centroid, finalForce, entry.Radius, entry.Decay);
                 injected++;
@@ -79,7 +82,8 @@ public static class AdvectionZoneLoader
             var position = new Vector3(entry.X, 0f, entry.Z);
             float force = SampleForce(entry, random);
             float timeMultiplier = ComputeTimeMultiplier(entry, raidTimeNormalized);
-            float finalForce = force * timeMultiplier;
+            float bossMultiplier = isBossAlive ? entry.BossAliveMultiplier : 1f;
+            float finalForce = force * timeMultiplier * bossMultiplier;
 
             field.AddBoundedZone(position, finalForce, entry.Radius, entry.Decay);
             injected++;

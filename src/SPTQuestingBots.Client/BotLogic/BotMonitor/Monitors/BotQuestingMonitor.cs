@@ -84,10 +84,18 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
                 return false;
             }
 
-            // Check if the bot is too far from any of its followers
-            IEnumerable<float> followerDistances = followers
+            // Materialize alive-follower distances to avoid double-enumeration and
+            // vacuous-truth on an empty IEnumerable (.All() returns true on empty).
+            List<float> followerDistances = followers
                 .Where(f => (f != null) && !f.IsDead)
-                .Select(f => Vector3.Distance(BotOwner.Position, f.Position));
+                .Select(f => Vector3.Distance(BotOwner.Position, f.Position))
+                .ToList();
+
+            // No living followers — nothing to wait for
+            if (followerDistances.Count == 0)
+            {
+                return false;
+            }
 
             if (
                 followerDistances.Any(d => d > ConfigController.Config.Questing.BotQuestingRequirements.MaxFollowerDistance.Furthest)

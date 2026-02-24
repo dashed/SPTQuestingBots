@@ -83,7 +83,9 @@ public static class FormationSpeedController
         }
         else if (distToBossSqr > config.MatchSpeedDistanceSqr)
         {
-            decision = FormationSpeedDecision.Walk;
+            // When boss is sprinting, match sprint to avoid falling behind;
+            // only walk when boss is also walking.
+            decision = bossIsSprinting ? FormationSpeedDecision.MatchBoss : FormationSpeedDecision.Walk;
         }
         else if (distToTacticalSqr < config.SlowApproachDistanceSqr)
         {

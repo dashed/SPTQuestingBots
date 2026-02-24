@@ -45,8 +45,11 @@ public class PositionHistory
         var oldestIndex = _validCount < _bufferSize ? 0 : _writeIndex;
         var oldestPosition = _positions[oldestIndex];
 
-        // Observed distance over actual time window
-        var observedDistSqr = (mostRecentPosition - oldestPosition).sqrMagnitude;
+        // Observed distance over actual time window (XZ plane only — ignore Y to avoid
+        // vertical jumps/vaults masking horizontal stuck state)
+        float dxObs = mostRecentPosition.x - oldestPosition.x;
+        float dzObs = mostRecentPosition.z - oldestPosition.z;
+        var observedDistSqr = dxObs * dxObs + dzObs * dzObs;
 
         if (_validCount >= _bufferSize)
         {

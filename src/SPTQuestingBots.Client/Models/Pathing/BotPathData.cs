@@ -181,8 +181,11 @@ namespace SPTQuestingBots.Models.Pathing
                 {
                     // Only update the path if the bot has moved from the start position set in the currently cached path. Otherwise, the path may
                     // constantly be recalculated as brain layers are switched.
-                    requiresUpdate &= distanceFromStartPosition > ConfigController.Config.Questing.BotPathing.MaxStartPositionDiscrepancy;
-                    reason = BotPathUpdateNeededReason.RefreshNeededPath;
+                    if (distanceFromStartPosition > ConfigController.Config.Questing.BotPathing.MaxStartPositionDiscrepancy)
+                    {
+                        requiresUpdate = true;
+                        reason = BotPathUpdateNeededReason.RefreshNeededPath;
+                    }
                 }
             }
 

@@ -115,6 +115,15 @@ namespace SPTQuestingBots.Controllers
             allQuests.Add(quest);
         }
 
+        /// <summary>
+        /// Removes a quest from the global quest list. Used by DynamicObjectiveScanner
+        /// to clean up expired dynamic quests so bots are no longer assigned to them.
+        /// </summary>
+        public static bool RemoveQuest(Quest quest)
+        {
+            return allQuests.Remove(quest);
+        }
+
         public static Quest FindQuest(string questID)
         {
             Quest found = null;

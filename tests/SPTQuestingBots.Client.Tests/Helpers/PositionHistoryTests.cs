@@ -131,20 +131,21 @@ public class PositionHistoryTests
 
         history.Update(new Vector3(3, 4, 0));
         // 2 segments, buffer size 3, 2 samples. scaleFactor = 2/1 = 2
-        // distSqr = 9+16 = 25, scaled = 25 * 4 = 100
-        Assert.That(history.GetDistanceSqr(), Is.EqualTo(100f));
+        // XZ distSqr = 9+0 = 9 (Y=4 is ignored), scaled = 9 * 4 = 36
+        Assert.That(history.GetDistanceSqr(), Is.EqualTo(36f));
     }
 
     [Test]
-    public void GetDistanceSqr_3DVector_AllAxesContribute()
+    public void GetDistanceSqr_3DVector_OnlyXZContribute()
     {
         // 1 segment -> buffer size 2. Full at 2 samples.
+        // GetDistanceSqr uses XZ-plane only (Y ignored for stuck detection).
         var history = new PositionHistory(1);
         history.Update(new Vector3(0, 0, 0));
         history.Update(new Vector3(1, 2, 3));
 
-        // distSqr = 1 + 4 + 9 = 14, buffer is full so no scaling
-        Assert.That(history.GetDistanceSqr(), Is.EqualTo(14f));
+        // XZ distSqr = 1 + 9 = 10 (Y=2 is ignored), buffer full so no scaling
+        Assert.That(history.GetDistanceSqr(), Is.EqualTo(10f));
     }
 
     [Test]

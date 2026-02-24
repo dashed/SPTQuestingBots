@@ -15,6 +15,7 @@ namespace SPTQuestingBots.BotLogic.Objective
     /// </summary>
     internal class PatrolAction : BehaviorExtensions.GoToPositionAbstractAction
     {
+        private static readonly System.Random SharedRandom = new System.Random();
         private PatrolRoute _route;
         private int _waypointIndex;
         private bool _isPausing;
@@ -170,7 +171,7 @@ namespace SPTQuestingBots.BotLogic.Objective
 
             float pauseMin = wp.PauseDurationMin > 0f ? wp.PauseDurationMin : 2f;
             float pauseMax = wp.PauseDurationMax > pauseMin ? wp.PauseDurationMax : pauseMin + 3f;
-            float pauseDuration = pauseMin + (float)(new System.Random().NextDouble() * (pauseMax - pauseMin));
+            float pauseDuration = pauseMin + (float)(SharedRandom.NextDouble() * (pauseMax - pauseMin));
 
             _pauseUntil = Time.time + pauseDuration;
             _nextScanTime = 0f;
@@ -192,15 +193,13 @@ namespace SPTQuestingBots.BotLogic.Objective
             // Random head scan during pause
             if (Time.time >= _nextScanTime)
             {
-                float angle = (float)(new System.Random().NextDouble() * 2 - 1) * 90f;
+                float angle = (float)(SharedRandom.NextDouble() * 2 - 1) * 90f;
                 Vector3 lookDir = Quaternion.Euler(0, angle, 0) * BotOwner.LookDirection;
                 Vector3 lookPoint = BotOwner.Position + lookDir * 15f;
                 UpdateBotSteering(lookPoint);
 
                 _nextScanTime =
-                    Time.time
-                    + _headScanIntervalMin
-                    + (float)(new System.Random().NextDouble() * (_headScanIntervalMax - _headScanIntervalMin));
+                    Time.time + _headScanIntervalMin + (float)(SharedRandom.NextDouble() * (_headScanIntervalMax - _headScanIntervalMin));
             }
         }
 

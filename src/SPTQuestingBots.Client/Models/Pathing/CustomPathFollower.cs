@@ -43,6 +43,7 @@ public class CustomPathFollower
     private Vector3 _target;
     private PathFollowerStatus _status;
     private int _retryCount;
+    private bool _partialPathDetected;
 
     // Squared epsilons (precomputed from config)
     private readonly float _walkEpsSqr;
@@ -134,6 +135,7 @@ public class CustomPathFollower
         _corners = corners;
         _currentCorner = 0;
         _status = PathFollowerStatus.Following;
+        _partialPathDetected = false;
         LoggingController.LogInfo("[CustomPathFollower] Path started: " + corners.Length + " corners");
     }
 
@@ -146,6 +148,7 @@ public class CustomPathFollower
         _currentCorner = 0;
         _status = PathFollowerStatus.Idle;
         _retryCount = 0;
+        _partialPathDetected = false;
     }
 
     /// <summary>
@@ -396,12 +399,19 @@ public class CustomPathFollower
             // On the last corner — check for destination arrival or path insufficiency
             if (!DoesPathReachTarget())
             {
-                // Path doesn't reach the target — needs retry
-                if (IncrementRetry())
+                // Only count one retry per partial path detection.
+                // Without this guard, IncrementRetry fires every tick and exhausts
+                // MaxRetries (10) in ~167ms at 60fps, never giving the bot time to
+                // walk the available partial path segment.
+                if (!_partialPathDetected)
                 {
-                    LoggingController.LogWarning("[CustomPathFollower] Path failed: retries exhausted (" + _retryCount + ")");
-                    _status = PathFollowerStatus.Failed;
-                    return _status;
+                    _partialPathDetected = true;
+                    if (IncrementRetry())
+                    {
+                        LoggingController.LogWarning("[CustomPathFollower] Path failed: retries exhausted (" + _retryCount + ")");
+                        _status = PathFollowerStatus.Failed;
+                        return _status;
+                    }
                 }
                 // Caller should recalculate the path
                 return _status;

@@ -77,12 +77,17 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
             return wasInCombat || hasCloseDanger;
         }
 
-        private int updateSearchTimeAfterCombat()
+        private double updateSearchTimeAfterCombat()
         {
-            int min = (int)minMaxSearchTimeAfterCombat.Min;
-            int max = (int)minMaxSearchTimeAfterCombat.Max;
+            double min = minMaxSearchTimeAfterCombat.Min;
+            double max = minMaxSearchTimeAfterCombat.Max;
 
-            return random.Next(min, max);
+            if (max <= min)
+            {
+                return min;
+            }
+
+            return min + random.NextDouble() * (max - min);
         }
 
         private bool updateCombatState(bool inCombat)

@@ -387,6 +387,88 @@ public class DynamicObjectiveGeneratorTests
         Assert.That(CombatEventType.Death, Is.EqualTo((byte)4));
     }
 
+    // ── FirefightMinIntensity regression ────────────────────────
+    // These tests verify clustering intensity thresholds directly via
+    // CombatEventClustering (pure C#) since DynamicObjectiveGenerator
+    // depends on Quest types that require Unity assemblies.
+
+    [Test]
+    public void ClusterEvents_ThreeGunshots_IntensityMeetsNewDefault3()
+    {
+        // 3 gunshots in the same cluster -> intensity 3, passes new default minIntensity=3
+        var events = new[]
+        {
+            MakeEvent(100f, 0f, 200f, 5f, 100f, CombatEventType.Gunshot),
+            MakeEvent(110f, 0f, 210f, 6f, 100f, CombatEventType.Gunshot),
+            MakeEvent(105f, 0f, 205f, 7f, 100f, CombatEventType.Gunshot),
+        };
+        var output = new CombatEventClustering.ClusterResult[10];
+        int count = CombatEventClustering.ClusterEvents(events, 3, 10f, 120f, 50f * 50f, output, 10);
+
+        Assert.That(count, Is.EqualTo(1));
+        Assert.That(output[0].Intensity, Is.GreaterThanOrEqualTo(3), "3 gunshots should produce intensity >= 3 (new default minIntensity)");
+    }
+
+    [Test]
+    public void ClusterEvents_ThreeGunshots_IntensityBelowOldDefault20()
+    {
+        // 3 gunshots -> intensity 3, would NOT pass old minIntensity=20
+        var events = new[]
+        {
+            MakeEvent(100f, 0f, 200f, 5f, 100f, CombatEventType.Gunshot),
+            MakeEvent(110f, 0f, 210f, 6f, 100f, CombatEventType.Gunshot),
+            MakeEvent(105f, 0f, 205f, 7f, 100f, CombatEventType.Gunshot),
+        };
+        var output = new CombatEventClustering.ClusterResult[10];
+        int count = CombatEventClustering.ClusterEvents(events, 3, 10f, 120f, 50f * 50f, output, 10);
+
+        Assert.That(count, Is.EqualTo(1));
+        Assert.That(
+            output[0].Intensity,
+            Is.LessThan(20),
+            "3 gunshots (intensity=3) should NOT pass old minIntensity=20 — old default was too high"
+        );
+    }
+
+    [Test]
+    public void ClusterEvents_SingleExplosion_IntensityMeetsNewDefault3()
+    {
+        // 1 explosion = 1 base + 2 explosion bonus = intensity 3, passes minIntensity=3
+        var events = new[] { MakeEvent(100f, 0f, 200f, 5f, 150f, CombatEventType.Explosion) };
+        var output = new CombatEventClustering.ClusterResult[10];
+        int count = CombatEventClustering.ClusterEvents(events, 1, 10f, 120f, 50f * 50f, output, 10);
+
+        Assert.That(count, Is.EqualTo(1));
+        Assert.That(output[0].Intensity, Is.EqualTo(3), "Single explosion should have intensity 3 (1 base + 2 explosion bonus)");
+    }
+
+    [Test]
+    public void ClusterEvents_TwoGunshots_IntensityBelowNewDefault3()
+    {
+        // 2 gunshots = intensity 2, should NOT pass minIntensity=3
+        var events = new[]
+        {
+            MakeEvent(100f, 0f, 200f, 5f, 100f, CombatEventType.Gunshot),
+            MakeEvent(110f, 0f, 210f, 6f, 100f, CombatEventType.Gunshot),
+        };
+        var output = new CombatEventClustering.ClusterResult[10];
+        int count = CombatEventClustering.ClusterEvents(events, 2, 10f, 120f, 50f * 50f, output, 10);
+
+        Assert.That(count, Is.EqualTo(1));
+        Assert.That(output[0].Intensity, Is.LessThan(3), "2 gunshots (intensity=2) should NOT pass minIntensity=3");
+    }
+
+    [Test]
+    public void DynamicObjectiveConfig_FirefightMinIntensity_DefaultIsThree()
+    {
+        var config = new SPTQuestingBots.Configuration.DynamicObjectiveConfig();
+        Assert.That(
+            config.FirefightMinIntensity,
+            Is.EqualTo(3),
+            "Default FirefightMinIntensity should be 3 (was previously 20, which was too high to ever trigger)"
+        );
+    }
+
     // ── Helper ──────────────────────────────────────────────────
 
     private static CombatEvent MakeEvent(float x, float y, float z, float time, float power, byte type)

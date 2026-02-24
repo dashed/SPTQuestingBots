@@ -100,13 +100,15 @@ public class FormationSpeedControllerTests
     }
 
     [Test]
-    public void BossSprintingDoesNotAffectDecision()
+    public void BossSprintingAffectsWalkZoneDecision()
     {
-        // Same distances, different boss sprint state — same decision
+        // In the Walk zone (15-30m), boss sprint state now matters:
+        // - Boss sprinting → MatchBoss (follower should sprint to keep up)
+        // - Boss walking → Walk (follower walks at normal pace)
         var result1 = FormationSpeedController.ComputeSpeedDecision(true, 20f * 20f, 10f * 10f, in _default);
         var result2 = FormationSpeedController.ComputeSpeedDecision(false, 20f * 20f, 10f * 10f, in _default);
-        Assert.AreEqual(result1, result2);
-        Assert.AreEqual(FormationSpeedDecision.Walk, result1);
+        Assert.AreEqual(FormationSpeedDecision.MatchBoss, result1);
+        Assert.AreEqual(FormationSpeedDecision.Walk, result2);
     }
 
     // ── ShouldSprint ──────────────────────────────────────────

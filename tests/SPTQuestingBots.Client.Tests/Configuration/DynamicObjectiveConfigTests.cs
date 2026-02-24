@@ -18,7 +18,7 @@ public class DynamicObjectiveConfigTests
             Assert.That(config.ScanIntervalSec, Is.EqualTo(30f));
             Assert.That(config.MaxActiveQuests, Is.EqualTo(10));
             Assert.That(config.FirefightEnabled, Is.True);
-            Assert.That(config.FirefightMinIntensity, Is.EqualTo(20));
+            Assert.That(config.FirefightMinIntensity, Is.EqualTo(3));
             Assert.That(config.FirefightDesirability, Is.EqualTo(8f));
             Assert.That(config.FirefightMaxAgeSec, Is.EqualTo(120f));
             Assert.That(config.FirefightClusterRadius, Is.EqualTo(50f));
@@ -43,7 +43,7 @@ public class DynamicObjectiveConfigTests
             Assert.That(config.ScanIntervalSec, Is.EqualTo(30f));
             Assert.That(config.MaxActiveQuests, Is.EqualTo(10));
             Assert.That(config.FirefightEnabled, Is.True);
-            Assert.That(config.FirefightMinIntensity, Is.EqualTo(20));
+            Assert.That(config.FirefightMinIntensity, Is.EqualTo(3));
             Assert.That(config.CorpseEnabled, Is.True);
             Assert.That(config.BuildingClearEnabled, Is.True);
         });

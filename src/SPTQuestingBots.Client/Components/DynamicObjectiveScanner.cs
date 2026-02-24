@@ -168,6 +168,7 @@ namespace SPTQuestingBots.Components
                 if (currentTime - tracked.CreatedTime > tracked.MaxAge)
                 {
                     LoggingController.LogDebug("[DynamicObjectiveScanner] Expired quest: " + tracked.Quest.Name);
+                    BotJobAssignmentFactory.RemoveQuest(tracked.Quest);
                     _activeQuests.RemoveAt(i);
                 }
             }

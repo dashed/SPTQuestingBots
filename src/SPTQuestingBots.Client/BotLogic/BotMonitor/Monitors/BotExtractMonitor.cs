@@ -117,7 +117,10 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
             if (minTotalQuestsForExtract == int.MaxValue)
             {
                 Configuration.MinMaxConfig minMax = ConfigController.Config.Questing.ExtractionRequirements.TotalQuests * scalingFactor;
-                minTotalQuestsForExtract = random.Next((int)minMax.Min, (int)minMax.Max);
+                int min = (int)minMax.Min;
+                int max = (int)minMax.Max;
+                // Random.Next is max-exclusive; add 1 so Max is reachable
+                minTotalQuestsForExtract = max > min ? random.Next(min, max + 1) : min;
             }
 
             // Check if the bot has completed enough total quests to extract
@@ -140,7 +143,10 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
             if (minEFTQuestsForExtract == int.MaxValue)
             {
                 Configuration.MinMaxConfig minMax = ConfigController.Config.Questing.ExtractionRequirements.EFTQuests * scalingFactor;
-                minEFTQuestsForExtract = random.Next((int)minMax.Min, (int)minMax.Max);
+                int min = (int)minMax.Min;
+                int max = (int)minMax.Max;
+                // Random.Next is max-exclusive; add 1 so Max is reachable
+                minEFTQuestsForExtract = max > min ? random.Next(min, max + 1) : min;
             }
 
             // Check if the bot has completed enough EFT quests to extract

@@ -132,13 +132,19 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
             return shouldBeSuspicious;
         }
 
-        private int updateSuspiciousTime()
-        {
-            System.Random random = new System.Random();
-            int min = (int)ConfigController.Config.Questing.BotQuestingRequirements.HearingSensor.SuspiciousTime.Min;
-            int max = (int)ConfigController.Config.Questing.BotQuestingRequirements.HearingSensor.SuspiciousTime.Max;
+        private static readonly System.Random _suspiciousRng = new System.Random();
 
-            return random.Next(min, max);
+        private double updateSuspiciousTime()
+        {
+            double min = ConfigController.Config.Questing.BotQuestingRequirements.HearingSensor.SuspiciousTime.Min;
+            double max = ConfigController.Config.Questing.BotQuestingRequirements.HearingSensor.SuspiciousTime.Max;
+
+            if (max <= min)
+            {
+                return min;
+            }
+
+            return min + _suspiciousRng.NextDouble() * (max - min);
         }
 
         private void updateMaxSuspiciousTime()
