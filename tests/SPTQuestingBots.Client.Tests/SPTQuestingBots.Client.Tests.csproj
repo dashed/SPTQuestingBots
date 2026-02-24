@@ -94,6 +94,10 @@
     />
     <Compile Include="../../src/SPTQuestingBots.Client/Configuration/BotLodConfig.cs" Link="LinkedSources/Configuration/BotLodConfig.cs" />
     <Compile
+      Include="../../src/SPTQuestingBots.Client/Configuration/StuckBotRemediesConfig.cs"
+      Link="LinkedSources/Configuration/StuckBotRemediesConfig.cs"
+    />
+    <Compile
       Include="../../src/SPTQuestingBots.Client/Configuration/LootingConfig.cs"
       Link="LinkedSources/Configuration/LootingConfig.cs"
     />

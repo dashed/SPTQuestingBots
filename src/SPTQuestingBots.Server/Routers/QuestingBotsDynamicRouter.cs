@@ -1,5 +1,6 @@
 #pragma warning disable CS0618 // ConfigServer is obsolete (SPT 4.2 migration pending)
 
+using System.Globalization;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
 using SPTarkov.Server.Core.Models.Eft.Common;
@@ -69,9 +70,8 @@ public class QuestingBotsDynamicRouter(
                         return new ValueTask<string>(jsonUtil.Serialize(new { resp = "OK" }) ?? "{}");
                     }
 
-                    // Extract the factor from the last URL segment
-                    var urlParts = url.Split('/');
-                    if (!double.TryParse(urlParts[^1], out var factor))
+                    // Extract and validate the factor from the last URL segment
+                    if (!TryParseFactorFromUrl(url, out var factor))
                     {
                         return new ValueTask<string>(jsonUtil.Serialize(new { resp = "ERROR", message = "Invalid factor" }) ?? "{}");
                     }
@@ -85,4 +85,28 @@ public class QuestingBotsDynamicRouter(
                 }
             ),
         ]
-    ) { }
+    )
+{
+    /// <summary>
+    /// Extracts and validates the floating-point factor from the last URL segment.
+    /// Uses invariant culture to ensure "0.5" always parses correctly regardless
+    /// of the server's locale. Rejects NaN and Infinity values.
+    /// </summary>
+    internal static bool TryParseFactorFromUrl(string url, out double factor)
+    {
+        factor = 0;
+        var urlParts = url.Split('/');
+        if (!double.TryParse(urlParts[^1], NumberStyles.Float | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out factor))
+        {
+            return false;
+        }
+
+        if (!double.IsFinite(factor) || factor < 0)
+        {
+            factor = 0;
+            return false;
+        }
+
+        return true;
+    }
+}

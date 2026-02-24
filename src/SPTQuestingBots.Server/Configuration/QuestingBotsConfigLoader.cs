@@ -75,8 +75,16 @@ public class QuestingBotsConfigLoader
             return;
         }
 
-        var json = File.ReadAllText(configPath);
-        _config = JsonConvert.DeserializeObject<QuestingBotsConfig>(json);
+        try
+        {
+            var json = File.ReadAllText(configPath);
+            _config = JsonConvert.DeserializeObject<QuestingBotsConfig>(json);
+        }
+        catch (JsonException ex)
+        {
+            _logger.Error($"[Questing Bots] Failed to parse config.json: {ex.Message}");
+            _config = null;
+        }
 
         if (_config == null)
         {
@@ -113,8 +121,16 @@ public class QuestingBotsConfigLoader
             return null;
         }
 
-        var json = File.ReadAllText(filePath);
-        return JsonConvert.DeserializeObject<T>(json);
+        try
+        {
+            var json = File.ReadAllText(filePath);
+            return JsonConvert.DeserializeObject<T>(json);
+        }
+        catch (JsonException ex)
+        {
+            _logger.Error($"[Questing Bots] Failed to parse {filePath}: {ex.Message}");
+            return null;
+        }
     }
 
     /// <summary>

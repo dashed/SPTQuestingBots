@@ -70,13 +70,23 @@ public static class QuestScorer
     )
     {
         // Distance fraction: closer quests score higher (inverted, normalized to 0-1)
+        // Note: Random.Next(min, max) is max-exclusive, so use max+1 for symmetric range
         double distanceFraction =
-            maxOverallDistance > 0 ? 1.0 - (minDistance + rng.Next(-maxRandomDistance, maxRandomDistance)) / maxOverallDistance : 1.0;
+            maxOverallDistance > 0 ? 1.0 - (minDistance + rng.Next(-maxRandomDistance, maxRandomDistance + 1)) / maxOverallDistance : 1.0;
+        // Clamp to [0, 1] — random noise can push the fraction out of range
+        if (distanceFraction < 0.0)
+            distanceFraction = 0.0;
+        if (distanceFraction > 1.0)
+            distanceFraction = 1.0;
 
         // Desirability fraction: higher desirability scores higher (normalized to ~0-1)
+        // Note: Random.Next(min, max) is max-exclusive, so use max+1 for symmetric range
         float activeMultiplier = isActiveForPlayer ? config.DesirabilityActiveQuestMultiplier : 1f;
         float desirabilityFraction =
-            (desirability * activeMultiplier + rng.Next(-config.DesirabilityRandomness, config.DesirabilityRandomness)) / 100f;
+            (desirability * activeMultiplier + rng.Next(-config.DesirabilityRandomness, config.DesirabilityRandomness + 1)) / 100f;
+        // Clamp to [0, 2] — random noise can push the fraction negative
+        if (desirabilityFraction < 0f)
+            desirabilityFraction = 0f;
 
         // Exfil angle factor: quests aligned with exfil direction are penalized less
         // Angles below MaxExfilAngle get zero penalty; above that, penalty scales linearly to 1.0

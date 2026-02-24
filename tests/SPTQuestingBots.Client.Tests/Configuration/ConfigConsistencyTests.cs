@@ -208,20 +208,19 @@ public class ConfigConsistencyTests
     // ── BotPathingConfig ─────────────────────────────────────────
 
     [Test]
-    public void BotPathing_UseCustomMover_NotInJson()
+    public void BotPathing_UseCustomMover_MatchesJson()
     {
-        AssertJsonMissingPath("questing.bot_pathing.use_custom_mover");
-        // C# has this property (default true) but JSON doesn't expose it
         var config = new BotPathingConfig();
-        Assert.That(config.UseCustomMover, Is.True, "C# default used since missing from JSON");
+        var jsonValue = JsonValue<bool>("questing.bot_pathing.use_custom_mover");
+        Assert.That(config.UseCustomMover, Is.EqualTo(jsonValue), "C# default should match config.json");
     }
 
     [Test]
-    public void BotPathing_BypassDoorColliders_NotInJson()
+    public void BotPathing_BypassDoorColliders_MatchesJson()
     {
-        AssertJsonMissingPath("questing.bot_pathing.bypass_door_colliders");
         var config = new BotPathingConfig();
-        Assert.That(config.BypassDoorColliders, Is.True, "C# default used since missing from JSON");
+        var jsonValue = JsonValue<bool>("questing.bot_pathing.bypass_door_colliders");
+        Assert.That(config.BypassDoorColliders, Is.EqualTo(jsonValue), "C# default should match config.json");
     }
 
     // ── BotQuestingRequirementsConfig ────────────────────────────
@@ -473,37 +472,123 @@ public class ConfigConsistencyTests
     // ══════════════════════════════════════════════════════════════
 
     [Test]
-    public void StuckBotRemedies_HasOrphanedProperties_NotInJson()
+    public void StuckBotRemedies_AllProperties_MatchJson()
     {
-        var remedies = _configJson.SelectToken("questing.stuck_bot_detection.stuck_bot_remedies") as JObject;
-        Assert.That(remedies, Is.Not.Null);
-
+        var cfg = new StuckBotRemediesConfig();
         Assert.Multiple(() =>
         {
-            Assert.That(remedies["soft_stuck_fail_delay"], Is.Null, "soft_stuck_fail_delay not in JSON");
-            Assert.That(remedies["hard_stuck_path_retry_delay"], Is.Null, "hard_stuck_path_retry_delay not in JSON");
-            Assert.That(remedies["hard_stuck_teleport_delay"], Is.Null, "hard_stuck_teleport_delay not in JSON");
-            Assert.That(remedies["hard_stuck_fail_delay"], Is.Null, "hard_stuck_fail_delay not in JSON");
-            Assert.That(remedies["teleport_enabled"], Is.Null, "teleport_enabled not in JSON");
-            Assert.That(remedies["teleport_max_player_distance"], Is.Null, "teleport_max_player_distance not in JSON");
+            Assert.That(
+                cfg.SoftStuckFailDelay,
+                Is.EqualTo(JsonValue<float>("questing.stuck_bot_detection.stuck_bot_remedies.soft_stuck_fail_delay")),
+                "soft_stuck_fail_delay"
+            );
+            Assert.That(
+                cfg.HardStuckPathRetryDelay,
+                Is.EqualTo(JsonValue<float>("questing.stuck_bot_detection.stuck_bot_remedies.hard_stuck_path_retry_delay")),
+                "hard_stuck_path_retry_delay"
+            );
+            Assert.That(
+                cfg.HardStuckTeleportDelay,
+                Is.EqualTo(JsonValue<float>("questing.stuck_bot_detection.stuck_bot_remedies.hard_stuck_teleport_delay")),
+                "hard_stuck_teleport_delay"
+            );
+            Assert.That(
+                cfg.HardStuckFailDelay,
+                Is.EqualTo(JsonValue<float>("questing.stuck_bot_detection.stuck_bot_remedies.hard_stuck_fail_delay")),
+                "hard_stuck_fail_delay"
+            );
+            Assert.That(
+                cfg.TeleportEnabled,
+                Is.EqualTo(JsonValue<bool>("questing.stuck_bot_detection.stuck_bot_remedies.teleport_enabled")),
+                "teleport_enabled"
+            );
+            Assert.That(
+                cfg.TeleportMaxPlayerDistance,
+                Is.EqualTo(JsonValue<float>("questing.stuck_bot_detection.stuck_bot_remedies.teleport_max_player_distance")),
+                "teleport_max_player_distance"
+            );
         });
     }
 
     [Test]
-    public void SquadStrategy_EntireSectionMissing_FromJson()
+    public void SquadStrategy_AllProperties_MatchJson()
     {
-        AssertJsonMissingPath("questing.squad_strategy");
-        // The entire squad_strategy config section is absent from config.json.
-        // All 30+ properties use only C# defaults. Users cannot tune squad behavior
-        // without first adding this section to config.json.
+        AssertJsonHasPath("questing.squad_strategy");
+        var cfg = new SquadStrategyConfig();
+        Assert.Multiple(() =>
+        {
+            Assert.That(cfg.Enabled, Is.EqualTo(JsonValue<bool>("questing.squad_strategy.enabled")));
+            Assert.That(cfg.GuardDistance, Is.EqualTo(JsonValue<float>("questing.squad_strategy.guard_distance")));
+            Assert.That(cfg.FlankDistance, Is.EqualTo(JsonValue<float>("questing.squad_strategy.flank_distance")));
+            Assert.That(cfg.OverwatchDistance, Is.EqualTo(JsonValue<float>("questing.squad_strategy.overwatch_distance")));
+            Assert.That(cfg.EscortDistance, Is.EqualTo(JsonValue<float>("questing.squad_strategy.escort_distance")));
+            Assert.That(cfg.ArrivalRadius, Is.EqualTo(JsonValue<float>("questing.squad_strategy.arrival_radius")));
+            Assert.That(cfg.MaxDistanceFromBoss, Is.EqualTo(JsonValue<float>("questing.squad_strategy.max_distance_from_boss")));
+            Assert.That(
+                cfg.StrategyPacingSeconds,
+                Is.EqualTo(JsonValue<float>("questing.squad_strategy.strategy_pacing_seconds")).Within(0.001f)
+            );
+            Assert.That(cfg.UseQuestTypeRoles, Is.EqualTo(JsonValue<bool>("questing.squad_strategy.use_quest_type_roles")));
+            Assert.That(cfg.EnableCommunicationRange, Is.EqualTo(JsonValue<bool>("questing.squad_strategy.enable_communication_range")));
+            Assert.That(
+                cfg.CommunicationRangeNoEarpiece,
+                Is.EqualTo(JsonValue<float>("questing.squad_strategy.communication_range_no_earpiece"))
+            );
+            Assert.That(
+                cfg.CommunicationRangeEarpiece,
+                Is.EqualTo(JsonValue<float>("questing.squad_strategy.communication_range_earpiece"))
+            );
+            Assert.That(cfg.EnableSquadPersonality, Is.EqualTo(JsonValue<bool>("questing.squad_strategy.enable_squad_personality")));
+            Assert.That(cfg.EnablePositionValidation, Is.EqualTo(JsonValue<bool>("questing.squad_strategy.enable_position_validation")));
+            Assert.That(cfg.NavMeshSampleRadius, Is.EqualTo(JsonValue<float>("questing.squad_strategy.navmesh_sample_radius")));
+            Assert.That(cfg.FallbackCandidateCount, Is.EqualTo(JsonValue<int>("questing.squad_strategy.fallback_candidate_count")));
+            Assert.That(cfg.FallbackSearchRadius, Is.EqualTo(JsonValue<float>("questing.squad_strategy.fallback_search_radius")));
+            Assert.That(cfg.EnableReachabilityCheck, Is.EqualTo(JsonValue<bool>("questing.squad_strategy.enable_reachability_check")));
+            Assert.That(
+                cfg.MaxPathLengthMultiplier,
+                Is.EqualTo(JsonValue<float>("questing.squad_strategy.max_path_length_multiplier")).Within(0.001f)
+            );
+            Assert.That(cfg.EnableLosCheck, Is.EqualTo(JsonValue<bool>("questing.squad_strategy.enable_los_check")));
+            Assert.That(cfg.EnableCoverPositionSource, Is.EqualTo(JsonValue<bool>("questing.squad_strategy.enable_cover_position_source")));
+            Assert.That(cfg.CoverSearchRadius, Is.EqualTo(JsonValue<float>("questing.squad_strategy.cover_search_radius")));
+            Assert.That(cfg.EnableFormationMovement, Is.EqualTo(JsonValue<bool>("questing.squad_strategy.enable_formation_movement")));
+            Assert.That(cfg.CatchUpDistance, Is.EqualTo(JsonValue<float>("questing.squad_strategy.catch_up_distance")));
+            Assert.That(cfg.MatchSpeedDistance, Is.EqualTo(JsonValue<float>("questing.squad_strategy.match_speed_distance")));
+            Assert.That(cfg.SlowApproachDistance, Is.EqualTo(JsonValue<float>("questing.squad_strategy.slow_approach_distance")));
+            Assert.That(cfg.ColumnSpacing, Is.EqualTo(JsonValue<float>("questing.squad_strategy.column_spacing")));
+            Assert.That(cfg.SpreadSpacing, Is.EqualTo(JsonValue<float>("questing.squad_strategy.spread_spacing")));
+            Assert.That(cfg.FormationSwitchWidth, Is.EqualTo(JsonValue<float>("questing.squad_strategy.formation_switch_width")));
+            Assert.That(
+                cfg.EnableCombatAwarePositioning,
+                Is.EqualTo(JsonValue<bool>("questing.squad_strategy.enable_combat_aware_positioning"))
+            );
+            Assert.That(cfg.EnableZoneFollowerSpread, Is.EqualTo(JsonValue<bool>("questing.squad_strategy.enable_zone_follower_spread")));
+            Assert.That(cfg.ZoneJitterRadius, Is.EqualTo(JsonValue<float>("questing.squad_strategy.zone_jitter_radius")));
+            Assert.That(cfg.EnableObjectiveSharing, Is.EqualTo(JsonValue<bool>("questing.squad_strategy.enable_objective_sharing")));
+            Assert.That(cfg.TrustedFollowerCount, Is.EqualTo(JsonValue<int>("questing.squad_strategy.trusted_follower_count")));
+            Assert.That(cfg.SharingNoiseBase, Is.EqualTo(JsonValue<float>("questing.squad_strategy.sharing_noise_base")));
+            Assert.That(cfg.EnableVoiceCommands, Is.EqualTo(JsonValue<bool>("questing.squad_strategy.enable_voice_commands")));
+            Assert.That(cfg.VoiceCommandCooldown, Is.EqualTo(JsonValue<float>("questing.squad_strategy.voice_command_cooldown")));
+            Assert.That(
+                cfg.FollowerResponseDelay,
+                Is.EqualTo(JsonValue<float>("questing.squad_strategy.follower_response_delay")).Within(0.001f)
+            );
+        });
     }
 
     [Test]
-    public void BotLod_EntireSectionMissing_FromJson()
+    public void BotLod_AllProperties_MatchJson()
     {
-        AssertJsonMissingPath("questing.bot_lod");
-        // The entire bot_lod config section is absent from config.json.
-        // LOD distances and frame skip counts use only C# defaults.
+        AssertJsonHasPath("questing.bot_lod");
+        var cfg = new BotLodConfig();
+        Assert.Multiple(() =>
+        {
+            Assert.That(cfg.Enabled, Is.EqualTo(JsonValue<bool>("questing.bot_lod.enabled")));
+            Assert.That(cfg.ReducedDistance, Is.EqualTo(JsonValue<float>("questing.bot_lod.reduced_distance")));
+            Assert.That(cfg.MinimalDistance, Is.EqualTo(JsonValue<float>("questing.bot_lod.minimal_distance")));
+            Assert.That(cfg.ReducedFrameSkip, Is.EqualTo(JsonValue<int>("questing.bot_lod.reduced_frame_skip")));
+            Assert.That(cfg.MinimalFrameSkip, Is.EqualTo(JsonValue<int>("questing.bot_lod.minimal_frame_skip")));
+        });
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -550,6 +635,8 @@ public class ConfigConsistencyTests
             AssertJsonHasPath("questing.sprinting_limitations");
             AssertJsonHasPath("questing.bot_quests");
             AssertJsonHasPath("questing.zone_movement");
+            AssertJsonHasPath("questing.squad_strategy");
+            AssertJsonHasPath("questing.bot_lod");
             AssertJsonHasPath("questing.looting");
             AssertJsonHasPath("questing.vulture");
             AssertJsonHasPath("questing.linger");
@@ -825,7 +912,6 @@ public class ConfigConsistencyTests
             Assert.That(cfg.MinimalDistance, Is.EqualTo(300f));
             Assert.That(cfg.ReducedFrameSkip, Is.EqualTo(2));
             Assert.That(cfg.MinimalFrameSkip, Is.EqualTo(4));
-            // Not in config.json — defaults are the only values used
         });
     }
 
@@ -844,5 +930,84 @@ public class ConfigConsistencyTests
         });
         // Suspicious time: JSON says min=5, max=20 but C# default gives min=0, max=100
         // Extraction total_quests: JSON says min=3, max=8 but C# default gives min=0, max=100
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Distribution array consistency — sums should equal 100
+    // ══════════════════════════════════════════════════════════════
+
+    [Test]
+    public void PmcDifficultyDistribution_SumsTo100()
+    {
+        var array = _configJson.SelectToken("bot_spawns.pmcs.bot_difficulty_as_online") as JArray;
+        Assert.That(array, Is.Not.Null);
+        double sum = 0;
+        foreach (var row in array)
+        {
+            sum += row[1].Value<double>();
+        }
+        Assert.That(sum, Is.EqualTo(100).Within(0.01), "PMC difficulty distribution should sum to 100");
+    }
+
+    [Test]
+    public void PScavDifficultyDistribution_SumsTo100()
+    {
+        var array = _configJson.SelectToken("bot_spawns.player_scavs.bot_difficulty_as_online") as JArray;
+        Assert.That(array, Is.Not.Null);
+        double sum = 0;
+        foreach (var row in array)
+        {
+            sum += row[1].Value<double>();
+        }
+        Assert.That(sum, Is.EqualTo(100).Within(0.01), "PScav difficulty distribution should sum to 100");
+    }
+
+    [Test]
+    public void PmcGroupDistribution_SumsTo100()
+    {
+        var array = _configJson.SelectToken("bot_spawns.pmcs.bots_per_group_distribution") as JArray;
+        Assert.That(array, Is.Not.Null);
+        double sum = 0;
+        foreach (var row in array)
+        {
+            sum += row[1].Value<double>();
+        }
+        Assert.That(sum, Is.EqualTo(100).Within(0.01), "PMC group distribution should sum to 100");
+    }
+
+    [Test]
+    public void PScavGroupDistribution_SumsTo100()
+    {
+        var array = _configJson.SelectToken("bot_spawns.player_scavs.bots_per_group_distribution") as JArray;
+        Assert.That(array, Is.Not.Null);
+        double sum = 0;
+        foreach (var row in array)
+        {
+            sum += row[1].Value<double>();
+        }
+        Assert.That(sum, Is.EqualTo(100).Within(0.01), "PScav group distribution should sum to 100");
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Bot pathing — newly exposed properties
+    // ══════════════════════════════════════════════════════════════
+
+    [Test]
+    public void BotPathingConfig_AllProperties_MatchJson()
+    {
+        var cfg = new BotPathingConfig();
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                cfg.MaxStartPositionDiscrepancy,
+                Is.EqualTo(JsonValue<float>("questing.bot_pathing.max_start_position_discrepancy")).Within(0.001f)
+            );
+            Assert.That(
+                cfg.IncompletePathRetryInterval,
+                Is.EqualTo(JsonValue<float>("questing.bot_pathing.incomplete_path_retry_interval"))
+            );
+            Assert.That(cfg.UseCustomMover, Is.EqualTo(JsonValue<bool>("questing.bot_pathing.use_custom_mover")));
+            Assert.That(cfg.BypassDoorColliders, Is.EqualTo(JsonValue<bool>("questing.bot_pathing.bypass_door_colliders")));
+        });
     }
 }

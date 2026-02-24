@@ -92,9 +92,10 @@ public class HardStuckDetector
             return false;
         }
 
-        // Check if bot moved outside stuck radius (scaled by speed)
+        // Check if bot moved outside stuck radius (scaled by speed squared for proper
+        // dimension matching: both sides are in squared-distance units)
         var moveDistanceSqr = _positionHistory.GetDistanceSqr();
-        var stuckThresholdSqr = StuckRadiusSqr * moveSpeed;
+        var stuckThresholdSqr = StuckRadiusSqr * moveSpeed * moveSpeed;
 
         if (moveDistanceSqr > stuckThresholdSqr)
         {

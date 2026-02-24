@@ -58,7 +58,7 @@ public class QuestingBotGenerateRouter(
                 {
                     var bots = await botController.Generate(sessionId, info);
 
-                    if (info.GeneratePScav)
+                    if (bots != null && info.GeneratePScav)
                     {
                         var pmcConfig = configServer.GetConfig<PmcConfig>();
 

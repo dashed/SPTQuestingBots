@@ -53,7 +53,13 @@
 				"min_time_before_jumping": 6,
 				"jump_debounce_time": 4,
 				"min_time_before_vaulting": 8,
-				"vault_debounce_time": 4
+				"vault_debounce_time": 4,
+				"soft_stuck_fail_delay": 6,
+				"hard_stuck_path_retry_delay": 5,
+				"hard_stuck_teleport_delay": 10,
+				"hard_stuck_fail_delay": 15,
+				"teleport_enabled": true,
+				"teleport_max_player_distance": 10
 			}
 		},
 		"unlocking_doors" : {
@@ -90,7 +96,9 @@
 		},
 		"bot_pathing": {
 			"max_start_position_discrepancy": 0.5,
-			"incomplete_path_retry_interval": 5
+			"incomplete_path_retry_interval": 5,
+			"use_custom_mover": true,
+			"bypass_door_colliders": true
 		},
 		"bot_questing_requirements": {
 			"exclude_bots_by_level": true,
@@ -305,6 +313,53 @@
 			"combat_convergence_radius": 300,
 			"combat_convergence_force": 0.8,
 			"advection_zones_per_map": {}
+		},
+		"squad_strategy": {
+			"enabled": true,
+			"guard_distance": 8,
+			"flank_distance": 15,
+			"overwatch_distance": 25,
+			"escort_distance": 5,
+			"arrival_radius": 3,
+			"max_distance_from_boss": 75,
+			"strategy_pacing_seconds": 0.5,
+			"use_quest_type_roles": true,
+			"enable_communication_range": true,
+			"communication_range_no_earpiece": 35,
+			"communication_range_earpiece": 200,
+			"enable_squad_personality": true,
+			"enable_position_validation": true,
+			"navmesh_sample_radius": 2.0,
+			"fallback_candidate_count": 16,
+			"fallback_search_radius": 15.0,
+			"enable_reachability_check": true,
+			"max_path_length_multiplier": 2.5,
+			"enable_los_check": true,
+			"enable_cover_position_source": true,
+			"cover_search_radius": 25,
+			"enable_formation_movement": true,
+			"catch_up_distance": 30,
+			"match_speed_distance": 15,
+			"slow_approach_distance": 5,
+			"column_spacing": 4,
+			"spread_spacing": 3,
+			"formation_switch_width": 8,
+			"enable_combat_aware_positioning": true,
+			"enable_zone_follower_spread": true,
+			"zone_jitter_radius": 5,
+			"enable_objective_sharing": true,
+			"trusted_follower_count": 2,
+			"sharing_noise_base": 5,
+			"enable_voice_commands": true,
+			"voice_command_cooldown": 5.0,
+			"follower_response_delay": 0.8
+		},
+		"bot_lod": {
+			"enabled": true,
+			"reduced_distance": 150,
+			"minimal_distance": 300,
+			"reduced_frame_skip": 2,
+			"minimal_frame_skip": 4
 		},
 		"looting": {
 			"enabled": true,
@@ -560,7 +615,7 @@
 			],
 			"bot_difficulty_as_online" : [
 				[0, 33],
-				[1, 65],
+				[1, 55],
 				[2, 10],
 				[3, 2]
 			]

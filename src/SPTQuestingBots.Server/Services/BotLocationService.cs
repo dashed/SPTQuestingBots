@@ -145,7 +145,7 @@ public class BotLocationService
         // Apply to every difficulty level (easy, normal, hard, impossible)
         foreach (var difficulty in bot.BotDifficulty.Values)
         {
-            if (difficulty.Mind?.EnemyBotTypes != null)
+            if (difficulty.Mind != null)
             {
                 difficulty.Mind.EnemyBotTypes = pmcWildSpawnTypes;
             }
@@ -422,12 +422,12 @@ public class BotLocationService
                 BotConfig.MaxBotCap[locationKey] = eftCap;
             }
 
-            // Apply the fixed per-map adjustment (defaults to 0)
+            // Apply the fixed per-map adjustment (defaults to 0), floored at 0
             var fixedAdjustment = config.BotSpawns.BotCapAdjustments.MapSpecificAdjustments.GetValueOrDefault(
                 locationKey,
                 config.BotSpawns.BotCapAdjustments.MapSpecificAdjustments.GetValueOrDefault("default", 0)
             );
-            BotConfig.MaxBotCap[locationKey] += fixedAdjustment;
+            BotConfig.MaxBotCap[locationKey] = Math.Max(0, BotConfig.MaxBotCap[locationKey] + fixedAdjustment);
 
             var newCap = BotConfig.MaxBotCap[locationKey];
 
