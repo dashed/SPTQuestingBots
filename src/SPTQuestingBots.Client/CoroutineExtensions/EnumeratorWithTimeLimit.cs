@@ -132,7 +132,22 @@ namespace SPTQuestingBots.CoroutineExtensions
         {
             Run_Internal_Init();
 
-            foreach (TItem item in collection)
+            // Snapshot the collection to prevent InvalidOperationException if the
+            // source list is modified between yield frames (e.g. DynamicObjectiveScanner
+            // calling RemoveQuest while ProcessAllQuests coroutine is mid-iteration).
+            List<TItem> snapshot;
+            if (collection is ICollection<TItem> col)
+            {
+                snapshot = new List<TItem>(col.Count);
+                foreach (TItem item in collection)
+                    snapshot.Add(item);
+            }
+            else
+            {
+                snapshot = new List<TItem>(collection);
+            }
+
+            foreach (TItem item in snapshot)
             {
                 if (base.stopRequested)
                 {

@@ -148,19 +148,23 @@ namespace SPTQuestingBots.BotLogic.Objective
                 return;
             }
 
-            // Movement timeout
-            float elapsedSeconds = (float)_phaseTimer.ElapsedMilliseconds / 1000f;
-            if (elapsedSeconds > _movementTimeout)
-            {
-                LoggingController.LogInfo(
-                    "[VultureAction] Bot " + BotOwner.GetText() + ": movement timeout after " + elapsedSeconds.ToString("F1") + "s"
-                );
-                CompleteVulture();
-                return;
-            }
-
             if (!BotEntityBridge.TryGetEntity(BotOwner, out var ent))
                 return;
+
+            // Movement timeout — only applies during movement phases, not stationary
+            // HoldAmbush/Paranoia which have their own duration logic
+            if (ent.VulturePhase != VulturePhase.HoldAmbush && ent.VulturePhase != VulturePhase.Paranoia)
+            {
+                float elapsedSeconds = (float)_phaseTimer.ElapsedMilliseconds / 1000f;
+                if (elapsedSeconds > _movementTimeout)
+                {
+                    LoggingController.LogInfo(
+                        "[VultureAction] Bot " + BotOwner.GetText() + ": movement timeout after " + elapsedSeconds.ToString("F1") + "s"
+                    );
+                    CompleteVulture();
+                    return;
+                }
+            }
 
             switch (ent.VulturePhase)
             {
@@ -287,6 +291,7 @@ namespace SPTQuestingBots.BotLogic.Objective
                 );
                 entity.VulturePhase = VulturePhase.Rush;
                 _phaseTimer.Restart();
+                return;
             }
 
             // If silence detected (no recent events), rush in early

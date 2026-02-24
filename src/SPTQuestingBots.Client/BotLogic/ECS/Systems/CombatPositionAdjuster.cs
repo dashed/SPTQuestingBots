@@ -88,6 +88,15 @@ public static class CombatPositionAdjuster
             return;
         }
 
+        // Normalize defensively: flanker and overwatch positions scale with vector
+        // magnitude, so non-unit vectors produce incorrect distances
+        if (lenSq < 0.9999f || lenSq > 1.0001f)
+        {
+            float invLen = 1f / (float)Math.Sqrt(lenSq);
+            threatDirX *= invLen;
+            threatDirZ *= invLen;
+        }
+
         // Count guards and flankers first so each role uses its own index/count
         int guardCount = 0;
         int flankerCount = 0;

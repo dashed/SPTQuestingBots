@@ -118,12 +118,24 @@ public static class LookVarianceController
     }
 
     /// <summary>
-    /// Sample a random float in [min, max].
+    /// Sample a random float in [min, max], clamped to a minimum of 0.5s
+    /// to prevent every-frame firing when config has zero or negative intervals.
     /// </summary>
     internal static float SampleInterval(float min, float max)
     {
-        return min + (float)(Rng.NextDouble() * (max - min));
+        float value = min + (float)(Rng.NextDouble() * (max - min));
+        // Clamp to minimum 0.5s to prevent every-frame look oscillation
+        // when user misconfigures min/max to zero or negative values
+        if (value < MinInterval)
+        {
+            return MinInterval;
+        }
+
+        return value;
     }
+
+    /// <summary>Minimum interval to prevent every-frame firing from zero/negative config.</summary>
+    internal const float MinInterval = 0.5f;
 
     /// <summary>
     /// Generate a random angle in [minDegrees, maxDegrees].

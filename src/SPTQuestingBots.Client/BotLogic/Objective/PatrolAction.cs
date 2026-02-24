@@ -212,6 +212,15 @@ namespace SPTQuestingBots.BotLogic.Objective
             {
                 if (_route.IsLoop)
                 {
+                    // Degenerate case: 1-waypoint loop would create infinite
+                    // pause-arrive cycle with timer resets preventing timeout
+                    if (_route.Waypoints.Length <= 1)
+                    {
+                        LoggingController.LogInfo("[PatrolAction] Bot " + BotOwner.GetText() + ": single-waypoint loop route, completing");
+                        CompletePatrol();
+                        return;
+                    }
+
                     _waypointIndex = 0;
                     LoggingController.LogDebug("[PatrolAction] Bot " + BotOwner.GetText() + ": looping back to waypoint 0");
                 }

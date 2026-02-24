@@ -63,6 +63,13 @@ public static class RoomClearController
         // Currently in room clear mode
         if (entity.IsInRoomClear)
         {
+            // Cancel room clear if bot moved back outdoors
+            if (!isIndoor)
+            {
+                entity.IsInRoomClear = false;
+                return RoomClearInstruction.None;
+            }
+
             // Timer expired
             if (currentTime >= entity.RoomClearUntil)
             {
