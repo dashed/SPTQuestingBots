@@ -16,10 +16,10 @@ namespace SPTQuestingBots.Configuration
         public bool DisableRogueDelay { get; set; } = true;
 
         [JsonProperty("max_initial_bosses")]
-        public int MaxInitialBosses { get; set; } = 10;
+        public int MaxInitialBosses { get; set; } = 14;
 
         [JsonProperty("max_initial_rogues")]
-        public int MaxInitialRogues { get; set; } = 6;
+        public int MaxInitialRogues { get; set; } = 10;
 
         public LimitInitialBossSpawnsConfig() { }
     }

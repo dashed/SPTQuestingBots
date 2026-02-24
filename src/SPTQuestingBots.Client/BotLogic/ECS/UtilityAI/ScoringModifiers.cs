@@ -16,24 +16,28 @@ public static class ScoringModifiers
     /// </summary>
     public static float PersonalityModifier(float aggression, int actionTypeId)
     {
+        float clampedAggression =
+            aggression < 0f ? 0f
+            : aggression > 1f ? 1f
+            : aggression;
         switch (actionTypeId)
         {
             case BotActionTypeId.GoToObjective:
-                return Lerp(0.85f, 1.15f, aggression);
+                return Lerp(0.85f, 1.15f, clampedAggression);
             case BotActionTypeId.Ambush:
-                return Lerp(1.2f, 0.8f, aggression);
+                return Lerp(1.2f, 0.8f, clampedAggression);
             case BotActionTypeId.Snipe:
-                return Lerp(1.2f, 0.8f, aggression);
+                return Lerp(1.2f, 0.8f, clampedAggression);
             case BotActionTypeId.Linger:
-                return Lerp(1.3f, 0.7f, aggression);
+                return Lerp(1.3f, 0.7f, clampedAggression);
             case BotActionTypeId.Loot:
-                return Lerp(1.1f, 0.9f, aggression);
+                return Lerp(1.1f, 0.9f, clampedAggression);
             case BotActionTypeId.Vulture:
-                return Lerp(0.7f, 1.3f, aggression);
+                return Lerp(0.7f, 1.3f, clampedAggression);
             case BotActionTypeId.Investigate:
-                return Lerp(0.8f, 1.2f, aggression);
+                return Lerp(0.8f, 1.2f, clampedAggression);
             case BotActionTypeId.Patrol:
-                return Lerp(1.2f, 0.8f, aggression);
+                return Lerp(1.2f, 0.8f, clampedAggression);
             default:
                 return 1f;
         }
@@ -46,20 +50,24 @@ public static class ScoringModifiers
     /// </summary>
     public static float RaidTimeModifier(float raidTimeNormalized, int actionTypeId)
     {
+        float clampedTime =
+            raidTimeNormalized < 0f ? 0f
+            : raidTimeNormalized > 1f ? 1f
+            : raidTimeNormalized;
         switch (actionTypeId)
         {
             case BotActionTypeId.GoToObjective:
-                return Lerp(1.2f, 0.8f, raidTimeNormalized);
+                return Lerp(1.2f, 0.8f, clampedTime);
             case BotActionTypeId.Linger:
-                return Lerp(0.7f, 1.3f, raidTimeNormalized);
+                return Lerp(0.7f, 1.3f, clampedTime);
             case BotActionTypeId.Loot:
-                return Lerp(0.8f, 1.2f, raidTimeNormalized);
+                return Lerp(0.8f, 1.2f, clampedTime);
             case BotActionTypeId.Ambush:
-                return Lerp(0.9f, 1.1f, raidTimeNormalized);
+                return Lerp(0.9f, 1.1f, clampedTime);
             case BotActionTypeId.Snipe:
-                return Lerp(0.9f, 1.1f, raidTimeNormalized);
+                return Lerp(0.9f, 1.1f, clampedTime);
             case BotActionTypeId.Patrol:
-                return Lerp(0.8f, 1.2f, raidTimeNormalized);
+                return Lerp(0.8f, 1.2f, clampedTime);
             default:
                 return 1f;
         }
@@ -70,12 +78,22 @@ public static class ScoringModifiers
     /// </summary>
     public static float CombinedModifier(float aggression, float raidTimeNormalized, int actionTypeId)
     {
-        return PersonalityModifier(aggression, actionTypeId) * RaidTimeModifier(raidTimeNormalized, actionTypeId);
+        float result = PersonalityModifier(aggression, actionTypeId) * RaidTimeModifier(raidTimeNormalized, actionTypeId);
+        if (float.IsNaN(result) || result < 0f)
+        {
+            return 1.0f;
+        }
+
+        return result;
     }
 
-    /// <summary>Simple linear interpolation: a + (b - a) * t.</summary>
+    /// <summary>Simple linear interpolation: a + (b - a) * t, with t clamped to [0, 1].</summary>
     internal static float Lerp(float a, float b, float t)
     {
-        return a + (b - a) * t;
+        float clampedT =
+            t < 0f ? 0f
+            : t > 1f ? 1f
+            : t;
+        return a + (b - a) * clampedT;
     }
 }

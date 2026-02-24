@@ -28,7 +28,7 @@ public class DebugConfig
     public bool ShowDoorInteractionTestPoints { get; set; } = false;
 
     [JsonProperty("allow_zero_distance_sleeping")]
-    public bool AllowZeroDistanceSleeping { get; set; } = false;
+    public bool AllowZeroDistanceSleeping { get; set; } = true;
 
     [JsonProperty("dedicated_log_file")]
     public bool DedicatedLogFile { get; set; } = true;

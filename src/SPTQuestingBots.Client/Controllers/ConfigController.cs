@@ -49,8 +49,14 @@ namespace SPTQuestingBots.Controllers
             Type targetType = Helpers.TarkovTypeHelpers.FindTargetTypeByField(fieldName);
             LoggingController.LogInfo("Found type for " + fieldName + ": " + targetType.FullName, true);
 
-            serializerSettings =
-                targetType.GetField(fieldName, BindingFlags.Public | BindingFlags.Static).GetValue(null) as JsonSerializerSettings;
+            FieldInfo field = targetType.GetField(fieldName, BindingFlags.Public | BindingFlags.Static);
+            if (field == null)
+            {
+                LoggingController.LogError("Could not find field '" + fieldName + "' on " + targetType.FullName);
+                return;
+            }
+
+            serializerSettings = field.GetValue(null) as JsonSerializerSettings;
         }
 
         public static void AdjustPScavChance(float timeRemainingFactor, bool preventPScav)

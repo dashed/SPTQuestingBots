@@ -16,7 +16,7 @@ namespace SPTQuestingBots.Configuration
         public float Time { get; set; } = 20;
 
         [JsonProperty("max_count")]
-        public int MaxCount { get; set; } = 10;
+        public int MaxCount { get; set; } = 8;
 
         [JsonProperty("follower_break_time")]
         public float FollowerBreakTime { get; set; } = 10;

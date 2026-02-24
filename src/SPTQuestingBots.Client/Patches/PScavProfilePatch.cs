@@ -26,6 +26,11 @@ namespace SPTQuestingBots.Patches
         [PatchPrefix]
         protected static bool PatchPrefix(object __instance, ref Profile __result, BotCreationDataClass data, bool withDelete)
         {
+            if (profileListField == null)
+            {
+                return true;
+            }
+
             bool shouldSpawnPScav = RaidHelpers.ShouldSpawnPScavByChance();
 
             List<Profile> cachedProfiles = (List<Profile>)profileListField.GetValue(__instance);

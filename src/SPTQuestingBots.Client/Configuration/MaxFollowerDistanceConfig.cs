@@ -19,7 +19,7 @@ namespace SPTQuestingBots.Configuration
         public float RegroupPauseTime { get; set; } = 2;
 
         [JsonProperty("target_position_variation_allowed")]
-        public float TargetPositionVariationAllowed { get; set; } = 1;
+        public float TargetPositionVariationAllowed { get; set; } = 3;
 
         [JsonProperty("target_range_questing")]
         public MinMaxConfig TargetRangeQuesting { get; set; } = new MinMaxConfig();
@@ -28,10 +28,10 @@ namespace SPTQuestingBots.Configuration
         public MinMaxConfig TargetRangeCombat { get; set; } = new MinMaxConfig();
 
         [JsonProperty("nearest")]
-        public float Nearest { get; set; } = 35;
+        public float Nearest { get; set; } = 15;
 
         [JsonProperty("furthest")]
-        public float Furthest { get; set; } = 50;
+        public float Furthest { get; set; } = 25;
 
         public MaxFollowerDistanceConfig() { }
     }

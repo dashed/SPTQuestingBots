@@ -57,6 +57,7 @@ namespace SPTQuestingBots
                 new Patches.CheckLookEnemyPatch().Enable();
                 new Patches.ReturnToPoolPatch().Enable();
                 new Patches.BotOwnerSprintPatch().Enable();
+                new Patches.OnMakingShotPatch().Enable();
 
                 // Custom mover patches (Phobos-style Player.Move replacement)
                 if (ConfigController.Config.Questing.BotPathing.UseCustomMover)

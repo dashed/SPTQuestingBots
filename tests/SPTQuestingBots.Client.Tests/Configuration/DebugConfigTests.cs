@@ -20,7 +20,7 @@ public class DebugConfigTests
             Assert.That(config.ShowZoneOutlines, Is.False);
             Assert.That(config.ShowFailedPaths, Is.False);
             Assert.That(config.ShowDoorInteractionTestPoints, Is.False);
-            Assert.That(config.AllowZeroDistanceSleeping, Is.False);
+            Assert.That(config.AllowZeroDistanceSleeping, Is.True);
             Assert.That(config.DedicatedLogFile, Is.True);
         });
     }

@@ -27,7 +27,7 @@ namespace SPTQuestingBots.Configuration
 
         /// <summary>Weight for the convergence (player attraction) field component.</summary>
         [JsonProperty("convergence_weight")]
-        public float ConvergenceWeight { get; set; } = 1.0f;
+        public float ConvergenceWeight { get; set; } = 0.3f;
 
         /// <summary>Weight for the advection (zone attraction + crowd repulsion) field component.</summary>
         [JsonProperty("advection_weight")]
@@ -79,7 +79,7 @@ namespace SPTQuestingBots.Configuration
 
         /// <summary>Force multiplier for combat event convergence pull (relative to player pull).</summary>
         [JsonProperty("combat_convergence_force")]
-        public float CombatConvergenceForce { get; set; } = 0.5f;
+        public float CombatConvergenceForce { get; set; } = 0.8f;
 
         /// <summary>
         /// Per-map advection zone overrides. Keys are BSG location IDs (case-insensitive).

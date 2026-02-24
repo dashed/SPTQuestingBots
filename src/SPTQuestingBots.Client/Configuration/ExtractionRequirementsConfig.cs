@@ -10,7 +10,7 @@ namespace SPTQuestingBots.Configuration
     public class ExtractionRequirementsConfig
     {
         [JsonProperty("use_sain_for_extracting")]
-        public bool UseSAINForExtracting { get; set; } = false;
+        public bool UseSAINForExtracting { get; set; } = true;
 
         [JsonProperty("min_alive_time")]
         public float MinAliveTime { get; set; } = 60;

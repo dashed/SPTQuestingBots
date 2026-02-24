@@ -10,10 +10,10 @@ namespace SPTQuestingBots.Configuration
     public class BotQuestsConfig
     {
         [JsonProperty("distance_randomness")]
-        public int DistanceRandomness { get; set; } = 50;
+        public int DistanceRandomness { get; set; } = 30;
 
         [JsonProperty("desirability_randomness")]
-        public int DesirabilityRandomness { get; set; } = 50;
+        public int DesirabilityRandomness { get; set; } = 20;
 
         [JsonProperty("distance_weighting")]
         public float DistanceWeighting { get; set; } = 1;
@@ -28,7 +28,7 @@ namespace SPTQuestingBots.Configuration
         public float DesirabilitySnipingMultiplier { get; set; } = 1;
 
         [JsonProperty("desirability_active_quest_multiplier")]
-        public float DesirabilityActiveQuestMultiplier { get; set; } = 1;
+        public float DesirabilityActiveQuestMultiplier { get; set; } = 1.2f;
 
         [JsonProperty("exfil_direction_weighting")]
         public Dictionary<string, float> ExfilDirectionWeighting { get; set; } = new Dictionary<string, float>();
@@ -43,7 +43,7 @@ namespace SPTQuestingBots.Configuration
         public string[] BlacklistedBossHunterBosses { get; set; } = new string[0];
 
         [JsonProperty("airdrop_bot_interest_time")]
-        public float AirdropBotInterestTime { get; set; } = 1800;
+        public float AirdropBotInterestTime { get; set; } = 420;
 
         [JsonProperty("elimination_quest_search_time")]
         public float EliminationQuestSearchTime { get; set; } = 60;

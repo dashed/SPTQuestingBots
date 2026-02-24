@@ -19,10 +19,10 @@ namespace SPTQuestingBots.Configuration
         public BrainLayerPrioritiesOptionsConfig BrainLayerPriorities { get; set; } = new BrainLayerPrioritiesOptionsConfig();
 
         [JsonProperty("quest_selection_timeout")]
-        public float QuestSelectionTimeout { get; set; } = 2000;
+        public float QuestSelectionTimeout { get; set; } = 250;
 
         [JsonProperty("btr_run_distance")]
-        public float BTRRunDistance { get; set; } = 40;
+        public float BTRRunDistance { get; set; } = 10;
 
         [JsonProperty("allowed_bot_types_for_questing")]
         public BotTypeConfig AllowedBotTypesForQuesting { get; set; } = new BotTypeConfig();
@@ -37,7 +37,7 @@ namespace SPTQuestingBots.Configuration
         public float MinTimeBetweenSwitchingObjectives { get; set; } = 5;
 
         [JsonProperty("default_wait_time_after_objective_completion")]
-        public float DefaultWaitTimeAfterObjectiveCompletion { get; set; } = 10;
+        public float DefaultWaitTimeAfterObjectiveCompletion { get; set; } = 3;
 
         [JsonProperty("update_bot_zone_after_stopping")]
         public bool UpdateBotZoneAfterStopping { get; set; } = true;

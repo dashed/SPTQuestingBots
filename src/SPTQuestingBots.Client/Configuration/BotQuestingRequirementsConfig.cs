@@ -10,19 +10,19 @@ namespace SPTQuestingBots.Configuration
     public class BotQuestingRequirementsConfig
     {
         [JsonProperty("exclude_bots_by_level")]
-        public bool ExcludeBotsByLevel { get; set; } = false;
+        public bool ExcludeBotsByLevel { get; set; } = true;
 
         [JsonProperty("repeat_quest_delay")]
-        public float RepeatQuestDelay { get; set; } = 300;
+        public float RepeatQuestDelay { get; set; } = 360;
 
         [JsonProperty("max_time_per_quest")]
         public float MaxTimePerQuest { get; set; } = 300;
 
         [JsonProperty("min_hydration")]
-        public float MinHydration { get; set; } = 50;
+        public float MinHydration { get; set; } = 20;
 
         [JsonProperty("min_energy")]
-        public float MinEnergy { get; set; } = 50;
+        public float MinEnergy { get; set; } = 20;
 
         [JsonProperty("min_health_head")]
         public float MinHealthHead { get; set; } = 50;

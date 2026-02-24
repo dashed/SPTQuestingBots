@@ -101,7 +101,8 @@ public sealed class InvestigateTask : QuestUtilityTask
         }
 
         // Intensity component: how much over threshold, capped at 2x
-        float intensityRatio = (float)entity.CombatIntensity / intensityThreshold;
+        int safeIntensityThreshold = System.Math.Max(1, intensityThreshold);
+        float intensityRatio = (float)entity.CombatIntensity / safeIntensityThreshold;
         if (intensityRatio > 2f)
         {
             intensityRatio = 2f;

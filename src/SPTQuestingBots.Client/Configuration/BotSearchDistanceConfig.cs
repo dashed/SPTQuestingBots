@@ -10,10 +10,10 @@ namespace SPTQuestingBots.Configuration
     public class BotSearchDistanceConfig
     {
         [JsonProperty("objective_reached_ideal")]
-        public float OjectiveReachedIdeal { get; set; } = 3;
+        public float OjectiveReachedIdeal { get; set; } = 0.5f;
 
         [JsonProperty("objective_reached_navmesh_path_error")]
-        public float ObjectiveReachedNavMeshPathError { get; set; } = 20;
+        public float ObjectiveReachedNavMeshPathError { get; set; } = 2;
 
         [JsonProperty("max_navmesh_path_error")]
         public float MaxNavMeshPathError { get; set; } = 10;

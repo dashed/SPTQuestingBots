@@ -10,7 +10,7 @@ namespace SPTQuestingBots.Configuration
     public class SprintingLimitationsConfig
     {
         [JsonProperty("enable_debounce_time")]
-        public float EnableDebounceTime { get; set; } = 1;
+        public float EnableDebounceTime { get; set; } = 3;
 
         [JsonProperty("stamina")]
         public MinMaxConfig Stamina { get; set; } = new MinMaxConfig();

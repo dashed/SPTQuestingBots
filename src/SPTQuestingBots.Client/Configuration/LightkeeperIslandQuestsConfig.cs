@@ -10,7 +10,7 @@ namespace SPTQuestingBots.Configuration
     public class LightkeeperIslandQuestsConfig
     {
         [JsonProperty("enabled")]
-        public bool Enabled { get; set; } = false;
+        public bool Enabled { get; set; } = true;
 
         public LightkeeperIslandQuestsConfig() { }
     }

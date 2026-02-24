@@ -14,7 +14,7 @@ public class PositionHistory
     {
         // Add one extra item as we want to cover bufferSize + 1 segments.
         // E.g. to measure 10 segments, we need 11 samples.
-        _bufferSize = segments + 1;
+        _bufferSize = System.Math.Max(1, segments) + 1;
         _positions = new Vector3[_bufferSize];
     }
 

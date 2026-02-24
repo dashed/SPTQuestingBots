@@ -326,7 +326,7 @@ namespace SPTQuestingBots.BehaviorExtensions
                 return;
             }
 
-            botZoneField.SetValue(BotOwner.BotsGroup, closestBotZone);
+            botZoneField?.SetValue(BotOwner.BotsGroup, closestBotZone);
             BotOwner.PatrollingData.PointChooser.ShallChangeWay(true);
         }
 

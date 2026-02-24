@@ -4,7 +4,7 @@ namespace SPTQuestingBots.Helpers;
 
 public class RollingAverage(int windowSize, int recalcInterval = 1000)
 {
-    private readonly float[] _buffer = new float[windowSize];
+    private readonly float[] _buffer = new float[System.Math.Max(1, windowSize)];
     private int _writeIndex;
     private float _sum;
     private int _count;

@@ -22,7 +22,7 @@ namespace SPTQuestingBots.Configuration
         public float DoorApproachPositionSearchRadius { get; set; } = 0.75f;
 
         [JsonProperty("door_approach_position_search_offset")]
-        public float DoorApproachPositionSearchOffset { get; set; } = -0.5f;
+        public float DoorApproachPositionSearchOffset { get; set; } = -0.75f;
 
         [JsonProperty("pause_time_after_unlocking")]
         public float PauseTimeAfterUnlocking { get; set; } = 5;

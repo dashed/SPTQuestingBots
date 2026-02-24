@@ -119,7 +119,8 @@ public sealed class VultureTask : QuestUtilityTask
         }
 
         // Intensity component: how much over threshold, capped at 2×
-        float intensityRatio = (float)entity.CombatIntensity / courageThreshold;
+        int safeCourageThreshold = System.Math.Max(1, courageThreshold);
+        float intensityRatio = (float)entity.CombatIntensity / safeCourageThreshold;
         if (intensityRatio > 2f)
         {
             intensityRatio = 2f;

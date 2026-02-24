@@ -16,7 +16,7 @@ public class SprintingLimitationsConfigTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(config.EnableDebounceTime, Is.EqualTo(1f));
+            Assert.That(config.EnableDebounceTime, Is.EqualTo(3f));
             Assert.That(config.Stamina, Is.Not.Null);
             Assert.That(config.SharpPathCorners, Is.Not.Null);
             Assert.That(config.ApproachingClosedDoors, Is.Not.Null);
@@ -98,7 +98,7 @@ public class SprintingLimitationsConfigTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(config.EnableDebounceTime, Is.EqualTo(1f));
+            Assert.That(config.EnableDebounceTime, Is.EqualTo(3f));
             Assert.That(config.Stamina, Is.Not.Null);
             Assert.That(config.SharpPathCorners, Is.Not.Null);
             Assert.That(config.ApproachingClosedDoors, Is.Not.Null);
@@ -197,7 +197,7 @@ public class SprintingLimitationsConfigTests
             Assert.That(config.EnableLateRaidSprintBlock, Is.False);
             Assert.That(config.EnableSuspicionSprintBlock, Is.False);
             // Other fields should retain defaults
-            Assert.That(config.EnableDebounceTime, Is.EqualTo(1f));
+            Assert.That(config.EnableDebounceTime, Is.EqualTo(3f));
             Assert.That(config.PostCombatCooldownSeconds, Is.EqualTo(20f));
             Assert.That(config.LateRaidNoSprintThreshold, Is.EqualTo(0.15f));
         });

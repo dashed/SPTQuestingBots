@@ -10,7 +10,7 @@ namespace SPTQuestingBots.Configuration
     public class HearingSensorConfig
     {
         [JsonProperty("enabled")]
-        public bool Enabled { get; set; } = false;
+        public bool Enabled { get; set; } = true;
 
         [JsonProperty("min_corrected_sound_power")]
         public float MinCorrectedSoundPower { get; set; } = 17;
@@ -19,10 +19,10 @@ namespace SPTQuestingBots.Configuration
         public float MaxDistanceFootsteps { get; set; } = 20;
 
         [JsonProperty("max_distance_gunfire")]
-        public float MaxDistanceGunfire { get; set; } = 75;
+        public float MaxDistanceGunfire { get; set; } = 50;
 
         [JsonProperty("max_distance_gunfire_suppressed")]
-        public float MaxDistanceGunfireSuppressed { get; set; } = 75;
+        public float MaxDistanceGunfireSuppressed { get; set; } = 50;
 
         [JsonProperty("loudness_multiplier_footsteps")]
         public float LoudnessMultiplierFootsteps { get; set; } = 1f;
@@ -43,7 +43,7 @@ namespace SPTQuestingBots.Configuration
         public Dictionary<string, int> MaxSuspiciousTime { get; set; } = new Dictionary<string, int>();
 
         [JsonProperty("suspicion_cooldown_time")]
-        public float SuspicionCooldownTime { get; set; } = 30;
+        public float SuspicionCooldownTime { get; set; } = 7;
 
         public HearingSensorConfig() { }
     }

@@ -134,6 +134,11 @@ namespace SPTQuestingBots.Patches.Spawning
                 return;
             }
 
+            if (wavesSpawnScenarioField == null)
+            {
+                return;
+            }
+
             WavesSpawnScenario wavesSpawnScenario = (WavesSpawnScenario)wavesSpawnScenarioField.GetValue(localGameObj);
             if (wavesSpawnScenario?.SpawnWaves == null)
             {

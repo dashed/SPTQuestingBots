@@ -25,6 +25,12 @@ namespace SPTQuestingBots.BotLogic
         private Stopwatch lastRequestedTimer = new Stopwatch();
         private float maxLayerSearchTime = 300;
 
+        // Cached reflection fields — resolved once, used per-call
+        private static FieldInfo _layerListField;
+        private static bool _layerListFieldResolved;
+        private static FieldInfo _customLayerField;
+        private static bool _customLayerFieldResolved;
+
         public bool CanLayerBeUsed => layer?.IsActive == true;
         public double TimeSinceLastRequested =>
             lastRequestedTimer.IsRunning ? lastRequestedTimer.ElapsedMilliseconds / 1000.0 : double.MaxValue;
@@ -170,22 +176,24 @@ namespace SPTQuestingBots.BotLogic
                 return emptyCollection;
             }
 
-            // Find the field that stores the list of brain layers assigned to the bot
-            Type aICoreStrategyClassType = typeof(AICoreStrategyAbstractClass<BotLogicDecision>);
-
-            FieldInfo layerListField = Helpers.ReflectionHelper.RequireField(
-                aICoreStrategyClassType,
-                "List_0",
-                "AICoreStrategyAbstractClass brain layer list"
-            );
-            if (layerListField == null)
+            // Resolve and cache the brain layer list field once
+            if (!_layerListFieldResolved)
+            {
+                _layerListField = Helpers.ReflectionHelper.RequireField(
+                    typeof(AICoreStrategyAbstractClass<BotLogicDecision>),
+                    "List_0",
+                    "AICoreStrategyAbstractClass brain layer list"
+                );
+                _layerListFieldResolved = true;
+            }
+            if (_layerListField == null)
             {
                 return emptyCollection;
             }
 
             // Get the list of brain layers for the bot
             List<AICoreLayerClass<BotLogicDecision>> layerList =
-                (List<AICoreLayerClass<BotLogicDecision>>)layerListField.GetValue(botOwner.Brain.BaseBrain);
+                (List<AICoreLayerClass<BotLogicDecision>>)_layerListField.GetValue(botOwner.Brain.BaseBrain);
             if (layerList == null)
             {
                 LoggingController.LogError("Could not retrieve brain layers for bot " + botOwner.GetText());
@@ -244,31 +252,38 @@ namespace SPTQuestingBots.BotLogic
                 return null;
             }
 
-            Assembly bigBrainAssembly = Assembly.GetAssembly(typeof(BrainManager));
-            if (bigBrainAssembly == null)
+            // Resolve and cache the BigBrain CustomLayerWrapper field once
+            if (!_customLayerFieldResolved)
             {
-                LoggingController.LogError("Could get the BigBrain assembly");
+                Assembly bigBrainAssembly = Assembly.GetAssembly(typeof(BrainManager));
+                if (bigBrainAssembly == null)
+                {
+                    LoggingController.LogError("Could get the BigBrain assembly");
+                    _customLayerFieldResolved = true;
+                    return null;
+                }
+
+                Type customLayerWrapperType = bigBrainAssembly.GetType(bigBrainCustomLayerWrapperTypeName, false);
+                if (customLayerWrapperType == null)
+                {
+                    LoggingController.LogError("Could not find CustomLayerWrapper type");
+                    _customLayerFieldResolved = true;
+                    return null;
+                }
+
+                _customLayerField = Helpers.ReflectionHelper.RequireField(
+                    customLayerWrapperType,
+                    "customLayer",
+                    "BigBrain CustomLayerWrapper inner field"
+                );
+                _customLayerFieldResolved = true;
+            }
+            if (_customLayerField == null)
+            {
                 return null;
             }
 
-            Type customLayerWrapperType = bigBrainAssembly.GetType(bigBrainCustomLayerWrapperTypeName, false);
-            if (customLayerWrapperType == null)
-            {
-                LoggingController.LogError("Could not find CustomLayerWrapper type");
-                return null;
-            }
-
-            FieldInfo customLayerField = Helpers.ReflectionHelper.RequireField(
-                customLayerWrapperType,
-                "customLayer",
-                "BigBrain CustomLayerWrapper inner field"
-            );
-            if (customLayerField == null)
-            {
-                return null;
-            }
-
-            CustomLayer customLayer = (CustomLayer)customLayerField.GetValue(layer);
+            CustomLayer customLayer = (CustomLayer)_customLayerField.GetValue(layer);
             if (customLayer == null)
             {
                 LoggingController.LogError("Could not get CustomLayer");
