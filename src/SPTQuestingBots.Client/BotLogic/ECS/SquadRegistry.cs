@@ -284,7 +284,19 @@ public sealed class SquadRegistry
         {
             if (squad.Members.Count > 0)
             {
-                squad.Leader = squad.Members[0];
+                // Prefer an active member as the new leader
+                BotEntity newLeader = null;
+                for (int i = 0; i < squad.Members.Count; i++)
+                {
+                    if (squad.Members[i].IsActive)
+                    {
+                        newLeader = squad.Members[i];
+                        break;
+                    }
+                }
+
+                // Fall back to first member if all are inactive
+                squad.Leader = newLeader ?? squad.Members[0];
                 squad.Leader.SquadRole = SquadRole.Leader;
                 LoggingController.LogInfo("[SquadRegistry] Squad " + squad.Id + " leader reassigned to entity " + squad.Leader.Id);
             }
