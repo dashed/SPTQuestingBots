@@ -9,7 +9,7 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks;
 /// </summary>
 public sealed class PlantItemTask : QuestUtilityTask
 {
-    public const float BaseScore = 0.65f;
+    public const float BaseScore = 0.80f;
 
     public override int BotActionTypeId
     {

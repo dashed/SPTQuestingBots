@@ -63,9 +63,9 @@ public static class ScoringModifiers
             case BotActionTypeId.Loot:
                 return Lerp(0.8f, 1.2f, clampedTime);
             case BotActionTypeId.Ambush:
-                return Lerp(0.9f, 1.1f, clampedTime);
+                return Lerp(0.9f, 1.2f, clampedTime);
             case BotActionTypeId.Snipe:
-                return Lerp(0.9f, 1.1f, clampedTime);
+                return Lerp(0.9f, 1.2f, clampedTime);
             case BotActionTypeId.Patrol:
                 return Lerp(0.8f, 1.2f, clampedTime);
             default:

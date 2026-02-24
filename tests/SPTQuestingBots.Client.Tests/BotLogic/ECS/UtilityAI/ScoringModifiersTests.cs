@@ -191,7 +191,7 @@ public class ScoringModifiersTests
     public void RaidTimeModifier_Ambush_LateRaid_SlightlyBoosted()
     {
         float lateMod = ScoringModifiers.RaidTimeModifier(1f, BotActionTypeId.Ambush);
-        Assert.That(lateMod, Is.EqualTo(1.1f).Within(0.001f));
+        Assert.That(lateMod, Is.EqualTo(1.2f).Within(0.001f));
     }
 
     [Test]
