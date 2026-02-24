@@ -85,7 +85,16 @@ public class VultureSquadStrategy : SquadStrategy
         float targetZ = leader.NearbyEventZ;
         float targetY = leader.NearbyEventY;
 
-        int followerCount = squad.Size - 1;
+        int followerCount = 0;
+        for (int m = 0; m < squad.Members.Count; m++)
+        {
+            var mem = squad.Members[m];
+            if (mem != null && mem != leader && mem.IsActive)
+            {
+                followerCount++;
+            }
+        }
+
         if (followerCount <= 0)
         {
             return;
@@ -119,7 +128,7 @@ public class VultureSquadStrategy : SquadStrategy
         for (int m = 0; m < squad.Size; m++)
         {
             var member = squad.Members[m];
-            if (member == null || member == leader)
+            if (member == null || member == leader || !member.IsActive)
             {
                 continue;
             }

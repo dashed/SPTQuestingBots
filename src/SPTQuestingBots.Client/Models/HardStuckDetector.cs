@@ -81,10 +81,14 @@ public class HardStuckDetector
         var averageSpeed = _averageSpeed.Value;
         var moveSpeed = currentMoveSpeed <= averageSpeed ? currentMoveSpeed : averageSpeed;
 
-        // Don't check if stationary (unless already in a stuck state)
-        if (moveSpeed <= 0.01f && Status != HardStuckStatus.None)
+        // Don't check if stationary — skip stuck detection entirely.
+        // If already in a stuck state, clear it (bot stopped trying to move).
+        if (moveSpeed <= 0.01f)
         {
-            ResetInternal();
+            if (Status != HardStuckStatus.None)
+            {
+                ResetInternal();
+            }
             return false;
         }
 

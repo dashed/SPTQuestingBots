@@ -85,7 +85,13 @@ public static class PathDeviationForce
 
         if (len < 1e-6f)
         {
-            return moveDirection;
+            // Normalize fallback to guarantee unit-length output
+            float mdLen = (float)Math.Sqrt(moveDirection.x * moveDirection.x + moveDirection.z * moveDirection.z);
+            if (mdLen < 1e-6f)
+            {
+                return Vector3.zero;
+            }
+            return new Vector3(moveDirection.x / mdLen, 0f, moveDirection.z / mdLen);
         }
 
         return new Vector3(bx / len, 0f, bz / len);

@@ -728,11 +728,12 @@ public class BotRegistryEdgeCaseTests
 public class BotLodCalculatorEdgeCaseTests
 {
     [Test]
-    public void ShouldSkipUpdate_NegativeSkip_DivisionByZeroGuard()
+    public void ShouldSkipUpdate_NegativeSkip_ClampedToNeverSkip()
     {
-        // Skip=-1 means cycle length = 0, which causes DivideByZeroException
-        // Documenting that negative skip values are NOT safe
-        Assert.Throws<DivideByZeroException>(() => BotLodCalculator.ShouldSkipUpdate(BotLodCalculator.TierReduced, 0, -1, 4));
+        // Skip=-1 previously caused DivideByZeroException (cycle length = 0).
+        // Fix: clamp cycle to at least 1, so negative skip behaves like skip=0 (never skip).
+        Assert.DoesNotThrow(() => BotLodCalculator.ShouldSkipUpdate(BotLodCalculator.TierReduced, 0, -1, 4));
+        Assert.That(BotLodCalculator.ShouldSkipUpdate(BotLodCalculator.TierReduced, 0, -1, 4), Is.False);
     }
 
     [Test]

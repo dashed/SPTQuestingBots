@@ -686,7 +686,7 @@ namespace SPTQuestingBots.Controllers
 
             // Once a valid assignment is selected, assign it to the bot
             BotJobAssignment assignment = new BotJobAssignment(bot, quest, objective);
-            BotLogic.ECS.BotEntityBridge.GetJobAssignments(bot).Add(assignment);
+            BotLogic.ECS.BotEntityBridge.AddJobAssignment(bot, assignment);
 
             return assignment;
         }

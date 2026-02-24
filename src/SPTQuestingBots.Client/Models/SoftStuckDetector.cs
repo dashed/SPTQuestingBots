@@ -13,8 +13,8 @@ public enum SoftStuckStatus
 
 public class SoftStuckDetector
 {
-    // Bots moving at half the walk speed (3.5 m/s) are expected to be stuck
-    private const float SpeedThreshold = 3.5f / 2f;
+    // Bot must move at least this fraction of its expected distance to not be stuck
+    private const float SpeedFraction = 0.5f;
     private const float StaleThreshold = 0.2f;
 
     /// <summary>
@@ -90,7 +90,7 @@ public class SoftStuckDetector
         }
 
         // Calculate expected movement distance based on current speed
-        var stuckThreshold = SpeedThreshold * moveSpeed * deltaTime;
+        var stuckThreshold = SpeedFraction * moveSpeed * deltaTime;
 
         // Check actual horizontal movement (ignore Y to filter jumps)
         var moveVector = currentPosition - lastPos;

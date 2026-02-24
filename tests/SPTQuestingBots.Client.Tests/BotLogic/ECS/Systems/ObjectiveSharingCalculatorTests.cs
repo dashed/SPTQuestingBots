@@ -543,4 +543,56 @@ public class ObjectiveSharingCalculatorTests
         Assert.That(pos1[1], Is.EqualTo(pos2[1]));
         Assert.That(pos1[2], Is.EqualTo(pos2[2]));
     }
+
+    // ── Bug Fix: coordinationLevel clamping ────────────────────────
+
+    [Test]
+    public void DegradePositions_CoordinationAbove5_ClampedNoNegativeNoise()
+    {
+        // coordinationLevel=10 would produce negative noiseScale without clamping
+        byte[] tiers = { ObjectiveSharingCalculator.TierRelayed };
+        float[] positions = { 50f, 10f, 50f };
+        var rng = new System.Random(42);
+
+        ObjectiveSharingCalculator.DegradePositions(tiers, 1, positions, 10f, 5f, rng);
+
+        // With clamped coord=5, noiseScale = 5 * (6-5)/5 = 1.0
+        // Noise should be positive-magnitude (non-zero, non-negative scale)
+        // Key: position should differ from original but noise should be reasonable
+        Assert.That(positions[0], Is.Not.EqualTo(50f), "Position should be modified with positive noise scale");
+        Assert.That(positions[1], Is.EqualTo(10f), "Y should be unchanged");
+    }
+
+    [Test]
+    public void DegradePositions_CoordinationAbove5_SameAsCoordination5()
+    {
+        // coordinationLevel=10 should produce same results as coordinationLevel=5
+        byte[] tiers1 = { ObjectiveSharingCalculator.TierRelayed };
+        float[] pos1 = { 50f, 10f, 50f };
+        ObjectiveSharingCalculator.DegradePositions(tiers1, 1, pos1, 10f, 5f, new System.Random(42));
+
+        byte[] tiers2 = { ObjectiveSharingCalculator.TierRelayed };
+        float[] pos2 = { 50f, 10f, 50f };
+        ObjectiveSharingCalculator.DegradePositions(tiers2, 1, pos2, 5f, 5f, new System.Random(42));
+
+        Assert.That(pos1[0], Is.EqualTo(pos2[0]).Within(0.001f));
+        Assert.That(pos1[2], Is.EqualTo(pos2[2]).Within(0.001f));
+    }
+
+    [Test]
+    public void DegradePositions_NegativeCoordination_ClampedToZero()
+    {
+        // coordinationLevel=-5 should clamp to 0, giving max noise
+        byte[] tiers = { ObjectiveSharingCalculator.TierRelayed };
+        float[] pos1 = { 50f, 10f, 50f };
+        ObjectiveSharingCalculator.DegradePositions(tiers, 1, pos1, -5f, 5f, new System.Random(42));
+
+        // With clamped coord=0, noiseScale = 5 * (6-0)/5 = 6.0
+        byte[] tiers2 = { ObjectiveSharingCalculator.TierRelayed };
+        float[] pos2 = { 50f, 10f, 50f };
+        ObjectiveSharingCalculator.DegradePositions(tiers2, 1, pos2, 0f, 5f, new System.Random(42));
+
+        Assert.That(pos1[0], Is.EqualTo(pos2[0]).Within(0.001f));
+        Assert.That(pos1[2], Is.EqualTo(pos2[2]).Within(0.001f));
+    }
 }

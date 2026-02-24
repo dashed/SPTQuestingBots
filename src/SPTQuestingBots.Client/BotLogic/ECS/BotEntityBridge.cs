@@ -775,7 +775,7 @@ namespace SPTQuestingBots.BotLogic.ECS
                 var lingerConfig = Controllers.ConfigController.Config?.Questing?.Linger;
                 float durationMin = lingerConfig?.DurationMin ?? 10f;
                 float durationMax = lingerConfig?.DurationMax ?? 30f;
-                entity.LingerDuration = durationMin + (float)(new System.Random().NextDouble() * (durationMax - durationMin));
+                entity.LingerDuration = durationMin + (float)(_lingerRng.NextDouble() * (durationMax - durationMin));
                 LoggingController.LogDebug(
                     "[BotEntityBridge] Entity "
                         + entity.Id
@@ -905,6 +905,33 @@ namespace SPTQuestingBots.BotLogic.ECS
         }
 
         /// <summary>
+        /// Add a job assignment to a bot's list. Safely handles unregistered bots
+        /// by logging a warning instead of mutating the shared empty sentinel.
+        /// </summary>
+        public static void AddJobAssignment(BotOwner bot, BotJobAssignment assignment)
+        {
+            if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
+            {
+                if (_jobAssignments.TryGetValue(entity.Id, out var list))
+                {
+                    list.Add(assignment);
+                    return;
+                }
+
+                // Entity exists but has no assignment list — create one
+                var newList = new List<BotJobAssignment> { assignment };
+                _jobAssignments[entity.Id] = newList;
+                return;
+            }
+
+            LoggingController.LogWarning(
+                "[BotEntityBridge] AddJobAssignment called for unregistered bot "
+                    + (bot != null ? bot.GetText() : "null")
+                    + ", assignment discarded"
+            );
+        }
+
+        /// <summary>
         /// Check whether a bot has any job assignments by profile ID.
         /// </summary>
         public static bool HasJobAssignments(string profileId)
@@ -990,6 +1017,9 @@ namespace SPTQuestingBots.BotLogic.ECS
         }
 
         // ── Personality Assignment ────────────────────────────────
+
+        /// <summary>Shared RNG for linger duration, seeded once.</summary>
+        private static readonly System.Random _lingerRng = new System.Random(42);
 
         /// <summary>Shared RNG for personality fallback, seeded once.</summary>
         private static readonly System.Random _personalityRng = new System.Random();

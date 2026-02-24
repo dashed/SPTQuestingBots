@@ -53,7 +53,8 @@ public static class RoomClearController
         // Outdoor->Indoor transition: start room clear
         if (wasOutdoor && isIndoor && !entity.IsInRoomClear)
         {
-            float duration = durationMin + (float)(_rng.NextDouble() * (durationMax - durationMin));
+            float range = System.Math.Max(0f, durationMax - durationMin);
+            float duration = durationMin + (float)(_rng.NextDouble() * range);
             entity.RoomClearUntil = currentTime + duration;
             entity.IsInRoomClear = true;
             return RoomClearInstruction.SlowWalk;

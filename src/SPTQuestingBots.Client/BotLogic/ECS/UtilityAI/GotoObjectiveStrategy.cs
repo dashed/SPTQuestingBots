@@ -638,7 +638,8 @@ public class GotoObjectiveStrategy : SquadStrategy
     internal void CheckArrivals(SquadEntity squad)
     {
         var obj = squad.Objective;
-        float arrivalSqr = _config.ArrivalRadius * _config.ArrivalRadius;
+        float safeRadius = Math.Max(0.5f, _config.ArrivalRadius);
+        float arrivalSqr = safeRadius * safeRadius;
 
         int arrived = 0;
         int totalFollowers = 0;

@@ -41,6 +41,7 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             CombatEventRegistry.Clear();
             GrenadeExplosionSubscriber.Clear();
             _lastScanTime.Clear();
+            _preStrategyObjectiveVersions.Clear();
         }
 
         /// <summary>Scratch buffers for refreshing HumanPlayerCache.</summary>
@@ -274,6 +275,17 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                 );
             }
 
+            // Snapshot pre-strategy objective versions so voice commands can detect
+            // version-change edges that the strategy manager would otherwise mask.
+            _preStrategyObjectiveVersions.Clear();
+            var preSquads = ECS.BotEntityBridge.SquadRegistry.ActiveSquads;
+            for (int ps = 0; ps < preSquads.Count; ps++)
+            {
+                var psSquad = preSquads[ps];
+                if (psSquad.Leader != null)
+                    _preStrategyObjectiveVersions[psSquad.Id] = psSquad.Leader.LastSeenObjectiveVersion;
+            }
+
             _squadStrategyManager.Update(ECS.BotEntityBridge.SquadRegistry.ActiveSquads);
 
             // 6. Override tactical positions with zone-derived spread for zone movement squads
@@ -372,6 +384,14 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                 }
             }
         }
+
+        /// <summary>
+        /// Per-squad snapshot of leader.LastSeenObjectiveVersion taken BEFORE the strategy
+        /// manager runs. Used by voice commands to detect objective-change edge triggers
+        /// that would otherwise be masked by the strategy manager syncing the version first.
+        /// Keyed by squad index in ActiveSquads.
+        /// </summary>
+        private static readonly Dictionary<int, int> _preStrategyObjectiveVersions = new Dictionary<int, int>();
 
         /// <summary>Reusable buffer for zone candidate positions (max 4 neighbors × 3 floats).</summary>
         private static readonly float[] _zoneCandidateBuffer = new float[4 * 3];
@@ -762,11 +782,16 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                 }
 
                 // 2. Boss objective callout (edge-triggered on version change)
-                if (objective.HasObjective && leader.LastSeenObjectiveVersion != objective.Version)
+                // Use pre-strategy snapshot to detect version changes that the strategy
+                // manager has already consumed (leader.LastSeenObjectiveVersion is now synced).
+                int preStrategyVersion = _preStrategyObjectiveVersions.TryGetValue(squad.Id, out int pv)
+                    ? pv
+                    : leader.LastSeenObjectiveVersion;
+                if (objective.HasObjective && preStrategyVersion != objective.Version)
                 {
                     if (!SquadCalloutDecider.IsOnCooldown(leader.LastCalloutTime, currentTime, cooldown))
                     {
-                        bool objectiveChanged = leader.LastSeenObjectiveVersion > 0;
+                        bool objectiveChanged = preStrategyVersion > 0;
                         bool bossArrived = leader.IsCloseToObjective;
                         int bossCallout = SquadCalloutDecider.DecideBossCallout(objectiveChanged, bossArrived);
 

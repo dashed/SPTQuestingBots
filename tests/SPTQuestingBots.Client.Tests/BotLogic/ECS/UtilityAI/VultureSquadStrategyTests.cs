@@ -231,6 +231,83 @@ public class VultureSquadStrategyTests
         Assert.That(f3.SquadRole, Is.EqualTo(SquadRole.Flanker));
     }
 
+    // ── Bug Fix: Inactive followers should be skipped ─────
+
+    [Test]
+    public void Update_InactiveFollowers_NotAssignedPositions()
+    {
+        var squad = MakeSquadWithFollowers(2);
+        squad.Leader.VulturePhase = VulturePhase.Approach;
+        squad.Leader.HasNearbyEvent = true;
+        squad.Leader.NearbyEventX = 100f;
+        squad.Leader.NearbyEventY = 0f;
+        squad.Leader.NearbyEventZ = 100f;
+        squad.Leader.CurrentPositionX = 50f;
+        squad.Leader.CurrentPositionZ = 50f;
+
+        // Mark first follower as inactive (dead/despawned)
+        squad.Members[1].IsActive = false;
+
+        var strategy = new VultureSquadStrategy();
+        strategy.Activate(squad);
+        strategy.Update();
+
+        // Inactive follower should NOT get tactical position
+        Assert.IsFalse(squad.Members[1].HasTacticalPosition, "Inactive follower should not get tactical position");
+        // Active follower should still get position
+        Assert.IsTrue(squad.Members[2].HasTacticalPosition, "Active follower should get tactical position");
+    }
+
+    [Test]
+    public void Update_AllFollowersInactive_NoPositionsAssigned()
+    {
+        var squad = MakeSquadWithFollowers(2);
+        squad.Leader.VulturePhase = VulturePhase.Approach;
+        squad.Leader.HasNearbyEvent = true;
+        squad.Leader.NearbyEventX = 100f;
+        squad.Leader.NearbyEventY = 0f;
+        squad.Leader.NearbyEventZ = 100f;
+        squad.Leader.CurrentPositionX = 50f;
+        squad.Leader.CurrentPositionZ = 50f;
+
+        // Mark all followers inactive
+        squad.Members[1].IsActive = false;
+        squad.Members[2].IsActive = false;
+
+        var strategy = new VultureSquadStrategy();
+        strategy.Activate(squad);
+        Assert.DoesNotThrow(() => strategy.Update());
+
+        Assert.IsFalse(squad.Members[1].HasTacticalPosition);
+        Assert.IsFalse(squad.Members[2].HasTacticalPosition);
+    }
+
+    [Test]
+    public void Update_MixedActiveInactive_CorrectSpreadCalc()
+    {
+        // 3 followers, 1 inactive — spread should be based on 2 active followers
+        var squad = MakeSquadWithFollowers(3);
+        squad.Leader.VulturePhase = VulturePhase.Approach;
+        squad.Leader.HasNearbyEvent = true;
+        squad.Leader.NearbyEventX = 100f;
+        squad.Leader.NearbyEventY = 0f;
+        squad.Leader.NearbyEventZ = 100f;
+        squad.Leader.CurrentPositionX = 50f;
+        squad.Leader.CurrentPositionZ = 50f;
+
+        // Middle follower inactive
+        squad.Members[2].IsActive = false;
+
+        var strategy = new VultureSquadStrategy();
+        strategy.Activate(squad);
+        strategy.Update();
+
+        // Only active followers should get positions
+        Assert.IsTrue(squad.Members[1].HasTacticalPosition);
+        Assert.IsFalse(squad.Members[2].HasTacticalPosition, "Inactive follower should be skipped");
+        Assert.IsTrue(squad.Members[3].HasTacticalPosition);
+    }
+
     // ── Helpers ───────────────────────────────────────────
 
     private static SquadEntity MakeSquad(int strategyCount)

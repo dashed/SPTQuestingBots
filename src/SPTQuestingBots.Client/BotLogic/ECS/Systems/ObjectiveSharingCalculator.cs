@@ -218,7 +218,8 @@ public static class ObjectiveSharingCalculator
             return;
         }
 
-        float noiseScale = baseNoise * (6f - coordinationLevel) / 5f;
+        float clampedCoord = System.Math.Max(0f, System.Math.Min(5f, coordinationLevel));
+        float noiseScale = baseNoise * (6f - clampedCoord) / 5f;
 
         for (int i = 0; i < count; i++)
         {

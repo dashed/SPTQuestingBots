@@ -2627,4 +2627,66 @@ public class GotoObjectiveStrategyTests
         Assert.IsTrue(follower.HasTacticalPosition);
         Assert.AreEqual(SPTQuestingBots.BotLogic.ECS.Systems.ObjectiveSharingCalculator.TierDirect, follower.SharingTier);
     }
+
+    // ── Bug Fix: ArrivalRadius zero guard ─────────────────────
+
+    [Test]
+    public void CheckArrivals_ZeroArrivalRadius_StillDetectsArrival()
+    {
+        var config = DefaultConfig();
+        config.ArrivalRadius = 0f; // Bug: would make arrival impossible without guard
+        var strategy = new GotoObjectiveStrategy(config, seed: 42);
+        var squad = CreateSquad(0);
+        var leader = CreateBot(0);
+        var follower = CreateBot(1);
+
+        leader.HasActiveObjective = true;
+        leader.CurrentQuestAction = QuestActionId.Ambush;
+        SetupSquadWithLeaderAndFollower(squad, leader, follower);
+        squad.Objective.SetObjective(50f, 0f, 50f);
+        squad.Objective.State = ObjectiveState.Active;
+
+        // Place follower at tactical position (within 0.5m safe radius)
+        follower.HasTacticalPosition = true;
+        follower.TacticalPositionX = 45f;
+        follower.TacticalPositionY = 0f;
+        follower.TacticalPositionZ = 45f;
+        follower.CurrentPositionX = 45f;
+        follower.CurrentPositionY = 0f;
+        follower.CurrentPositionZ = 45f;
+
+        strategy.CheckArrivals(squad);
+
+        // With the fix, 0.5m min radius means exact-position follower should be "arrived"
+        Assert.AreEqual(ObjectiveState.Wait, squad.Objective.State, "Zero ArrivalRadius should still detect arrival with safe minimum");
+    }
+
+    [Test]
+    public void CheckArrivals_NegativeArrivalRadius_StillDetectsArrival()
+    {
+        var config = DefaultConfig();
+        config.ArrivalRadius = -5f; // Negative should be clamped to 0.5
+        var strategy = new GotoObjectiveStrategy(config, seed: 42);
+        var squad = CreateSquad(0);
+        var leader = CreateBot(0);
+        var follower = CreateBot(1);
+
+        leader.HasActiveObjective = true;
+        leader.CurrentQuestAction = QuestActionId.Ambush;
+        SetupSquadWithLeaderAndFollower(squad, leader, follower);
+        squad.Objective.SetObjective(50f, 0f, 50f);
+        squad.Objective.State = ObjectiveState.Active;
+
+        follower.HasTacticalPosition = true;
+        follower.TacticalPositionX = 45f;
+        follower.TacticalPositionY = 0f;
+        follower.TacticalPositionZ = 45f;
+        follower.CurrentPositionX = 45f;
+        follower.CurrentPositionY = 0f;
+        follower.CurrentPositionZ = 45f;
+
+        strategy.CheckArrivals(squad);
+
+        Assert.AreEqual(ObjectiveState.Wait, squad.Objective.State, "Negative ArrivalRadius should clamp to safe minimum");
+    }
 }

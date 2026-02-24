@@ -429,6 +429,116 @@ public class BugFixRegressionTests
 
     #endregion
 
+    #region Voice callout edge-trigger regression test
+
+    [Test]
+    public void BotHiveMindMonitor_VoiceCommands_UsesPreStrategyVersionSnapshot()
+    {
+        // Bug fix: updateSquadVoiceCommands() checked leader.LastSeenObjectiveVersion
+        // against objective.Version to detect new-objective edges. But
+        // _squadStrategyManager.Update() (which runs BEFORE voice commands) already
+        // syncs leader.LastSeenObjectiveVersion = objective.Version in
+        // GotoObjectiveStrategy.AssignNewObjective(). The edge trigger therefore
+        // never fires because the version is always equal by the time the check runs.
+        //
+        // Fix: snapshot versions into _preStrategyObjectiveVersions BEFORE the
+        // strategy update, then compare the snapshot in voice commands.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/BotLogic/HiveMind/BotHiveMindMonitor.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("_preStrategyObjectiveVersions"),
+            "BotHiveMindMonitor should use _preStrategyObjectiveVersions dictionary to snapshot versions before strategy update"
+        );
+        Assert.That(
+            source,
+            Does.Contain("preStrategyVersion != objective.Version"),
+            "Voice command edge trigger should compare preStrategyVersion (snapshot) against objective.Version"
+        );
+        // Ensure the old broken pattern is gone: the voice command section should NOT
+        // compare leader.LastSeenObjectiveVersion directly against objective.Version.
+        // (leader.LastSeenObjectiveVersion IS used elsewhere, e.g. in the snapshot loop,
+        // but the edge-trigger comparison must use preStrategyVersion.)
+        Assert.That(
+            source,
+            Does.Not.Contain("leader.LastSeenObjectiveVersion != objective.Version"),
+            "Voice commands must not compare leader.LastSeenObjectiveVersion directly — use preStrategyVersion snapshot"
+        );
+    }
+
+    #endregion
+
+    #region Linger RNG regression test
+
+    [Test]
+    public void BotEntityBridge_LingerDuration_UsesSharedRng()
+    {
+        // Bug fix: SyncQuestState used `new System.Random().NextDouble()` to generate
+        // linger durations. System.Random() seeds from Environment.TickCount, so two
+        // bots completing objectives in the same millisecond get identical linger values.
+        //
+        // Fix: use a shared static `_lingerRng` field seeded once at class load.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/BotLogic/ECS/BotEntityBridge.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("_lingerRng"),
+            "BotEntityBridge should use shared _lingerRng field for linger duration randomness"
+        );
+        Assert.That(
+            source,
+            Does.Not.Contain("new System.Random().NextDouble()"),
+            "BotEntityBridge must not use `new System.Random().NextDouble()` — poorly seeded per-call RNG"
+        );
+    }
+
+    #endregion
+
+    #region Empty assignments sentinel corruption regression test
+
+    [Test]
+    public void BotJobAssignmentFactory_UsesAddJobAssignment_NotGetJobAssignmentsAdd()
+    {
+        // Bug fix: BotJobAssignmentFactory called GetJobAssignments(bot).Add(assignment)
+        // to register a new job. GetJobAssignments() returns a shared _emptyAssignments
+        // list when the bot isn't registered, so .Add() on that sentinel corrupts it
+        // for all future callers.
+        //
+        // Fix: use dedicated AddJobAssignment() which handles unregistered bots safely.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Controllers/BotJobAssignmentFactory.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("AddJobAssignment(bot, assignment)"),
+            "BotJobAssignmentFactory should use AddJobAssignment() to safely add assignments"
+        );
+        Assert.That(
+            source,
+            Does.Not.Contain("GetJobAssignments(bot).Add("),
+            "BotJobAssignmentFactory must not call GetJobAssignments().Add() — corrupts shared sentinel list"
+        );
+    }
+
+    [Test]
+    public void BotEntityBridge_HasAddJobAssignmentMethod()
+    {
+        // Verify the AddJobAssignment method exists and handles unregistered bots.
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/BotLogic/ECS/BotEntityBridge.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("public static void AddJobAssignment(BotOwner bot, BotJobAssignment assignment)"),
+            "BotEntityBridge should have an AddJobAssignment method"
+        );
+        Assert.That(
+            source,
+            Does.Contain("assignment discarded"),
+            "AddJobAssignment should log a warning when called for unregistered bots"
+        );
+    }
+
+    #endregion
+
     #region Helpers
 
     private static int CountOccurrences(string text, string pattern)

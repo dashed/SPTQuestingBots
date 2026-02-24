@@ -348,10 +348,11 @@ public class HardStuckDetectorEdgeCaseTests
     // ── Zero speed when not in stuck state ───────────────────
 
     [Test]
-    public void Update_ZeroSpeed_NotStuck_AccumulatesTimer()
+    public void Update_ZeroSpeed_NotStuck_DoesNotAccumulateTimer()
     {
-        // This documents the behavior: a bot with speed=0 and Status=None
-        // falls through the zero-speed guard and can accumulate stuck time.
+        // Fix: stationary bots (speed <= 0.01) with Status=None now skip stuck detection entirely.
+        // Previously, the zero-speed guard only triggered when Status != None, allowing
+        // a stationary bot with Status=None to accumulate stuck time (false positive).
         var detector = new HardStuckDetector(10, 5f, 10f, 15f);
         float time = 0f;
         float dt = 0.1f;
@@ -363,9 +364,8 @@ public class HardStuckDetectorEdgeCaseTests
             detector.Update(pos, 0f, time);
         }
 
-        // With zero speed: stuckThresholdSqr = StuckRadiusSqr * 0 = 0
-        // moveDistanceSqr = 0 (stationary), 0 > 0 is false → accumulates
-        Assert.That(detector.Timer, Is.GreaterThan(0f));
+        // With the fix, timer should not accumulate for stationary bots
+        Assert.That(detector.Timer, Is.EqualTo(0f));
     }
 
     // ── historySize=1 ────────────────────────────────────────

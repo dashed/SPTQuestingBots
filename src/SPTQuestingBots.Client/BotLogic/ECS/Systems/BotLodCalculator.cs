@@ -58,9 +58,13 @@ public static class BotLodCalculator
 
         if (lodTier == TierReduced)
         {
-            return (frameCounter % (reducedSkip + 1)) != 0;
+            int cycle = System.Math.Max(1, reducedSkip + 1);
+            return (frameCounter % cycle) != 0;
         }
         // TierMinimal
-        return (frameCounter % (minimalSkip + 1)) != 0;
+        {
+            int cycle = System.Math.Max(1, minimalSkip + 1);
+            return (frameCounter % cycle) != 0;
+        }
     }
 }

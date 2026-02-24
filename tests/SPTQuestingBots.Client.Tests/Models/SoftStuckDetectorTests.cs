@@ -27,19 +27,17 @@ public class SoftStuckDetectorTests
         var detector = new SoftStuckDetector(VaultDelay, JumpDelay, FailDelay);
         float time = 0f;
         float dt = 0.1f;
-        float speed = 0.5f;
+        float speed = 3.5f;
 
         // Initialize
         detector.Update(new Vector3(0, 0, 0), speed, time);
 
-        // Bot moves 0.5 m/s * 0.1s = 0.05m per tick. Threshold is ~1.75*0.5*0.1 = 0.0875m
-        // So 0.05m < 0.0875m won't clear. Let's move faster.
-        // At speed=0.5, threshold = 1.75*0.5*0.1 = 0.0875
-        // Move 0.1m per tick (> 0.0875)
+        // Bot moves at commanded speed (3.5 m/s * 0.1s = 0.35m per tick).
+        // Threshold = 0.5 * 3.5 * 0.1 = 0.175m. 0.35 > 0.175 → not stuck.
         for (int i = 0; i < 50; i++)
         {
             time += dt;
-            detector.Update(new Vector3(time, 0, 0), speed, time);
+            detector.Update(new Vector3(speed * time, 0, 0), speed, time);
         }
 
         Assert.That(detector.Status, Is.EqualTo(SoftStuckStatus.None));
