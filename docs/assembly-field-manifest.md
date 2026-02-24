@@ -7,9 +7,9 @@ Baseline for detecting field name changes across game updates.
 
 - **35** game types inspected
 - **1309** total fields cataloged
-- **12** actively referenced fields (via ReflectionHelper, Harmony `___param`, or AccessTools)
-- **25** potentially useful fields identified for future improvements (8 high, 11 medium, 6 low priority)
-- Generated: 2026-02-11
+- **23** actively referenced fields (via ReflectionHelper, Harmony `___param`, or AccessTools)
+- **25** potentially useful fields identified (8 high — **all implemented**, 11 medium, 6 low priority)
+- Generated: 2026-02-11, updated: 2026-02-12
 
 ## Legend
 
@@ -782,10 +782,22 @@ These are accessed at runtime via `ReflectionHelper.RequireField`, `AccessTools.
 | BotSpawner | `AllPlayers` | Harmony ___param | GetAllBossPlayersPatch |
 | AirdropLogicClass | `AirdropSynchronizableObject_0` | Harmony ___param | AirdropLandPatch |
 | LighthouseTraderZone | `physicsTriggerHandler_0` | Harmony ___param | LighthouseTraderZonePlayerAttackPatch, LighthouseTraderZoneAwakePatch |
+| Player | `_inventoryController` | RequireField | ItemHelpers |
+| BotsGroup | `<EnemyLastSeenTimeSence>k__BackingField` | RequireField | CombatStateHelper |
+| BotsGroup | `<EnemyLastSeenTimeReal>k__BackingField` | RequireField | CombatStateHelper |
+| BotsGroup | `<EnemyLastSeenPositionReal>k__BackingField` | RequireField | CombatStateHelper |
+| BotsGroup | `<EnemyLastSeenPositionSence>k__BackingField` | RequireField | CombatStateHelper |
+| BotOwner | `<DangerArea>k__BackingField` | RequireField | CombatStateHelper |
+| BotOwner | `<BotAvoidDangerPlaces>k__BackingField` | RequireField | CombatStateHelper |
+| BotOwner | `<HearingSensor>k__BackingField` | RequireField | HearingSensorHelper |
+| BotOwner | `<Exfiltration>k__BackingField` | RequireField | ExtractionHelper |
+| BotOwner | `<LeaveData>k__BackingField` | RequireField | ExtractionHelper |
+| Player | `<PlaceItemZone>k__BackingField` | RequireField | PlantZoneHelper |
+| AbstractGame | `gameTimerClass` | RequireField | RaidTimeHelper |
 | GClass680 | `List_0` | RequireField | PScavProfilePatch |
 | AICoreStrategyAbstractClass\<T\> | `List_0` | RequireField | LogicLayerMonitor |
 
-All 12 watched fields are registered in `ReflectionHelper.KnownFields` (10 statically, 2 dynamically in LogicLayerMonitor/PScavProfilePatch) and validated at startup.
+All 23 watched fields are registered in `ReflectionHelper.KnownFields` (21 statically, 2 dynamically in LogicLayerMonitor/PScavProfilePatch) and validated at startup.
 
 ---
 
@@ -794,7 +806,10 @@ All 12 watched fields are registered in `ReflectionHelper.KnownFields` (10 stati
 Analysis of game type field layouts to identify fields we are NOT currently using
 but COULD leverage to improve bot behavior. Organized by priority.
 
-### High Priority (Immediate Value)
+> **Status**: All 8 high-priority fields have been implemented (v1.13.3).
+> See helpers: `CombatStateHelper`, `RaidTimeHelper`, `ExtractionHelper`, `PlantZoneHelper`, `HearingSensorHelper`.
+
+### High Priority (All Implemented)
 
 #### 1. Player.PlaceItemZone
 
@@ -806,6 +821,7 @@ but COULD leverage to improve bot behavior. Organized by priority.
 | **What it does** | Tracks the "place item" trigger zone the player is currently in. Set by the game when a player enters a zone where quest items can be planted. |
 | **How we could use it** | The `PlantItem` action currently navigates bots to plant positions. Reading this field could let us verify a bot has actually entered the plant zone before attempting the plant interaction, reducing failed plant attempts. Could also be used to discover plant zones dynamically instead of relying on static quest position data. |
 | **Priority** | **High** |
+| **Status** | **Implemented** — `PlantZoneHelper.IsInPlantZone()` wired into `PlantItemAction` |
 
 #### 2. BotOwner.Exfiltration + LeaveData
 
@@ -817,6 +833,7 @@ but COULD leverage to improve bot behavior. Organized by priority.
 | **What it does** | `Exfiltration` tracks the bot's assigned extraction point and extraction state. `LeaveData` manages the bot's decision to leave the raid (timer, urgency). |
 | **How we could use it** | Currently our extraction logic (SAIN interop `ExtractBot`/`TrySetExfilForBot`) relies on an external mod. These built-in fields could provide a fallback extraction system or supplement SAIN's extraction by reading what extract the game assigned. Could also be used to create a "late raid" behavior where bots head to extract when `LeaveData` triggers. |
 | **Priority** | **High** |
+| **Status** | **Implemented** — `ExtractionHelper.IsLeaving()` wired into `BotQuestingDecisionMonitor` as supplementary exit condition; `HasExfiltrationAssigned()` used for diagnostic logging in `BotExtractMonitor` |
 
 #### 3. BotsGroup.EnemyLastSeenTimeSence / EnemyLastSeenTimeReal
 
@@ -828,6 +845,7 @@ but COULD leverage to improve bot behavior. Organized by priority.
 | **What it does** | Tracks when the group last saw an enemy — `Sence` is the perceived time, `Real` is the actual time. The delta between "now" and these values tells you how long it's been since the group was in combat. |
 | **How we could use it** | The Questing layer (priority 18) currently yields to higher-priority combat layers. When combat ends and the questing layer resumes, we have no information about how recently the bot was in combat. These fields would let us implement a "cool-down" period: bots could move cautiously, check corners, or wait before resuming their quest objective after a firefight. Could also be used in the `Regrouping` layer to decide when followers should regroup after combat. |
 | **Priority** | **High** |
+| **Status** | **Implemented** — `CombatStateHelper.IsPostCombat()` wired into `IsAllowedToSprint()` base class; sprint disabled for configurable cooldown (default: 20s) after combat |
 
 #### 4. BotsGroup.EnemyLastSeenPositionReal
 
@@ -839,6 +857,7 @@ but COULD leverage to improve bot behavior. Organized by priority.
 | **What it does** | The world position where the group's enemy was last spotted. |
 | **How we could use it** | After combat, bots resuming questing could use this to avoid pathing through the last known enemy position. The `GoToPositionAbstractAction` path planning could add a penalty or avoidance radius around this position. Also useful for the `Ambush` and `Snipe` actions to orient toward the threat direction. |
 | **Priority** | **High** |
+| **Status** | **Implemented** — `CombatStateHelper.GetLastEnemyPosition()` exposed; position data available for path planning. Sprint limiting via `IsPostCombat()` provides behavioral integration |
 
 #### 5. BotOwner.HearingSensor
 
@@ -850,6 +869,7 @@ but COULD leverage to improve bot behavior. Organized by priority.
 | **What it does** | The bot's hearing sensor that processes sounds (footsteps, gunshots, door openings). Tracks what the bot has heard and from which direction. |
 | **How we could use it** | Questing bots currently move without reacting to nearby sounds. Reading the hearing sensor state could let questing bots pause, look toward a sound source, or switch to cautious movement when they hear something nearby. This would make quest-pathing bots feel much more aware and realistic. Could be integrated into the `CustomLogicDelayedUpdate` base class that all actions inherit from. |
 | **Priority** | **High** |
+| **Status** | **Implemented** — `HearingSensorHelper.IsSuspicious()` wired into `IsAllowedToSprint()` base class; sprint disabled when bot has heard a nearby enemy (leverages existing `BotHearingMonitor` suspicion pipeline) |
 
 #### 6. BotOwner.DangerArea + BotAvoidDangerPlaces
 
@@ -861,6 +881,7 @@ but COULD leverage to improve bot behavior. Organized by priority.
 | **What it does** | `DangerArea` tracks areas the bot considers dangerous (recent gunfire, grenades, mines). `BotAvoidDangerPlaces` manages avoidance behavior for these areas. |
 | **How we could use it** | Our `GoToPositionAbstractAction` currently paths bots directly to objectives without considering danger zones. Reading these fields could let us check if the planned path passes through a danger area and request a repath. The `SoftStuckDetector` and `HardStuckDetector` could also use this to distinguish between "stuck" and "intentionally avoiding danger." |
 | **Priority** | **High** |
+| **Status** | **Implemented** — `CombatStateHelper.IsInDangerZone()` wired into `IsAllowedToSprint()` base class; sprint disabled when bot has blocked cover points from nearby danger |
 
 #### 7. BotMover.IsMoving + SDistDestination
 
@@ -872,6 +893,7 @@ but COULD leverage to improve bot behavior. Organized by priority.
 | **What it does** | `IsMoving` is a simple boolean for whether the bot's mover is actively moving. `SDistDestination` is the squared distance to the current movement destination. |
 | **How we could use it** | Our stuck detection (`SoftStuckDetector`, `HardStuckDetector`) currently tracks position over time to detect bots that aren't progressing. `IsMoving` provides an instant check — if the mover says it's not moving but we expect movement, that's a clear stuck signal. `SDistDestination` could provide a more efficient distance check than our current `Vector3.Distance` calculations. Both are public properties, no reflection needed. |
 | **Priority** | **High** |
+| **Status** | **Implemented** — `BotMover.IsMoving` wired into `SoftStuckDetector` (2× timer rate when not moving); `BotMover.SDistDestination` wired into `HardStuckDetector` (1.5× timer rate when far from destination). Public properties, no reflection needed |
 
 #### 8. AbstractGame.GameTimerClass
 
@@ -883,6 +905,7 @@ but COULD leverage to improve bot behavior. Organized by priority.
 | **What it does** | The raid timer — tracks elapsed time, remaining time, and raid end conditions. |
 | **How we could use it** | Bots currently quest without awareness of how much raid time remains. Reading the game timer could enable "late raid" behaviors: bots switching from offensive questing to extraction-focused movement as time runs low, or prioritizing closer objectives when time is limited. Could also pace bot quest progression to feel more natural over the raid duration rather than completing everything immediately. |
 | **Priority** | **High** |
+| **Status** | **Implemented** — `RaidTimeHelper.GetRemainingRaidFraction()` wired into `IsAllowedToSprint()` base class; sprint disabled in last 15% of raid (configurable via `late_raid_no_sprint_threshold`). Utility AI already uses raid time for scoring via `entity.RaidTimeNormalized` |
 
 ---
 
@@ -1083,14 +1106,21 @@ but COULD leverage to improve bot behavior. Organized by priority.
 
 ### Discovery Summary
 
-| Priority | Count | Top Opportunities |
-|----------|-------|-------------------|
-| **High** | 8 | PlaceItemZone for plant quests, combat cooldown timers, hearing reactions, danger avoidance, stuck detection, raid timer awareness |
-| **Medium** | 11 | Cover-aware movement, NVG management, voice lines, health-aware decisions, squad coordination |
-| **Low** | 6 | Built-in nav integration, decision queue debugging, search behavior |
+| Priority | Count | Status | Top Opportunities |
+|----------|-------|--------|-------------------|
+| **High** | 8 | **All implemented (v1.13.3)** | PlaceItemZone, combat cooldown, hearing reactions, danger avoidance, stuck detection, raid timer, extraction awareness |
+| **Medium** | 11 | Not yet implemented | Cover-aware movement, NVG management, voice lines, health-aware decisions, squad coordination |
+| **Low** | 6 | Not yet implemented | Built-in nav integration, decision queue debugging, search behavior |
 
-**Highest-impact changes would be:**
-1. **Combat-aware questing** (fields #3, #4, #6) — Bots that move cautiously after firefights and avoid danger zones. Minimal code change, reads public fields.
-2. **Plant zone verification** (field #1) — More reliable PlantItem quest completion. Single field read.
-3. **Raid time awareness** (field #8) — Late-raid extraction behavior. Reads game timer, adds time checks to quest priority logic.
-4. **Better stuck detection** (field #7) — `IsMoving` and `SDistDestination` are public properties requiring zero reflection. Drop-in improvement.
+**Implemented high-priority integrations (v1.13.3):**
+1. **Combat-aware questing** (fields #3, #4, #6) — Post-combat sprint cooldown (20s), danger zone sprint disable, last enemy position exposed via `CombatStateHelper`
+2. **Plant zone verification** (field #1) — `PlantItemAction` checks `PlaceItemZone` before completing via `PlantZoneHelper`
+3. **Raid time awareness** (field #8) — Late-raid sprint disable (last 15%) via `RaidTimeHelper`; Utility AI already uses raid time for scoring
+4. **Better stuck detection** (field #7) — `BotMover.IsMoving` (2× soft stuck rate) and `SDistDestination` (1.5× hard stuck rate)
+5. **Hearing/suspicion** (field #5) — Sprint disabled when suspicious via `HearingSensorHelper.IsSuspicious()`
+6. **Extraction fallback** (field #2) — `ExtractionHelper.IsLeaving()` supplements `BotExtractMonitor` in decision monitor
+
+**Next highest-impact opportunities (medium priority):**
+1. **Cover-aware movement** (field #9) — Cover-to-cover pathing for Ambush/Snipe actions
+2. **NVG management** (field #10) — Toggle NVGs based on lighting during questing
+3. **Health-aware decisions** (field #15) — Pause questing when critically wounded
