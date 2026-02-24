@@ -68,7 +68,7 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - When disabled, the existing deterministic switch statement is used as fallback
 
 ### Squad Strategies (Optional)
-- Phobos-style coordinated group questing — disabled by default (`squad_strategy.enabled`, default: false; F12 toggle `Enable Squad Strategies`)
+- Phobos-style coordinated group questing — enabled by default (`squad_strategy.enabled`, default: true; F12 toggle `Enable Squad Strategies`)
 - Followers receive tactical positions computed from their boss's quest objective instead of standing idle
 - Quest-type-aware formations: Ambush quests use flanking positions (120° spread), Snipe quests use overwatch (150° spread), PlantItem quests use perimeter guard, HoldAtPosition uses circular spread, MoveToPosition uses trail formation
 - Two follower utility tasks: GoToTacticalPosition (score=0.70, travel phase) and HoldTacticalPosition (score=0.65, hold phase) with hysteresis to prevent flip-flopping
