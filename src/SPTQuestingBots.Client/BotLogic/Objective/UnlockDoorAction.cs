@@ -131,6 +131,18 @@ namespace SPTQuestingBots.BotLogic.Objective
         {
             base.Stop();
 
+            // Release any in-progress bundle loader to prevent resource leak
+            // when the action is interrupted (bot killed, objective changed, etc.)
+            if (bundleLoader != null)
+            {
+                if (!bundleLoader.Finished)
+                {
+                    LoggingController.LogDebug(BotOwner.GetText() + " releasing unfinished bundle loader for door unlock action");
+                }
+                bundleLoader.Release();
+                bundleLoader = null;
+            }
+
             BotOwner.PatrollingData.Unpause();
         }
 

@@ -81,6 +81,9 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// </summary>
         public static BotEntity RegisterBot(BotOwner bot, Controllers.BotType controllerBotType)
         {
+            if (bot == null)
+                return null;
+
             if (_ownerToEntity.TryGetValue(bot, out var existing))
                 return existing;
 
@@ -470,7 +473,7 @@ namespace SPTQuestingBots.BotLogic.ECS
         public static Vector3 GetLocationOfNearestGroupMember(BotOwner bot)
         {
             if (bot == null || !_ownerToEntity.TryGetValue(bot, out var entity))
-                return bot.Position;
+                return Vector3.zero;
 
             var groupBoss = entity.Boss ?? entity;
             float nearestDist = float.MaxValue;
@@ -1215,7 +1218,7 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// </summary>
         public static void SetLootTarget(BotOwner bot, int lootId, float x, float y, float z, byte type, float value)
         {
-            if (!_ownerToEntity.TryGetValue(bot, out var entity))
+            if (bot == null || !_ownerToEntity.TryGetValue(bot, out var entity))
                 return;
 
             entity.HasLootTarget = true;
@@ -1245,7 +1248,7 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// </summary>
         public static void ClearLootTarget(BotOwner bot)
         {
-            if (!_ownerToEntity.TryGetValue(bot, out var entity))
+            if (bot == null || !_ownerToEntity.TryGetValue(bot, out var entity))
                 return;
 
             if (entity.HasLootTarget)
@@ -1272,7 +1275,7 @@ namespace SPTQuestingBots.BotLogic.ECS
         /// </summary>
         public static void ReleaseLootClaims(BotOwner bot)
         {
-            if (_ownerToEntity.TryGetValue(bot, out var entity))
+            if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
             {
                 LoggingController.LogDebug("[BotEntityBridge] Releasing all loot claims for entity " + entity.Id);
                 _lootClaims.ReleaseAll(entity.Id);

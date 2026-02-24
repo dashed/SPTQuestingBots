@@ -470,6 +470,11 @@
       Include="../../src/SPTQuestingBots.Client/Configuration/DistanceAngleConfig.cs"
       Link="LinkedSources/Configuration/DistanceAngleConfig.cs"
     />
+    <!-- Zone movement config POCO: needed for FieldComposer and convergence tests -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Configuration/ZoneMovementConfig.cs"
+      Link="LinkedSources/Configuration/ZoneMovementConfig.cs"
+    />
   </ItemGroup>
 
   <!--
