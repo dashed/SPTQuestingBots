@@ -27,6 +27,7 @@ public class TelemetryDeploymentTests
         "System.Buffers.dll",
         "System.Numerics.Vectors.dll",
         "System.Runtime.CompilerServices.Unsafe.dll",
+        "System.Runtime.InteropServices.RuntimeInformation.dll",
     };
 
     [Test]

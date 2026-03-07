@@ -80,16 +80,8 @@ DEPLOY_DIR           := build/deploy
 SERVER_MOD_DIR       := $(DEPLOY_DIR)/SPT/user/mods/SPTQuestingBots
 CLIENT_PLUGIN_DIR    := $(DEPLOY_DIR)/BepInEx/plugins/DanW-SPTQuestingBots
 
-# NuGet runtime dependencies copied to build/ via CopyLocalLockFileAssemblies
-# These are the managed DLLs that must ship alongside SPTQuestingBots.dll
-CLIENT_NUGET_DLLS    := Microsoft.Data.Sqlite.dll SQLitePCLRaw.batteries_v2.dll \
-	SQLitePCLRaw.core.dll SQLitePCLRaw.provider.e_sqlite3.dll \
-	System.Buffers.dll System.Memory.dll System.Numerics.Vectors.dll \
-	System.Runtime.CompilerServices.Unsafe.dll
-
-# Extra DLLs not emitted by the netstandard2.1 build but required by Unity/Mono at runtime
+# Native SQLite DLL from NuGet cache (not emitted by managed build)
 NUGET_CACHE          := $(HOME)/.nuget/packages
-VALUETUPLE_DLL       := $(NUGET_CACHE)/system.valuetuple/4.5.0/lib/net47/System.ValueTuple.dll
 SQLITE_NATIVE_DLL    := $(NUGET_CACHE)/sqlitepclraw.lib.e_sqlite3/2.1.6/runtimes/win-x64/native/e_sqlite3.dll
 
 .DEFAULT_GOAL := help
@@ -191,11 +183,10 @@ deploy: build ## Build and create install layout in build/deploy/
 	@cp $(LIBS_DIR)/Newtonsoft.Json.dll  $(SERVER_MOD_DIR)/
 	@cp config/*.json                    $(SERVER_MOD_DIR)/config/
 	@cp quests/standard/*.json           $(SERVER_MOD_DIR)/quests/standard/
-	@cp build/SPTQuestingBots.dll        $(CLIENT_PLUGIN_DIR)/
-	@for dll in $(CLIENT_NUGET_DLLS); do \
-		cp build/$$dll $(CLIENT_PLUGIN_DIR)/; \
+	@for dll in build/*.dll; do \
+		case "$$(basename $$dll)" in SPTQuestingBots.Server.*) continue ;; esac; \
+		cp $$dll $(CLIENT_PLUGIN_DIR)/; \
 	done
-	@cp $(VALUETUPLE_DLL) $(CLIENT_PLUGIN_DIR)/
 	@cp $(SQLITE_NATIVE_DLL) $(CLIENT_PLUGIN_DIR)/
 	@echo ""
 	@echo "Deploy layout ready at $(DEPLOY_DIR)/"
