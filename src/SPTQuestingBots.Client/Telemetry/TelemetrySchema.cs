@@ -1,4 +1,8 @@
+#if UNITY_MONO
+using Mono.Data.Sqlite;
+#else
 using Microsoft.Data.Sqlite;
+#endif
 
 namespace SPTQuestingBots.Telemetry;
 

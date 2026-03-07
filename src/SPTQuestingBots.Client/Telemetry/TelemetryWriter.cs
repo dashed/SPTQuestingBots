@@ -3,7 +3,11 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+#if UNITY_MONO
+using Mono.Data.Sqlite;
+#else
 using Microsoft.Data.Sqlite;
+#endif
 using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.Telemetry;
@@ -143,15 +147,13 @@ internal sealed class TelemetryWriter
     };
 
     /// <summary>
-    /// Probes SQLite at startup: sets provider, creates DB file + schema.
-    /// Called from plugin Awake so assembly-load and platform errors surface immediately.
+    /// Probes SQLite at startup: creates DB file + schema.
+    /// Called from plugin Awake so errors surface immediately.
     /// </summary>
     internal static bool EnsureDatabase(TelemetryConfig config)
     {
         try
         {
-            SQLitePCL.raw.SetProvider(new SQLitePCL.SQLite3Provider_e_sqlite3());
-
             string dbPath = ResolveDbPath(config.DbPath);
             string dbDir = Path.GetDirectoryName(dbPath);
             if (!string.IsNullOrEmpty(dbDir) && !Directory.Exists(dbDir))
@@ -205,8 +207,6 @@ internal sealed class TelemetryWriter
             string dbDir = Path.GetDirectoryName(dbPath);
             if (!string.IsNullOrEmpty(dbDir) && !Directory.Exists(dbDir))
                 Directory.CreateDirectory(dbDir);
-
-            SQLitePCL.raw.SetProvider(new SQLitePCL.SQLite3Provider_e_sqlite3());
 
             _conn = new SqliteConnection("Data Source=" + dbPath);
             _conn.Open();

@@ -53,7 +53,9 @@ EFT_MANAGED_DLLS := \
 	Newtonsoft.Json.dll \
 	Sirenix.Serialization.dll \
 	Unity.Postprocessing.Runtime.dll \
-	Unity.TextMeshPro.dll
+	Unity.TextMeshPro.dll \
+	Mono.Data.Sqlite.dll \
+	System.Data.dll
 
 # DLLs from BepInEx/plugins/spt/
 SPT_PLUGIN_DLLS := \
@@ -79,10 +81,6 @@ ALL_DLLS := $(SPT_SERVER_DLLS) $(BEPINEX_CORE_DLLS) $(EFT_MANAGED_DLLS) \
 DEPLOY_DIR           := build/deploy
 SERVER_MOD_DIR       := $(DEPLOY_DIR)/SPT/user/mods/SPTQuestingBots
 CLIENT_PLUGIN_DIR    := $(DEPLOY_DIR)/BepInEx/plugins/DanW-SPTQuestingBots
-
-# Native SQLite DLL from NuGet cache (not emitted by managed build)
-NUGET_CACHE          := $(HOME)/.nuget/packages
-SQLITE_NATIVE_DLL    := $(NUGET_CACHE)/sqlitepclraw.lib.e_sqlite3/2.1.6/runtimes/win-x64/native/e_sqlite3.dll
 
 .DEFAULT_GOAL := help
 .PHONY: help all ci ci-contract-sain ci-full restore build build-server build-client \
@@ -183,11 +181,7 @@ deploy: build ## Build and create install layout in build/deploy/
 	@cp $(LIBS_DIR)/Newtonsoft.Json.dll  $(SERVER_MOD_DIR)/
 	@cp config/*.json                    $(SERVER_MOD_DIR)/config/
 	@cp quests/standard/*.json           $(SERVER_MOD_DIR)/quests/standard/
-	@for dll in build/*.dll; do \
-		case "$$(basename $$dll)" in SPTQuestingBots.Server.*) continue ;; esac; \
-		cp $$dll $(CLIENT_PLUGIN_DIR)/; \
-	done
-	@cp $(SQLITE_NATIVE_DLL) $(CLIENT_PLUGIN_DIR)/
+	@cp build/SPTQuestingBots.dll $(CLIENT_PLUGIN_DIR)/
 	@echo ""
 	@echo "Deploy layout ready at $(DEPLOY_DIR)/"
 	@echo "Copy its contents into your SPT installation root:"
