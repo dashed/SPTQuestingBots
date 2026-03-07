@@ -165,8 +165,17 @@ namespace SPTQuestingBots.BotLogic.ECS
         {
             if (bot != null && _ownerToEntity.TryGetValue(bot, out var entity))
             {
+                if (!entity.IsActive)
+                    return; // Already deactivated
+
                 LoggingController.LogInfo("[BotEntityBridge] Deactivating entity " + entity.Id + " for bot " + bot.GetText());
                 entity.IsActive = false;
+
+                // Remove from squad to trigger leader reassignment if needed
+                if (entity.Squad != null)
+                {
+                    _squadRegistry.RemoveMember(entity.Squad, entity);
+                }
 
                 // Release loot claims on deactivation (death/despawn)
                 if (entity.HasLootTarget)

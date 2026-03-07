@@ -219,14 +219,26 @@ namespace SPTQuestingBots.Controllers
                     continue;
                 }
 
-                if (group.ContainsEnemy(boss))
+                // Make PMC group hostile toward boss
+                if (!group.ContainsEnemy(boss))
+                {
+                    group.AddEnemy(boss, EBotEnemyCause.addPlayer);
+                }
+
+                // Make boss group hostile toward PMC members (bidirectional hostility)
+                BotsGroup bossGroup = boss.BotsGroup;
+                if (bossGroup == null)
                 {
                     continue;
                 }
 
-                group.AddEnemy(boss, EBotEnemyCause.addPlayer);
-
-                //LoggingController.LogInfo("Group containing " + string.Join(", ", groupMembers.Select(m => m.GetText())) + " is now hostile toward " + boss.GetText());
+                foreach (BotOwner member in groupMembers)
+                {
+                    if (!bossGroup.ContainsEnemy(member))
+                    {
+                        bossGroup.AddEnemy(member, EBotEnemyCause.addPlayer);
+                    }
+                }
             }
         }
 

@@ -560,8 +560,14 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                     continue;
 
                 var bot = ECS.BotEntityBridge.GetBotOwner(entity);
-                if (bot == null || bot.IsDead)
+                if (bot == null)
                     continue;
+
+                if (bot.IsDead)
+                {
+                    ECS.BotEntityBridge.DeactivateBot(bot);
+                    continue;
+                }
 
                 // Discover boss from BSG API if not yet assigned
                 BotOwner bossBot = null;
