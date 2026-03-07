@@ -171,6 +171,224 @@ public class QuestingBotsServerStartupE2ETests
         });
     }
 
+    [Test]
+    public async Task OnLoad_WithConflictingModAndSpawningAlreadyDisabled_LogsAlreadyDisabledFallback()
+    {
+        var config = CreateValidConfig();
+        config.BotSpawns.Enabled = false;
+
+        var botConfig = (BotConfig)RuntimeHelpers.GetUninitializedObject(typeof(BotConfig));
+        botConfig.ChanceAssaultScavHasPlayerScavName = 17;
+        botConfig.PlayerScavBrainType = new Dictionary<string, Dictionary<string, int>>();
+
+        var pmcConfig = (PmcConfig)RuntimeHelpers.GetUninitializedObject(typeof(PmcConfig));
+        pmcConfig.PmcType = new Dictionary<string, Dictionary<string, Dictionary<string, double>>>();
+
+        var logger = Substitute.For<ISptLogger<CommonUtils>>();
+        var configLoader = CreateConfigLoader(config);
+        var commonUtils = new CommonUtils(logger, null!, null!, configLoader);
+        var configServer = TestConfigServer.Create(botConfig);
+        var pmcConversionService = new PMCConversionService(commonUtils, configLoader, configServer);
+        SetPrivateField(pmcConversionService, "_pmcConfig", pmcConfig);
+        SetPrivateField(pmcConversionService, "_botConfig", botConfig);
+
+        var plugin = new QuestingBotsServerPlugin(
+            configLoader,
+            commonUtils,
+            null!,
+            pmcConversionService,
+            configServer,
+            [CreateLoadedMod("SWAG+Donuts", "swag-and-donuts")]
+        );
+
+        await plugin.OnLoad();
+
+        var warningMessages = logger
+            .ReceivedCalls()
+            .Where(call => call.GetMethodInfo().Name == nameof(ISptLogger<CommonUtils>.Warning))
+            .Select(call => call.GetArguments()[0]?.ToString() ?? string.Empty)
+            .ToList();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(config.BotSpawns.Enabled, Is.False, "Spawning should stay disabled when it was already off.");
+            Assert.That(
+                warningMessages.Any(message => message.Contains("QuestingBots spawning is already disabled.", StringComparison.Ordinal)),
+                Is.True,
+                "The startup warning should make the already-disabled fallback explicit."
+            );
+        });
+    }
+
+    [Test]
+    public async Task OnLoad_WithPartialConflictName_DoesNotTreatItAsKnownConflict()
+    {
+        var config = CreateValidConfig();
+        config.BotSpawns.Enabled = false;
+
+        var botConfig = (BotConfig)RuntimeHelpers.GetUninitializedObject(typeof(BotConfig));
+        botConfig.ChanceAssaultScavHasPlayerScavName = 19;
+        botConfig.PlayerScavBrainType = new Dictionary<string, Dictionary<string, int>>();
+
+        var pmcConfig = (PmcConfig)RuntimeHelpers.GetUninitializedObject(typeof(PmcConfig));
+        pmcConfig.PmcType = new Dictionary<string, Dictionary<string, Dictionary<string, double>>>();
+
+        var logger = Substitute.For<ISptLogger<CommonUtils>>();
+        var configLoader = CreateConfigLoader(config);
+        var commonUtils = new CommonUtils(logger, null!, null!, configLoader);
+        var configServer = TestConfigServer.Create(botConfig);
+        var pmcConversionService = new PMCConversionService(commonUtils, configLoader, configServer);
+        SetPrivateField(pmcConversionService, "_pmcConfig", pmcConfig);
+        SetPrivateField(pmcConversionService, "_botConfig", botConfig);
+
+        var plugin = new QuestingBotsServerPlugin(
+            configLoader,
+            commonUtils,
+            null!,
+            pmcConversionService,
+            configServer,
+            [CreateLoadedMod("SWAGCompatBridge", "swag-compat-bridge")]
+        );
+
+        await plugin.OnLoad();
+
+        var warningMessages = logger
+            .ReceivedCalls()
+            .Where(call => call.GetMethodInfo().Name == nameof(ISptLogger<CommonUtils>.Warning))
+            .Select(call => call.GetArguments()[0]?.ToString() ?? string.Empty)
+            .ToList();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(config.BotSpawns.Enabled, Is.False, "The startup path should not change an already-disabled spawning flag.");
+            Assert.That(
+                warningMessages.Any(message => message.Contains("Detected potentially conflicting server mod", StringComparison.Ordinal)),
+                Is.False,
+                "Partial alias matches should not be treated as known spawning conflicts."
+            );
+        });
+    }
+
+    [Test]
+    public async Task OnLoad_WithConflictingModWhileSpawningAlreadyDisabled_LogsAlreadyDisabledWarning()
+    {
+        var config = CreateValidConfig();
+
+        var botConfig = (BotConfig)RuntimeHelpers.GetUninitializedObject(typeof(BotConfig));
+        botConfig.ChanceAssaultScavHasPlayerScavName = 11;
+        botConfig.PlayerScavBrainType = new Dictionary<string, Dictionary<string, int>>();
+
+        var pmcConfig = (PmcConfig)RuntimeHelpers.GetUninitializedObject(typeof(PmcConfig));
+        pmcConfig.PmcType = new Dictionary<string, Dictionary<string, Dictionary<string, double>>>();
+
+        var logger = Substitute.For<ISptLogger<CommonUtils>>();
+        var configLoader = CreateConfigLoader(config);
+        var commonUtils = new CommonUtils(logger, null!, null!, configLoader);
+        var configServer = TestConfigServer.Create(botConfig);
+        var pmcConversionService = new PMCConversionService(commonUtils, configLoader, configServer);
+        SetPrivateField(pmcConversionService, "_pmcConfig", pmcConfig);
+        SetPrivateField(pmcConversionService, "_botConfig", botConfig);
+
+        var plugin = new QuestingBotsServerPlugin(
+            configLoader,
+            commonUtils,
+            null!,
+            pmcConversionService,
+            configServer,
+            [
+                new SptMod
+                {
+                    Directory = "/mods/SWAG+Donuts",
+                    Assemblies = Array.Empty<Assembly>(),
+                    ModMetadata = new QuestingBotsMetadata { Name = "SWAG+Donuts", ModGuid = "swag-and-donuts" },
+                },
+            ]
+        );
+
+        await plugin.OnLoad();
+
+        var warningMessages = logger
+            .ReceivedCalls()
+            .Where(call => call.GetMethodInfo().Name == nameof(ISptLogger<CommonUtils>.Warning))
+            .Select(call => call.GetArguments()[0]?.ToString() ?? string.Empty)
+            .ToList();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(config.BotSpawns.Enabled, Is.False, "Spawning should remain disabled.");
+            Assert.That(
+                warningMessages.Any(message => message.Contains("QuestingBots spawning is already disabled.", StringComparison.Ordinal)),
+                Is.True,
+                "The startup warning should explain that no extra spawn toggle was needed."
+            );
+            Assert.That(
+                warningMessages.Any(message => message.Contains("/client/game/bot/generate", StringComparison.Ordinal)),
+                Is.True,
+                "Route-shadowing warnings should stay explicit even when spawning was already off."
+            );
+        });
+    }
+
+    [Test]
+    public async Task OnLoad_WithOnlyPartialConflictNameMatch_DoesNotEmitConflictWarning()
+    {
+        var config = CreateValidConfig();
+
+        var botConfig = (BotConfig)RuntimeHelpers.GetUninitializedObject(typeof(BotConfig));
+        botConfig.ChanceAssaultScavHasPlayerScavName = 13;
+        botConfig.PlayerScavBrainType = new Dictionary<string, Dictionary<string, int>>();
+
+        var pmcConfig = (PmcConfig)RuntimeHelpers.GetUninitializedObject(typeof(PmcConfig));
+        pmcConfig.PmcType = new Dictionary<string, Dictionary<string, Dictionary<string, double>>>();
+
+        var logger = Substitute.For<ISptLogger<CommonUtils>>();
+        var configLoader = CreateConfigLoader(config);
+        var commonUtils = new CommonUtils(logger, null!, null!, configLoader);
+        var configServer = TestConfigServer.Create(botConfig);
+        var pmcConversionService = new PMCConversionService(commonUtils, configLoader, configServer);
+        SetPrivateField(pmcConversionService, "_pmcConfig", pmcConfig);
+        SetPrivateField(pmcConversionService, "_botConfig", botConfig);
+
+        var plugin = new QuestingBotsServerPlugin(
+            configLoader,
+            commonUtils,
+            null!,
+            pmcConversionService,
+            configServer,
+            [
+                new SptMod
+                {
+                    Directory = "/mods/BetterSpawnsPlusCompat",
+                    Assemblies = Array.Empty<Assembly>(),
+                    ModMetadata = new QuestingBotsMetadata { Name = "BetterSpawnsPlusCompat", ModGuid = "betterspawnsplus-compat" },
+                },
+            ]
+        );
+
+        await plugin.OnLoad();
+
+        var warningMessages = logger
+            .ReceivedCalls()
+            .Where(call => call.GetMethodInfo().Name == nameof(ISptLogger<CommonUtils>.Warning))
+            .Select(call => call.GetArguments()[0]?.ToString() ?? string.Empty)
+            .ToList();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(config.BotSpawns.Enabled, Is.False, "The baseline config keeps spawning disabled for this startup test.");
+            Assert.That(
+                warningMessages.Any(message => message.Contains("Detected potentially conflicting server mod", StringComparison.Ordinal)),
+                Is.False,
+                "Conflict detection should require an exact known alias, not just a substring match."
+            );
+            Assert.That(
+                warningMessages.Any(message => message.Contains("/client/game/bot/generate", StringComparison.Ordinal)),
+                Is.False,
+                "A non-matching mod name should not trigger route-shadowing diagnostics."
+            );
+        });
+    }
+
     private static QuestingBotsConfig CreateValidConfig()
     {
         return new QuestingBotsConfig
@@ -249,6 +467,16 @@ public class QuestingBotsServerStartupE2ETests
     {
         var field = target.GetType().GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Instance);
         field!.SetValue(target, value);
+    }
+
+    private static SptMod CreateLoadedMod(string name, string guid)
+    {
+        return new SptMod
+        {
+            Directory = "/mods/" + name,
+            Assemblies = Array.Empty<Assembly>(),
+            ModMetadata = new QuestingBotsMetadata { Name = name, ModGuid = guid },
+        };
     }
 
 #pragma warning disable CS0618 // ConfigServer is obsolete (SPT 4.2 migration pending)

@@ -101,6 +101,98 @@ public class ClientStartupPipelineTests
         Assert.That(File.Exists(removedRouterPath), Is.False, "The obsolete AdjustPScavChance dynamic router should remain deleted");
     }
 
+    [Test]
+    public void DebugPatchPipeline_OnlyEnablesTrackedDebugPatches_WhenDebugConfigIsEnabled()
+    {
+        string pluginSource = ReadSourceFile("src/SPTQuestingBots.Client/QuestingBotsPlugin.cs");
+        string debugGateBlock = ExtractBlock(pluginSource, "if (ConfigController.Config.Debug.Enabled)");
+
+        string processSourceOcclusionPath = Path.Combine(
+            RepoRoot,
+            "src",
+            "SPTQuestingBots.Client",
+            "Patches",
+            "Debug",
+            "ProcessSourceOcclusionPatch.cs"
+        );
+        string handleFinishedTaskPath = Path.Combine(
+            RepoRoot,
+            "src",
+            "SPTQuestingBots.Client",
+            "Patches",
+            "Debug",
+            "HandleFinishedTaskPatch.cs"
+        );
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                debugGateBlock,
+                Does.Contain("new Patches.Debug.ProcessSourceOcclusionPatch().Enable();")
+                    .And.Contain("//new Patches.Debug.HandleFinishedTaskPatch().Enable();")
+                    .And.Contain("//new Patches.Debug.HandleFinishedTaskPatch2().Enable();"),
+                "Debug-only patch registration should stay behind the debug config gate."
+            );
+            Assert.That(
+                File.Exists(processSourceOcclusionPath),
+                Is.True,
+                "The ProcessSourceOcclusion debug patch source should be tracked."
+            );
+            Assert.That(File.Exists(handleFinishedTaskPath), Is.True, "The HandleFinishedTask debug patch source should be tracked.");
+        });
+    }
+
+    [Test]
+    public void SuccessfulStartup_BootstrapsLoggingAndConfigSyncInStableOrder()
+    {
+        string pluginSource = ReadSourceFile("src/SPTQuestingBots.Client/QuestingBotsPlugin.cs");
+
+        int fileLoggerIndex = pluginSource.IndexOf("LoggingController.InitFileLogger();", System.StringComparison.Ordinal);
+        int menuPatchIndex = pluginSource.IndexOf("new Patches.MenuShowPatch().Enable();", System.StringComparison.Ordinal);
+        int initPatchEnableIndex = pluginSource.IndexOf("new Patches.TarkovInitPatch().Enable();", System.StringComparison.Ordinal);
+        int buildOptionsIndex = pluginSource.IndexOf(
+            "QuestingBotsPluginConfig.BuildConfigOptions(Config);",
+            System.StringComparison.Ordinal
+        );
+        int configSyncIndex = pluginSource.IndexOf("ConfigSync.SyncToModConfig();", System.StringComparison.Ordinal);
+        int settingChangedIndex = pluginSource.IndexOf(
+            "Config.SettingChanged += (_, _) => ConfigSync.SyncToModConfig();",
+            System.StringComparison.Ordinal
+        );
+        int tarkovDataIndex = pluginSource.IndexOf("this.GetOrAddComponent<TarkovData>();", System.StringComparison.Ordinal);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(fileLoggerIndex, Is.GreaterThanOrEqualTo(0), "Successful startup should initialize dedicated file logging.");
+            Assert.That(menuPatchIndex, Is.GreaterThan(fileLoggerIndex), "Menu setup should happen after file logging is initialized.");
+            Assert.That(
+                initPatchEnableIndex,
+                Is.GreaterThan(menuPatchIndex),
+                "Gameplay patch enablement should remain downstream of menu setup."
+            );
+            Assert.That(
+                buildOptionsIndex,
+                Is.GreaterThan(initPatchEnableIndex),
+                "F12 option construction should stay after the main patch-enable path."
+            );
+            Assert.That(
+                configSyncIndex,
+                Is.GreaterThan(buildOptionsIndex),
+                "Initial config sync should happen only after F12 options are built."
+            );
+            Assert.That(
+                settingChangedIndex,
+                Is.GreaterThan(configSyncIndex),
+                "The SettingChanged subscription should remain downstream of the first config sync."
+            );
+            Assert.That(
+                tarkovDataIndex,
+                Is.GreaterThan(settingChangedIndex),
+                "TarkovData should be added only after startup config synchronization is wired."
+            );
+        });
+    }
+
     private static string FindRepoRoot()
     {
         var dir = TestContext.CurrentContext.TestDirectory;

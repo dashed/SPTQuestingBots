@@ -66,6 +66,40 @@ public class ExternalModCompatibilityPipelineTests
         );
     }
 
+    [Test]
+    public void ExternalModHandler_DedupesDependencyErrors_AndKeepsNoModsSummaryVisible()
+    {
+        string handlerSource = ReadSourceFile("src/SPTQuestingBots.Client/BotLogic/ExternalMods/ExternalModHandler.cs");
+
+        Assert.That(
+            handlerSource,
+            Does.Contain("if (!Chainloader.DependencyErrors.Contains(message))")
+                .And.Contain("Chainloader.DependencyErrors.Add(message);")
+                .And.Contain("External mod compatibility summary: no supported external mods detected.")
+                .And.Contain(
+                    "LoggingController.LogInfo(\"External mod compatibility summary: no supported external mods detected.\", true);"
+                )
+                .And.Contain("LoggingController.LogInfo(\"External mod compatibility summary:\", true);"),
+            "External-mod startup should dedupe dependency errors and keep the summary visible even when no supported mods are installed."
+        );
+    }
+
+    [Test]
+    public void ExternalModSummary_CarriesInteropStatusMetadata_IntoTheStartupReport()
+    {
+        string modInfoSource = ReadSourceFile("src/SPTQuestingBots.Client/BotLogic/ExternalMods/ModInfo/AbstractExternalModInfo.cs");
+
+        Assert.That(
+            modInfoSource,
+            Does.Contain("public virtual string InteropStatusMessage")
+                .And.Contain("protected bool SetInteropAvailability")
+                .And.Contain("CompatibilitySatisfied")
+                .And.Contain("BuildStartupSummary")
+                .And.Contain("InteropStatusMessage"),
+            "The startup summary should keep the detailed interop-status message that explains why a detected mod is healthy or degraded."
+        );
+    }
+
     private static string FindRepoRoot()
     {
         var dir = TestContext.CurrentContext.TestDirectory;
