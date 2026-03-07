@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using BepInEx.Bootstrap;
 using EFT;
 using SPTQuestingBots.BotLogic.ExternalMods.Functions.Extract;
@@ -23,7 +19,7 @@ namespace SPTQuestingBots.BotLogic.ExternalMods
             new PerformanceImprovementsModInfo();
         public static PleaseJustFightModInfo PleaseJustFightModInfo { get; private set; } = new PleaseJustFightModInfo();
 
-        private static List<AbstractExternalModInfo> externalMods = new List<AbstractExternalModInfo>
+        private static readonly List<AbstractExternalModInfo> externalMods = new List<AbstractExternalModInfo>
         {
             SAINModInfo,
             LootingBotsModInfo,
@@ -54,7 +50,7 @@ namespace SPTQuestingBots.BotLogic.ExternalMods
             if (!LootingBotsModInfo.IsInstalled)
                 return true;
 
-            return !ConfigController.Config.Questing.Looting.DisableWhenLootingBotsDetected;
+            return !LootingBotsModInfo.ShouldUseExternalLooting();
         }
 
         public static void CheckForExternalMods()
@@ -64,6 +60,8 @@ namespace SPTQuestingBots.BotLogic.ExternalMods
                 return;
             }
 
+            var installedMods = new List<AbstractExternalModInfo>();
+
             foreach (AbstractExternalModInfo modInfo in externalMods)
             {
                 if (!modInfo.CheckIfInstalled())
@@ -71,18 +69,59 @@ namespace SPTQuestingBots.BotLogic.ExternalMods
                     continue;
                 }
 
-                LoggingController.LogInfo($"Found external mod {modInfo.GetName()} (version {modInfo.GetVersion()})");
+                installedMods.Add(modInfo);
+                LoggingController.LogInfo($"Found external mod {modInfo.GetDisplayName()} (version {modInfo.GetVersionText()})");
 
-                if (!modInfo.IsCompatible())
+                bool isCompatible = modInfo.IsCompatible();
+                modInfo.RecordCompatibilityResult(isCompatible);
+
+                if (!isCompatible)
                 {
-                    Chainloader.DependencyErrors.Add(modInfo.IncompatibilityMessage);
+                    LoggingController.LogError(modInfo.IncompatibilityMessage);
+                    addDependencyError(modInfo.IncompatibilityMessage);
                     continue;
                 }
 
-                if (!modInfo.CheckInteropAvailability())
+                if (modInfo.UsesInterop && !modInfo.CheckInteropAvailability())
                 {
-                    LoggingController.LogWarning($"Interoperability for external mod {modInfo.GUID} could not be initialized");
+                    string interopMessage = modInfo.GetInteropUnavailableMessage();
+
+                    if (modInfo.IsInteropRequiredForCurrentConfig)
+                    {
+                        LoggingController.LogError(interopMessage);
+                        addDependencyError(interopMessage);
+                    }
+                    else
+                    {
+                        LoggingController.LogWarning(interopMessage);
+                    }
                 }
+            }
+
+            logStartupCompatibilitySummary(installedMods);
+        }
+
+        private static void logStartupCompatibilitySummary(IReadOnlyCollection<AbstractExternalModInfo> installedMods)
+        {
+            if (installedMods.Count == 0)
+            {
+                LoggingController.LogInfo("External mod compatibility summary: no supported external mods detected.", true);
+                return;
+            }
+
+            LoggingController.LogInfo("External mod compatibility summary:", true);
+
+            foreach (AbstractExternalModInfo modInfo in installedMods)
+            {
+                LoggingController.LogInfo(" - " + modInfo.BuildStartupSummary(modInfo.CompatibilitySatisfied), true);
+            }
+        }
+
+        private static void addDependencyError(string message)
+        {
+            if (!Chainloader.DependencyErrors.Contains(message))
+            {
+                Chainloader.DependencyErrors.Add(message);
             }
         }
     }

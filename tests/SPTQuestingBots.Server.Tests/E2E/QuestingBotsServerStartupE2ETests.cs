@@ -103,6 +103,74 @@ public class QuestingBotsServerStartupE2ETests
         });
     }
 
+    [Test]
+    public async Task OnLoad_WithKnownRouteShadowingMod_DisablesSpawningAndLogsOrderSensitiveWarning()
+    {
+        var config = CreateValidConfig();
+        config.BotSpawns.Enabled = true;
+
+        var botConfig = (BotConfig)RuntimeHelpers.GetUninitializedObject(typeof(BotConfig));
+        botConfig.ChanceAssaultScavHasPlayerScavName = 21;
+        botConfig.PlayerScavBrainType = new Dictionary<string, Dictionary<string, int>>();
+
+        var pmcConfig = (PmcConfig)RuntimeHelpers.GetUninitializedObject(typeof(PmcConfig));
+        pmcConfig.PmcType = new Dictionary<string, Dictionary<string, Dictionary<string, double>>>();
+
+        var logger = Substitute.For<ISptLogger<CommonUtils>>();
+        var configLoader = CreateConfigLoader(config);
+        var commonUtils = new CommonUtils(logger, null!, null!, configLoader);
+        var configServer = TestConfigServer.Create(botConfig);
+        var pmcConversionService = new PMCConversionService(commonUtils, configLoader, configServer);
+        SetPrivateField(pmcConversionService, "_pmcConfig", pmcConfig);
+        SetPrivateField(pmcConversionService, "_botConfig", botConfig);
+
+        var plugin = new QuestingBotsServerPlugin(
+            configLoader,
+            commonUtils,
+            null!,
+            pmcConversionService,
+            configServer,
+            [
+                new SptMod
+                {
+                    Directory = "/mods/SWAG+Donuts",
+                    Assemblies = Array.Empty<Assembly>(),
+                    ModMetadata = new QuestingBotsMetadata { Name = "SWAG+Donuts", ModGuid = "swag-and-donuts" },
+                },
+            ]
+        );
+
+        await plugin.OnLoad();
+
+        var warningMessages = logger
+            .ReceivedCalls()
+            .Where(call => call.GetMethodInfo().Name == nameof(ISptLogger<CommonUtils>.Warning))
+            .Select(call => call.GetArguments()[0]?.ToString() ?? string.Empty)
+            .ToList();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(config.BotSpawns.Enabled, Is.False, "Known spawning conflicts should disable QuestingBots spawning.");
+            Assert.That(
+                warningMessages.Any(message => message.Contains("/client/game/bot/generate", StringComparison.Ordinal)),
+                Is.True,
+                "The startup warning should mention the shared bot-generation route explicitly."
+            );
+            Assert.That(
+                warningMessages.Any(message => message.Contains("order-sensitive", StringComparison.Ordinal)),
+                Is.True,
+                "The startup warning should explain that route dispatch is order-sensitive."
+            );
+            Assert.That(
+                warningMessages.Any(message =>
+                    message.Contains("QuestingBots spawning system has been disabled.", StringComparison.Ordinal)
+                ),
+                Is.True,
+                "The startup warning should make the spawn-system fallback explicit."
+            );
+        });
+    }
+
     private static QuestingBotsConfig CreateValidConfig()
     {
         return new QuestingBotsConfig

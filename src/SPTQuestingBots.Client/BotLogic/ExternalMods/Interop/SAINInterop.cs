@@ -16,11 +16,28 @@ namespace SAIN.Plugin
 {
     internal static class SAINInterop
     {
+        internal const string ExternalTypeName = "SAIN.Interop.SAINExternal, SAIN";
+
+        internal static readonly string[] RequiredMethodNames =
+        [
+            "ExtractBot",
+            "TrySetExfilForBot",
+            "IsPathTowardEnemy",
+            "TimeSinceSenseEnemy",
+            "CanBotQuest",
+            "GetExtractedBots",
+            "GetExtractionInfos",
+            "IgnoreHearing",
+            "GetPersonality",
+        ];
+
         private static bool _SAINLoadedChecked = false;
         private static bool _SAINInteropInited = false;
+        private static bool _SAINInteropAvailable = false;
 
         private static bool _IsSAINLoaded;
         private static Type _SAINExternalType;
+        private static string _lastInitError = string.Empty;
 
         private static MethodInfo _ExtractBotMethod;
         private static MethodInfo _SetExfilForBotMethod;
@@ -31,6 +48,8 @@ namespace SAIN.Plugin
         private static MethodInfo _GetExtractionInfosMethod;
         private static MethodInfo _IgnoreHearingMethod;
         private static MethodInfo _GetPersonalityMethod;
+
+        internal static string LastInitError => _lastInitError;
 
         /**
          * Return true if SAIN is loaded in the client
@@ -53,33 +72,60 @@ namespace SAIN.Plugin
         public static bool Init()
         {
             if (!IsSAINLoaded())
+            {
+                _lastInitError = "SAIN is not loaded.";
                 return false;
+            }
 
-            // Only check for the External class once
             if (!_SAINInteropInited)
             {
                 _SAINInteropInited = true;
-
-                _SAINExternalType = Type.GetType("SAIN.Interop.SAINExternal, SAIN");
-
-                // Only try to get the methods if we have the type
-                if (_SAINExternalType != null)
-                {
-                    _ExtractBotMethod = AccessTools.Method(_SAINExternalType, "ExtractBot");
-                    _SetExfilForBotMethod = AccessTools.Method(_SAINExternalType, "TrySetExfilForBot");
-                    _IsPathTowardEnemyMethod = AccessTools.Method(_SAINExternalType, "IsPathTowardEnemy");
-                    _TimeSinceSenseEnemyMethod = AccessTools.Method(_SAINExternalType, "TimeSinceSenseEnemy");
-                    _CanBotQuestMethod = AccessTools.Method(_SAINExternalType, "CanBotQuest");
-                    _GetExtractedBotsMethod = AccessTools.Method(_SAINExternalType, "GetExtractedBots");
-                    _GetExtractionInfosMethod = AccessTools.Method(_SAINExternalType, "GetExtractionInfos");
-
-                    _IgnoreHearingMethod = AccessTools.Method(_SAINExternalType, "IgnoreHearing");
-                    _GetPersonalityMethod = AccessTools.Method(_SAINExternalType, "GetPersonality");
-                }
+                _SAINInteropAvailable = tryInitializeInterop();
             }
 
-            // If we found the External class, at least some of the methods are (probably) available
-            return (_SAINExternalType != null);
+            return _SAINInteropAvailable;
+        }
+
+        private static bool tryInitializeInterop()
+        {
+            _SAINExternalType = Type.GetType(ExternalTypeName);
+            if (_SAINExternalType == null)
+            {
+                _lastInitError = "Could not resolve type " + ExternalTypeName + ".";
+                return false;
+            }
+
+            var missingMethods = new List<string>();
+
+            _ExtractBotMethod = getRequiredMethod(_SAINExternalType, "ExtractBot", missingMethods);
+            _SetExfilForBotMethod = getRequiredMethod(_SAINExternalType, "TrySetExfilForBot", missingMethods);
+            _IsPathTowardEnemyMethod = getRequiredMethod(_SAINExternalType, "IsPathTowardEnemy", missingMethods);
+            _TimeSinceSenseEnemyMethod = getRequiredMethod(_SAINExternalType, "TimeSinceSenseEnemy", missingMethods);
+            _CanBotQuestMethod = getRequiredMethod(_SAINExternalType, "CanBotQuest", missingMethods);
+            _GetExtractedBotsMethod = getRequiredMethod(_SAINExternalType, "GetExtractedBots", missingMethods);
+            _GetExtractionInfosMethod = getRequiredMethod(_SAINExternalType, "GetExtractionInfos", missingMethods);
+            _IgnoreHearingMethod = getRequiredMethod(_SAINExternalType, "IgnoreHearing", missingMethods);
+            _GetPersonalityMethod = getRequiredMethod(_SAINExternalType, "GetPersonality", missingMethods);
+
+            if (missingMethods.Count > 0)
+            {
+                _lastInitError = "Missing required SAIN interop methods: " + string.Join(", ", missingMethods);
+                return false;
+            }
+
+            _lastInitError = string.Empty;
+            return true;
+        }
+
+        private static MethodInfo getRequiredMethod(Type externalType, string methodName, List<string> missingMethods)
+        {
+            MethodInfo method = AccessTools.Method(externalType, methodName);
+            if (method == null)
+            {
+                missingMethods.Add(methodName);
+            }
+
+            return method;
         }
 
         /// <summary>

@@ -47,18 +47,56 @@ public class QuestingBotsServerPlugin(
     IReadOnlyList<SptMod> loadedMods
 ) : IOnLoad
 {
+    private const string BotGenerateRoute = "/client/game/bot/generate";
+
     /// <summary>
-    /// Mod names whose presence should cause the QuestingBots spawning
-    /// system to disable itself to avoid conflicts. These are other
-    /// community mods that provide their own bot-spawning logic.
+    /// Known server-side mods whose spawn handling can conflict with
+    /// QuestingBots. Several of these are also candidates to shadow the
+    /// shared <c>/client/game/bot/generate</c> route, which is order-sensitive
+    /// in server-csharp.
     /// </summary>
-    private static readonly string[] SpawningModNames =
+    private static readonly KnownServerConflict[] KnownServerConflicts =
     [
-        "SWAG",
-        "DewardianDev-MOAR",
-        "PreyToLive-BetterSpawnsPlus",
-        "RealPlayerSpawn",
-        "acidphantasm-botplacementsystem",
+        new(
+            "SWAG",
+            ["SWAG", "SWAG+Donuts"],
+            [],
+            DisableQuestingBotsSpawning: true,
+            MayShadowBotGenerationRoute: true,
+            "This mod manages spawn scheduling and can intercept bot-generation flow before QuestingBots."
+        ),
+        new(
+            "DewardianDev-MOAR",
+            ["DewardianDev-MOAR", "MOAR"],
+            [],
+            DisableQuestingBotsSpawning: true,
+            MayShadowBotGenerationRoute: true,
+            "This mod replaces raid spawn selection and can compete with QuestingBots bot generation."
+        ),
+        new(
+            "PreyToLive-BetterSpawnsPlus",
+            ["PreyToLive-BetterSpawnsPlus", "BetterSpawnsPlus"],
+            [],
+            DisableQuestingBotsSpawning: true,
+            MayShadowBotGenerationRoute: true,
+            "This mod adjusts bot spawn placement and can overlap with QuestingBots route interception."
+        ),
+        new(
+            "RealPlayerSpawn",
+            ["RealPlayerSpawn"],
+            [],
+            DisableQuestingBotsSpawning: true,
+            MayShadowBotGenerationRoute: false,
+            "This mod controls spawn placement, so QuestingBots spawning should stay off."
+        ),
+        new(
+            "acidphantasm-botplacementsystem",
+            ["acidphantasm-botplacementsystem", "BotPlacementSystem"],
+            [],
+            DisableQuestingBotsSpawning: true,
+            MayShadowBotGenerationRoute: true,
+            "This mod rewrites bot placement and can conflict with QuestingBots bot-generation interception."
+        ),
     ];
 
     /// <summary>
@@ -187,20 +225,86 @@ public class QuestingBotsServerPlugin(
     /// </returns>
     private bool ShouldDisableSpawningSystem()
     {
+        bool shouldDisableSpawning = false;
+        bool spawningWasEnabled = configLoader.Config.BotSpawns.Enabled;
+
+        foreach (var conflict in DetectKnownServerConflicts())
+        {
+            bool disableSpawningForConflict = conflict.Definition.DisableQuestingBotsSpawning;
+            shouldDisableSpawning |= disableSpawningForConflict;
+            logConflictWarning(conflict, spawningWasEnabled && disableSpawningForConflict);
+        }
+
+        return shouldDisableSpawning;
+    }
+
+    internal IReadOnlyList<DetectedServerConflict> DetectKnownServerConflicts()
+    {
+        var conflicts = new List<DetectedServerConflict>();
+
         foreach (var mod in loadedMods)
         {
-            var modName = mod.ModMetadata?.Name ?? "";
-            if (SpawningModNames.Any(name => modName.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0))
+            string modName = mod.ModMetadata?.Name ?? "";
+            string modGuid = mod.ModMetadata?.ModGuid ?? "";
+
+            foreach (var definition in KnownServerConflicts)
             {
-                commonUtils.LogWarning(
-                    $"Detected conflicting spawning mod '{modName}'. " + "QuestingBots spawning system has been disabled."
-                );
-                return true;
+                if (matchesKnownServerConflict(modName, modGuid, definition))
+                {
+                    conflicts.Add(new DetectedServerConflict(modName, modGuid, definition));
+                    break;
+                }
             }
         }
 
-        return false;
+        return conflicts;
     }
+
+    private void logConflictWarning(DetectedServerConflict conflict, bool spawningDisabledNow)
+    {
+        string modName = string.IsNullOrWhiteSpace(conflict.ModName) ? conflict.Definition.DisplayName : conflict.ModName;
+        string message =
+            "Detected potentially conflicting server mod '"
+            + modName
+            + "'"
+            + formatGuidSuffix(conflict.ModGuid)
+            + ". "
+            + conflict.Definition.Reason;
+
+        if (conflict.Definition.MayShadowBotGenerationRoute)
+        {
+            message += " It may shadow " + BotGenerateRoute + ", and server-csharp dispatch for matching routes is order-sensitive.";
+        }
+
+        if (conflict.Definition.DisableQuestingBotsSpawning)
+        {
+            message += spawningDisabledNow
+                ? " QuestingBots spawning system has been disabled."
+                : " QuestingBots spawning is already disabled.";
+        }
+
+        commonUtils.LogWarning(message);
+    }
+
+    private static bool matchesKnownServerConflict(string modName, string modGuid, KnownServerConflict definition) =>
+        hasExactAlias(modName, definition.ModNames) || hasExactAlias(modGuid, definition.ModGuids);
+
+    private static bool hasExactAlias(string value, IEnumerable<string> aliases) =>
+        !string.IsNullOrWhiteSpace(value) && aliases.Any(alias => string.Equals(value, alias, StringComparison.OrdinalIgnoreCase));
+
+    private static string formatGuidSuffix(string modGuid) =>
+        string.IsNullOrWhiteSpace(modGuid) ? string.Empty : " (guid: " + modGuid + ")";
+
+    internal sealed record KnownServerConflict(
+        string DisplayName,
+        IReadOnlyList<string> ModNames,
+        IReadOnlyList<string> ModGuids,
+        bool DisableQuestingBotsSpawning,
+        bool MayShadowBotGenerationRoute,
+        string Reason
+    );
+
+    internal sealed record DetectedServerConflict(string ModName, string ModGuid, KnownServerConflict Definition);
 
     // ────────────────────────────────────────────────────────────────────
     // Configuration validation (ported from mod.ts)

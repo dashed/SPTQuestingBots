@@ -12,13 +12,21 @@ namespace LootingBots
 {
     internal static class LootingBotsInterop
     {
+        internal const string ExternalTypeName = "LootingBots.External, skwizzy.LootingBots";
+
+        internal static readonly string[] RequiredMethodNames = ["ForceBotToScanLoot", "PreventBotFromLooting"];
+
         private static bool _LootingBotsLoadedChecked = false;
         private static bool _LootingBotsInteropInited = false;
+        private static bool _LootingBotsInteropAvailable = false;
 
         private static bool _IsLootingBotsLoaded;
         private static Type _LootingBotsExternalType;
+        private static string _lastInitError = string.Empty;
         private static MethodInfo _ForceBotToScanLootMethod;
         private static MethodInfo _PreventBotFromLootingMethod;
+
+        internal static string LastInitError => _lastInitError;
 
         /**
          * Return true if Looting Bots is loaded in the client
@@ -41,25 +49,52 @@ namespace LootingBots
         public static bool Init()
         {
             if (!IsLootingBotsLoaded())
+            {
+                _lastInitError = "LootingBots is not loaded.";
                 return false;
+            }
 
-            // Only check for the External class once
             if (!_LootingBotsInteropInited)
             {
                 _LootingBotsInteropInited = true;
-
-                _LootingBotsExternalType = Type.GetType("LootingBots.External, skwizzy.LootingBots");
-
-                // Only try to get the methods if we have the type
-                if (_LootingBotsExternalType != null)
-                {
-                    _ForceBotToScanLootMethod = AccessTools.Method(_LootingBotsExternalType, "ForceBotToScanLoot");
-                    _PreventBotFromLootingMethod = AccessTools.Method(_LootingBotsExternalType, "PreventBotFromLooting");
-                }
+                _LootingBotsInteropAvailable = tryInitializeInterop();
             }
 
-            // If we found the External class, at least some of the methods are (probably) available
-            return (_LootingBotsExternalType != null);
+            return _LootingBotsInteropAvailable;
+        }
+
+        private static bool tryInitializeInterop()
+        {
+            _LootingBotsExternalType = Type.GetType(ExternalTypeName);
+            if (_LootingBotsExternalType == null)
+            {
+                _lastInitError = "Could not resolve type " + ExternalTypeName + ".";
+                return false;
+            }
+
+            var missingMethods = new List<string>();
+            _ForceBotToScanLootMethod = getRequiredMethod(_LootingBotsExternalType, "ForceBotToScanLoot", missingMethods);
+            _PreventBotFromLootingMethod = getRequiredMethod(_LootingBotsExternalType, "PreventBotFromLooting", missingMethods);
+
+            if (missingMethods.Count > 0)
+            {
+                _lastInitError = "Missing required LootingBots interop methods: " + string.Join(", ", missingMethods);
+                return false;
+            }
+
+            _lastInitError = string.Empty;
+            return true;
+        }
+
+        private static MethodInfo getRequiredMethod(Type externalType, string methodName, List<string> missingMethods)
+        {
+            MethodInfo method = AccessTools.Method(externalType, methodName);
+            if (method == null)
+            {
+                missingMethods.Add(methodName);
+            }
+
+            return method;
         }
 
         /**

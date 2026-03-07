@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using DrakiaXYZ.BigBrain.Brains;
 using EFT;
 using SPTQuestingBots.BotLogic.ExternalMods.Functions.Extract;
@@ -15,6 +12,8 @@ namespace SPTQuestingBots.BotLogic.ExternalMods.ModInfo
     public class SAINModInfo : AbstractExternalModInfo
     {
         public override string GUID { get; } = "me.sol.sain";
+        public override bool UsesInterop => true;
+        public override bool IsInteropRequiredForCurrentConfig => shouldUseSainForExtracting();
 
         private Dictionary<string, int> minimumBrainLayerPrioritiesForBrains = new Dictionary<string, int>();
         private Dictionary<string, MinMaxConfig> searchTimeAfterCombatForBrains = new Dictionary<string, MinMaxConfig>();
@@ -25,19 +24,15 @@ namespace SPTQuestingBots.BotLogic.ExternalMods.ModInfo
         {
             if (SAIN.Plugin.SAINInterop.Init())
             {
-                CanUseInterop = true;
-            }
-            else
-            {
-                LoggingController.LogWarning("SAIN Interop not detected. Will instruct bots to extract using vanilla EFT behavior.");
+                return SetInteropAvailability(true, "Resolved " + SAIN.Plugin.SAINInterop.ExternalTypeName);
             }
 
-            return CanUseInterop;
+            return SetInteropAvailability(false, SAIN.Plugin.SAINInterop.LastInitError);
         }
 
         public override AbstractExtractFunction CreateExtractFunction(BotOwner _botOwner)
         {
-            if (!CanUseInterop || !ConfigController.Config.Questing.ExtractionRequirements.UseSAINForExtracting)
+            if (!CanUseInterop || !shouldUseSainForExtracting())
             {
                 return base.CreateExtractFunction(_botOwner);
             }
@@ -53,6 +48,38 @@ namespace SPTQuestingBots.BotLogic.ExternalMods.ModInfo
             }
 
             return new SAINHearingFunction(_botOwner);
+        }
+
+        public override string GetConfiguredFeatureDescription() =>
+            shouldUseSainForExtracting() ? "SAIN extraction integration enabled" : "SAIN extraction integration disabled in config";
+
+        public override string GetFallbackBehaviorDescription()
+        {
+            if (CanUseInterop)
+            {
+                return shouldUseSainForExtracting()
+                    ? "using SAIN extraction and hearing integration"
+                    : "using QuestingBots extraction while keeping SAIN hearing integration";
+            }
+
+            return "using QuestingBots extraction and hearing behavior";
+        }
+
+        public override string GetInteropUnavailableMessage()
+        {
+            string message =
+                GetDisplayName()
+                + " detected, but QuestingBots could not initialize SAIN interop. "
+                + "Reason: "
+                + InteropStatusMessage
+                + ".";
+
+            if (shouldUseSainForExtracting())
+            {
+                return message + " Falling back to QuestingBots extraction behavior.";
+            }
+
+            return message + " QuestingBots will continue without SAIN extraction or hearing integration.";
         }
 
         public MinMaxConfig GetSearchTimeAfterCombat(string brainName)
@@ -108,5 +135,8 @@ namespace SPTQuestingBots.BotLogic.ExternalMods.ModInfo
 
             return -1;
         }
+
+        private static bool shouldUseSainForExtracting() =>
+            ConfigController.Config?.Questing?.ExtractionRequirements?.UseSAINForExtracting == true;
     }
 }
