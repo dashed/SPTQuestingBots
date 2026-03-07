@@ -306,8 +306,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `LootingConfig`, `VultureConfig`, `ZoneMovementConfig`, `SquadStrategyConfig`: property-level docstrings
   - `SquadCalloutId`, `SquadCalloutDecider`, `FormationSpeedController`: class and method docstrings
 - **Spawn entry behavior** — bots pause and scan on first spawn instead of instantly beelining to objectives
-  - `SpawnEntryTask`: utility task (`BotActionTypeId=SpawnEntry(17)`, MaxBaseScore=0.80, gating task)
-    - Flat score of 0.80 during spawn duration, drops to 0 once complete — overrides all other tasks
+  - `SpawnEntryTask`: utility task (`BotActionTypeId=SpawnEntry(17)`, MaxBaseScore=1.0, gating task)
+    - Flat score of 1.0 during spawn duration, drops to 0 once complete — overrides all other tasks
     - Does NOT use `ScoringModifiers.CombinedModifier()` (flat gating, not personality-influenced)
     - Gates: `!IsSpawnEntryComplete`, elapsed time < spawn duration
   - `SpawnEntryAction`: BigBrain action extending `CustomLogicDelayedUpdate`

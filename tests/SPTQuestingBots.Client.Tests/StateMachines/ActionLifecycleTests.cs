@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using SPTQuestingBots.BotLogic.ECS;
 using SPTQuestingBots.BotLogic.ECS.Systems;
+using SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks;
 using SPTQuestingBots.Models.Pathing;
 
 namespace SPTQuestingBots.Client.Tests.StateMachines;
@@ -403,7 +404,7 @@ public class ActionLifecycleTests
         entity.SpawnEntryDuration = 0f;
         entity.IsSpawnEntryComplete = false;
 
-        float score = entity.SpawnEntryDuration <= 0f ? 0f : 0.80f;
+        float score = entity.SpawnEntryDuration <= 0f ? 0f : SpawnEntryTask.MaxBaseScore;
 
         Assert.That(score, Is.EqualTo(0f));
     }
@@ -415,7 +416,7 @@ public class ActionLifecycleTests
         entity.IsSpawnEntryComplete = true;
         entity.SpawnEntryDuration = 4f;
 
-        float score = entity.IsSpawnEntryComplete ? 0f : 0.80f;
+        float score = entity.IsSpawnEntryComplete ? 0f : SpawnEntryTask.MaxBaseScore;
 
         Assert.That(score, Is.EqualTo(0f));
     }

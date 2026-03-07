@@ -115,7 +115,7 @@ public class LifecyclePipelineTests
         var manager = new UtilityTaskManager(tasks);
         InitTaskScores(entity, tasks.Length);
 
-        // Act phase 1: SpawnEntry should win (0.80 > 0.65)
+        // Act phase 1: SpawnEntry should win (1.0 > 0.65)
         manager.ScoreAndPick(entity);
 
         Assert.That(entity.TaskAssignment.Task, Is.SameAs(spawnTask), "SpawnEntry should be active during spawn pause");
@@ -1264,7 +1264,7 @@ public class LifecyclePipelineTests
     [Test]
     public void Integration_SpawnEntry_CompetesWithAllQuestTasks()
     {
-        // SpawnEntryTask at 0.80 should beat all standard quest tasks
+        // SpawnEntryTask at 1.0 should beat all standard quest tasks
         var spawnTask = new SpawnEntryTask();
         var goTo = new FixedScoreTask(0.65f, BotActionTypeId.GoToObjective, "GoTo");
         var loot = new FixedScoreTask(0.50f, BotActionTypeId.Loot, "Loot");

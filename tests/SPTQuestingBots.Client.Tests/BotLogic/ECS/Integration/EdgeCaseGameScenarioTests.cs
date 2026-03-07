@@ -1199,7 +1199,7 @@ public class EdgeCaseGameScenarioTests
         bot.Aggression = 0.5f;
         bot.RaidTimeNormalized = 0.1f;
 
-        // t=10: SpawnEntry should win (0.80 > GoToObjective's ~0.60)
+        // t=10: SpawnEntry should win (1.0 > GoToObjective's ~0.60)
         manager.Update(new[] { bot });
         Assert.IsInstanceOf<SpawnEntryTask>(bot.TaskAssignment.Task, "Just spawned -> SpawnEntry");
 

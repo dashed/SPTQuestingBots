@@ -1071,7 +1071,7 @@ public class PmcLifecycleBehaviorTests
     [Test]
     public void CrossSystem_SpawnEntry_Blocks_AllOtherTasks()
     {
-        // During spawn entry, SpawnEntry (0.80) should beat all other tasks
+        // During spawn entry, SpawnEntry (1.0) should beat all other tasks
         var registry = new BotRegistry(8);
         var manager = CreateQuestManager();
         var entity = CreatePmc(registry, 801, 0.9f, BotPersonality.Reckless);
@@ -1086,7 +1086,7 @@ public class PmcLifecycleBehaviorTests
 
         manager.ScoreAndPick(entity);
 
-        // SpawnEntry at 0.80 should beat everything (HoldPosition 0.70, UnlockDoor 0.70)
+        // SpawnEntry at 1.0 should beat everything (HoldPosition 0.70, UnlockDoor 0.70)
         Assert.That(
             entity.TaskAssignment.Task?.GetType().Name,
             Is.EqualTo("SpawnEntryTask"),

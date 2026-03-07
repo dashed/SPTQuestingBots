@@ -626,7 +626,7 @@ public class SpawnEntryCombatEventTests
             Assert.Greater(
                 SpawnEntryTask.MaxBaseScore,
                 maxVultureScore,
-                "SpawnEntry (0.80) should beat max Vulture score at aggression=" + aggr
+                "SpawnEntry (1.0) should beat max Vulture score at aggression=" + aggr
             );
         }
     }
@@ -641,7 +641,7 @@ public class SpawnEntryCombatEventTests
             float maxInvMod = ScoringModifiers.CombinedModifier(aggr, 0.5f, BotActionTypeId.Investigate);
             float maxInvScore = InvestigateTask.MaxBaseScore * maxInvMod;
 
-            Assert.Greater(SpawnEntryTask.MaxBaseScore, maxInvScore, "SpawnEntry (0.80) should beat max Investigate at aggression=" + aggr);
+            Assert.Greater(SpawnEntryTask.MaxBaseScore, maxInvScore, "SpawnEntry (1.0) should beat max Investigate at aggression=" + aggr);
         }
     }
 
@@ -651,7 +651,7 @@ public class SpawnEntryCombatEventTests
         float maxLootMod = ScoringModifiers.CombinedModifier(0.1f, 1.0f, BotActionTypeId.Loot);
         float maxLootScore = LootTask.MaxBaseScore * maxLootMod;
 
-        Assert.Greater(SpawnEntryTask.MaxBaseScore, maxLootScore, "SpawnEntry (0.80) should beat max modified Loot");
+        Assert.Greater(SpawnEntryTask.MaxBaseScore, maxLootScore, "SpawnEntry (1.0) should beat max modified Loot");
     }
 
     [Test]
@@ -1061,7 +1061,7 @@ public class ScoreCeilingTests
     [Test]
     public void SpawnEntry_AboveAllDiscretionaryMaximums()
     {
-        // SpawnEntry at 0.80 should be above all discretionary maximum scores
+        // SpawnEntry at 1.0 should be above all discretionary maximum scores
         float[] maxScores = new float[8];
         int[] taskIds =
         {
@@ -1097,7 +1097,7 @@ public class ScoreCeilingTests
             Assert.Greater(
                 SpawnEntryTask.MaxBaseScore,
                 maxScore,
-                $"SpawnEntry (0.80) should beat max modified score ({maxScore:F3}) for task {taskIds[i]}"
+                $"SpawnEntry (1.0) should beat max modified score ({maxScore:F3}) for task {taskIds[i]}"
             );
         }
     }

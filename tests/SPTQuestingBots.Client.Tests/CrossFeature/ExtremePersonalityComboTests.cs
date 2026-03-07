@@ -324,7 +324,7 @@ public class ExtremePersonalityComboTests
     [Test]
     public void SpawnEntry_BeatsAllModifiedScores_AtAnyExtreme()
     {
-        // SpawnEntry scores 0.80 with no modifiers
+        // SpawnEntry scores 1.0 with no modifiers
         // Verify no other task with max modifiers can beat it
         float maxModifier = 0f;
         int[] allActions =

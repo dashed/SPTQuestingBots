@@ -367,9 +367,9 @@ Implemented as `ConvergenceMapConfig` + combat pull + time weight:
 
 #### 3.1 Spawn Entry Behavior ✅
 
-Implemented as `SpawnEntryTask` (`BotActionTypeId=SpawnEntry(17)`, MaxBaseScore=0.80, gating task):
+Implemented as `SpawnEntryTask` (`BotActionTypeId=SpawnEntry(17)`, MaxBaseScore=1.0, gating task):
 - 3–5s pause with 360° look rotation, pose 0.85, sprint disabled
-- Flat score of 0.80 overrides all other tasks during spawn duration, drops to 0 once complete
+- Flat score of 1.0 overrides all other tasks during spawn duration, drops to 0 once complete
 - Direction bias in `GoToObjectiveTask`: dot-product bonus toward spawn facing for 30s (linear decay)
 - Squad stagger: 0.5s extra per member index for natural departure spread
 - `SpawnEntryConfig`: 7 JSON properties under `questing.spawn_entry`

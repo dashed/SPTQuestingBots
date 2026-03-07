@@ -428,7 +428,7 @@ public class FeaturePairInterferenceTests
     [Test]
     public void SpawnEntry_ScoresHigherThanAllOtherTasks()
     {
-        // SpawnEntry MaxBaseScore=0.80 is higher than GoToObjective (0.65), Vulture (0.60), etc.
+        // SpawnEntry MaxBaseScore=1.0 is higher than GoToObjective (0.65), Vulture (0.60), etc.
         Assert.That(SpawnEntryTask.MaxBaseScore, Is.GreaterThan(0.65f), "SpawnEntry > GoToObjective");
         Assert.That(SpawnEntryTask.MaxBaseScore, Is.GreaterThan(VultureTask.MaxBaseScore), "SpawnEntry > Vulture");
         Assert.That(SpawnEntryTask.MaxBaseScore, Is.GreaterThan(LootTask.MaxBaseScore), "SpawnEntry > Loot");

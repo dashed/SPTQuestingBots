@@ -122,7 +122,7 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - 360° look rotation during pause, pose 0.85, sprint disabled
 - Direction bias: first objective biased toward spawn facing direction for 30s (linear decay), preventing immediate U-turns
 - Squad stagger: 1.5s extra per member index for natural departure spread
-- Gating task (score=0.80) that overrides all other tasks during spawn duration
+- Gating task (score=1.0) that overrides all other tasks during spawn duration
 - Configurable via `questing.spawn_entry` in config.json
 
 ### Head-Look Variance

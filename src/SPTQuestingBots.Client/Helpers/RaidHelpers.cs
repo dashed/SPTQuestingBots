@@ -10,6 +10,8 @@ namespace SPTQuestingBots.Helpers
 {
     public static class RaidHelpers
     {
+        private static readonly System.Random random = new System.Random();
+
         public static bool ForcePScavs { get; set; } = false;
 
         public static bool IsScavRun => SPT.SinglePlayer.Utils.InRaid.RaidChangesUtil.IsScavRaid;
@@ -53,7 +55,6 @@ namespace SPTQuestingBots.Helpers
 
             double pScavChance = ConfigController.InterpolateForFirstCol(chanceVsTimeRemainingFraction, remainingRaidTimeFraction);
 
-            System.Random random = new System.Random();
             if (random.NextDouble() * 100 < pScavChance)
             {
                 return true;

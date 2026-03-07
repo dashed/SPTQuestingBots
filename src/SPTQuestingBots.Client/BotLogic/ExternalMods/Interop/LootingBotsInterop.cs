@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading.Tasks;
 using BepInEx.Bootstrap;
 using EFT;
-using HarmonyLib;
 
 namespace LootingBots
 {
@@ -33,7 +32,7 @@ namespace LootingBots
          */
         public static bool IsLootingBotsLoaded()
         {
-            // Only check for SAIN once
+            // Only check for LootingBots once
             if (!_LootingBotsLoadedChecked)
             {
                 _LootingBotsLoadedChecked = true;
@@ -73,8 +72,21 @@ namespace LootingBots
             }
 
             var missingMethods = new List<string>();
-            _ForceBotToScanLootMethod = getRequiredMethod(_LootingBotsExternalType, "ForceBotToScanLoot", missingMethods);
-            _PreventBotFromLootingMethod = getRequiredMethod(_LootingBotsExternalType, "PreventBotFromLooting", missingMethods);
+            _ForceBotToScanLootMethod = getRequiredMethod(
+                _LootingBotsExternalType,
+                "ForceBotToScanLoot",
+                typeof(bool),
+                missingMethods,
+                typeof(BotOwner)
+            );
+            _PreventBotFromLootingMethod = getRequiredMethod(
+                _LootingBotsExternalType,
+                "PreventBotFromLooting",
+                typeof(bool),
+                missingMethods,
+                typeof(BotOwner),
+                typeof(float)
+            );
 
             if (missingMethods.Count > 0)
             {
@@ -86,12 +98,19 @@ namespace LootingBots
             return true;
         }
 
-        private static MethodInfo getRequiredMethod(Type externalType, string methodName, List<string> missingMethods)
+        private static MethodInfo getRequiredMethod(
+            Type externalType,
+            string methodName,
+            Type returnType,
+            List<string> missingMethods,
+            params Type[] parameterTypes
+        )
         {
-            MethodInfo method = AccessTools.Method(externalType, methodName);
-            if (method == null)
+            MethodInfo method = externalType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Static, null, parameterTypes, null);
+            if (method == null || method.ReturnType != returnType)
             {
-                missingMethods.Add(methodName);
+                missingMethods.Add(methodName + "(" + string.Join(", ", parameterTypes.Select(t => t.Name)) + ") -> " + returnType.Name);
+                return null;
             }
 
             return method;

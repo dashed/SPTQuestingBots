@@ -42,7 +42,7 @@ public class QuestLifecycleE2ETests
         bot.CurrentQuestAction = QuestActionId.MoveToPosition;
         bot.DistanceToObjective = 200f;
 
-        // Tick 1: SpawnEntry should win (0.80 > GoToObjective ~0.48)
+        // Tick 1: SpawnEntry should win (1.0 > GoToObjective ~0.48)
         _manager.ScoreAndPick(bot);
         Assert.IsInstanceOf<SpawnEntryTask>(bot.TaskAssignment.Task, "SpawnEntry should win at t=1s with 4s duration");
 
@@ -452,7 +452,7 @@ public class AllZeroScoresE2ETests
         entity.CurrentQuestAction = QuestActionId.MoveToPosition;
         entity.DistanceToObjective = 100f;
 
-        // SpawnEntry wins initially (0.80 > GoToObjective ~0.48)
+        // SpawnEntry wins initially (1.0 > GoToObjective ~0.48)
         manager.ScoreAndPick(entity);
         Assert.IsInstanceOf<SpawnEntryTask>(entity.TaskAssignment.Task);
 

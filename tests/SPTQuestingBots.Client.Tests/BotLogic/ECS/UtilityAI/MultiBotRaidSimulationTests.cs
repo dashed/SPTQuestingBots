@@ -1205,7 +1205,7 @@ public class FullRaidTimelineTests
     public void ThreeBotRaid_SpawnQuestCombatLateRaid_FullProgression()
     {
         // === PHASE 1: Spawn (t=0..5) ===
-        // Use raidTime=0.3 so GoToObjective's combined modifier stays below SpawnEntry's 0.80
+        // Use raidTime=0.3 so GoToObjective's combined modifier stays below SpawnEntry's 1.0
         var botA = SimHelper.CreateBot(0, aggression: 0.9f, raidTime: 0.3f, gameTime: 0f, posX: 10f, posZ: 10f);
         botA.SpawnTime = 0f;
         botA.SpawnEntryDuration = 3f;
