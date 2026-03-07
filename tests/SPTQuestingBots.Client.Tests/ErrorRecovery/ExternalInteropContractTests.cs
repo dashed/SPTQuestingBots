@@ -9,7 +9,7 @@ public class ExternalInteropContractTests
     private static readonly string RepoRoot = FindRepoRoot();
 
     [Test]
-    public void SAINInterop_DeclaresExpectedTypeAndRequiredMembers()
+    public void SAINInterop_DeclaresRequiredAndOptionalContracts_WithExactSignatureValidation()
     {
         string source = ReadSourceFile("src/SPTQuestingBots.Client/BotLogic/ExternalMods/Interop/SAINInterop.cs");
 
@@ -20,7 +20,16 @@ public class ExternalInteropContractTests
                 Does.Contain("ExternalTypeName = \"SAIN.Interop.SAINExternal, SAIN\""),
                 "SAIN interop should lock the reflected external type name."
             );
-            Assert.That(source, Does.Contain("RequiredMethodNames"), "SAIN interop should centralize its reflected method contract.");
+            Assert.That(
+                source,
+                Does.Contain("RuntimeRequiredMethodNames"),
+                "SAIN interop should centralize its runtime-critical reflected contract."
+            );
+            Assert.That(
+                source,
+                Does.Contain("OptionalMethodNames"),
+                "SAIN interop should track optional reflected members separately from runtime-critical ones."
+            );
             Assert.That(
                 source,
                 Does.Contain("Type.GetType(ExternalTypeName)"),
@@ -28,23 +37,41 @@ public class ExternalInteropContractTests
             );
             Assert.That(
                 source,
-                Does.Contain("Missing required SAIN interop methods: "),
-                "SAIN interop should fail loudly when a required member disappears."
+                Does.Contain("Missing required SAIN interop members: "),
+                "SAIN interop should fail loudly when a required member or signature disappears."
+            );
+            Assert.That(
+                source,
+                Does.Contain("BindingFlags.Public | BindingFlags.Static").And.Contain("method.ReturnType != returnType"),
+                "SAIN interop should validate exact static signatures, not just method names."
             );
             Assert.That(source, Does.Contain("return _SAINInteropAvailable;"), "SAIN interop init should cache the contract result.");
         });
 
-        AssertSourceContainsAll(
+        AssertSourceContainsAll(source, "ExtractBot", "TrySetExfilForBot", "IgnoreHearing");
+        AssertSourceContainsAll(source, "IsPathTowardEnemy", "TimeSinceSenseEnemy", "CanBotQuest", "GetExtractedBots", "GetPersonality");
+
+        Assert.That(
             source,
-            "ExtractBot",
-            "TrySetExfilForBot",
-            "IsPathTowardEnemy",
-            "TimeSinceSenseEnemy",
-            "CanBotQuest",
-            "GetExtractedBots",
-            "GetExtractionInfos",
-            "IgnoreHearing",
-            "GetPersonality"
+            Does.Not.Contain("\"GetExtractionInfos\""),
+            "QuestingBots should not keep GetExtractionInfos in its required or optional SAIN method contract."
+        );
+        Assert.That(
+            source,
+            Does.Not.Contain("class ExtractionInfo"),
+            "QuestingBots should not mirror SAIN's ExtractionInfo DTO until it has a safe DTO-mapping layer."
+        );
+    }
+
+    [Test]
+    public void SAINHearingFunction_ForwardsIgnoreUnderFireFlag()
+    {
+        string source = ReadSourceFile("src/SPTQuestingBots.Client/BotLogic/ExternalMods/Functions/Hearing/SAINHearingFunction.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("IgnoreHearing(BotOwner, value, ignoreUnderFire, duration)"),
+            "SAIN hearing interop should forward the ignore-under-fire flag instead of hard-coding false."
         );
     }
 

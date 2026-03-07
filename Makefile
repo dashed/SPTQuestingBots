@@ -3,6 +3,8 @@ DOTNET_ROOT  ?= $(HOME)/.dotnet
 DOTNET       := $(DOTNET_ROOT)/dotnet
 export DOTNET_ROOT
 export PATH  := $(DOTNET_ROOT):$(DOTNET_ROOT)/tools:$(PATH)
+SAIN_CONTRACT_REPO ?= $(CURDIR)/external/SAIN
+export QB_SAIN_REPO ?= $(SAIN_CONTRACT_REPO)
 
 # ─── Projects ─────────────────────────────────────────────────────────
 SOLUTION        := SPTQuestingBots.sln
@@ -79,8 +81,8 @@ SERVER_MOD_DIR       := $(DEPLOY_DIR)/SPT/user/mods/SPTQuestingBots
 CLIENT_PLUGIN_DIR    := $(DEPLOY_DIR)/BepInEx/plugins/DanW-SPTQuestingBots
 
 .DEFAULT_GOAL := help
-.PHONY: help all ci ci-full restore build build-server build-client \
-	build-tests test test-server test-client deploy install clean format \
+.PHONY: help all ci ci-contract-sain ci-full restore build build-server build-client \
+	build-tests test test-server test-client test-contract-sain deploy install clean format \
 	format-check lint lint-fix copy-libs check-libs inspect validate-fields \
 	test-inspector
 
@@ -95,6 +97,8 @@ help: ## Show available targets
 all: format-check lint test ## Run format-check, lint, and test
 
 ci: restore format-check build-client-tests test-client ## CI pipeline (no game DLLs needed)
+
+ci-contract-sain: restore build-client-tests test-contract-sain ## Cross-repo SAIN contract CI (requires SAIN checkout)
 
 ci-full: restore format-check lint build-tests test ## Full CI pipeline (requires libs/)
 
@@ -200,6 +204,9 @@ test-server: ## Run server-side tests only
 
 test-client: ## Run client-side tests only
 	$(DOTNET) test $(CLIENT_TEST) -c $(CONFIGURATION) --nologo
+
+test-contract-sain: ## Run repo-to-repo SAIN contract tests (requires external/SAIN or QB_SAIN_REPO)
+	$(DOTNET) test $(CLIENT_TEST) -c $(CONFIGURATION) --nologo --filter "Category=SAINContract"
 
 # ─── Format ───────────────────────────────────────────────────────────
 

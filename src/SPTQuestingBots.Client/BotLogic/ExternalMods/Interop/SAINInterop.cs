@@ -2,13 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using BepInEx.Bootstrap;
-using Comfort.Common;
 using EFT;
-using EFT.Interactive;
-using HarmonyLib;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -18,16 +13,14 @@ namespace SAIN.Plugin
     {
         internal const string ExternalTypeName = "SAIN.Interop.SAINExternal, SAIN";
 
-        internal static readonly string[] RequiredMethodNames =
+        internal static readonly string[] RuntimeRequiredMethodNames = ["ExtractBot", "TrySetExfilForBot", "IgnoreHearing"];
+
+        internal static readonly string[] OptionalMethodNames =
         [
-            "ExtractBot",
-            "TrySetExfilForBot",
             "IsPathTowardEnemy",
             "TimeSinceSenseEnemy",
             "CanBotQuest",
             "GetExtractedBots",
-            "GetExtractionInfos",
-            "IgnoreHearing",
             "GetPersonality",
         ];
 
@@ -45,7 +38,6 @@ namespace SAIN.Plugin
         private static MethodInfo _TimeSinceSenseEnemyMethod;
         private static MethodInfo _CanBotQuestMethod;
         private static MethodInfo _GetExtractedBotsMethod;
-        private static MethodInfo _GetExtractionInfosMethod;
         private static MethodInfo _IgnoreHearingMethod;
         private static MethodInfo _GetPersonalityMethod;
 
@@ -95,21 +87,51 @@ namespace SAIN.Plugin
                 return false;
             }
 
-            var missingMethods = new List<string>();
+            var missingMembers = new List<string>();
 
-            _ExtractBotMethod = getRequiredMethod(_SAINExternalType, "ExtractBot", missingMethods);
-            _SetExfilForBotMethod = getRequiredMethod(_SAINExternalType, "TrySetExfilForBot", missingMethods);
-            _IsPathTowardEnemyMethod = getRequiredMethod(_SAINExternalType, "IsPathTowardEnemy", missingMethods);
-            _TimeSinceSenseEnemyMethod = getRequiredMethod(_SAINExternalType, "TimeSinceSenseEnemy", missingMethods);
-            _CanBotQuestMethod = getRequiredMethod(_SAINExternalType, "CanBotQuest", missingMethods);
-            _GetExtractedBotsMethod = getRequiredMethod(_SAINExternalType, "GetExtractedBots", missingMethods);
-            _GetExtractionInfosMethod = getRequiredMethod(_SAINExternalType, "GetExtractionInfos", missingMethods);
-            _IgnoreHearingMethod = getRequiredMethod(_SAINExternalType, "IgnoreHearing", missingMethods);
-            _GetPersonalityMethod = getRequiredMethod(_SAINExternalType, "GetPersonality", missingMethods);
+            _ExtractBotMethod = getRequiredMethod(_SAINExternalType, "ExtractBot", typeof(bool), missingMembers, typeof(BotOwner));
+            _SetExfilForBotMethod = getRequiredMethod(
+                _SAINExternalType,
+                "TrySetExfilForBot",
+                typeof(bool),
+                missingMembers,
+                typeof(BotOwner)
+            );
+            _IgnoreHearingMethod = getRequiredMethod(
+                _SAINExternalType,
+                "IgnoreHearing",
+                typeof(bool),
+                missingMembers,
+                typeof(BotOwner),
+                typeof(bool),
+                typeof(bool),
+                typeof(float)
+            );
 
-            if (missingMethods.Count > 0)
+            _IsPathTowardEnemyMethod = getOptionalMethod(
+                _SAINExternalType,
+                "IsPathTowardEnemy",
+                typeof(bool),
+                typeof(NavMeshPath),
+                typeof(BotOwner),
+                typeof(float),
+                typeof(float)
+            );
+            _TimeSinceSenseEnemyMethod = getOptionalMethod(_SAINExternalType, "TimeSinceSenseEnemy", typeof(float), typeof(BotOwner));
+            _CanBotQuestMethod = getOptionalMethod(
+                _SAINExternalType,
+                "CanBotQuest",
+                typeof(bool),
+                typeof(BotOwner),
+                typeof(Vector3),
+                typeof(float)
+            );
+            _GetExtractedBotsMethod = getOptionalMethod(_SAINExternalType, "GetExtractedBots", typeof(void), typeof(List<string>));
+            _GetPersonalityMethod = getOptionalMethod(_SAINExternalType, "GetPersonality", typeof(string), typeof(BotOwner));
+
+            if (missingMembers.Count > 0)
             {
-                _lastInitError = "Missing required SAIN interop methods: " + string.Join(", ", missingMethods);
+                _lastInitError = "Missing required SAIN interop members: " + string.Join(", ", missingMembers);
                 return false;
             }
 
@@ -117,15 +139,60 @@ namespace SAIN.Plugin
             return true;
         }
 
-        private static MethodInfo getRequiredMethod(Type externalType, string methodName, List<string> missingMethods)
+        private static MethodInfo getRequiredMethod(
+            Type externalType,
+            string methodName,
+            Type returnType,
+            List<string> missingMembers,
+            params Type[] parameterTypes
+        )
         {
-            MethodInfo method = AccessTools.Method(externalType, methodName);
+            MethodInfo method = getMethod(externalType, methodName, returnType, parameterTypes);
             if (method == null)
             {
-                missingMethods.Add(methodName);
+                missingMembers.Add(formatMethodSignature(methodName, returnType, parameterTypes));
             }
 
             return method;
+        }
+
+        private static MethodInfo getOptionalMethod(Type externalType, string methodName, Type returnType, params Type[] parameterTypes) =>
+            getMethod(externalType, methodName, returnType, parameterTypes);
+
+        private static MethodInfo getMethod(Type externalType, string methodName, Type returnType, params Type[] parameterTypes)
+        {
+            MethodInfo method = externalType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Static, null, parameterTypes, null);
+            if ((method == null) || (method.ReturnType != returnType))
+            {
+                return null;
+            }
+
+            return method;
+        }
+
+        private static string formatMethodSignature(string methodName, Type returnType, params Type[] parameterTypes) =>
+            methodName + "(" + string.Join(", ", parameterTypes.Select(getFriendlyTypeName)) + ") -> " + getFriendlyTypeName(returnType);
+
+        private static string getFriendlyTypeName(Type type)
+        {
+            if (type == typeof(void))
+            {
+                return "void";
+            }
+
+            if (!type.IsGenericType)
+            {
+                return type.Name;
+            }
+
+            string genericTypeName = type.Name;
+            int genericSuffixIndex = genericTypeName.IndexOf('`');
+            if (genericSuffixIndex >= 0)
+            {
+                genericTypeName = genericTypeName.Substring(0, genericSuffixIndex);
+            }
+
+            return genericTypeName + "<" + string.Join(", ", type.GetGenericArguments().Select(getFriendlyTypeName)) + ">";
         }
 
         /// <summary>
@@ -181,24 +248,6 @@ namespace SAIN.Plugin
                 return false;
 
             _GetExtractedBotsMethod.Invoke(null, new object[] { list });
-            return true;
-        }
-
-        /// <summary>
-        /// Get a list of all "Player.ProfileID"s of bots that have extracted. The list must not be null. The list is cleared before adding all extracted ProfileIDs;
-        /// </summary>
-        /// <param name="list">An already existing list to add to</param>
-        /// <returns>True if the list was successfully updated</returns>
-        public static bool GetExtractedBots(List<ExtractionInfo> list)
-        {
-            if (list == null)
-                return false;
-            if (!Init())
-                return false;
-            if (_GetExtractionInfosMethod == null)
-                return false;
-
-            _GetExtractionInfosMethod.Invoke(null, new object[] { list });
             return true;
         }
 
@@ -278,23 +327,5 @@ namespace SAIN.Plugin
 
             return (float)_TimeSinceSenseEnemyMethod.Invoke(null, new object[] { botOwner });
         }
-    }
-
-    public class ExtractionInfo
-    {
-        public ExtractionInfo(BotOwner bot, string reason, ExfiltrationPoint exfil)
-        {
-            BotNickname = bot.Profile.Nickname;
-            ProfileID = bot.GetPlayer.ProfileId;
-            Reason = reason;
-            TimeExtracted = Time.time;
-            ExtractionPoint = exfil.Settings.Name;
-        }
-
-        public readonly string BotNickname;
-        public readonly string ProfileID;
-        public readonly string Reason;
-        public readonly string ExtractionPoint;
-        public readonly float TimeExtracted;
     }
 }
