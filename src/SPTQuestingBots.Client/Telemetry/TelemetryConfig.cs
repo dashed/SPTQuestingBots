@@ -5,7 +5,7 @@ namespace SPTQuestingBots.Telemetry;
 public class TelemetryConfig
 {
     [JsonProperty("enabled")]
-    public bool Enabled { get; set; } = false;
+    public bool Enabled { get; set; } = true;
 
     [JsonProperty("db_path")]
     public string DbPath { get; set; } = "log/telemetry.db";
