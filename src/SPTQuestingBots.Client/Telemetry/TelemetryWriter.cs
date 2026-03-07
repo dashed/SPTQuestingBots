@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 #if UNITY_MONO
@@ -147,6 +148,32 @@ internal sealed class TelemetryWriter
     };
 
     /// <summary>
+    /// Mono.Data.Sqlite P/Invokes "sqlite3" but the game ships "e_sqlite3.dll".
+    /// Copy the native library so Mono can find it.
+    /// </summary>
+    private static void EnsureNativeSqliteLibrary()
+    {
+        try
+        {
+            string gameRoot = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
+            string target = Path.Combine(gameRoot, "sqlite3.dll");
+            if (File.Exists(target))
+                return;
+
+            string source = Path.Combine(gameRoot, "EscapeFromTarkov_Data", "Plugins", "x86_64", "e_sqlite3.dll");
+            if (File.Exists(source))
+            {
+                File.Copy(source, target, false);
+                LoggingController.LogInfo("[Telemetry] Copied e_sqlite3.dll -> sqlite3.dll for Mono.Data.Sqlite", alwaysShow: true);
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggingController.LogWarning("[Telemetry] Failed to copy native SQLite library: " + ex.Message);
+        }
+    }
+
+    /// <summary>
     /// Probes SQLite at startup: creates DB file + schema.
     /// Called from plugin Awake so errors surface immediately.
     /// </summary>
@@ -154,6 +181,8 @@ internal sealed class TelemetryWriter
     {
         try
         {
+            EnsureNativeSqliteLibrary();
+
             string dbPath = ResolveDbPath(config.DbPath);
             string dbDir = Path.GetDirectoryName(dbPath);
             if (!string.IsNullOrEmpty(dbDir) && !Directory.Exists(dbDir))
