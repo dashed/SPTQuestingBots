@@ -485,7 +485,7 @@ The mod is configured through `config/config.json` and the BepInEx F12 in-game m
 | `questing.dynamic_objectives` | Dynamic objectives: enable/disable, scan interval, firefight/corpse/building-clear toggles, intensity thresholds, desirability scores |
 | `questing.patrol` | Patrol routes: enable/disable, base score, cooldown, waypoint arrival radius, pose, per-bot-type toggles, per-map route overrides (`routes_per_map`) |
 | `questing.zone_movement.advection_zones_per_map` | Per-map advection zone overrides: builtin zones (by BSG BotZone name) and custom zones (by world position) with force/radius/decay/time/boss settings |
-| `adjust_pscav_chance` | Dynamic player-Scav conversion rates when spawning system is disabled |
+| `adjust_pscav_chance` | Client-side player-Scav conversion curve used when QuestingBots spawning is disabled |
 
 ### In-Game Configuration (F12 Menu)
 

@@ -215,6 +215,85 @@ public class BugFixRegressionTests
     }
 
     [Test]
+    public void QuestingBotsPlugin_Awake_PerformsVersionPreflight_BeforeConfigFetch_AndPatchEnable()
+    {
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/QuestingBotsPlugin.cs");
+
+        int modNameIndex = source.IndexOf("ModName = Info.Metadata.Name;", System.StringComparison.Ordinal);
+        int preflightIndex = source.IndexOf(
+            "if (!Patches.TarkovInitPatch.IsCurrentVersionSupported(out string currentVersion))",
+            System.StringComparison.Ordinal
+        );
+        int buildErrorIndex = source.IndexOf(
+            "Patches.TarkovInitPatch.BuildVersionErrorMessage(ModName, currentVersion)",
+            System.StringComparison.Ordinal
+        );
+        int addDependencyErrorIndex = source.IndexOf("Chainloader.DependencyErrors.Add(versionError);", System.StringComparison.Ordinal);
+        int logErrorIndex = source.IndexOf("Logger.LogError(versionError);", System.StringComparison.Ordinal);
+        int configFetchIndex = source.IndexOf("ConfigController.GetConfig()", System.StringComparison.Ordinal);
+        int menuPatchIndex = source.IndexOf("new Patches.MenuShowPatch().Enable();", System.StringComparison.Ordinal);
+        int initPatchEnableIndex = source.IndexOf("new Patches.TarkovInitPatch().Enable();", System.StringComparison.Ordinal);
+
+        Assert.That(modNameIndex, Is.GreaterThanOrEqualTo(0), "QuestingBotsPlugin.Awake must initialize ModName before version preflight");
+        Assert.That(preflightIndex, Is.GreaterThan(modNameIndex), "Version preflight must run after ModName is known");
+        Assert.That(
+            buildErrorIndex,
+            Is.GreaterThan(preflightIndex),
+            "QuestingBotsPlugin must build the user-facing version error from the helper"
+        );
+        Assert.That(
+            addDependencyErrorIndex,
+            Is.GreaterThan(buildErrorIndex),
+            "Unsupported versions must be reported through Chainloader.DependencyErrors before Awake exits"
+        );
+        Assert.That(logErrorIndex, Is.GreaterThan(addDependencyErrorIndex), "Unsupported versions should also be logged before returning");
+        Assert.That(
+            configFetchIndex,
+            Is.GreaterThan(logErrorIndex),
+            "ConfigController.GetConfig must not run before version compatibility is preflighted"
+        );
+        Assert.That(
+            menuPatchIndex,
+            Is.GreaterThan(configFetchIndex),
+            "Patch enablement must stay behind config fetch after version preflight succeeds"
+        );
+        Assert.That(
+            initPatchEnableIndex,
+            Is.GreaterThan(menuPatchIndex),
+            "TarkovInitPatch.Enable should remain downstream of the version preflight and config load path"
+        );
+    }
+
+    [Test]
+    public void TarkovInitPatch_ExposesVersionPreflightHelpers_AndDoesNotLateGateInPostfix()
+    {
+        var source = ReadSourceFile("src/SPTQuestingBots.Client/Patches/TarkovInitPatch.cs");
+
+        Assert.That(
+            source,
+            Does.Contain("public static bool IsCurrentVersionSupported(out string currentVersion)"),
+            "TarkovInitPatch must expose IsCurrentVersionSupported for plugin startup preflight"
+        );
+        Assert.That(
+            source,
+            Does.Contain("public static string BuildVersionErrorMessage(string modName, string currentVersion)"),
+            "TarkovInitPatch must expose BuildVersionErrorMessage for the unsupported-version dependency error"
+        );
+
+        string postfixBody = ExtractMethodBody(source, "protected static void PatchPostfix");
+        Assert.That(
+            postfixBody,
+            Does.Not.Contain("IsCurrentVersionSupported"),
+            "PatchPostfix should not perform late version gating after patches are already enabled"
+        );
+        Assert.That(
+            postfixBody,
+            Does.Not.Contain("BuildVersionErrorMessage"),
+            "PatchPostfix should not build dependency errors after the plugin has already proceeded past preflight"
+        );
+    }
+
+    [Test]
     public void LocationData_Awake_UsesStaticInstance_NotFindObjectOfType()
     {
         // Bug fix: FindObjectOfType<QuestingBotsPlugin>() returned null, breaking LocationData
@@ -847,6 +926,33 @@ public class BugFixRegressionTests
             index += pattern.Length;
         }
         return count;
+    }
+
+    private static string ExtractMethodBody(string source, string methodSignature)
+    {
+        int methodStart = source.IndexOf(methodSignature, System.StringComparison.Ordinal);
+        Assert.That(methodStart, Is.GreaterThan(-1), $"Method signature not found: {methodSignature}");
+
+        int braceStart = source.IndexOf('{', methodStart);
+        Assert.That(braceStart, Is.GreaterThan(-1), $"Opening brace not found for method: {methodSignature}");
+
+        int braceCount = 1;
+        int pos = braceStart + 1;
+        while (braceCount > 0 && pos < source.Length)
+        {
+            if (source[pos] == '{')
+            {
+                braceCount++;
+            }
+            else if (source[pos] == '}')
+            {
+                braceCount--;
+            }
+            pos++;
+        }
+
+        Assert.That(braceCount, Is.EqualTo(0), $"Failed to parse method body for: {methodSignature}");
+        return source.Substring(braceStart, pos - braceStart);
     }
 
     #endregion

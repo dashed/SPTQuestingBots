@@ -4,7 +4,6 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using BepInEx.Bootstrap;
 using EFT;
 using EFT.InputSystem;
 using SPT.Reflection.Patching;
@@ -27,21 +26,19 @@ namespace SPTQuestingBots.Patches
         [PatchPostfix]
         protected static void PatchPostfix(IAssetsManager assetsManager, InputTree inputTree)
         {
-            checkSPTVersion();
-
             ExternalModHandler.CheckForExternalMods();
 
             addQuestingBotsBrainLayers();
         }
 
-        private static void checkSPTVersion()
+        public static bool IsCurrentVersionSupported(out string currentVersion)
         {
-            if (Helpers.GameCompatibilityCheckHelper.IsSPTWithinVersionRange(MinVersion, MaxVersion, out string currentVersion))
-            {
-                return;
-            }
+            return Helpers.GameCompatibilityCheckHelper.IsSPTWithinVersionRange(MinVersion, MaxVersion, out currentVersion);
+        }
 
-            string errorMessage = "Could not load " + QuestingBotsPlugin.ModName + " because it requires SPT ";
+        public static string BuildVersionErrorMessage(string modName, string currentVersion)
+        {
+            string errorMessage = "Could not load " + modName + " because it requires SPT ";
 
             if (MinVersion == MaxVersion)
             {
@@ -60,9 +57,9 @@ namespace SPTQuestingBots.Patches
                 errorMessage += "between versions " + MinVersion + " and " + MaxVersion;
             }
 
-            errorMessage += ". The current version is " + currentVersion + ".";
+            errorMessage += ". The current version is " + (currentVersion ?? "unknown") + ".";
 
-            Chainloader.DependencyErrors.Add(errorMessage);
+            return errorMessage;
         }
 
         private static void addQuestingBotsBrainLayers()

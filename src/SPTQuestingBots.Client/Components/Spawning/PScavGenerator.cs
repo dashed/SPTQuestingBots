@@ -99,8 +99,15 @@ namespace SPTQuestingBots.Components.Spawning
 
             // Force the server to generate a player Scav
             RaidHelpers.ForcePScavs = true;
-            Models.BotSpawnInfo group = await GenerateBotGroup(WildSpawnType.assault, botDifficulty, botsInGroup);
-            RaidHelpers.ForcePScavs = false;
+            Models.BotSpawnInfo group;
+            try
+            {
+                group = await GenerateBotGroup(WildSpawnType.assault, botDifficulty, botsInGroup);
+            }
+            finally
+            {
+                RaidHelpers.ForcePScavs = false;
+            }
 
             // Set the minimum and maximum spawn times for the PScav group
             float minTimeRemaining = ConfigController.Config.BotSpawns.PScavs.MinRaidTimeRemaining;

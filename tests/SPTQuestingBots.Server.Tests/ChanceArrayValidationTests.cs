@@ -89,6 +89,13 @@ public class ChanceArrayValidationTests
     }
 
     [Test]
+    public void NullRow_ReturnsFalse()
+    {
+        double[][] array = [null!];
+        Assert.That(_plugin.IsChanceArrayValid(array, false), Is.False);
+    }
+
+    [Test]
     public void MixedValidAndInvalidRows_ReturnsFalse()
     {
         double[][] array =

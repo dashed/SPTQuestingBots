@@ -166,16 +166,6 @@ public class ConfigDeserializationTests
     }
 
     [Test]
-    public void BasePScavConversionChance_IsIgnoredDuringSerialization()
-    {
-        var config = new QuestingBotsConfig { BasePScavConversionChance = 42 };
-        var json = JsonConvert.SerializeObject(config);
-
-        Assert.That(json, Does.Not.Contain("BasePScavConversionChance"));
-        Assert.That(json, Does.Not.Contain("42"));
-    }
-
-    [Test]
     public void Deserialize_BotCapAdjustments_ParsesMapSpecificAdjustments()
     {
         var json = """

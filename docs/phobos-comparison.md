@@ -620,7 +620,6 @@ QuestingBots has a dedicated **server plugin** (`src/SPTQuestingBots.Server/`) t
 
 **Routers**:
 - `QuestingBotsStaticRouter`: 6 endpoints serving quest data, map data, config
-- `QuestingBotsDynamicRouter`: 1 endpoint for dynamic bot data
 - `QuestingBotGenerateRouter`: Overrides `BotStaticRouter` to intercept bot generation
 
 **Services**:

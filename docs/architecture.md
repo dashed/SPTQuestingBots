@@ -17,7 +17,7 @@ SPTQuestingBots is split into a **server plugin** and a **client plugin** that c
 │  - Quest template retrieval     │                    │  - Harmony patches (25+)         │
 │  - Bot profile generation       │                    │  - BigBrain AI layers            │
 │  - Hostility/wave management    │                    │  - Spawning system               │
-│  - PScav conversion control     │                    │  - Quest management              │
+│  - PScav bot-profile interception │                   │  - Quest management              │
 └─────────────────────────────────┘                    └─────────────────────────────────┘
 ```
 
@@ -35,7 +35,7 @@ SPT 4.0.0 (core)
         └── Uses [Injectable] DI system
 ```
 
-**Data flow:** The client plugin starts up inside the EFT game process (loaded by BepInEx). During initialization it calls the server plugin's HTTP endpoints to fetch `config.json`, EFT quest templates, quest zone positions, Scav raid settings, and USEC chance data. During gameplay, it calls endpoints to adjust PScav conversion chances and generate bot profiles.
+**Data flow:** The client plugin starts up inside the EFT game process (loaded by BepInEx). During initialization it calls the server plugin's HTTP endpoints to fetch `config.json`, EFT quest templates, quest zone positions, Scav raid settings, and USEC chance data. During gameplay, bot profile generation is intercepted so QuestingBots can force PMC/PScav groups when needed.
 
 ---
 
@@ -51,7 +51,6 @@ All endpoints are registered by the server plugin and called by the client's `Co
 | `/QuestingBots/GetZoneAndItemQuestPositions` | Static | Returns `zoneAndItemQuestPositions.json` position overrides |
 | `/QuestingBots/GetScavRaidSettings` | Static | Returns Scav raid time settings per map |
 | `/QuestingBots/GetUSECChance` | Static | Returns the PMC USEC faction chance |
-| `/QuestingBots/AdjustPScavChance/{factor}` | Dynamic | Adjusts the PScav conversion chance by the given factor |
 | Bot generation | Intercepted | Intercepts `BotCallbacks.generateBots` to support PScav group generation |
 
 ---
@@ -64,7 +63,7 @@ The server plugin (`SPTQuestingBots.Server`) is a C# port of the original TypeSc
 
 In SPT 4.x, server mods follow this lifecycle:
 
-1. **IPreSptLoadModAsync** -- Register HTTP routes (static and dynamic routers), intercept `BotCallbacks`
+1. **IPreSptLoadModAsync** -- Register static HTTP routes, intercept `BotCallbacks`
 2. **IOnLoad (PostDBModLoader)** -- Resolve DI dependencies, initialize services, validate configuration
 3. **IOnLoad (PostSptModLoader)** -- Remove blacklisted brain types, detect conflicting spawning mods, configure the spawning system
 
@@ -84,7 +83,9 @@ The server loads three JSON configuration files at startup:
 - `config/eftQuestSettings.json` -- Per-quest override settings
 - `config/zoneAndItemQuestPositions.json` -- Manual position overrides for quest zones and items
 
-Configuration arrays are validated on load (correct column count, integer constraints). If validation fails, the mod disables itself.
+Configuration arrays are validated on load for both structure and semantics (column count, null rows, sorted keys for curves, bounded values, non-negative weights, non-zero totals). If validation fails, the mod disables itself.
+
+`adjust_pscav_chance` is delivered as part of `/QuestingBots/GetConfig`; the server no longer exposes a dedicated `/QuestingBots/AdjustPScavChance` route.
 
 ### Spawning Mod Detection
 

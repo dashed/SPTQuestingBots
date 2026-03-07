@@ -27,6 +27,14 @@ namespace SPTQuestingBots
             LoggingController.Logger = Logger;
             ModName = Info.Metadata.Name;
 
+            if (!Patches.TarkovInitPatch.IsCurrentVersionSupported(out string currentVersion))
+            {
+                string versionError = Patches.TarkovInitPatch.BuildVersionErrorMessage(ModName, currentVersion);
+                Chainloader.DependencyErrors.Add(versionError);
+                Logger.LogError(versionError);
+                return;
+            }
+
             Logger.LogInfo("Loading QuestingBots...getting configuration data...");
             if (ConfigController.GetConfig() == null)
             {

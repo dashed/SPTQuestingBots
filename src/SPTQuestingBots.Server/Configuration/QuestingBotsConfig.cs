@@ -46,18 +46,11 @@ public class QuestingBotsConfig
     public BotSpawnsConfig BotSpawns { get; set; } = new();
 
     /// <summary>
-    /// PScav conversion chance curve — adjusts the likelihood that a
-    /// regular Scav spawn slot is converted into a Player Scav.
+    /// Client-delivered PScav conversion chance curve — adjusts the likelihood
+    /// that a regular Scav spawn slot is converted into a Player Scav.
     /// </summary>
     [JsonProperty("adjust_pscav_chance")]
     public AdjustPScavChanceConfig AdjustPScavChance { get; set; } = new();
-
-    /// <summary>
-    /// Runtime-only field. Stores the original SPT PScav conversion chance
-    /// before QuestingBots overrides it. Not read from <c>config.json</c>.
-    /// </summary>
-    [JsonIgnore]
-    public int BasePScavConversionChance { get; set; }
 }
 
 // ────────────────────────────────────────────────────────────────────────
@@ -1010,7 +1003,7 @@ public class PlayerScavSpawnConfig
 // ────────────────────────────────────────────────────────────────────────
 
 /// <summary>
-/// Controls dynamic PScav conversion probability based on remaining raid time.
+/// Controls client-side dynamic PScav conversion probability based on remaining raid time.
 /// </summary>
 public class AdjustPScavChanceConfig
 {

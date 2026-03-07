@@ -18,6 +18,9 @@ namespace SPTQuestingBots.Components.Spawning
 {
     public abstract class BotGenerator : MonoBehaviour
     {
+        internal const int MaxGenerateBotGroupAttempts = 10;
+        private const int MaxGenerateBotGroupRetryDelayMs = 250;
+
         public bool IsSpawningBots { get; private set; } = false;
         public string BotTypeName { get; private set; } = "???";
         public bool HasGeneratedBots { get; private set; } = false;
@@ -486,12 +489,14 @@ namespace SPTQuestingBots.Components.Spawning
                 "Generating " + botdifficulty.ToString() + " " + BotTypeName + " group (Number of bots: " + bots + ")..."
             );
 
-            Models.BotSpawnInfo botSpawnInfo = null;
-            while (botSpawnInfo == null)
+            for (int attempt = 1; attempt <= MaxGenerateBotGroupAttempts; attempt++)
             {
                 try
                 {
-                    await Task.Delay(5);
+                    if (attempt > 1)
+                    {
+                        await Task.Delay(GetGenerateBotGroupRetryDelayMs(attempt));
+                    }
 
                     // Starting with SPT 3.11, bots are cached via the client, and the client expects this to always be EPlayerSide.Savage. SPT later fixes it in a patch.
                     //EPlayerSide spawnSide = spawnType.GetPlayerSide();
@@ -507,6 +512,21 @@ namespace SPTQuestingBots.Components.Spawning
 
                     if (botSpawnData.Profiles.Count != bots)
                     {
+                        if (attempt == MaxGenerateBotGroupAttempts)
+                        {
+                            throw new InvalidOperationException(
+                                "Requested "
+                                    + bots
+                                    + " "
+                                    + BotTypeName
+                                    + "s but only "
+                                    + botSpawnData.Profiles.Count
+                                    + " were generated after "
+                                    + MaxGenerateBotGroupAttempts
+                                    + " attempts."
+                            );
+                        }
+
                         LoggingController.LogWarning(
                             "Requested "
                                 + bots
@@ -519,7 +539,7 @@ namespace SPTQuestingBots.Components.Spawning
                         continue;
                     }
 
-                    botSpawnInfo = new Models.BotSpawnInfo(botSpawnData, this);
+                    Models.BotSpawnInfo botSpawnInfo = new Models.BotSpawnInfo(botSpawnData, this);
 
                     string profileListText = string.Join(", ", botSpawnData.Profiles.Select(p => p.Nickname));
                     LoggingController.LogInfo(
@@ -533,23 +553,48 @@ namespace SPTQuestingBots.Components.Spawning
                             + profileListText
                             + ")"
                     );
+
+                    return botSpawnInfo;
                 }
                 catch (NullReferenceException nre)
                 {
-                    LoggingController.LogWarning(
+                    if (attempt < MaxGenerateBotGroupAttempts)
+                    {
+                        LoggingController.LogWarning(
+                            "Generating "
+                                + botdifficulty.ToString()
+                                + " "
+                                + BotTypeName
+                                + " group (Number of bots: "
+                                + bots
+                                + ")...failed on attempt "
+                                + attempt
+                                + "/"
+                                + MaxGenerateBotGroupAttempts
+                                + ". Retrying..."
+                        );
+
+                        LoggingController.LogError(nre.Message);
+                        LoggingController.LogError(nre.StackTrace);
+
+                        continue;
+                    }
+
+                    LoggingController.LogError(
                         "Generating "
                             + botdifficulty.ToString()
                             + " "
                             + BotTypeName
                             + " group (Number of bots: "
                             + bots
-                            + ")...failed. Trying again..."
+                            + ")...failed after "
+                            + MaxGenerateBotGroupAttempts
+                            + " attempts."
                     );
-
-                    LoggingController.LogError(nre.Message);
-                    LoggingController.LogError(nre.StackTrace);
-
-                    continue;
+                    throw new InvalidOperationException(
+                        "Failed to generate " + BotTypeName + " group after " + MaxGenerateBotGroupAttempts + " attempts.",
+                        nre
+                    );
                 }
                 catch (Exception)
                 {
@@ -557,7 +602,20 @@ namespace SPTQuestingBots.Components.Spawning
                 }
             }
 
-            return botSpawnInfo;
+            throw new InvalidOperationException(
+                "Generating "
+                    + botdifficulty.ToString()
+                    + " "
+                    + BotTypeName
+                    + " group (Number of bots: "
+                    + bots
+                    + ") exhausted retry attempts."
+            );
+        }
+
+        internal static int GetGenerateBotGroupRetryDelayMs(int attempt)
+        {
+            return Math.Min(MaxGenerateBotGroupRetryDelayMs, Math.Max(1, attempt) * 25);
         }
 
         protected BotDifficulty GetBotDifficulty(EFT.Bots.EBotDifficulty raidDifficulty, double[][] difficultyChances)

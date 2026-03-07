@@ -64,15 +64,6 @@ namespace SPTQuestingBots.Controllers
             serializerSettings = field.GetValue(null) as JsonSerializerSettings;
         }
 
-        public static void AdjustPScavChance(float timeRemainingFactor, bool preventPScav)
-        {
-            double factor = preventPScav
-                ? 0
-                : InterpolateForFirstCol(Config.AdjustPScavChance.ChanceVsTimeRemainingFraction, timeRemainingFactor);
-
-            GetJson("/QuestingBots/AdjustPScavChance/" + factor, "Could not adjust PScav conversion chance");
-        }
-
         public static void ReportInfoToServer(string message)
         {
             SPT.Common.Utils.ServerLog.Info("Questing Bots", message);
@@ -303,7 +294,7 @@ namespace SPTQuestingBots.Controllers
 
         public static double InterpolateForFirstCol(double[][] array, double value)
         {
-            validateArray(array);
+            validateInterpolatedArray(array);
 
             if (array.Length == 1)
             {
@@ -333,7 +324,7 @@ namespace SPTQuestingBots.Controllers
 
         public static double GetValueFromTotalChanceFraction(double[][] array, double fraction)
         {
-            validateArray(array);
+            validateWeightedArray(array, fraction);
 
             if (array.Length == 1)
             {
@@ -370,6 +361,47 @@ namespace SPTQuestingBots.Controllers
             if (array.Any(x => x.Length != 2))
             {
                 throw new ArgumentOutOfRangeException("All rows in the array must have two columns.");
+            }
+        }
+
+        private static void validateInterpolatedArray(double[][] array)
+        {
+            validateArray(array);
+
+            for (int i = 1; i < array.Length; i++)
+            {
+                if (array[i][0] <= array[i - 1][0])
+                {
+                    throw new ArgumentOutOfRangeException(
+                        "Interpolation arrays must be sorted by strictly increasing first-column values."
+                    );
+                }
+            }
+        }
+
+        private static void validateWeightedArray(double[][] array, double fraction)
+        {
+            validateArray(array);
+
+            if ((fraction < 0) || (fraction > 1))
+            {
+                throw new ArgumentOutOfRangeException(nameof(fraction), "The fraction must be between 0 and 1.");
+            }
+
+            double totalWeight = 0;
+            for (int i = 0; i < array.Length; i++)
+            {
+                if (array[i][1] < 0)
+                {
+                    throw new ArgumentOutOfRangeException("Weighted arrays cannot contain negative weights.");
+                }
+
+                totalWeight += array[i][1];
+            }
+
+            if (totalWeight <= 0)
+            {
+                throw new ArgumentOutOfRangeException("Weighted arrays must have a positive total weight.");
             }
         }
     }

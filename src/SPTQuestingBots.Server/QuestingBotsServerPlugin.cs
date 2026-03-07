@@ -21,10 +21,10 @@ namespace SPTQuestingBots.Server;
 /// </para>
 ///
 /// <list type="bullet">
-///   <item>Validates the mod configuration (2D array formats for curves/distributions).</item>
+///   <item>Validates the mod configuration (2D array structure plus ordering, bounds, and weight semantics).</item>
 ///   <item>Removes blacklisted brain types from PMC and Player Scav pools.</item>
-///   <item>Stores the original PScav conversion chance, then zeroes it so QuestingBots
-///         can manage PScav spawning dynamically.</item>
+///   <item>Zeroes SPT's built-in PScav conversion chance so QuestingBots can make
+///         the final Player Scav decision client-side without conflicting server logic.</item>
 ///   <item>Adjusts bot hostility settings, removes PvE boss waves, disables
 ///         custom wave generators, and applies EFT bot caps.</item>
 ///   <item>Removes the artificial Rogue spawn delay on Lighthouse.</item>
@@ -32,9 +32,9 @@ namespace SPTQuestingBots.Server;
 ///
 /// <para>
 /// HTTP routes are registered separately via
-/// <see cref="Routers.QuestingBotsStaticRouter"/> and
-/// <see cref="Routers.QuestingBotsDynamicRouter"/> — the SPT DI system discovers
-/// and wires them automatically.
+/// <see cref="Routers.QuestingBotsStaticRouter"/> — the SPT DI system discovers
+/// and wires them automatically. Bot generation interception is handled by
+/// <see cref="Routers.QuestingBotGenerateRouter"/>.
 /// </para>
 /// </summary>
 [Injectable(InjectionType.Singleton, typePriority: 100)]
@@ -91,15 +91,13 @@ public class QuestingBotsServerPlugin(
         // PMCs or Player Scavs (e.g. bossKilla, bossTagilla).
         pmcConversionService.RemoveBlacklistedBrainTypes();
 
-        // ── Store original PScav conversion chance ─────────────────────
-        // QuestingBots manages PScav spawning dynamically via the
-        // /QuestingBots/AdjustPScavChance/ endpoint, so we zero out
-        // SPT's built-in chance and save the original for scaling.
-        var botConfig = configServer.GetConfig<BotConfig>();
-        config.BasePScavConversionChance = botConfig.ChanceAssaultScavHasPlayerScavName;
-
+        // ── Disable SPT's built-in PScav conversion chance ─────────────
+        // QuestingBots decides Player Scav generation client-side, so the
+        // vanilla server-side conversion chance must be zeroed to avoid
+        // conflicting decisions.
         if (config.AdjustPScavChance.Enabled || (config.BotSpawns.Enabled && config.BotSpawns.PlayerScavs.Enabled))
         {
+            var botConfig = configServer.GetConfig<BotConfig>();
             botConfig.ChanceAssaultScavHasPlayerScavName = 0;
         }
 
@@ -218,43 +216,43 @@ public class QuestingBotsServerPlugin(
     {
         var config = configLoader.Config;
 
-        if (!IsChanceArrayValid(config.Questing.BotQuests.EftQuests.LevelRange, true))
+        if (!IsInterpolatedArrayValid(config.Questing.BotQuests.EftQuests.LevelRange, true, minX: 0, minY: 0))
         {
             commonUtils.LogError("questing.bot_quests.eft_quests.level_range has invalid data. Mod disabled.");
             return false;
         }
 
-        if (!IsChanceArrayValid(config.BotSpawns.Pmcs.FractionOfMaxPlayersVsRaidET, false))
+        if (!IsInterpolatedArrayValid(config.BotSpawns.Pmcs.FractionOfMaxPlayersVsRaidET, false, minX: 0, maxX: 1, minY: 0))
         {
             commonUtils.LogError("bot_spawns.pmcs.fraction_of_max_players_vs_raidET has invalid data. Mod disabled.");
             return false;
         }
 
-        if (!IsChanceArrayValid(config.BotSpawns.Pmcs.BotsPerGroupDistribution, true))
+        if (!IsWeightedDistributionValid(config.BotSpawns.Pmcs.BotsPerGroupDistribution, true, minX: 1))
         {
             commonUtils.LogError("bot_spawns.pmcs.bots_per_group_distribution has invalid data. Mod disabled.");
             return false;
         }
 
-        if (!IsChanceArrayValid(config.BotSpawns.Pmcs.BotDifficultyAsOnline, true))
+        if (!IsWeightedDistributionValid(config.BotSpawns.Pmcs.BotDifficultyAsOnline, true, minX: 0))
         {
             commonUtils.LogError("bot_spawns.pmcs.bot_difficulty_as_online has invalid data. Mod disabled.");
             return false;
         }
 
-        if (!IsChanceArrayValid(config.BotSpawns.PlayerScavs.BotsPerGroupDistribution, true))
+        if (!IsWeightedDistributionValid(config.BotSpawns.PlayerScavs.BotsPerGroupDistribution, true, minX: 1))
         {
             commonUtils.LogError("bot_spawns.player_scavs.bots_per_group_distribution has invalid data. Mod disabled.");
             return false;
         }
 
-        if (!IsChanceArrayValid(config.BotSpawns.PlayerScavs.BotDifficultyAsOnline, true))
+        if (!IsWeightedDistributionValid(config.BotSpawns.PlayerScavs.BotDifficultyAsOnline, true, minX: 0))
         {
             commonUtils.LogError("bot_spawns.player_scavs.bot_difficulty_as_online has invalid data. Mod disabled.");
             return false;
         }
 
-        if (!IsChanceArrayValid(config.AdjustPScavChance.ChanceVsTimeRemainingFraction, false))
+        if (!IsInterpolatedArrayValid(config.AdjustPScavChance.ChanceVsTimeRemainingFraction, false, minX: 0, maxX: 1, minY: 0, maxY: 100))
         {
             commonUtils.LogError("adjust_pscav_chance.chance_vs_time_remaining_fraction has invalid data. Mod disabled.");
             return false;
@@ -263,8 +261,84 @@ public class QuestingBotsServerPlugin(
         return true;
     }
 
+    internal bool IsInterpolatedArrayValid(
+        double[][]? array,
+        bool shouldLeftColumnBeIntegers,
+        double? minX = null,
+        double? maxX = null,
+        double? minY = null,
+        double? maxY = null
+    )
+    {
+        if (!IsChanceArrayValid(array, shouldLeftColumnBeIntegers))
+        {
+            return false;
+        }
+
+        double previousX = double.NegativeInfinity;
+        foreach (var row in array!)
+        {
+            if (!double.IsFinite(row[0]) || !double.IsFinite(row[1]))
+            {
+                return false;
+            }
+
+            if ((minX.HasValue && row[0] < minX.Value) || (maxX.HasValue && row[0] > maxX.Value))
+            {
+                return false;
+            }
+
+            if ((minY.HasValue && row[1] < minY.Value) || (maxY.HasValue && row[1] > maxY.Value))
+            {
+                return false;
+            }
+
+            if (row[0] <= previousX)
+            {
+                return false;
+            }
+
+            previousX = row[0];
+        }
+
+        return true;
+    }
+
+    internal bool IsWeightedDistributionValid(double[][]? array, bool shouldLeftColumnBeIntegers, double? minX = null, double? maxX = null)
+    {
+        if (!IsChanceArrayValid(array, shouldLeftColumnBeIntegers))
+        {
+            return false;
+        }
+
+        double totalWeight = 0;
+        foreach (var row in array!)
+        {
+            if (!double.IsFinite(row[0]) || !double.IsFinite(row[1]))
+            {
+                return false;
+            }
+
+            if ((minX.HasValue && row[0] < minX.Value) || (maxX.HasValue && row[0] > maxX.Value))
+            {
+                return false;
+            }
+
+            if (row[1] < 0)
+            {
+                return false;
+            }
+
+            totalWeight += row[1];
+        }
+
+        return totalWeight > 0;
+    }
+
     /// <summary>
-    /// Validates a single 2D array used as a chance curve or distribution.
+    /// Validates the structural shape of a 2D array used as a curve or distribution.
+    /// Semantic validation (ordering, bounds, non-negative weights) is handled by
+    /// <see cref="IsInterpolatedArrayValid"/> and <see cref="IsWeightedDistributionValid"/>.
     /// </summary>
     /// <param name="array">The 2D array to validate. Must not be null or empty.</param>
     /// <param name="shouldLeftColumnBeIntegers">
@@ -283,7 +357,7 @@ public class QuestingBotsServerPlugin(
         foreach (var row in array)
         {
             // Every row must be a [key, value] pair
-            if (row.Length != 2)
+            if (row == null || row.Length != 2)
             {
                 return false;
             }

@@ -311,6 +311,103 @@ public class SpawningLifecycleBugTests
         );
     }
 
+    // ── Regression: BotGenerator.GenerateBotGroup bounded retry loop ──
+
+    [Test]
+    public void BotGenerator_GenerateBotGroup_UsesBoundedRetryState_AndFinalThrows()
+    {
+        var source = File.ReadAllText(Path.Combine(SrcRoot, "Components", "Spawning", "BotGenerator.cs"));
+        string methodBody = ExtractMethodBody(source, "protected async Task<Models.BotSpawnInfo> GenerateBotGroup");
+
+        Assert.That(source, Does.Contain("MaxGenerateBotGroupAttempts = 10"), "BotGenerator must cap bot generation retries at 10");
+        Assert.That(
+            source,
+            Does.Contain("MaxGenerateBotGroupRetryDelayMs = 250"),
+            "BotGenerator must define a capped retry-delay constant for group generation"
+        );
+        Assert.That(
+            methodBody,
+            Does.Contain("for (int attempt = 1; attempt <= MaxGenerateBotGroupAttempts; attempt++)"),
+            "GenerateBotGroup must use a bounded retry loop instead of an unbounded retry"
+        );
+        Assert.That(
+            methodBody,
+            Does.Not.Match(@"while\s*\(\s*botSpawnInfo\s*==\s*null\s*\)"),
+            "GenerateBotGroup must not retry forever while botSpawnInfo stays null"
+        );
+        Assert.That(
+            methodBody,
+            Does.Contain("await Task.Delay(GetGenerateBotGroupRetryDelayMs(attempt));"),
+            "GenerateBotGroup retries should flow through GetGenerateBotGroupRetryDelayMs(attempt)"
+        );
+        Assert.That(
+            methodBody,
+            Does.Contain("catch (NullReferenceException nre)"),
+            "GenerateBotGroup should specifically bound and wrap the NullReferenceException retry path"
+        );
+        Assert.That(
+            methodBody,
+            Does.Contain("Failed to generate ")
+                .And.Contain("group after ")
+                .And.Contain("MaxGenerateBotGroupAttempts")
+                .And.Contain("exhausted retry attempts"),
+            "GenerateBotGroup must fail fast with explicit InvalidOperationException throw paths when retries are exhausted"
+        );
+    }
+
+    [Test]
+    public void BotGenerator_GetGenerateBotGroupRetryDelayMs_UsesCappedLinearBackoff()
+    {
+        var source = File.ReadAllText(Path.Combine(SrcRoot, "Components", "Spawning", "BotGenerator.cs"));
+        string methodBody = ExtractMethodBody(source, "internal static int GetGenerateBotGroupRetryDelayMs");
+
+        Assert.That(
+            methodBody,
+            Does.Contain("Math.Min(MaxGenerateBotGroupRetryDelayMs, Math.Max(1, attempt) * 25)"),
+            "GetGenerateBotGroupRetryDelayMs must apply the capped linear backoff used by GenerateBotGroup retries"
+        );
+    }
+
+    // ── Regression: PScavGenerator must reset ForcePScavs on failure ──
+
+    [Test]
+    public void PScavGenerator_GenerateBotGroupTask_ResetsForcePScavs_InFinally()
+    {
+        var source = File.ReadAllText(Path.Combine(SrcRoot, "Components", "Spawning", "PScavGenerator.cs"));
+        string methodBody = ExtractMethodBody(source, "protected override async Task<Models.BotSpawnInfo> GenerateBotGroupTask()");
+
+        int setTrueIndex = methodBody.IndexOf("RaidHelpers.ForcePScavs = true;", StringComparison.Ordinal);
+        int tryIndex = methodBody.IndexOf("try", StringComparison.Ordinal);
+        int generateIndex = methodBody.IndexOf("group = await GenerateBotGroup", StringComparison.Ordinal);
+        int finallyIndex = methodBody.IndexOf("finally", StringComparison.Ordinal);
+        int setFalseIndex = methodBody.IndexOf("RaidHelpers.ForcePScavs = false;", StringComparison.Ordinal);
+
+        Assert.That(
+            setTrueIndex,
+            Is.GreaterThanOrEqualTo(0),
+            "GenerateBotGroupTask must force server-side PScav generation before the call"
+        );
+        Assert.That(tryIndex, Is.GreaterThan(setTrueIndex), "ForcePScavs assignment should be wrapped by a try/finally");
+        Assert.That(
+            generateIndex,
+            Is.GreaterThan(tryIndex),
+            "GenerateBotGroupTask must call GenerateBotGroup inside the guarded try block"
+        );
+        Assert.That(finallyIndex, Is.GreaterThan(generateIndex), "GenerateBotGroupTask must use finally to reset ForcePScavs");
+        Assert.That(setFalseIndex, Is.GreaterThan(finallyIndex), "ForcePScavs reset must happen inside the finally block");
+
+        Assert.That(
+            CountOccurrences(methodBody, "RaidHelpers.ForcePScavs = true;"),
+            Is.EqualTo(1),
+            "GenerateBotGroupTask should force PScavs exactly once per generation attempt"
+        );
+        Assert.That(
+            CountOccurrences(methodBody, "RaidHelpers.ForcePScavs = false;"),
+            Is.EqualTo(1),
+            "GenerateBotGroupTask should reset ForcePScavs exactly once in the finally block"
+        );
+    }
+
     // ── Regression: Verify QuestObjectiveStep has a shared static Random ──
 
     [Test]
@@ -356,5 +453,45 @@ public class SpawningLifecycleBugTests
             Does.Match(@"random\.Next\(1,\s*101\)"),
             "PMCGenerator USEC chance must use random.Next(1, 101) for correct 1-100 inclusive range"
         );
+    }
+
+    private static string ExtractMethodBody(string source, string methodSignature)
+    {
+        int methodStart = source.IndexOf(methodSignature, StringComparison.Ordinal);
+        Assert.That(methodStart, Is.GreaterThan(-1), $"Method signature not found: {methodSignature}");
+
+        int braceStart = source.IndexOf('{', methodStart);
+        Assert.That(braceStart, Is.GreaterThan(-1), $"Opening brace not found for method: {methodSignature}");
+
+        int braceCount = 1;
+        int pos = braceStart + 1;
+        while (braceCount > 0 && pos < source.Length)
+        {
+            if (source[pos] == '{')
+            {
+                braceCount++;
+            }
+            else if (source[pos] == '}')
+            {
+                braceCount--;
+            }
+            pos++;
+        }
+
+        Assert.That(braceCount, Is.EqualTo(0), $"Failed to parse method body for: {methodSignature}");
+        return source.Substring(braceStart, pos - braceStart);
+    }
+
+    private static int CountOccurrences(string text, string pattern)
+    {
+        int count = 0;
+        int index = 0;
+        while ((index = text.IndexOf(pattern, index, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            index += pattern.Length;
+        }
+
+        return count;
     }
 }

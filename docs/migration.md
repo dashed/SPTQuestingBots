@@ -92,36 +92,14 @@ public class GetConfigRouter : StaticRouter
 
 ### Dynamic Route Migration
 
-**Before (TypeScript):**
-```typescript
-dynamicRouterModService.registerDynamicRouter(`DynamicAdjustPScavChance${modName}`,
-    [{
-        url: "/QuestingBots/AdjustPScavChance/",
-        action: async (url: string) => {
-            const urlParts = url.split("/");
-            const factor: number = Number(urlParts[urlParts.length - 1]);
-            // ...
-            return JSON.stringify({ resp: "OK" });
-        }
-    }], "AdjustPScavChance"
-);
-```
+QuestingBots no longer ships a dynamic HTTP route for Player Scav chance adjustment.
+The old `/QuestingBots/AdjustPScavChance/{factor}` endpoint was removed after the
+port because the client now interpolates the final chance locally from
+`adjust_pscav_chance.chance_vs_time_remaining_fraction`, while the server only
+zeros SPT's built-in conversion chance at startup to avoid conflicting behavior.
 
-**After (C# DynamicRouter pattern):**
-```csharp
-public class AdjustPScavChanceRouter : DynamicRouter
-{
-    public AdjustPScavChanceRouter() : base("/QuestingBots/AdjustPScavChance/") { }
-
-    public override async Task<string> HandleAsync(string url, string body, string sessionId)
-    {
-        var urlParts = url.Split('/');
-        var factor = double.Parse(urlParts[^1]);
-        // ...
-        return JsonConvert.SerializeObject(new { resp = "OK" });
-    }
-}
-```
+Runtime bot-profile generation is handled through `QuestingBotGenerateRouter`
+intercepting `BotCallbacks.generateBots`, not through a dynamic route.
 
 ### BotCallbacks Interception
 
