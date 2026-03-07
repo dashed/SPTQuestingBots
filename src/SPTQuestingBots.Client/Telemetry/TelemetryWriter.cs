@@ -167,6 +167,8 @@ internal sealed class TelemetryWriter
             if (!string.IsNullOrEmpty(dbDir) && !Directory.Exists(dbDir))
                 Directory.CreateDirectory(dbDir);
 
+            SQLitePCL.Batteries_V2.Init();
+
             _conn = new SqliteConnection("Data Source=" + dbPath);
             _conn.Open();
 
