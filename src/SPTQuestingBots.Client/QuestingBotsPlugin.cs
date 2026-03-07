@@ -4,6 +4,7 @@ using SPTQuestingBots.Components;
 using SPTQuestingBots.Components.Spawning;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
+using SPTQuestingBots.Telemetry;
 
 namespace SPTQuestingBots
 {
@@ -52,6 +53,11 @@ namespace SPTQuestingBots
 
             if (ConfigController.Config.Enabled)
             {
+                if (ConfigController.Config.Telemetry?.Enabled == true)
+                {
+                    TelemetryWriter.EnsureDatabase(ConfigController.Config.Telemetry);
+                }
+
                 LoggingController.LogInfo("Loading QuestingBots...enabling patches...");
 
                 new Patches.TarkovInitPatch().Enable();

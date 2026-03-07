@@ -142,6 +142,45 @@ internal sealed class TelemetryWriter
         },
     };
 
+    /// <summary>
+    /// Probes SQLite at startup: sets provider, creates DB file + schema.
+    /// Called from plugin Awake so assembly-load and platform errors surface immediately.
+    /// </summary>
+    internal static bool EnsureDatabase(TelemetryConfig config)
+    {
+        try
+        {
+            SQLitePCL.raw.SetProvider(new SQLitePCL.SQLite3Provider_e_sqlite3());
+
+            string dbPath = ResolveDbPath(config.DbPath);
+            string dbDir = Path.GetDirectoryName(dbPath);
+            if (!string.IsNullOrEmpty(dbDir) && !Directory.Exists(dbDir))
+                Directory.CreateDirectory(dbDir);
+
+            using (var conn = new SqliteConnection("Data Source=" + dbPath))
+            {
+                conn.Open();
+
+                using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = "PRAGMA journal_mode=WAL;";
+                    cmd.ExecuteNonQuery();
+                }
+
+                TelemetrySchema.EnsureSchema(conn);
+                conn.Close();
+            }
+
+            LoggingController.LogInfo("[Telemetry] Database verified: " + dbPath, alwaysShow: true);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LoggingController.LogError("[Telemetry] Database probe failed at startup: " + ex.Message);
+            return false;
+        }
+    }
+
     public void Initialize(
         TelemetryConfig config,
         string raidId,
