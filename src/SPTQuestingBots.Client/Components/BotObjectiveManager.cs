@@ -12,6 +12,7 @@ using SPTQuestingBots.BotLogic.HiveMind;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Models.Pathing;
 using SPTQuestingBots.Models.Questing;
+using SPTQuestingBots.Telemetry;
 using UnityEngine;
 
 namespace SPTQuestingBots.Components
@@ -281,12 +282,14 @@ namespace SPTQuestingBots.Components
             }
 
             StuckCount = 0;
+            recordObjectiveTelemetry("quest_complete");
         }
 
         public void FailObjective()
         {
             assignment.Fail();
             BotLogic.ECS.BotEntityBridge.IncrementConsecutiveFailedAssignments(botOwner);
+            recordObjectiveTelemetry("quest_fail");
         }
 
         public bool TryChangeObjective()
@@ -499,6 +502,35 @@ namespace SPTQuestingBots.Components
                 {
                     LoggingController.LogError("Timed out when trying to select an initial objective for " + botOwner.GetText());
                 }
+            }
+        }
+
+        private void recordObjectiveTelemetry(string eventType)
+        {
+            try
+            {
+                if (!TelemetryRecorder.IsEnabled)
+                    return;
+
+                var pos = botOwner.Position;
+                string detail = assignment?.ToString();
+
+                TelemetryRecorder.RecordBotEvent(
+                    Time.time,
+                    botOwner.Id,
+                    botOwner.Profile.Id,
+                    botOwner.Profile.Nickname,
+                    botOwner.Profile.Info.Settings.Role.ToString(),
+                    eventType,
+                    detail,
+                    pos.x,
+                    pos.y,
+                    pos.z
+                );
+            }
+            catch (Exception ex)
+            {
+                LoggingController.LogError("[Telemetry] Failed to record objective event: " + ex.Message);
             }
         }
     }

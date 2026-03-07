@@ -14,6 +14,7 @@ using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
 using SPTQuestingBots.Models;
 using SPTQuestingBots.Models.Pathing;
+using SPTQuestingBots.Telemetry;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -262,6 +263,7 @@ namespace SPTQuestingBots.BehaviorExtensions
                     drawBotPath(Color.red);
                 }
 
+                recordStuckTelemetry("hard_failed");
                 return true;
             }
 
@@ -344,12 +346,14 @@ namespace SPTQuestingBots.BehaviorExtensions
                     BotOwner.Mover.Stop();
                     BotOwner.Mover.SetPose(1f);
                     BotOwner.GetPlayer.MovementContext.TryVaulting();
+                    recordStuckTelemetry("soft_vault");
                     break;
                 case SoftStuckStatus.Jumping:
                     LoggingController.LogWarning(BotOwner.GetText() + " is stuck. Trying to jump...");
                     BotOwner.Mover.Stop();
                     BotOwner.Mover.SetPose(1f);
                     tryJump(false);
+                    recordStuckTelemetry("soft_jump");
                     break;
             }
         }
@@ -361,10 +365,12 @@ namespace SPTQuestingBots.BehaviorExtensions
                 case HardStuckStatus.Retrying:
                     LoggingController.LogWarning(BotOwner.GetText() + " is hard stuck. Retrying path...");
                     ObjectiveManager.BotPath.ForcePathRecalculation();
+                    recordStuckTelemetry("hard_retry");
                     break;
                 case HardStuckStatus.Teleport:
                     LoggingController.LogWarning(BotOwner.GetText() + " is hard stuck. Attempting teleport...");
                     attemptSafeTeleport();
+                    recordStuckTelemetry("hard_teleport");
                     break;
             }
         }
@@ -425,12 +431,86 @@ namespace SPTQuestingBots.BehaviorExtensions
 
             LoggingController.LogWarning("Teleporting " + BotOwner.GetText() + " to " + teleportPos);
             BotOwner.GetPlayer.Teleport(teleportPos);
+
+            try
+            {
+                if (TelemetryRecorder.IsEnabled)
+                {
+                    var fromPos = BotOwner.Position;
+                    TelemetryRecorder.RecordMovement(
+                        Time.time,
+                        BotOwner.Id,
+                        "teleport",
+                        fromPos.x,
+                        fromPos.y,
+                        fromPos.z,
+                        teleportPos.x,
+                        teleportPos.y,
+                        teleportPos.z,
+                        0f,
+                        null
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingController.LogError("[Telemetry] Failed to record teleport: " + ex.Message);
+            }
         }
 
         /// <summary>
         /// Periodically redirects the bot's look direction for natural head movement.
         /// Call after UpdateBotSteering() in movement actions.
         /// </summary>
+        private void recordStuckTelemetry(string eventType)
+        {
+            try
+            {
+                if (!TelemetryRecorder.IsEnabled)
+                    return;
+
+                var pos = BotOwner.Position;
+                float destX = 0f,
+                    destY = 0f,
+                    destZ = 0f;
+                if (ObjectiveManager.Position.HasValue)
+                {
+                    var dest = ObjectiveManager.Position.Value;
+                    destX = dest.x;
+                    destY = dest.y;
+                    destZ = dest.z;
+                }
+
+                string detail =
+                    "soft="
+                    + _softStuck.Status
+                    + "/t="
+                    + _softStuck.Timer.ToString("F1")
+                    + " hard="
+                    + _hardStuck.Status
+                    + "/t="
+                    + _hardStuck.Timer.ToString("F1");
+
+                TelemetryRecorder.RecordMovement(
+                    Time.time,
+                    BotOwner.Id,
+                    eventType,
+                    pos.x,
+                    pos.y,
+                    pos.z,
+                    destX,
+                    destY,
+                    destZ,
+                    BotOwner.GetPlayer.MovementContext.CharacterMovementSpeed,
+                    detail
+                );
+            }
+            catch (Exception ex)
+            {
+                LoggingController.LogError("[Telemetry] Failed to record stuck event: " + ex.Message);
+            }
+        }
+
         protected void ApplyLookVariance()
         {
             var lookCfg = ConfigController.Config.Questing.LookVariance;

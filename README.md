@@ -219,6 +219,35 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - 790+ logging calls across 175+ files covering all major systems (ECS, utility AI, squads, formations, looting, vulture, zone movement, pathing)
 - Toggle via `debug.dedicated_log_file` in config.json (default: enabled)
 
+### Telemetry & Debugging
+- Optional SQLite-based telemetry system records bot behavior data for offline analysis and debugging
+- **7 event categories**: bot events (spawn/death), task scores, movement, combat, squad events, performance samples, and errors
+- Background writer thread with batched transactions -- zero impact on game thread (lock-free enqueue)
+- Per-bot sampling intervals prevent database bloat: task scores every 2s, movement every 1s, performance every 5s
+- Automatic raid retention: keeps the last 20 raids (configurable), older data is purged on each new raid
+- WAL journal mode for concurrent reads while the game is writing
+- Each sub-category can be independently toggled (`record_combat`, `record_movement`, etc.)
+
+**Enabling telemetry:**
+
+Set `telemetry.enabled` to `true` in `config/config.json`:
+
+```json
+"telemetry": {
+    "enabled": true
+}
+```
+
+**Database location:** `BepInEx/plugins/DanW-SPTQuestingBots/log/telemetry.db` (configurable via `telemetry.db_path`)
+
+**Querying the data:** Use any SQLite tool:
+- `sqlite3 telemetry.db "SELECT * FROM raids;"` (command line)
+- [DB Browser for SQLite](https://sqlitebrowser.org/) (GUI)
+
+See [docs/telemetry-queries.md](docs/telemetry-queries.md) for a cookbook of useful analysis queries.
+
+**Performance impact:** Negligible when enabled. All recording is asynchronous via a background thread. The main game thread only performs lock-free queue enqueue operations. When disabled (default), the telemetry system adds zero overhead.
+
 ---
 
 ## Architecture
@@ -486,6 +515,7 @@ The mod is configured through `config/config.json` and the BepInEx F12 in-game m
 | `questing.patrol` | Patrol routes: enable/disable, base score, cooldown, waypoint arrival radius, pose, per-bot-type toggles, per-map route overrides (`routes_per_map`) |
 | `questing.zone_movement.advection_zones_per_map` | Per-map advection zone overrides: builtin zones (by BSG BotZone name) and custom zones (by world position) with force/radius/decay/time/boss settings |
 | `adjust_pscav_chance` | Client-side player-Scav conversion curve used when QuestingBots spawning is disabled |
+| `telemetry` | Telemetry system: enable/disable, DB path, sample intervals, queue depth, batch size, retention raids, per-category recording toggles |
 
 ### In-Game Configuration (F12 Menu)
 

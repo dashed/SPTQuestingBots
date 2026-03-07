@@ -10,6 +10,10 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="SPTQuestingBots.Client.Tests" />
+  </ItemGroup>
+
   <!--
     BepInEx, EFT, and SPT game assemblies.
     Copy the required DLLs into the libs/ folder from your SPT 4.x installation:
@@ -86,5 +90,10 @@
   <!-- Third-party mod dependencies -->
   <ItemGroup>
     <Reference Include="DrakiaXYZ-BigBrain" HintPath="..\..\libs\DrakiaXYZ-BigBrain.dll" Private="false" />
+  </ItemGroup>
+
+  <!-- Telemetry: SQLite for local data recording -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.*" />
   </ItemGroup>
 </Project>

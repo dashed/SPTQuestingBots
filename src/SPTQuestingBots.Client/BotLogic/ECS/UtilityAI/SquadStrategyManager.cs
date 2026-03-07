@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using SPTQuestingBots.Controllers;
+using SPTQuestingBots.Telemetry;
 
 namespace SPTQuestingBots.BotLogic.ECS.UtilityAI;
 
@@ -166,6 +168,19 @@ public class SquadStrategyManager
         nextStrategy.Activate(squad);
 
         squad.StrategyAssignment = new StrategyAssignment(nextStrategy, nextOrdinal);
+
+        try
+        {
+            if (TelemetryRecorder.IsEnabled)
+            {
+                int leaderId = squad.Leader?.Id ?? -1;
+                TelemetryRecorder.RecordSquadEvent(0f, squad.Id, leaderId, "strategy_change", nextStrategy.GetType().Name);
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggingController.LogError("[Telemetry] Failed to record squad event: " + ex.Message);
+        }
     }
 
     /// <summary>

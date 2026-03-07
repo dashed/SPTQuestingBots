@@ -265,6 +265,31 @@ namespace SPTQuestingBots.Controllers
 
             Logger.LogError(message);
             WriteToFile("ERROR", message);
+
+            // Record to telemetry — skip telemetry's own errors to avoid recursion
+            if (!message.StartsWith("[Telemetry]"))
+            {
+                try
+                {
+                    if (Telemetry.TelemetryRecorder.IsEnabled)
+                    {
+                        // Capture caller stack trace for diagnostic context
+                        string stackTrace = System.Environment.StackTrace;
+                        Telemetry.TelemetryRecorder.RecordError(
+                            UnityEngine.Time.time,
+                            "error",
+                            "LoggingController",
+                            message,
+                            stackTrace,
+                            0
+                        );
+                    }
+                }
+                catch
+                {
+                    // Swallow — telemetry must never break logging
+                }
+            }
         }
 
         public static void LogInfoToServerConsole(string message)

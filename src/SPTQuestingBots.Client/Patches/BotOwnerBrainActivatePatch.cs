@@ -10,6 +10,7 @@ using SPT.Reflection.Patching;
 using SPTQuestingBots.Components.Spawning;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
+using SPTQuestingBots.Telemetry;
 
 namespace SPTQuestingBots.Patches
 {
@@ -65,6 +66,35 @@ namespace SPTQuestingBots.Patches
             if (BotLogic.ECS.BotEntityBridge.IsBotAPMC(__instance) || __instance.WillBeAPlayerScav())
             {
                 registerBotAsHumanPlayer(__instance);
+            }
+
+            recordSpawnTelemetry(__instance);
+        }
+
+        private static void recordSpawnTelemetry(BotOwner bot)
+        {
+            try
+            {
+                if (!TelemetryRecorder.IsEnabled)
+                    return;
+
+                var pos = bot.Position;
+                TelemetryRecorder.RecordBotEvent(
+                    UnityEngine.Time.time,
+                    bot.Id,
+                    bot.Profile.Id,
+                    bot.Profile.Nickname,
+                    bot.Profile.Info.Settings.Role.ToString(),
+                    "spawn",
+                    null,
+                    pos.x,
+                    pos.y,
+                    pos.z
+                );
+            }
+            catch (Exception ex)
+            {
+                LoggingController.LogError("[Telemetry] Failed to record spawn: " + ex.Message);
             }
         }
 

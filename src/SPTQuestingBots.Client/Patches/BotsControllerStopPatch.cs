@@ -8,6 +8,7 @@ using Comfort.Common;
 using EFT;
 using SPT.Reflection.Patching;
 using SPTQuestingBots.Controllers;
+using SPTQuestingBots.Telemetry;
 
 namespace SPTQuestingBots.Patches
 {
@@ -21,6 +22,9 @@ namespace SPTQuestingBots.Patches
         [PatchPostfix]
         protected static void PatchPostfix()
         {
+            // Shutdown telemetry before clearing bot data
+            shutdownTelemetry();
+
             // Stop updating debug overlays
             if (Singleton<GameWorld>.Instance.gameObject.TryGetComponent(out Components.DebugData debugController))
             {
@@ -65,6 +69,23 @@ namespace SPTQuestingBots.Patches
 
             // Flush and close the dedicated log file
             LoggingController.DisposeFileLogger();
+        }
+
+        private static void shutdownTelemetry()
+        {
+            try
+            {
+                if (!TelemetryRecorder.IsEnabled)
+                    return;
+
+                int botCount = BotLogic.ECS.BotEntityBridge.Registry?.Count ?? 0;
+                TelemetryRecorder.UpdateRaidEnd(botCount);
+                TelemetryRecorder.Shutdown();
+            }
+            catch (Exception ex)
+            {
+                LoggingController.LogError("[Telemetry] Failed to shutdown: " + ex.Message);
+            }
         }
     }
 }

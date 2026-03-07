@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using SPTQuestingBots.Telemetry;
 
 namespace SPTQuestingBots.Configuration
 {
@@ -29,6 +30,9 @@ namespace SPTQuestingBots.Configuration
 
         [JsonProperty("adjust_pscav_chance")]
         public AdjustPScavChanceConfig AdjustPScavChance { get; set; } = new AdjustPScavChanceConfig();
+
+        [JsonProperty("telemetry")]
+        public TelemetryConfig Telemetry { get; set; } = new TelemetryConfig();
 
         public ModConfig() { }
     }

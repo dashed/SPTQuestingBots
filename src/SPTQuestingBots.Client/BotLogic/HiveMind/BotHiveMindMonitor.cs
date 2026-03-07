@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 using Comfort.Common;
@@ -11,6 +12,7 @@ using SPTQuestingBots.Components.Spawning;
 using SPTQuestingBots.Configuration;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
+using SPTQuestingBots.Telemetry;
 using UnityEngine;
 
 namespace SPTQuestingBots.BotLogic.HiveMind
@@ -28,6 +30,7 @@ namespace SPTQuestingBots.BotLogic.HiveMind
     public class BotHiveMindMonitor : MonoBehaviourDelayedUpdate
     {
         private ECS.UtilityAI.SquadStrategyManager _squadStrategyManager;
+        private static readonly Stopwatch _updateStopwatch = new Stopwatch();
 
         public BotHiveMindMonitor()
         {
@@ -80,6 +83,8 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                 return;
             }
 
+            _updateStopwatch.Restart();
+
             // 1. Discover/validate boss relationships from BSG API
             updateBosses();
 
@@ -106,6 +111,42 @@ namespace SPTQuestingBots.BotLogic.HiveMind
 
             // 9. Compute LOD tiers for all active entities
             updateLodTiers();
+
+            // 10. Record performance telemetry
+            recordPerformanceTelemetry();
+        }
+
+        private void recordPerformanceTelemetry()
+        {
+            try
+            {
+                if (!TelemetryRecorder.IsEnabled)
+                    return;
+
+                _updateStopwatch.Stop();
+                float updateMs = (float)_updateStopwatch.Elapsed.TotalMilliseconds;
+                float frameTimeMs = Time.deltaTime * 1000f;
+                float memoryMb = (float)(System.GC.GetTotalMemory(false) / (1024.0 * 1024.0));
+
+                var registry = ECS.BotEntityBridge.Registry;
+                int aliveBots = 0;
+                int activeEntities = registry?.Count ?? 0;
+                if (registry != null)
+                {
+                    var entities = registry.Entities;
+                    for (int i = 0; i < entities.Count; i++)
+                    {
+                        if (entities[i].IsActive)
+                            aliveBots++;
+                    }
+                }
+
+                TelemetryRecorder.RecordPerformance(Time.time, aliveBots, activeEntities, updateMs, frameTimeMs, memoryMb);
+            }
+            catch (Exception ex)
+            {
+                LoggingController.LogError("[Telemetry] Failed to record performance: " + ex.Message);
+            }
         }
 
         public static void UpdateValueForBot(BotHiveMindSensorType sensorType, BotOwner bot, bool value)

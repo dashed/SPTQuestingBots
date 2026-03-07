@@ -13,6 +13,7 @@ using SPTQuestingBots.BotLogic.ECS.UtilityAI;
 using SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Models.Questing;
+using SPTQuestingBots.Telemetry;
 
 namespace SPTQuestingBots.BotLogic.Objective
 {
@@ -20,6 +21,7 @@ namespace SPTQuestingBots.BotLogic.Objective
     {
         private static UtilityTaskManager _taskManager;
         private static UtilityTaskManager _followerTaskManager;
+        private static readonly string[] PersonalityNames = { "Timid", "Cautious", "Normal", "Aggressive", "Reckless" };
 
         /// <summary>
         /// Tracks which task manager last assigned a task to the current entity.
@@ -225,6 +227,8 @@ namespace SPTQuestingBots.BotLogic.Objective
             // Score and pick
             _followerTaskManager.ScoreAndPick(entity);
 
+            recordTaskScoreTelemetry(entity, _followerTaskManager);
+
             var task = entity.TaskAssignment.Task as QuestUtilityTask;
             if (task == null)
                 return false;
@@ -273,6 +277,8 @@ namespace SPTQuestingBots.BotLogic.Objective
             // Score all tasks and pick the best one
             _taskManager.ScoreAndPick(entity);
 
+            recordTaskScoreTelemetry(entity, _taskManager);
+
             // Read the selected task
             var task = entity.TaskAssignment.Task as QuestUtilityTask;
             if (task == null)
@@ -287,6 +293,47 @@ namespace SPTQuestingBots.BotLogic.Objective
         /// Wire task scorer properties from config so config.json values take effect.
         /// Called once when the task manager is created.
         /// </summary>
+        private static void recordTaskScoreTelemetry(BotEntity entity, UtilityTaskManager manager)
+        {
+            try
+            {
+                if (!TelemetryRecorder.IsEnabled)
+                    return;
+
+                var assignment = entity.TaskAssignment;
+                int activeTaskId = assignment.Task != null ? assignment.Ordinal : -1;
+                string activeTaskName = assignment.Task?.GetType().Name ?? "None";
+
+                // Build compact scores JSON: {"TaskName":0.123,...}
+                var sb = new StringBuilder(manager.Tasks.Length * 20);
+                sb.Append('{');
+                for (int i = 0; i < manager.Tasks.Length && i < entity.TaskScores.Length; i++)
+                {
+                    if (i > 0)
+                        sb.Append(',');
+                    sb.Append('"').Append(manager.Tasks[i].GetType().Name).Append("\":").Append(entity.TaskScores[i].ToString("F3"));
+                }
+                sb.Append('}');
+
+                string personality = entity.Personality < PersonalityNames.Length ? PersonalityNames[entity.Personality] : "Unknown";
+
+                TelemetryRecorder.RecordTaskScores(
+                    UnityEngine.Time.time,
+                    entity.Id,
+                    activeTaskId,
+                    activeTaskName,
+                    sb.ToString(),
+                    personality,
+                    entity.Aggression,
+                    entity.RaidTimeNormalized
+                );
+            }
+            catch (Exception ex)
+            {
+                LoggingController.LogError("[Telemetry] Failed to record task scores: " + ex.Message);
+            }
+        }
+
         private static void WireTaskConfigValues(UtilityTaskManager manager)
         {
             var vultureCfg = ConfigController.Config?.Questing?.Vulture;

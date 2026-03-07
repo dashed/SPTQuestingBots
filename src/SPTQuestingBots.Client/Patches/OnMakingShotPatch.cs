@@ -1,8 +1,10 @@
+using System;
 using System.Reflection;
 using EFT;
 using SPT.Reflection.Patching;
 using SPTQuestingBots.BotLogic.ECS.Systems;
 using SPTQuestingBots.Controllers;
+using SPTQuestingBots.Telemetry;
 using UnityEngine;
 
 namespace SPTQuestingBots.Patches
@@ -65,6 +67,30 @@ namespace SPTQuestingBots.Patches
                     + ") isBoss="
                     + isBoss
             );
+
+            recordShotTelemetry(__instance);
+        }
+
+        private static void recordShotTelemetry(Player shooter)
+        {
+            try
+            {
+                if (!TelemetryRecorder.IsEnabled)
+                    return;
+
+                var pos = shooter.Position;
+                string weaponName = null;
+                if (shooter.HandsController is Player.FirearmController fc)
+                {
+                    weaponName = fc.Item?.ShortName?.Localized();
+                }
+
+                TelemetryRecorder.RecordCombatEvent(Time.time, shooter.Id, "shot", 0, null, weaponName, 0f, 0f, pos.x, pos.y, pos.z);
+            }
+            catch (Exception ex)
+            {
+                LoggingController.LogError("[Telemetry] Failed to record shot: " + ex.Message);
+            }
         }
 
         private static bool IsMarksmanType(WildSpawnType role)

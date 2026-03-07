@@ -8,6 +8,7 @@ using Comfort.Common;
 using EFT;
 using SPT.Reflection.Patching;
 using SPTQuestingBots.Controllers;
+using SPTQuestingBots.Telemetry;
 
 namespace SPTQuestingBots.Patches
 {
@@ -60,6 +61,52 @@ namespace SPTQuestingBots.Patches
                     IsActive = true,
                 }
             );
+
+            recordDeathTelemetry(__instance, aggressor);
+        }
+
+        private static void recordDeathTelemetry(Player victim, Player aggressor)
+        {
+            try
+            {
+                if (!TelemetryRecorder.IsEnabled)
+                    return;
+
+                float raidTime = UnityEngine.Time.time;
+                var pos = victim.Position;
+
+                TelemetryRecorder.RecordBotEvent(
+                    raidTime,
+                    victim.Id,
+                    victim.Profile.Id,
+                    victim.Profile.Nickname,
+                    victim.Profile.Info.Settings.Role.ToString(),
+                    "death",
+                    aggressor?.Profile?.Nickname,
+                    pos.x,
+                    pos.y,
+                    pos.z
+                );
+
+                float distance = UnityEngine.Vector3.Distance(victim.Position, aggressor.Position);
+                TelemetryRecorder.RecordCombatEvent(
+                    raidTime,
+                    aggressor.Id,
+                    "kill",
+                    victim.Id,
+                    victim.Profile.Nickname,
+                    null,
+                    0f,
+                    distance,
+                    aggressor.Position.x,
+                    aggressor.Position.y,
+                    aggressor.Position.z
+                );
+            }
+            catch (Exception ex)
+            {
+                LoggingController.LogError("[Telemetry] Failed to record death: " + ex.Message);
+            }
         }
     }
 }
