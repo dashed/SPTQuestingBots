@@ -12,6 +12,8 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+!src/SPTQuestingBots.Client/Patches/Debug/
+!src/SPTQuestingBots.Client/Patches/Debug/*.cs
 
 ## Visual Studio
 .vs/
@@ -69,4 +71,3 @@ build/
 artifacts/
 publish/
 out/
-
