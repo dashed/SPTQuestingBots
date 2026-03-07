@@ -68,7 +68,11 @@ namespace SPTQuestingBots.BotLogic.BotMonitor.Monitors
                 return;
             }
 
-            Singleton<BotEventHandler>.Instance.OnSoundPlayed -= enemySoundHeard;
+            if (Singleton<BotEventHandler>.Instantiated)
+            {
+                Singleton<BotEventHandler>.Instance.OnSoundPlayed -= enemySoundHeard;
+            }
+
             soundPlayedEventAdded = false;
         }
 

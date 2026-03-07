@@ -339,22 +339,52 @@ namespace SPTQuestingBots.BotLogic.Objective
             var vultureCfg = ConfigController.Config?.Questing?.Vulture;
             var lingerCfg = ConfigController.Config?.Questing?.Linger;
             var investigateCfg = ConfigController.Config?.Questing?.Investigate;
+            var spawnEntryCfg = ConfigController.Config?.Questing?.SpawnEntry;
+            var patrolCfg = ConfigController.Config?.Questing?.Patrol;
+            var lootingCfg = ConfigController.Config?.Questing?.Looting;
 
             foreach (var task in manager.Tasks)
             {
-                if (task is VultureTask vt && vultureCfg != null)
+                if (task is VultureTask vt)
                 {
-                    vt.CourageThreshold = vultureCfg.CourageThreshold;
-                    vt.DetectionRange = vultureCfg.BaseDetectionRange;
+                    if (vultureCfg != null)
+                    {
+                        vt.CourageThreshold = vultureCfg.CourageThreshold;
+                        vt.DetectionRange = vultureCfg.BaseDetectionRange;
+                        vt.IsEnabled = vultureCfg.Enabled;
+                    }
                 }
-                else if (task is LingerTask lt && lingerCfg != null)
+                else if (task is LingerTask lt)
                 {
-                    lt.BaseScore = lingerCfg.BaseScore;
+                    if (lingerCfg != null)
+                    {
+                        lt.BaseScore = lingerCfg.BaseScore;
+                        lt.IsEnabled = lingerCfg.Enabled;
+                    }
                 }
-                else if (task is InvestigateTask it && investigateCfg != null)
+                else if (task is InvestigateTask it)
                 {
-                    it.IntensityThreshold = investigateCfg.IntensityThreshold;
-                    it.DetectionRange = investigateCfg.DetectionRange;
+                    if (investigateCfg != null)
+                    {
+                        it.IntensityThreshold = investigateCfg.IntensityThreshold;
+                        it.DetectionRange = investigateCfg.DetectionRange;
+                        it.IsEnabled = investigateCfg.Enabled;
+                    }
+                }
+                else if (task is SpawnEntryTask set)
+                {
+                    if (spawnEntryCfg != null)
+                        set.IsEnabled = spawnEntryCfg.Enabled;
+                }
+                else if (task is PatrolTask pt)
+                {
+                    if (patrolCfg != null)
+                        pt.IsEnabled = patrolCfg.Enabled;
+                }
+                else if (task is LootTask lot)
+                {
+                    if (lootingCfg != null)
+                        lot.IsEnabled = lootingCfg.Enabled;
                 }
             }
         }

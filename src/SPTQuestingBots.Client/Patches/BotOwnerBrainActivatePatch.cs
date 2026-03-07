@@ -113,6 +113,9 @@ namespace SPTQuestingBots.Patches
 
         private static void deletePlayer(Player player, IPlayer lastAgressor, DamageInfoStruct damage, EBodyPart part)
         {
+            if (!Singleton<IBotGame>.Instantiated)
+                return;
+
             BotSpawner botSpawnerClass = Singleton<IBotGame>.Instance.BotsController.BotSpawner;
 
             try

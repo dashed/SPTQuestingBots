@@ -992,31 +992,45 @@ namespace SPTQuestingBots.BotLogic.HiveMind
         private static readonly LootScanResult[] _lootScanResults = new LootScanResult[32];
 
         /// <summary>
-        /// Tick step 6: Cleanup expired combat events and query per-bot combat state
-        /// for vulture behavior. Writes HasNearbyEvent, CombatIntensity, IsInBossZone
-        /// on each active entity.
+        /// Tick step 6: Cleanup expired combat events and query per-bot combat state.
+        /// Writes HasNearbyEvent, CombatIntensity, IsInBossZone on each active entity.
+        /// Runs whenever vulture OR investigate is enabled — these systems share the
+        /// combat event pipeline. Previously gated only by vulture, which silently broke
+        /// investigate, look variance, and dynamic objectives when vulture was disabled.
         /// </summary>
         private static void updateCombatEvents()
         {
             var vultureConfig = ConfigController.Config?.Questing?.Vulture;
-            if (vultureConfig == null || !vultureConfig.Enabled)
+            var investigateConfig = ConfigController.Config?.Questing?.Investigate;
+
+            bool vultureEnabled = vultureConfig?.Enabled == true;
+            bool investigateEnabled = investigateConfig?.Enabled == true;
+
+            if (!vultureEnabled && !investigateEnabled)
                 return;
+
+            // Use vulture config values when available, fall back to investigate/defaults
+            float maxEventAge = vultureConfig?.MaxEventAge ?? 300f;
+            float detectionRange = vultureEnabled ? vultureConfig.BaseDetectionRange : investigateConfig?.DetectionRange ?? 120f;
+            float intensityWindow = vultureConfig?.IntensityWindow ?? 15f;
+            float bossAvoidanceRadius = vultureConfig?.BossAvoidanceRadius ?? 75f;
+            float bossZoneDecay = vultureConfig?.BossZoneDecay ?? 120f;
 
             float currentTime = Time.time;
 
             // Cleanup expired events once per tick
-            CombatEventRegistry.CleanupExpired(currentTime, vultureConfig.MaxEventAge);
+            CombatEventRegistry.CleanupExpired(currentTime, maxEventAge);
 
             // Update per-entity combat event fields
             CombatEventScanner.UpdateEntities(
                 ECS.BotEntityBridge.Registry.Entities,
                 currentTime,
-                vultureConfig.MaxEventAge,
-                vultureConfig.BaseDetectionRange,
-                vultureConfig.BaseDetectionRange,
-                vultureConfig.IntensityWindow,
-                vultureConfig.BossAvoidanceRadius,
-                vultureConfig.BossZoneDecay
+                maxEventAge,
+                detectionRange,
+                detectionRange,
+                intensityWindow,
+                bossAvoidanceRadius,
+                bossZoneDecay
             );
         }
 

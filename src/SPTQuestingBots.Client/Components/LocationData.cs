@@ -74,6 +74,9 @@ namespace SPTQuestingBots.Components
 
             Singleton<GameWorld>.Instance.gameObject.GetOrAddComponent<BotLogic.HiveMind.BotHiveMindMonitor>();
 
+            // Subscribe to grenade explosions for combat event tracking
+            GrenadeExplosionSubscriber.Subscribe();
+
             if (
                 ConfigController.Config.Questing.ZoneMovement?.Enabled == true
                 && QuestingBotsPluginConfig.ZoneMovementEnabled?.Value != false

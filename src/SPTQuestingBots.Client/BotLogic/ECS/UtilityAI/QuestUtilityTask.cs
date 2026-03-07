@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.BotLogic.ECS.UtilityAI;
@@ -24,6 +25,13 @@ public abstract class QuestUtilityTask : UtilityTask
     /// </summary>
     public abstract string ActionReason { get; }
 
+    /// <summary>
+    /// Whether this task is enabled. When false, <see cref="UpdateScores"/> zeroes
+    /// all entity scores for this task. Wired from per-task config Enabled flags
+    /// in <c>BotObjectiveLayer.WireTaskConfigValues</c>.
+    /// </summary>
+    public bool IsEnabled { get; set; } = true;
+
     protected QuestUtilityTask(float hysteresis)
         : base(hysteresis) { }
 
@@ -31,6 +39,22 @@ public abstract class QuestUtilityTask : UtilityTask
     /// No-op — BigBrain handles action execution via CustomLogic classes.
     /// </summary>
     public override void Update() { }
+
+    /// <summary>
+    /// Override to check <see cref="IsEnabled"/> before scoring.
+    /// When disabled, zeroes all entity scores for this task.
+    /// </summary>
+    public override void UpdateScores(int ordinal, IReadOnlyList<BotEntity> entities)
+    {
+        if (!IsEnabled)
+        {
+            for (int i = 0; i < entities.Count; i++)
+                entities[i].TaskScores[ordinal] = 0f;
+            return;
+        }
+
+        base.UpdateScores(ordinal, entities);
+    }
 }
 
 /// <summary>
