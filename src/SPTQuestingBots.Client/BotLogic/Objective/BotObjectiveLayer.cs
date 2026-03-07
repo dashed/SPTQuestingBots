@@ -10,6 +10,7 @@ using SPTQuestingBots.BotLogic.BotMonitor.Monitors;
 using SPTQuestingBots.BotLogic.ECS;
 using SPTQuestingBots.BotLogic.ECS.Systems;
 using SPTQuestingBots.BotLogic.ECS.UtilityAI;
+using SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks;
 using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Models.Questing;
 
@@ -294,16 +295,16 @@ namespace SPTQuestingBots.BotLogic.Objective
 
             foreach (var task in manager.Tasks)
             {
-                if (task is UtilityAI.Tasks.VultureTask vt && vultureCfg != null)
+                if (task is VultureTask vt && vultureCfg != null)
                 {
                     vt.CourageThreshold = vultureCfg.CourageThreshold;
                     vt.DetectionRange = vultureCfg.BaseDetectionRange;
                 }
-                else if (task is UtilityAI.Tasks.LingerTask lt && lingerCfg != null)
+                else if (task is LingerTask lt && lingerCfg != null)
                 {
                     lt.BaseScore = lingerCfg.BaseScore;
                 }
-                else if (task is UtilityAI.Tasks.InvestigateTask it && investigateCfg != null)
+                else if (task is InvestigateTask it && investigateCfg != null)
                 {
                     it.IntensityThreshold = investigateCfg.IntensityThreshold;
                     it.DetectionRange = investigateCfg.DetectionRange;
