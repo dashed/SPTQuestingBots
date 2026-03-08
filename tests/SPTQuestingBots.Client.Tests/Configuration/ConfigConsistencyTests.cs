@@ -276,11 +276,11 @@ public class ConfigConsistencyTests
     }
 
     [Test]
-    public void HearingSensor_MaxDistanceGunfireSuppressed_Default75_Json50()
+    public void HearingSensor_MaxDistanceGunfireSuppressed_Default75_Json25()
     {
         var jsonValue = JsonValue<float>("questing.bot_questing_requirements.hearing_sensor.max_distance_gunfire_suppressed");
-        Assert.That(jsonValue, Is.EqualTo(50f), "config.json value");
-        // C# default is 75 — suppressed weapons heard same distance as unsuppressed
+        Assert.That(jsonValue, Is.EqualTo(25f), "config.json value");
+        // C# default is 75 — JSON overrides to half of unsuppressed range (50)
     }
 
     [Test]
