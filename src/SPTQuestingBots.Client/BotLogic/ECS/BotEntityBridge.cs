@@ -770,10 +770,19 @@ namespace SPTQuestingBots.BotLogic.ECS
             }
 
             // Sync raid time progression (0.0 = start, 1.0 = end)
+            // Use elapsed/total directly instead of 1-remaining/original, because
+            // GetRaidTimeRemainingFraction divides by OriginalEscapeTimeSeconds which
+            // may differ from the actual raid duration (late-join raids, time reductions).
+            // PastTimeSeconds (via GetSecondsSinceSpawning) is a reliable elapsed counter.
             try
             {
-                float remainingFraction = Helpers.RaidHelpers.GetRaidTimeRemainingFraction();
-                entity.RaidTimeNormalized = 1f - remainingFraction;
+                float elapsed = Helpers.RaidHelpers.GetSecondsSinceSpawning();
+                float total = Helpers.RaidHelpers.OriginalEscapeTimeSeconds;
+                if (total > 0f)
+                {
+                    float normalized = elapsed / total;
+                    entity.RaidTimeNormalized = normalized > 1f ? 1f : (normalized < 0f ? 0f : normalized);
+                }
             }
             catch
             {

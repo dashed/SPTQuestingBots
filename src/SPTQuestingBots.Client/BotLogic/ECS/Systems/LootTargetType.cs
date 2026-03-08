@@ -10,4 +10,10 @@ public static class LootTargetType
     public const byte Container = 1;
     public const byte LooseItem = 2;
     public const byte Corpse = 3;
+
+    /// <summary>Default estimated value for containers (contents unknown before opening).</summary>
+    public const float DefaultContainerValue = 15000f;
+
+    /// <summary>Default estimated value for corpses (gear value unknown before searching).</summary>
+    public const float DefaultCorpseValue = 20000f;
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using Comfort.Common;
 using EFT;
 using EFT.Interactive;
 using SPTQuestingBots.BotLogic.ECS.Systems;
@@ -23,6 +24,34 @@ namespace SPTQuestingBots.Helpers
         /// Matches LootingBots LootUtils.LootMask.
         /// </summary>
         private static readonly LayerMask LootMask = LayerMask.GetMask("Interactive", "Loot", "Deadbody");
+
+        /// <summary>Default estimated value for containers (contents unknown before opening).</summary>
+        internal const float DefaultContainerValue = LootTargetType.DefaultContainerValue;
+
+        /// <summary>Default estimated value for corpses (gear value unknown before searching).</summary>
+        internal const float DefaultCorpseValue = LootTargetType.DefaultCorpseValue;
+
+        /// <summary>
+        /// Look up the handbook base price for an item template.
+        /// Returns 0 if the handbook is unavailable or the item is not found.
+        /// </summary>
+        internal static float GetHandbookPrice(EFT.InventoryLogic.Item item)
+        {
+            try
+            {
+                if (item == null)
+                    return 0f;
+
+                if (!Singleton<HandbookClass>.Instantiated)
+                    return 0f;
+
+                return (float)Singleton<HandbookClass>.Instance.GetBasePrice(item.TemplateId);
+            }
+            catch
+            {
+                return 0f;
+            }
+        }
 
         /// <summary>
         /// Scan for loot around a position. Returns number of results written.
@@ -106,7 +135,7 @@ namespace SPTQuestingBots.Helpers
                                 Y = pos.y,
                                 Z = pos.z,
                                 Type = LootTargetType.Container,
-                                Value = 0,
+                                Value = DefaultContainerValue,
                                 DistanceSqr = distSqr,
                             };
                             continue;
@@ -136,7 +165,7 @@ namespace SPTQuestingBots.Helpers
                                             Y = pos.y,
                                             Z = pos.z,
                                             Type = LootTargetType.LooseItem,
-                                            Value = 0,
+                                            Value = GetHandbookPrice(rootItem),
                                             DistanceSqr = distSqr,
                                         };
                                         continue;
@@ -170,7 +199,7 @@ namespace SPTQuestingBots.Helpers
                                 Y = pos.y,
                                 Z = pos.z,
                                 Type = LootTargetType.Corpse,
-                                Value = 0,
+                                Value = DefaultCorpseValue,
                                 DistanceSqr = distSqr,
                             };
                         }
