@@ -16,7 +16,8 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - Interop with SAIN (combat/extraction), Looting Bots (loot scanning), and Donuts (spawn management)
 
 ### PMC and Player-Scav Spawning
-- PMCs spawn at actual EFT spawn points at raid start, with staggered replacements as they die
+- **Vanilla-like by default**: PMC counts match live Tarkov player slots per map (e.g. 9-11 on Customs, 11-15 on Streets), spawning at actual EFT player spawn points
+- PMCs spawn in groups of 1-5 at raid start, with staggered replacements as they die — `max_alive_bots` per map matches vanilla `MaxPlayers - 1`
 - Player Scavs spawn on a schedule mirroring live Tarkov reduced-raid-time settings
 - Advanced spawning tricks EFT into treating AI as human players, preserving normal Scav/boss spawns
 - Configurable group sizes (solo through 5-man squads), difficulty distribution, and spawn distances
@@ -353,7 +354,7 @@ Both mods have independent personality systems (SAIN for combat behavior, Questi
 **Not compatible:**
 - AI Limit or similar mods that disable AI globally (use the built-in Bot LOD system instead)
 
-> If using other spawn-management mods, disable the QuestingBots spawning system to avoid excessive bot counts. The spawning system auto-disables when SWAG + DONUTS, MOAR, Better Spawns Plus, Reality, or ABPS are detected.
+> **Spawning is enabled by default.** If using other spawn-management mods (SWAG + DONUTS, MOAR, Better Spawns Plus, Reality, or ABPS), the spawning system auto-disables to avoid double-spawning. You can also manually disable it via `bot_spawns.enabled` in config.json or the F12 menu.
 
 ---
 
@@ -532,7 +533,7 @@ The mod is configured through `config/config.json` and the BepInEx F12 in-game m
 | `chance_of_being_hostile_toward_bosses` | Per-bot-type boss hostility chances |
 | `questing` | Objective system: brain layer priorities, quest selection, pathing, stuck detection, door unlocking, sprint limits, extraction |
 | `questing.bot_quests` | Quest-type settings: EFT quests, spawn rush, boss hunter, airdrop chaser, spawn wandering |
-| `bot_spawns` | PMC/PScav spawning: group sizes, difficulty, distances, hostility, bot caps, boss limits |
+| `bot_spawns` | PMC/PScav spawning (enabled by default): group sizes, difficulty, distances, hostility, bot caps (`max_alive_bots` matches vanilla), boss limits |
 | `questing.bot_pathing` | Path following: custom mover toggle (`use_custom_mover`), incomplete path retry, start position discrepancy |
 | `questing.bot_lod` | LOD system: enable/disable, reduced/minimal distance thresholds (150m/300m), frame skip counts (2/4) |
 | `questing.zone_movement` | Zone-based movement: grid size, field weights, POI scoring, convergence interval, debug overlay |
