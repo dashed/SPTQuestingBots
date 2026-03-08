@@ -59,31 +59,43 @@ public class BotPersonalityTests
     // ── FromDifficulty ──────────────────────────────────────
 
     [Test]
-    public void FromDifficulty_Easy_ReturnsCautious()
+    public void FromDifficulty_Easy_MostlyCautious()
     {
         var rng = new System.Random(42);
-        Assert.That(PersonalityHelper.FromDifficulty(0, rng), Is.EqualTo(BotPersonality.Cautious));
+        int cautiousCount = 0;
+        for (int i = 0; i < 100; i++)
+            if (PersonalityHelper.FromDifficulty(0, rng) == BotPersonality.Cautious) cautiousCount++;
+        Assert.That(cautiousCount, Is.GreaterThan(40), "Easy difficulty should mostly produce Cautious");
     }
 
     [Test]
-    public void FromDifficulty_Normal_ReturnsNormal()
+    public void FromDifficulty_Normal_MostlyNormal()
     {
         var rng = new System.Random(42);
-        Assert.That(PersonalityHelper.FromDifficulty(1, rng), Is.EqualTo(BotPersonality.Normal));
+        int normalCount = 0;
+        for (int i = 0; i < 100; i++)
+            if (PersonalityHelper.FromDifficulty(1, rng) == BotPersonality.Normal) normalCount++;
+        Assert.That(normalCount, Is.GreaterThan(40), "Normal difficulty should mostly produce Normal");
     }
 
     [Test]
-    public void FromDifficulty_Hard_ReturnsAggressive()
+    public void FromDifficulty_Hard_MostlyAggressive()
     {
         var rng = new System.Random(42);
-        Assert.That(PersonalityHelper.FromDifficulty(2, rng), Is.EqualTo(BotPersonality.Aggressive));
+        int aggressiveCount = 0;
+        for (int i = 0; i < 100; i++)
+            if (PersonalityHelper.FromDifficulty(2, rng) == BotPersonality.Aggressive) aggressiveCount++;
+        Assert.That(aggressiveCount, Is.GreaterThan(40), "Hard difficulty should mostly produce Aggressive");
     }
 
     [Test]
-    public void FromDifficulty_Impossible_ReturnsReckless()
+    public void FromDifficulty_Impossible_MostlyReckless()
     {
         var rng = new System.Random(42);
-        Assert.That(PersonalityHelper.FromDifficulty(3, rng), Is.EqualTo(BotPersonality.Reckless));
+        int recklessCount = 0;
+        for (int i = 0; i < 100; i++)
+            if (PersonalityHelper.FromDifficulty(3, rng) == BotPersonality.Reckless) recklessCount++;
+        Assert.That(recklessCount, Is.GreaterThan(40), "Impossible difficulty should mostly produce Reckless");
     }
 
     [Test]

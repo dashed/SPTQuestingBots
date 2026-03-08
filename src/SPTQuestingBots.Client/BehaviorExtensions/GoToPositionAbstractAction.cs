@@ -145,6 +145,21 @@ namespace SPTQuestingBots.BehaviorExtensions
                     {
                         BotOwner.FollowPath(ObjectiveManager.BotPath, true, false);
                     }
+
+                    var botPos = BotOwner.Position;
+                    TelemetryRecorder.RecordMovement(
+                        Time.time,
+                        BotOwner.Id,
+                        "waypoint",
+                        botPos.x,
+                        botPos.y,
+                        botPos.z,
+                        position.x,
+                        position.y,
+                        position.z,
+                        0f,
+                        updateReason.ToString()
+                    );
                 }
             }
             else

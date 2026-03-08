@@ -85,7 +85,31 @@ namespace SPTQuestingBots.Patches
                     weaponName = fc.Item?.ShortName?.Localized();
                 }
 
-                TelemetryRecorder.RecordCombatEvent(Time.time, shooter.Id, "shot", 0, null, weaponName, 0f, 0f, pos.x, pos.y, pos.z);
+                int targetId = 0;
+                string targetName = null;
+                float distance = 0f;
+                var botOwner = shooter.AIData?.BotOwner;
+                if (botOwner?.Memory?.GoalEnemy != null)
+                {
+                    var enemy = botOwner.Memory.GoalEnemy;
+                    var enemyPos = enemy.CurrPosition;
+                    distance = Vector3.Distance(pos, enemyPos);
+                    try
+                    {
+                        var enemyPlayer = enemy.Person as Player;
+                        if (enemyPlayer != null)
+                        {
+                            targetId = enemyPlayer.Id;
+                            targetName = enemyPlayer.Profile?.Nickname;
+                        }
+                    }
+                    catch
+                    {
+                        // Swallow — enemy may not be a Player
+                    }
+                }
+
+                TelemetryRecorder.RecordCombatEvent(Time.time, shooter.Id, "shot", targetId, targetName, weaponName, 0f, distance, pos.x, pos.y, pos.z);
             }
             catch (Exception ex)
             {

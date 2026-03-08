@@ -74,14 +74,61 @@ public static class ScoringModifiers
     }
 
     /// <summary>
-    /// Combined personality + raid time modifier for a single task.
+    /// Player proximity scoring multiplier.
+    /// When a human player is nearby, bots become more tactical:
+    /// boost ambush/snipe/investigate, reduce passive movement/looting.
+    /// <paramref name="proximity"/> is 0.0 (no player nearby) to 1.0 (very close).
     /// </summary>
+    public static float PlayerProximityModifier(float proximity, int actionTypeId)
+    {
+        if (proximity <= 0f)
+            return 1f;
+
+        float clampedProximity = proximity > 1f ? 1f : proximity;
+        switch (actionTypeId)
+        {
+            case BotActionTypeId.GoToObjective:
+                return Lerp(1f, 0.7f, clampedProximity);
+            case BotActionTypeId.Ambush:
+                return Lerp(1f, 1.4f, clampedProximity);
+            case BotActionTypeId.Snipe:
+                return Lerp(1f, 1.3f, clampedProximity);
+            case BotActionTypeId.HoldPosition:
+                return Lerp(1f, 1.3f, clampedProximity);
+            case BotActionTypeId.Investigate:
+                return Lerp(1f, 1.3f, clampedProximity);
+            case BotActionTypeId.Loot:
+                return Lerp(1f, 0.7f, clampedProximity);
+            case BotActionTypeId.Vulture:
+                return Lerp(1f, 1.2f, clampedProximity);
+            case BotActionTypeId.Patrol:
+                return Lerp(1f, 0.8f, clampedProximity);
+            case BotActionTypeId.Linger:
+                return Lerp(1f, 0.6f, clampedProximity);
+            default:
+                return 1f;
+        }
+    }
+
     /// <summary>Upper bound for CombinedModifier to prevent score overflow.</summary>
     public const float MaxCombinedModifier = 1.5f;
 
+    /// <summary>
+    /// Combined personality + raid time + player proximity modifier for a single task.
+    /// </summary>
     public static float CombinedModifier(float aggression, float raidTimeNormalized, int actionTypeId)
     {
-        float result = PersonalityModifier(aggression, actionTypeId) * RaidTimeModifier(raidTimeNormalized, actionTypeId);
+        return CombinedModifier(aggression, raidTimeNormalized, 0f, actionTypeId);
+    }
+
+    /// <summary>
+    /// Combined personality + raid time + player proximity modifier for a single task.
+    /// </summary>
+    public static float CombinedModifier(float aggression, float raidTimeNormalized, float playerProximity, int actionTypeId)
+    {
+        float result = PersonalityModifier(aggression, actionTypeId)
+            * RaidTimeModifier(raidTimeNormalized, actionTypeId)
+            * PlayerProximityModifier(playerProximity, actionTypeId);
         if (float.IsNaN(result) || result < 0f)
         {
             return 1.0f;

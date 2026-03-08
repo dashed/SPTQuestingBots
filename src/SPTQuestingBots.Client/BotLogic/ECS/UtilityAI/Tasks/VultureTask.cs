@@ -54,7 +54,7 @@ public sealed class VultureTask : QuestUtilityTask
     {
         float score = Score(entity, CourageThreshold, DetectionRange);
         entity.TaskScores[ordinal] =
-            score * ScoringModifiers.CombinedModifier(entity.Aggression, entity.RaidTimeNormalized, BotActionTypeId);
+            score * ScoringModifiers.CombinedModifier(entity.Aggression, entity.RaidTimeNormalized, entity.HumanPlayerProximity, BotActionTypeId);
     }
 
     internal static float Score(BotEntity entity, int courageThreshold, float detectionRange)

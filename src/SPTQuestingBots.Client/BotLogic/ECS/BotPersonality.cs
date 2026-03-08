@@ -40,25 +40,37 @@ public static class PersonalityHelper
     }
 
     /// <summary>
-    /// Map BotDifficulty ordinal to BotPersonality.
-    /// easy(0)=Cautious, normal(1)=Normal, hard(2)=Aggressive, impossible(3)=Reckless.
-    /// Unknown values get a weighted random fallback.
+    /// Map BotDifficulty ordinal to a personality with randomized spread.
+    /// Each difficulty tier has a primary personality (60%) and adjacent ones (20% each).
+    /// easy(0)→mostly Cautious, normal(1)→mostly Normal, hard(2)→mostly Aggressive, impossible(3)→mostly Reckless.
     /// </summary>
     public static byte FromDifficulty(int difficultyOrdinal, System.Random rng)
     {
+        byte center;
         switch (difficultyOrdinal)
         {
             case 0:
-                return BotPersonality.Cautious;
+                center = BotPersonality.Cautious;
+                break;
             case 1:
-                return BotPersonality.Normal;
+                center = BotPersonality.Normal;
+                break;
             case 2:
-                return BotPersonality.Aggressive;
+                center = BotPersonality.Aggressive;
+                break;
             case 3:
-                return BotPersonality.Reckless;
+                center = BotPersonality.Reckless;
+                break;
             default:
                 return RandomFallback(rng);
         }
+
+        int roll = rng.Next(100);
+        if (roll < 60)
+            return center;
+        if (roll < 80)
+            return (byte)System.Math.Max(0, center - 1);
+        return (byte)System.Math.Min(4, center + 1);
     }
 
     /// <summary>

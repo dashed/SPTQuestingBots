@@ -1234,11 +1234,10 @@ namespace SPTQuestingBots.BotLogic.HiveMind
         private static void updateLodTiers()
         {
             var lodConfig = ConfigController.Config?.Questing?.BotLod;
-            if (lodConfig == null || !lodConfig.Enabled)
-                return;
+            bool lodEnabled = lodConfig != null && lodConfig.Enabled;
 
-            float reducedSqr = lodConfig.ReducedDistance * lodConfig.ReducedDistance;
-            float minimalSqr = lodConfig.MinimalDistance * lodConfig.MinimalDistance;
+            float reducedSqr = lodEnabled ? lodConfig.ReducedDistance * lodConfig.ReducedDistance : 0f;
+            float minimalSqr = lodEnabled ? lodConfig.MinimalDistance * lodConfig.MinimalDistance : 0f;
 
             var entities = ECS.BotEntityBridge.Registry.Entities;
             for (int i = 0; i < entities.Count; i++)
@@ -1253,8 +1252,17 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                     entity.CurrentPositionZ
                 );
 
-                entity.LodTier = BotLodCalculator.ComputeTier(sqrDist, reducedSqr, minimalSqr);
-                entity.LodFrameCounter++;
+                if (lodEnabled)
+                {
+                    entity.LodTier = BotLodCalculator.ComputeTier(sqrDist, reducedSqr, minimalSqr);
+                    entity.LodFrameCounter++;
+                }
+
+                // Player proximity: 1.0 at 0m, 0.0 beyond 150m, linear decay
+                const float proximityRangeSqr = 150f * 150f;
+                entity.HumanPlayerProximity = sqrDist >= proximityRangeSqr
+                    ? 0f
+                    : 1f - sqrDist / proximityRangeSqr;
             }
         }
 

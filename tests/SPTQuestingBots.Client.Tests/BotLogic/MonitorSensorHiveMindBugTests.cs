@@ -620,13 +620,22 @@ public class MonitorSensorHiveMindBugTests
     [Test]
     public void PersonalityHelper_FromDifficulty_AllMappings()
     {
+        // Each difficulty should mostly produce its center personality (60% chance)
         var rng = new System.Random(42);
         Assert.Multiple(() =>
         {
-            Assert.That(PersonalityHelper.FromDifficulty(0, rng), Is.EqualTo(BotPersonality.Cautious));
-            Assert.That(PersonalityHelper.FromDifficulty(1, rng), Is.EqualTo(BotPersonality.Normal));
-            Assert.That(PersonalityHelper.FromDifficulty(2, rng), Is.EqualTo(BotPersonality.Aggressive));
-            Assert.That(PersonalityHelper.FromDifficulty(3, rng), Is.EqualTo(BotPersonality.Reckless));
+            int c0 = 0, c1 = 0, c2 = 0, c3 = 0;
+            for (int i = 0; i < 200; i++)
+            {
+                if (PersonalityHelper.FromDifficulty(0, rng) == BotPersonality.Cautious) c0++;
+                if (PersonalityHelper.FromDifficulty(1, rng) == BotPersonality.Normal) c1++;
+                if (PersonalityHelper.FromDifficulty(2, rng) == BotPersonality.Aggressive) c2++;
+                if (PersonalityHelper.FromDifficulty(3, rng) == BotPersonality.Reckless) c3++;
+            }
+            Assert.That(c0, Is.GreaterThan(80), "Easy should mostly produce Cautious");
+            Assert.That(c1, Is.GreaterThan(80), "Normal should mostly produce Normal");
+            Assert.That(c2, Is.GreaterThan(80), "Hard should mostly produce Aggressive");
+            Assert.That(c3, Is.GreaterThan(80), "Impossible should mostly produce Reckless");
         });
     }
 

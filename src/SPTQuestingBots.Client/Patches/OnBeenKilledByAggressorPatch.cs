@@ -88,6 +88,10 @@ namespace SPTQuestingBots.Patches
                     pos.z
                 );
 
+                string weaponName = null;
+                if (aggressor.HandsController is Player.FirearmController fc)
+                    weaponName = fc.Item?.ShortName?.Localized();
+
                 float distance = UnityEngine.Vector3.Distance(victim.Position, aggressor.Position);
                 TelemetryRecorder.RecordCombatEvent(
                     raidTime,
@@ -95,7 +99,7 @@ namespace SPTQuestingBots.Patches
                     "kill",
                     victim.Id,
                     victim.Profile.Nickname,
-                    null,
+                    weaponName,
                     0f,
                     distance,
                     aggressor.Position.x,

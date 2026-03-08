@@ -348,6 +348,15 @@ public sealed class BotEntity : IEquatable<BotEntity>
     /// </summary>
     public float RaidTimeNormalized;
 
+    // ── Player Proximity ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Normalized proximity to the nearest human player (0.0 = far/none, 1.0 = very close).
+    /// Synced each HiveMind tick from HumanPlayerCache distances.
+    /// Used by ScoringModifiers to make bots more tactical near players.
+    /// </summary>
+    public float HumanPlayerProximity;
+
     // ── Investigate State ──────────────────────────────────────────────
 
     /// <summary>Whether this bot is currently investigating a gunfire event.</summary>

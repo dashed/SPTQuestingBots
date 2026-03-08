@@ -64,7 +64,7 @@ public sealed class PatrolTask : QuestUtilityTask
     {
         float score = Score(entity, CurrentMapRoutes);
         entity.TaskScores[ordinal] =
-            score * ScoringModifiers.CombinedModifier(entity.Aggression, entity.RaidTimeNormalized, BotActionTypeId);
+            score * ScoringModifiers.CombinedModifier(entity.Aggression, entity.RaidTimeNormalized, entity.HumanPlayerProximity, BotActionTypeId);
     }
 
     internal static float Score(BotEntity entity, PatrolRoute[] routes)
