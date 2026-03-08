@@ -57,8 +57,11 @@ public class PersonalityRandomizationTests
             seen.Add(PersonalityHelper.FromDifficulty(0, rng));
 
         Assert.That(seen, Does.Contain(BotPersonality.Cautious), "Easy difficulty should produce Cautious");
-        Assert.That(seen, Does.Contain(BotPersonality.Timid).Or.Contain(BotPersonality.Normal),
-            "Easy difficulty should produce adjacent personalities (Timid or Normal)");
+        Assert.That(
+            seen,
+            Does.Contain(BotPersonality.Timid).Or.Contain(BotPersonality.Normal),
+            "Easy difficulty should produce adjacent personalities (Timid or Normal)"
+        );
     }
 
     [Test]
@@ -96,8 +99,7 @@ public class PersonalityRandomizationTests
             for (int i = 0; i < 1000; i++)
             {
                 byte p = PersonalityHelper.FromDifficulty(difficulty, rng);
-                Assert.That(p, Is.InRange((byte)0, (byte)4),
-                    $"Personality {p} from difficulty {difficulty} is out of range");
+                Assert.That(p, Is.InRange((byte)0, (byte)4), $"Personality {p} from difficulty {difficulty} is out of range");
             }
         }
     }

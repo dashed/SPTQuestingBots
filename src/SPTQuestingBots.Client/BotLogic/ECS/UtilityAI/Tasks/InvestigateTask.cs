@@ -51,7 +51,8 @@ public sealed class InvestigateTask : QuestUtilityTask
     {
         float score = Score(entity, IntensityThreshold, DetectionRange);
         entity.TaskScores[ordinal] =
-            score * ScoringModifiers.CombinedModifier(entity.Aggression, entity.RaidTimeNormalized, entity.HumanPlayerProximity, BotActionTypeId);
+            score
+            * ScoringModifiers.CombinedModifier(entity.Aggression, entity.RaidTimeNormalized, entity.HumanPlayerProximity, BotActionTypeId);
     }
 
     internal static float Score(BotEntity entity, int intensityThreshold, float detectionRange)

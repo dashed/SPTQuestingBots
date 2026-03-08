@@ -36,7 +36,8 @@ public sealed class LingerTask : QuestUtilityTask
     {
         float score = Score(entity, BaseScore);
         entity.TaskScores[ordinal] =
-            score * ScoringModifiers.CombinedModifier(entity.Aggression, entity.RaidTimeNormalized, entity.HumanPlayerProximity, BotActionTypeId);
+            score
+            * ScoringModifiers.CombinedModifier(entity.Aggression, entity.RaidTimeNormalized, entity.HumanPlayerProximity, BotActionTypeId);
     }
 
     internal static float Score(BotEntity entity, float baseScore)

@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.0] - 2026-03-07
+
+### Added
+- **SQLite telemetry system** — structured per-raid telemetry database (`telemetry.db`) for debugging and tuning. Captures bot lifecycle events, task scoring decisions, combat events, and performance metrics. Queryable post-raid via standard SQLite tools. Enabled by default, configurable via `telemetry` section in config.json
+  - Extract event telemetry for both internal and SAIN extraction paths
+  - Player proximity scoring data in task telemetry
+  - Database probed at game startup for early validation
+- **Vanilla-like PMC spawning enabled by default** — `bot_spawns.enabled` now defaults to `true` with vanilla-accurate `max_alive_bots` per map (factory=7, customs=11, woods=13, shoreline=13, lighthouse=11, reserve=10, interchange=13, labs=9, streets=15, ground zero=9/11). PMCs spawn at actual EFT player spawn points using `ESpawnCategoryMask.Player`
+- **Randomized bot personalities** — bot personality assignment now randomized across Timid→Reckless spectrum for more varied behavior
+- **External mod compatibility diagnostics** — structured startup logging for SAIN and other detected mods with version, interop status, and feature flags
+- **SAIN repo contract CI** — CI coverage for SAIN interop contract stability
+- **Startup and compatibility E2E tests** — end-to-end coverage for plugin initialization and external mod detection
+- 4759 tests total (4608 client + 110 server + 41 inspector), up from 2131
+
+### Changed
+- **Server plugin load priority** — changed from `typePriority: 100` to `OnLoadOrder.PostDBModLoader + 1` (400001), ensuring database is initialized before mod configuration runs
+- **Suppressed gunfire hearing range** — reduced `max_distance_gunfire_suppressed` from 50m to 25m (half of unsuppressed range) for more realistic suppressor behavior
+- **SQLite backend** — switched from Microsoft.Data.Sqlite to Unity's Mono.Data.Sqlite for better Unity/Mono runtime compatibility
+- **Makefile install target** — now removes stale root-level plugin DLLs to prevent BepInEx duplicate-plugin conflicts
+
+### Fixed
+- 26 bugs across 3 audit rounds covering concurrency, math safety, state machines, patches, config wiring, error recovery, resource lifecycle, data flow, and cross-feature interactions
+- Server crash on startup ("The database has not been initialized!") when `bot_spawns.enabled` was true — load priority was too early
+- Shared RNG in RaidHelpers causing identical random results for bots spawned in the same millisecond
+- Dead bot lifecycle and bidirectional boss hostility edge cases
+- Combat event pipeline incorrectly gated behind vulture config — decoupled so combat events work independently
+- LootingBotsInterop signature validation
+- Mono.Data.Sqlite native library mismatch on Windows
+- SQLitePCL provider initialization ordering
+- UtilityAI.Tasks namespace resolution in BotObjectiveLayer build
+
 ## [1.13.3] - 2026-02-11
 
 ### Added

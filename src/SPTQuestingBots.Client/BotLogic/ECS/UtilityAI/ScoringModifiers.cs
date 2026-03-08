@@ -126,7 +126,8 @@ public static class ScoringModifiers
     /// </summary>
     public static float CombinedModifier(float aggression, float raidTimeNormalized, float playerProximity, int actionTypeId)
     {
-        float result = PersonalityModifier(aggression, actionTypeId)
+        float result =
+            PersonalityModifier(aggression, actionTypeId)
             * RaidTimeModifier(raidTimeNormalized, actionTypeId)
             * PlayerProximityModifier(playerProximity, actionTypeId);
         if (float.IsNaN(result) || result < 0f)

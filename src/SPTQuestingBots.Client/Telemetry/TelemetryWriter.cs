@@ -4,12 +4,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using SPTQuestingBots.Controllers;
 #if UNITY_MONO
 using Mono.Data.Sqlite;
 #else
 using Microsoft.Data.Sqlite;
 #endif
-using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.Telemetry;
 

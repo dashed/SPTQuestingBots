@@ -109,7 +109,19 @@ namespace SPTQuestingBots.Patches
                     }
                 }
 
-                TelemetryRecorder.RecordCombatEvent(Time.time, shooter.Id, "shot", targetId, targetName, weaponName, 0f, distance, pos.x, pos.y, pos.z);
+                TelemetryRecorder.RecordCombatEvent(
+                    Time.time,
+                    shooter.Id,
+                    "shot",
+                    targetId,
+                    targetName,
+                    weaponName,
+                    0f,
+                    distance,
+                    pos.x,
+                    pos.y,
+                    pos.z
+                );
             }
             catch (Exception ex)
             {

@@ -192,6 +192,8 @@ install: deploy ## Deploy and install to SPT_DIR (wipes old mod files first)
 	@echo "Installing to $(SPT_DIR)..."
 	@rm -rf "$(SPT_DIR)/SPT/user/mods/SPTQuestingBots"
 	@rm -rf "$(SPT_DIR)/BepInEx/plugins/DanW-SPTQuestingBots"
+	@# Remove stale DLL from old deploy layout (pre-subfolder) to prevent BepInEx duplicate-plugin conflicts
+	@rm -f "$(SPT_DIR)/BepInEx/plugins/SPTQuestingBots.dll"
 	@cp -r $(DEPLOY_DIR)/* "$(SPT_DIR)/"
 	@echo "Installed to $(SPT_DIR)/"
 

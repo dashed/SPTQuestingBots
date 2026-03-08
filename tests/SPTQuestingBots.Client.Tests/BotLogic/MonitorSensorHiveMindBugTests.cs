@@ -624,13 +624,20 @@ public class MonitorSensorHiveMindBugTests
         var rng = new System.Random(42);
         Assert.Multiple(() =>
         {
-            int c0 = 0, c1 = 0, c2 = 0, c3 = 0;
+            int c0 = 0,
+                c1 = 0,
+                c2 = 0,
+                c3 = 0;
             for (int i = 0; i < 200; i++)
             {
-                if (PersonalityHelper.FromDifficulty(0, rng) == BotPersonality.Cautious) c0++;
-                if (PersonalityHelper.FromDifficulty(1, rng) == BotPersonality.Normal) c1++;
-                if (PersonalityHelper.FromDifficulty(2, rng) == BotPersonality.Aggressive) c2++;
-                if (PersonalityHelper.FromDifficulty(3, rng) == BotPersonality.Reckless) c3++;
+                if (PersonalityHelper.FromDifficulty(0, rng) == BotPersonality.Cautious)
+                    c0++;
+                if (PersonalityHelper.FromDifficulty(1, rng) == BotPersonality.Normal)
+                    c1++;
+                if (PersonalityHelper.FromDifficulty(2, rng) == BotPersonality.Aggressive)
+                    c2++;
+                if (PersonalityHelper.FromDifficulty(3, rng) == BotPersonality.Reckless)
+                    c3++;
             }
             Assert.That(c0, Is.GreaterThan(80), "Easy should mostly produce Cautious");
             Assert.That(c1, Is.GreaterThan(80), "Normal should mostly produce Normal");

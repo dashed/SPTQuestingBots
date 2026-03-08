@@ -64,7 +64,8 @@ public class BotPersonalityTests
         var rng = new System.Random(42);
         int cautiousCount = 0;
         for (int i = 0; i < 100; i++)
-            if (PersonalityHelper.FromDifficulty(0, rng) == BotPersonality.Cautious) cautiousCount++;
+            if (PersonalityHelper.FromDifficulty(0, rng) == BotPersonality.Cautious)
+                cautiousCount++;
         Assert.That(cautiousCount, Is.GreaterThan(40), "Easy difficulty should mostly produce Cautious");
     }
 
@@ -74,7 +75,8 @@ public class BotPersonalityTests
         var rng = new System.Random(42);
         int normalCount = 0;
         for (int i = 0; i < 100; i++)
-            if (PersonalityHelper.FromDifficulty(1, rng) == BotPersonality.Normal) normalCount++;
+            if (PersonalityHelper.FromDifficulty(1, rng) == BotPersonality.Normal)
+                normalCount++;
         Assert.That(normalCount, Is.GreaterThan(40), "Normal difficulty should mostly produce Normal");
     }
 
@@ -84,7 +86,8 @@ public class BotPersonalityTests
         var rng = new System.Random(42);
         int aggressiveCount = 0;
         for (int i = 0; i < 100; i++)
-            if (PersonalityHelper.FromDifficulty(2, rng) == BotPersonality.Aggressive) aggressiveCount++;
+            if (PersonalityHelper.FromDifficulty(2, rng) == BotPersonality.Aggressive)
+                aggressiveCount++;
         Assert.That(aggressiveCount, Is.GreaterThan(40), "Hard difficulty should mostly produce Aggressive");
     }
 
@@ -94,7 +97,8 @@ public class BotPersonalityTests
         var rng = new System.Random(42);
         int recklessCount = 0;
         for (int i = 0; i < 100; i++)
-            if (PersonalityHelper.FromDifficulty(3, rng) == BotPersonality.Reckless) recklessCount++;
+            if (PersonalityHelper.FromDifficulty(3, rng) == BotPersonality.Reckless)
+                recklessCount++;
         Assert.That(recklessCount, Is.GreaterThan(40), "Impossible difficulty should mostly produce Reckless");
     }
 

@@ -1260,9 +1260,7 @@ namespace SPTQuestingBots.BotLogic.HiveMind
 
                 // Player proximity: 1.0 at 0m, 0.0 beyond 150m, linear decay
                 const float proximityRangeSqr = 150f * 150f;
-                entity.HumanPlayerProximity = sqrDist >= proximityRangeSqr
-                    ? 0f
-                    : 1f - sqrDist / proximityRangeSqr;
+                entity.HumanPlayerProximity = sqrDist >= proximityRangeSqr ? 0f : 1f - sqrDist / proximityRangeSqr;
             }
         }
 
