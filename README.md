@@ -277,8 +277,8 @@ For detailed architecture documentation, see [docs/architecture.md](docs/archite
 | Waypoints | 1.7.1+ |
 
 **Highly recommended:**
-- [SAIN](https://hub.sp-tarkov.com/files/file/1062-sain-2-0-solarint-s-ai-modifications-full-ai-combat-system-replacement/) (4.0.3+) -- AI combat and extraction behavior
-- [Looting Bots](https://hub.sp-tarkov.com/files/file/1096-looting-bots/) (1.5.2+) -- Bot looting behavior
+- [SAIN](https://hub.sp-tarkov.com/files/file/1062-sain-2-0-solarint-s-ai-modifications-full-ai-combat-system-replacement/) (4.0.3+) -- AI combat overhaul. QuestingBots handles objectives and spawning; SAIN handles combat, hearing, and extraction pathfinding. See [SAIN Integration](#sain-integration) for details.
+- [Looting Bots](https://hub.sp-tarkov.com/files/file/1096-looting-bots/) (1.5.2+) -- Bot looting behavior. QuestingBots auto-detects and defers to it when installed.
 
 ---
 
@@ -309,7 +309,40 @@ Launch SPT. Configure options via the F12 BepInEx menu in-game.
 
 ## Mod Compatibility
 
+### SAIN Integration
+
+QuestingBots and [SAIN](https://hub.sp-tarkov.com/files/file/1062-sain-2-0-solarint-s-ai-modifications-full-ai-combat-system-replacement/) are complementary mods that solve different problems:
+
+| Concern | QuestingBots | SAIN |
+|---------|-------------|------|
+| **Spawning** | Full control -- when, where, how many PMCs/PScavs spawn | No spawn control |
+| **Objectives** | Where bots go -- quests, patrols, zone movement, looting | No objective system |
+| **Combat AI** | Yields to SAIN via lower BigBrain priority | Full overhaul -- aiming, flanking, grenades, cover, squad tactics |
+| **Extraction** | Controls when bots extract (quest completion, raid time) | Controls how bots extract (pathfinding to exfil) |
+| **Hearing** | Delegates hearing suppression to SAIN during questing | Complete hearing system |
+
+**How they cooperate via BigBrain:**
+
+BigBrain evaluates layers highest-priority-first. SAIN combat layers (~35--50) always take priority over QuestingBots questing (18). When a bot sees an enemy, SAIN handles combat. When combat ends, QuestingBots resumes questing.
+
+```
+Priority ~80: SAIN AvoidThreat (grenade flee)
+Priority ~50: SAIN CombatSquad
+Priority ~35: SAIN CombatSolo
+Priority  26: QuestingBots Regrouping
+Priority ~20: SAIN Extract
+Priority  19: QuestingBots Following
+Priority  18: QuestingBots Questing
+```
+
+**Interop API:** When SAIN is installed, QuestingBots uses SAIN's extraction system (via reflection-based interop) instead of its own. It can also query SAIN to check path safety, suppress hearing during questing transitions, and read bot personality. In return, SAIN detects QuestingBots and disables its own time-based extraction -- deferring extraction timing decisions to QuestingBots.
+
+Both mods have independent personality systems (SAIN for combat behavior, QuestingBots for utility scoring) that don't conflict.
+
+### Compatibility List
+
 **Compatible:**
+- SAIN (4.0.3+) -- recommended, see above
 - SWAG + DONUTS, Late to the Party, Performance Improvements (0.2.4+)
 
 **Partially compatible:**
