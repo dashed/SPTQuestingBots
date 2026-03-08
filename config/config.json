@@ -513,7 +513,7 @@
 		}
 	},
 	"bot_spawns": {
-		"enabled": false,
+		"enabled": true,
 		"blacklisted_pmc_bot_brains": [ "bossKilla", "bossTagilla", "exUsec", "followerGluharAssault", "followerGluharProtect", "crazyAssaultEvent", "bossKnight" ],
 		"spawn_retry_time": 10,
 		"delay_game_start_until_bot_gen_finishes": true,
@@ -548,19 +548,19 @@
 			"max_initial_rogues": 10
 		},
 		"max_alive_bots": {
-			"default": 6,
+			"default": 10,
 			"factory4_day": 7,
-			"factory4_night": 7,
-			"bigmap": 7,
-			"woods": 8,
-			"shoreline": 7,
-			"lighthouse": 7,
-			"rezervbase": 7,
-			"interchange": 8,
+			"factory4_night": 5,
+			"bigmap": 11,
+			"woods": 13,
+			"shoreline": 13,
+			"lighthouse": 11,
+			"rezervbase": 10,
+			"interchange": 13,
 			"laboratory": 9,
-			"tarkovstreets": 8,
-			"sandbox": 7,
-			"sandbox_high": 7
+			"tarkovstreets": 15,
+			"sandbox": 9,
+			"sandbox_high": 11
 		},
 		"pmc_hostility_adjustments": {
 			"enabled": true,

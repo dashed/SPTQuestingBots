@@ -179,9 +179,9 @@ public class FirstRunInstallTests
     }
 
     [Test]
-    public void DefaultConfig_BotSpawnsDisabled()
+    public void DefaultConfig_BotSpawnsEnabled()
     {
-        Assert.That(JsonValue<bool>("bot_spawns.enabled"), Is.False, "Bot spawns should be disabled by default (requires opt-in)");
+        Assert.That(JsonValue<bool>("bot_spawns.enabled"), Is.True, "Bot spawns should be enabled by default for vanilla-like PMC counts");
     }
 
     [Test]
