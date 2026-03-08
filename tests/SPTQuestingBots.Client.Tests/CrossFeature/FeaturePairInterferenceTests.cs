@@ -342,13 +342,13 @@ public class FeaturePairInterferenceTests
     // ================================================================
 
     [Test]
-    public void FollowerTaskManager_HasNoLootTask()
+    public void FollowerTaskManager_Has6Tasks()
     {
-        // SquadTaskFactory creates a manager with only 2 tasks
+        // SquadTaskFactory creates a manager with 6 tasks (2 tactical + 4 opportunistic)
         Assert.That(
             SquadTaskFactory.TaskCount,
-            Is.EqualTo(2),
-            "Follower task manager should have exactly 2 tasks (GoTo + Hold tactical position)"
+            Is.EqualTo(6),
+            "Follower task manager should have 6 tasks (GoTo + Hold tactical + Loot + Investigate + Linger + Patrol)"
         );
     }
 
@@ -375,10 +375,12 @@ public class FeaturePairInterferenceTests
     }
 
     [Test]
-    public void Follower_NeverSeesLootScoring()
+    public void Follower_TacticalTask_BeatsLoot_WhenFarFromPosition()
     {
-        // The follower task manager only has GoToTacticalPosition and HoldTacticalPosition
-        // LootTask is in QuestTaskFactory but not SquadTaskFactory
+        // SquadTaskFactory now includes LootTask, but GoToTacticalPosition
+        // should still win when the follower is far from tactical position
+        // because GoToTactical base score (0.70) > LootTask max (0.55)
+        var manager = SquadTaskFactory.Create();
         var entity = CreateEntity(1);
         entity.Boss = CreateEntity(0);
         entity.HasTacticalPosition = true;
@@ -386,16 +388,16 @@ public class FeaturePairInterferenceTests
         entity.TacticalPositionZ = 200f;
         entity.HasLootTarget = true;
         entity.LootTargetValue = 50000f; // very valuable loot
-
-        var goTo = new GoToTacticalPositionTask();
-        var hold = new HoldTacticalPositionTask();
-        var fManager = new UtilityTaskManager(new UtilityTask[] { goTo, hold });
+        entity.InventorySpaceFree = 5f;
         entity.TaskScores = new float[SquadTaskFactory.TaskCount];
 
-        fManager.ScoreAndPick(entity);
+        manager.ScoreAndPick(entity);
 
-        // Follower should be assigned to GoToTacticalPosition (far from tac pos)
-        Assert.That(entity.TaskAssignment.Task, Is.SameAs(goTo), "Follower should navigate to tactical position, not loot");
+        // GoToTacticalPosition score should still beat LootTask
+        Assert.IsInstanceOf<GoToTacticalPositionTask>(
+            entity.TaskAssignment.Task,
+            "GoToTactical should outscore loot when follower is far from tactical position"
+        );
     }
 
     [Test]

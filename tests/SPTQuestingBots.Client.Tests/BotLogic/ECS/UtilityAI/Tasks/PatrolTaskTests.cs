@@ -54,12 +54,12 @@ public class PatrolTaskTests
     }
 
     [Test]
-    public void Score_HasActiveObjective_ReturnsZero()
+    public void Score_HasActiveObjective_StillScores()
     {
         _entity.HasActiveObjective = true;
         _entity.PatrolRouteIndex = 0;
         float score = PatrolTask.Score(_entity, _routes);
-        Assert.That(score, Is.EqualTo(0f));
+        Assert.That(score, Is.GreaterThan(0f), "Patrol should not gate on HasActiveObjective");
     }
 
     [Test]

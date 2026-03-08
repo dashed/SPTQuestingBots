@@ -181,11 +181,11 @@ public class DataHandoffTests
     // ── Follower Task Manager Boundary ───────────────────────────
 
     [Test]
-    public void FollowerTaskManager_OnlyTwoTasks_ScoresCorrectIndices()
+    public void FollowerTaskManager_ScoresCorrectIndices()
     {
         var manager = SquadTaskFactory.Create();
         Assert.That(manager.Tasks.Length, Is.EqualTo(SquadTaskFactory.TaskCount));
-        Assert.That(manager.Tasks.Length, Is.EqualTo(2));
+        Assert.That(manager.Tasks.Length, Is.EqualTo(6));
 
         var entity = new BotEntity(0) { IsActive = true, HasTacticalPosition = true };
         // Need boss for tactical tasks (HasBoss is computed from Boss != null)

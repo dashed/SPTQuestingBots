@@ -371,13 +371,17 @@ public class CoreSystemsReadmeTests
     }
 
     [Test]
-    public void Squad_SquadTaskFactory_HasTwoTasks()
+    public void Squad_SquadTaskFactory_HasSixTasks()
     {
-        // README: Two follower utility tasks
+        // README: Six follower utility tasks (2 tactical + 4 opportunistic)
         var src = ReadSource("BotLogic/ECS/UtilityAI/SquadTaskFactory.cs");
-        Assert.That(src, Does.Contain("TaskCount = 2"), "SquadTaskFactory should have 2 tasks");
+        Assert.That(src, Does.Contain("TaskCount = 6"), "SquadTaskFactory should have 6 tasks");
         Assert.That(src, Does.Contain("GoToTacticalPositionTask"), "Should include GoToTacticalPositionTask");
         Assert.That(src, Does.Contain("HoldTacticalPositionTask"), "Should include HoldTacticalPositionTask");
+        Assert.That(src, Does.Contain("LootTask"), "Should include LootTask");
+        Assert.That(src, Does.Contain("InvestigateTask"), "Should include InvestigateTask");
+        Assert.That(src, Does.Contain("LingerTask"), "Should include LingerTask");
+        Assert.That(src, Does.Contain("PatrolTask"), "Should include PatrolTask");
     }
 
     [Test]

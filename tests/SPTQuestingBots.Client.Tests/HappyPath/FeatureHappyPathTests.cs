@@ -36,11 +36,11 @@ public class FeatureHappyPathTests
     }
 
     [Test]
-    public void QuestingHappyPath_SquadTaskFactory_Creates2Tasks()
+    public void QuestingHappyPath_SquadTaskFactory_Creates6Tasks()
     {
-        Assert.That(SquadTaskFactory.TaskCount, Is.EqualTo(2));
+        Assert.That(SquadTaskFactory.TaskCount, Is.EqualTo(6));
         var manager = SquadTaskFactory.Create();
-        Assert.That(manager.Tasks.Length, Is.EqualTo(2));
+        Assert.That(manager.Tasks.Length, Is.EqualTo(6));
     }
 
     [Test]

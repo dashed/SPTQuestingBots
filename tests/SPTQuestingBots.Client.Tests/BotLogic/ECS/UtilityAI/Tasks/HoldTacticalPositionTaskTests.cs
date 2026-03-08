@@ -8,7 +8,16 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI.Tasks;
 [TestFixture]
 public class HoldTacticalPositionTaskTests
 {
-    private static BotEntity CreateFollowerWithTacticalPosition(float posX, float posY, float posZ, float tactX, float tactY, float tactZ)
+    private static BotEntity CreateFollowerWithTacticalPosition(
+        float posX,
+        float posY,
+        float posZ,
+        float tactX,
+        float tactY,
+        float tactZ,
+        float aggression = 0f,
+        float raidTime = 0f
+    )
     {
         var boss = new BotEntity(0);
         var entity = new BotEntity(1);
@@ -20,6 +29,8 @@ public class HoldTacticalPositionTaskTests
         entity.TacticalPositionX = tactX;
         entity.TacticalPositionY = tactY;
         entity.TacticalPositionZ = tactZ;
+        entity.Aggression = aggression;
+        entity.RaidTimeNormalized = raidTime;
         entity.TaskScores = new float[SquadTaskFactory.TaskCount];
         return entity;
     }
@@ -91,14 +102,18 @@ public class HoldTacticalPositionTaskTests
     }
 
     [Test]
-    public void ScoreEntity_WritesToTaskScores()
+    public void ScoreEntity_AppliesCombinedModifier()
     {
         var task = new HoldTacticalPositionTask();
-        var entity = CreateFollowerWithTacticalPosition(0, 0, 0, 1, 0, 0);
+        var entity = CreateFollowerWithTacticalPosition(0, 0, 0, 1, 0, 0, aggression: 0.5f, raidTime: 0.5f);
 
         task.ScoreEntity(0, entity);
 
-        Assert.AreEqual(HoldTacticalPositionTask.BaseScore, entity.TaskScores[0], 0.001f);
+        float rawScore = HoldTacticalPositionTask.Score(entity);
+        float modifier = ScoringModifiers.CombinedModifier(0.5f, 0.5f, 0f, BotActionTypeId.HoldPosition);
+        float expected = rawScore * modifier;
+
+        Assert.AreEqual(expected, entity.TaskScores[0], 0.001f);
     }
 
     [Test]

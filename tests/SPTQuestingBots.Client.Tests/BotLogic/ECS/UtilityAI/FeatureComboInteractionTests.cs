@@ -701,10 +701,13 @@ public class PatrolQuestTransitionTests
     }
 
     [Test]
-    public void HasQuest_PatrolDoesNotScore()
+    public void HasQuest_PatrolStillScores()
     {
         var entity = new BotEntity(0);
         entity.HasActiveObjective = true;
+        entity.CurrentPositionX = 50f;
+        entity.CurrentPositionZ = 50f;
+        entity.PatrolRouteIndex = 0;
 
         var routes = new[]
         {
@@ -719,7 +722,7 @@ public class PatrolQuestTransitionTests
 
         float patrolScore = PatrolTask.Score(entity, routes);
 
-        Assert.AreEqual(0f, patrolScore, "Patrol should return 0 when HasActiveObjective is true");
+        Assert.That(patrolScore, Is.GreaterThan(0f), "Patrol should score even when HasActiveObjective is true (decoupled)");
     }
 
     [Test]

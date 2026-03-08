@@ -9,16 +9,16 @@ namespace SPTQuestingBots.Client.Tests.BotLogic.ECS.UtilityAI;
 public class SquadTaskFactoryTests
 {
     [Test]
-    public void TaskCount_Is2()
+    public void TaskCount_Is6()
     {
-        Assert.AreEqual(2, SquadTaskFactory.TaskCount);
+        Assert.AreEqual(6, SquadTaskFactory.TaskCount);
     }
 
     [Test]
-    public void Create_Returns2Tasks()
+    public void Create_Returns6Tasks()
     {
         var manager = SquadTaskFactory.Create();
-        Assert.AreEqual(2, manager.Tasks.Length);
+        Assert.AreEqual(6, manager.Tasks.Length);
     }
 
     [Test]
@@ -33,6 +33,34 @@ public class SquadTaskFactoryTests
     {
         var manager = SquadTaskFactory.Create();
         Assert.IsInstanceOf<HoldTacticalPositionTask>(manager.Tasks[1]);
+    }
+
+    [Test]
+    public void Create_ThirdTaskIsLoot()
+    {
+        var manager = SquadTaskFactory.Create();
+        Assert.IsInstanceOf<LootTask>(manager.Tasks[2]);
+    }
+
+    [Test]
+    public void Create_FourthTaskIsInvestigate()
+    {
+        var manager = SquadTaskFactory.Create();
+        Assert.IsInstanceOf<InvestigateTask>(manager.Tasks[3]);
+    }
+
+    [Test]
+    public void Create_FifthTaskIsLinger()
+    {
+        var manager = SquadTaskFactory.Create();
+        Assert.IsInstanceOf<LingerTask>(manager.Tasks[4]);
+    }
+
+    [Test]
+    public void Create_SixthTaskIsPatrol()
+    {
+        var manager = SquadTaskFactory.Create();
+        Assert.IsInstanceOf<PatrolTask>(manager.Tasks[5]);
     }
 
     [Test]

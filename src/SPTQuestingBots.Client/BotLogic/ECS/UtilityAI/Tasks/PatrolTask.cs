@@ -76,12 +76,6 @@ public sealed class PatrolTask : QuestUtilityTask
             return 0f;
         }
 
-        // Has active quest objective — quest takes priority
-        if (entity.HasActiveObjective)
-        {
-            return 0f;
-        }
-
         // No routes available for this map
         if (routes == null || routes.Length == 0)
         {

@@ -812,15 +812,16 @@ public class EdgeCaseGameScenarioTests
     }
 
     [Test]
-    public void Patrol_HasActiveObjective_ScoresZero()
+    public void Patrol_HasActiveObjective_StillScores()
     {
         var bot = CreateBot(0, x: 100f, z: 100f);
         bot.HasActiveObjective = true; // Quest active
+        bot.PatrolRouteIndex = 0;
 
         var routes = new[] { new PatrolRoute("Route", PatrolRouteType.Perimeter, new[] { new PatrolWaypoint(200f, 0f, 200f) }) };
 
         float score = PatrolTask.Score(bot, routes);
-        Assert.AreEqual(0f, score, "Patrol should score 0 when bot has active objective");
+        Assert.That(score, Is.GreaterThan(0f), "Patrol should not gate on HasActiveObjective");
     }
 
     [Test]

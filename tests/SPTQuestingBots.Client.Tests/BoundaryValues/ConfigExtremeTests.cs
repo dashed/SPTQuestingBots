@@ -183,15 +183,17 @@ public class ConfigExtremeTests
     }
 
     [Test]
-    public void PatrolTask_HasActiveObjective_ScoresZero()
+    public void PatrolTask_HasActiveObjective_StillScores()
     {
         var entity = CreateEntity();
         entity.HasActiveObjective = true;
         entity.PatrolRouteIndex = 0;
+        entity.CurrentPositionX = 50f;
+        entity.CurrentPositionZ = 50f;
 
         var route = new PatrolRoute("Test", PatrolRouteType.Perimeter, new[] { new PatrolWaypoint(100f, 0f, 100f) });
         float score = PatrolTask.Score(entity, new[] { route });
-        Assert.That(score, Is.EqualTo(0f));
+        Assert.That(score, Is.GreaterThan(0f), "Patrol should not gate on HasActiveObjective");
     }
 
     // ── CombatEventRegistry: capacity edge cases ────────────────

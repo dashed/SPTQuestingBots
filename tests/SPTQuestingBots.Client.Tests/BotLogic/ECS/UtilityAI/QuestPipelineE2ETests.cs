@@ -1418,7 +1418,7 @@ public class TaskScoresArrayE2ETests
     {
         var manager = SquadTaskFactory.Create();
         var bot = new BotEntity(0);
-        bot.TaskScores = new float[QuestTaskFactory.TaskCount]; // 14 slots, only 2 needed
+        bot.TaskScores = new float[QuestTaskFactory.TaskCount]; // 14 slots, only 6 needed
         bot.HasTacticalPosition = true;
         bot.Boss = new BotEntity(99);
         bot.TacticalPositionX = 200f;
