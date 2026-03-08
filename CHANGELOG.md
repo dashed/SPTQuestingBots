@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.1] - 2026-03-08
+
+### Fixed
+- **PMC spawning broken by stale BepInEx config** — `ConfigSync.SyncToModConfig()` overwrote server-provided `BotSpawns.Enabled` with a stale `false` saved in the BepInEx `.cfg` file. Generator registration now runs after ConfigSync so the decision uses the final (F12-synced) config value
+- **PMC generation crash (NullReferenceException)** — `BotSpawner` resolution in `GenerateBotGroup()` was outside the retry loop's try/catch, causing an immediate unrecoverable crash when `BotsController` wasn't initialized yet. Moved inside the retry loop with null-propagation
+- **PMC generation timeout (BotsController not ready)** — added `waitForBotsController()` poll loop (500ms intervals, 30s timeout) before starting bot generation, ensuring `BotsController.BotSpawner` is available. Previously the retry window was ~1.5s total which was insufficient
+- **InvalidOperationException not retried** — the retry catch block only handled `NullReferenceException`; the "BotSpawner not available yet" `InvalidOperationException` was caught by `catch (Exception) { throw; }` and immediately re-thrown with zero retries
+
+### Changed
+- Increased `MaxGenerateBotGroupRetryDelayMs` from 250ms to 1000ms for more resilient retry behavior
+- Added version info to server plugin startup log
+- Makefile `install` target now handles locked server DLLs gracefully and verifies critical files after install
+
 ## [1.14.0] - 2026-03-07
 
 ### Added

@@ -108,6 +108,10 @@ public class QuestingBotsServerPlugin(
     {
         var config = configLoader.Config;
 
+        string serverVersion =
+            loadedMods.Select(m => m.ModMetadata).OfType<QuestingBotsMetadata>().FirstOrDefault()?.Version?.ToString() ?? "unknown";
+        commonUtils.LogInfo("QuestingBots server plugin v" + serverVersion + " loading...", alwaysShow: true);
+
         // ── Early exit if the mod is disabled ──────────────────────────
         if (!config.Enabled)
         {

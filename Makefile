@@ -190,12 +190,35 @@ deploy: build ## Build and create install layout in build/deploy/
 
 install: deploy ## Deploy and install to SPT_DIR (wipes old mod files first)
 	@echo "Installing to $(SPT_DIR)..."
-	@rm -rf "$(SPT_DIR)/SPT/user/mods/SPTQuestingBots"
-	@rm -rf "$(SPT_DIR)/BepInEx/plugins/DanW-SPTQuestingBots"
+	@# Wipe old install (ignore locked-file errors from running server/game)
+	@rm -rf "$(SPT_DIR)/SPT/user/mods/SPTQuestingBots" 2>/dev/null || true
+	@rm -rf "$(SPT_DIR)/BepInEx/plugins/DanW-SPTQuestingBots" 2>/dev/null || true
 	@# Remove stale DLL from old deploy layout (pre-subfolder) to prevent BepInEx duplicate-plugin conflicts
-	@rm -f "$(SPT_DIR)/BepInEx/plugins/SPTQuestingBots.dll"
-	@cp -r $(DEPLOY_DIR)/* "$(SPT_DIR)/"
-	@echo "Installed to $(SPT_DIR)/"
+	@rm -f "$(SPT_DIR)/BepInEx/plugins/SPTQuestingBots.dll" 2>/dev/null || true
+	@# Install client plugin
+	@mkdir -p "$(SPT_DIR)/BepInEx/plugins/DanW-SPTQuestingBots"
+	@cp $(DEPLOY_DIR)/BepInEx/plugins/DanW-SPTQuestingBots/SPTQuestingBots.dll \
+	    "$(SPT_DIR)/BepInEx/plugins/DanW-SPTQuestingBots/"
+	@# Install server plugin (DLLs may be locked by running server)
+	@mkdir -p "$(SPT_DIR)/SPT/user/mods/SPTQuestingBots"
+	@_fail=0; \
+	for f in SPTQuestingBots.Server.dll Newtonsoft.Json.dll; do \
+	    cp "$(DEPLOY_DIR)/SPT/user/mods/SPTQuestingBots/$$f" \
+	       "$(SPT_DIR)/SPT/user/mods/SPTQuestingBots/$$f" 2>/dev/null \
+	    || { echo "  WARNING: Could not update $$f (server running?). Restart server and re-run."; _fail=1; }; \
+	done; \
+	if [ "$$_fail" = "1" ]; then \
+	    echo "  Some server DLLs were skipped. Restart the SPT server, then run: make install"; \
+	fi
+	@# Config and quest data are never locked — always copy
+	@cp -r $(DEPLOY_DIR)/SPT/user/mods/SPTQuestingBots/config  "$(SPT_DIR)/SPT/user/mods/SPTQuestingBots/"
+	@cp -r $(DEPLOY_DIR)/SPT/user/mods/SPTQuestingBots/quests  "$(SPT_DIR)/SPT/user/mods/SPTQuestingBots/"
+	@# Verify critical files exist after install
+	@for f in "$(SPT_DIR)/SPT/user/mods/SPTQuestingBots/config/config.json" \
+	          "$(SPT_DIR)/BepInEx/plugins/DanW-SPTQuestingBots/SPTQuestingBots.dll"; do \
+	    if [ ! -f "$$f" ]; then echo "ERROR: Missing $$f" >&2; exit 1; fi; \
+	done
+	@echo "Installed to $(SPT_DIR)/ (verified)"
 
 # ─── Test ─────────────────────────────────────────────────────────────
 

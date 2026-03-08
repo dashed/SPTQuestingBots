@@ -12,7 +12,7 @@ namespace SPTQuestingBots
     [BepInIncompatibility("com.dvize.AILimit")]
     [BepInDependency("xyz.drakia.waypoints", "1.7.1")]
     [BepInDependency("xyz.drakia.bigbrain", "1.3.2")]
-    [BepInPlugin("com.DanW.QuestingBots", "DanW-QuestingBots", "1.14.0")]
+    [BepInPlugin("com.DanW.QuestingBots", "DanW-QuestingBots", "1.14.1")]
     public class QuestingBotsPlugin : BaseUnityPlugin
     {
         public static QuestingBotsPlugin Instance { get; private set; }
@@ -24,7 +24,7 @@ namespace SPTQuestingBots
             Patches.TarkovInitPatch.MinVersion = "4.0.0.0";
             Patches.TarkovInitPatch.MaxVersion = "4.99.99.0";
 
-            Logger.LogInfo("Loading QuestingBots...");
+            Logger.LogInfo("Loading QuestingBots v" + Info.Metadata.Version + "...");
             LoggingController.Logger = Logger;
             ModName = Info.Metadata.Name;
 
@@ -130,17 +130,6 @@ namespace SPTQuestingBots
                     {
                         new Patches.Spawning.BotsGroupIsPlayerEnemyPatch().Enable();
                     }
-
-                    if (ConfigController.Config.BotSpawns.PMCs.Enabled)
-                    {
-                        BotGenerator.RegisterBotGenerator<Components.Spawning.PMCGenerator>();
-                        Logger.LogInfo("Enabled PMC bot generation");
-                    }
-                    if (ConfigController.Config.BotSpawns.PScavs.Enabled)
-                    {
-                        BotGenerator.RegisterBotGenerator<Components.Spawning.PScavGenerator>(true);
-                        Logger.LogInfo("Enabled PScav bot generation");
-                    }
                 }
 
                 if (
@@ -154,16 +143,37 @@ namespace SPTQuestingBots
                 // Add options to the F12 menu
                 QuestingBotsPluginConfig.BuildConfigOptions(Config);
 
-                // Push F12 config values into ConfigController.Config
+                // Push F12 config values into ConfigController.Config.
+                // This MUST happen before generator registration because saved
+                // BepInEx config values override server defaults. If generator
+                // registration runs first, BotSpawns.Enabled could be true from
+                // the server but then overwritten to false by ConfigSync, causing
+                // generators to be registered but never invoked at raid start.
                 ConfigSync.SyncToModConfig();
                 Config.SettingChanged += (_, _) => ConfigSync.SyncToModConfig();
+
+                // Register bot generators AFTER ConfigSync so the decision is
+                // based on the final (F12-synced) value of BotSpawns.Enabled.
+                if (ConfigController.Config.BotSpawns.Enabled)
+                {
+                    if (ConfigController.Config.BotSpawns.PMCs.Enabled)
+                    {
+                        BotGenerator.RegisterBotGenerator<Components.Spawning.PMCGenerator>();
+                        Logger.LogInfo("Enabled PMC bot generation");
+                    }
+                    if (ConfigController.Config.BotSpawns.PScavs.Enabled)
+                    {
+                        BotGenerator.RegisterBotGenerator<Components.Spawning.PScavGenerator>(true);
+                        Logger.LogInfo("Enabled PScav bot generation");
+                    }
+                }
 
                 this.GetOrAddComponent<TarkovData>();
             }
 
             ReflectionHelper.ValidateAllReflectionFields();
 
-            Logger.LogInfo("Loading QuestingBots...done.");
+            Logger.LogInfo("Loading QuestingBots v" + Info.Metadata.Version + "...done.");
         }
     }
 }

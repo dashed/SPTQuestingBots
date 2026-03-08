@@ -19,7 +19,7 @@ namespace SPTQuestingBots.Components.Spawning
     public abstract class BotGenerator : MonoBehaviour
     {
         internal const int MaxGenerateBotGroupAttempts = 10;
-        private const int MaxGenerateBotGroupRetryDelayMs = 250;
+        private const int MaxGenerateBotGroupRetryDelayMs = 1000;
 
         public bool IsSpawningBots { get; private set; } = false;
         public string BotTypeName { get; private set; } = "???";
@@ -387,6 +387,8 @@ namespace SPTQuestingBots.Components.Spawning
 
         public static void RunBotGenerationTasks()
         {
+            LoggingController.LogInfo("RunBotGenerationTasks: starting with " + registeredBotGenerators.Count + " registered generator(s)");
+
             RaidSettings raidSettings = Singleton<GameWorld>.Instance.GetComponent<LocationData>().CurrentRaidSettings;
 
             foreach (Func<BotGenerator> registerBotGenerator in registeredBotGenerators.Keys)
@@ -394,31 +396,59 @@ namespace SPTQuestingBots.Components.Spawning
                 // Do not enable the bot generator if it's for PScavs and the location does not allow PScavs
                 if (registeredBotGenerators[registerBotGenerator] && raidSettings.SelectedLocation.DisabledForScav)
                 {
+                    LoggingController.LogInfo("RunBotGenerationTasks: skipping PScav generator (location disables scavs)");
                     continue;
                 }
 
-                registerBotGenerator();
+                try
+                {
+                    registerBotGenerator();
+                    LoggingController.LogInfo("RunBotGenerationTasks: instantiated generator component");
+                }
+                catch (Exception ex)
+                {
+                    LoggingController.LogError("RunBotGenerationTasks: failed to instantiate generator: " + ex.Message);
+                    LoggingController.LogError(ex.StackTrace);
+                }
             }
 
+            LoggingController.LogInfo(
+                "RunBotGenerationTasks: botGeneratorList has " + botGeneratorList.Count + " task(s), launching async generation"
+            );
             botGenerationTask = runBotGenerationTasks();
         }
 
         private static async Task runBotGenerationTasks()
         {
-            await waitForEFTBotPresetGenerator();
-
-            RemainingBotGenerators = botGeneratorList.Count;
-
-            foreach (Func<Task> botGeneratorCreator in botGeneratorList)
+            try
             {
-                Task task = botGeneratorCreator();
-                await task;
+                LoggingController.LogInfo("runBotGenerationTasks: waiting for EFT bot preset generator...");
+                await waitForEFTBotPresetGenerator();
+                LoggingController.LogInfo("runBotGenerationTasks: EFT preset wait complete.");
 
-                RemainingBotGenerators--;
+                LoggingController.LogInfo("runBotGenerationTasks: waiting for BotsController...");
+                await waitForBotsController();
+                LoggingController.LogInfo("runBotGenerationTasks: processing " + botGeneratorList.Count + " generator task(s)...");
+
+                RemainingBotGenerators = botGeneratorList.Count;
+
+                foreach (Func<Task> botGeneratorCreator in botGeneratorList)
+                {
+                    Task task = botGeneratorCreator();
+                    await task;
+
+                    RemainingBotGenerators--;
+                }
+
+                botGeneratorList.Clear();
+                RemainingBotGenerators = 0;
+                LoggingController.LogInfo("runBotGenerationTasks: all generation complete");
             }
-
-            botGeneratorList.Clear();
-            RemainingBotGenerators = 0;
+            catch (Exception ex)
+            {
+                LoggingController.LogError("runBotGenerationTasks: EXCEPTION: " + ex.Message);
+                LoggingController.LogError(ex.StackTrace);
+            }
         }
 
         private static async Task waitForEFTBotPresetGenerator()
@@ -430,6 +460,29 @@ namespace SPTQuestingBots.Components.Spawning
                 );
                 await Task.Delay(100);
             }
+        }
+
+        private static async Task waitForBotsController()
+        {
+            const int maxWaitMs = 30000;
+            const int pollIntervalMs = 500;
+            int waited = 0;
+
+            while (Singleton<IBotGame>.Instance?.BotsController?.BotSpawner == null)
+            {
+                if (waited >= maxWaitMs)
+                {
+                    throw new TimeoutException(
+                        "BotsController/BotSpawner not available after " + (maxWaitMs / 1000) + "s. Cannot generate bots."
+                    );
+                }
+
+                LoggingController.LogInfo("Waiting for BotsController to initialize (" + (waited / 1000) + "s)...");
+                await Task.Delay(pollIntervalMs);
+                waited += pollIntervalMs;
+            }
+
+            LoggingController.LogInfo("BotsController is available.");
         }
 
         private Func<Task> generateAllBotsTask(Func<Task<Models.BotSpawnInfo>> generateBotGroupAction)
@@ -482,9 +535,6 @@ namespace SPTQuestingBots.Components.Spawning
 
         protected async Task<Models.BotSpawnInfo> GenerateBotGroup(WildSpawnType spawnType, BotDifficulty botdifficulty, int bots)
         {
-            BotSpawner botSpawnerClass = Singleton<IBotGame>.Instance.BotsController.BotSpawner;
-            IBotCreator ibotCreator = botSpawnerClass.BotCreator;
-
             LoggingController.LogInfo(
                 "Generating " + botdifficulty.ToString() + " " + BotTypeName + " group (Number of bots: " + bots + ")..."
             );
@@ -497,6 +547,15 @@ namespace SPTQuestingBots.Components.Spawning
                     {
                         await Task.Delay(GetGenerateBotGroupRetryDelayMs(attempt));
                     }
+
+                    // Resolve game infrastructure inside the retry loop — BotsController
+                    // may not be available yet during early raid initialization.
+                    BotSpawner botSpawnerClass = Singleton<IBotGame>.Instance?.BotsController?.BotSpawner;
+                    if (botSpawnerClass == null)
+                    {
+                        throw new InvalidOperationException("BotSpawner not available yet (BotsController may not be initialized)");
+                    }
+                    IBotCreator ibotCreator = botSpawnerClass.BotCreator;
 
                     // Starting with SPT 3.11, bots are cached via the client, and the client expects this to always be EPlayerSide.Savage. SPT later fixes it in a patch.
                     //EPlayerSide spawnSide = spawnType.GetPlayerSide();
@@ -556,7 +615,7 @@ namespace SPTQuestingBots.Components.Spawning
 
                     return botSpawnInfo;
                 }
-                catch (NullReferenceException nre)
+                catch (Exception ex) when (ex is NullReferenceException || ex is InvalidOperationException)
                 {
                     if (attempt < MaxGenerateBotGroupAttempts)
                     {
@@ -574,8 +633,8 @@ namespace SPTQuestingBots.Components.Spawning
                                 + ". Retrying..."
                         );
 
-                        LoggingController.LogError(nre.Message);
-                        LoggingController.LogError(nre.StackTrace);
+                        LoggingController.LogError(ex.Message);
+                        LoggingController.LogError(ex.StackTrace);
 
                         continue;
                     }
@@ -593,12 +652,8 @@ namespace SPTQuestingBots.Components.Spawning
                     );
                     throw new InvalidOperationException(
                         "Failed to generate " + BotTypeName + " group after " + MaxGenerateBotGroupAttempts + " attempts.",
-                        nre
+                        ex
                     );
-                }
-                catch (Exception)
-                {
-                    throw;
                 }
             }
 

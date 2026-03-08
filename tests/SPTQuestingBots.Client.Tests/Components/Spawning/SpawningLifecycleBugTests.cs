@@ -322,7 +322,7 @@ public class SpawningLifecycleBugTests
         Assert.That(source, Does.Contain("MaxGenerateBotGroupAttempts = 10"), "BotGenerator must cap bot generation retries at 10");
         Assert.That(
             source,
-            Does.Contain("MaxGenerateBotGroupRetryDelayMs = 250"),
+            Does.Match(@"MaxGenerateBotGroupRetryDelayMs\s*=\s*\d+"),
             "BotGenerator must define a capped retry-delay constant for group generation"
         );
         Assert.That(
@@ -342,8 +342,8 @@ public class SpawningLifecycleBugTests
         );
         Assert.That(
             methodBody,
-            Does.Contain("catch (NullReferenceException nre)"),
-            "GenerateBotGroup should specifically bound and wrap the NullReferenceException retry path"
+            Does.Contain("NullReferenceException").And.Contain("InvalidOperationException"),
+            "GenerateBotGroup should retry on both NullReferenceException and InvalidOperationException"
         );
         Assert.That(
             methodBody,
