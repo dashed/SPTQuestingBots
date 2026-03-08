@@ -84,10 +84,10 @@
 		"update_bot_zone_after_stopping": true,
 		"wait_time_before_planting": 1,
 		"quest_generation": {
-			"navmesh_search_distance_item": 1.5,
-			"navmesh_search_distance_zone": 1.5,
-			"navmesh_search_distance_spawn": 2,
-			"navmesh_search_distance_doors": 0.75
+			"navmesh_search_distance_item": 2.5,
+			"navmesh_search_distance_zone": 5,
+			"navmesh_search_distance_spawn": 5,
+			"navmesh_search_distance_doors": 1.5
 		},
 		"bot_search_distances": {
 			"objective_reached_ideal": 0.5,

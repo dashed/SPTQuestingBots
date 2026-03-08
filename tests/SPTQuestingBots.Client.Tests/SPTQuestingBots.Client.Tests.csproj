@@ -466,6 +466,10 @@
       Include="../../src/SPTQuestingBots.Client/Configuration/SprintingLimitationsConfig.cs"
       Link="LinkedSources/Configuration/SprintingLimitationsConfig.cs"
     />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Configuration/QuestGenerationConfig.cs"
+      Link="LinkedSources/Configuration/QuestGenerationConfig.cs"
+    />
     <Compile Include="../../src/SPTQuestingBots.Client/Configuration/MinMaxConfig.cs" Link="LinkedSources/Configuration/MinMaxConfig.cs" />
     <Compile
       Include="../../src/SPTQuestingBots.Client/Configuration/DistanceAngleConfig.cs"

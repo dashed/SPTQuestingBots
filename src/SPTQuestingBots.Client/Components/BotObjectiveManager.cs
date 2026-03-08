@@ -259,6 +259,11 @@ namespace SPTQuestingBots.Components
 
         public void CompleteObjective()
         {
+            if (assignment == null || assignment.IsCompletedOrArchived)
+            {
+                return;
+            }
+
             assignment.Complete();
             BotLogic.ECS.BotEntityBridge.ResetConsecutiveFailedAssignments(botOwner);
 

@@ -150,13 +150,32 @@ namespace SPTQuestingBots.Models.Questing
                 return false;
             }
 
-            Vector3? navMeshPosition = Singleton<GameWorld>
-                .Instance.GetComponent<Components.LocationData>()
-                .FindNearestNavMeshPosition(SerializablePosition.ToUnityVector3(), maxDistance);
+            var locationData = Singleton<GameWorld>.Instance.GetComponent<Components.LocationData>();
+
+            Vector3? navMeshPosition = locationData.FindNearestNavMeshPosition(SerializablePosition.ToUnityVector3(), maxDistance);
             if (!navMeshPosition.HasValue)
             {
-                LoggingController.LogError("Cannot find NavMesh position for " + SerializablePosition.ToUnityVector3().ToString());
-                return false;
+                float fallbackDistance = Math.Max(3 * maxDistance, 10f);
+                LoggingController.LogWarning(
+                    "NavMesh snap failed at distance "
+                        + maxDistance
+                        + " for "
+                        + SerializablePosition.ToUnityVector3().ToString()
+                        + ", retrying with fallback distance "
+                        + fallbackDistance
+                );
+
+                navMeshPosition = locationData.FindNearestNavMeshPosition(SerializablePosition.ToUnityVector3(), fallbackDistance);
+                if (!navMeshPosition.HasValue)
+                {
+                    LoggingController.LogError(
+                        "Cannot find NavMesh position for "
+                            + SerializablePosition.ToUnityVector3().ToString()
+                            + " even with fallback distance "
+                            + fallbackDistance
+                    );
+                    return false;
+                }
             }
 
             SerializablePosition = new SerializableVector3(navMeshPosition.Value);

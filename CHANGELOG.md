@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.0] - 2026-03-07
+
+### Fixed
+- **Follower task repertoire too narrow** — expanded SquadTaskFactory from 2 to 6 tasks (added Loot, Investigate, Linger, Patrol). GoToTacticalPositionTask and HoldTacticalPositionTask now route through ScoringModifiers for personality/time-aware scoring
+- **Opportunistic tasks gated behind HasActiveObjective** — PatrolTask no longer requires an active objective, allowing bots to patrol even when idle
+- **raid_time_normalized stuck near zero** — fixed calculation to use elapsed time (`GetSecondsSinceSpawning() / OriginalEscapeTimeSeconds`) instead of `1 - GetRaidTimeRemainingFraction()`, which was always near zero early in raid
+- **Loot claim values always zero** — loose items now use handbook prices, containers and corpses use configurable default estimates instead of hardcoded zero
+- **Quest completion fired multiple times** — added dedup guard to `CompleteObjective()` that returns early when assignment is null or already completed/archived, preventing duplicate completion side effects
+- **NavMesh validation too strict for quest trigger points** — increased default search distances (item 1.5→2.5, zone 1.5→5, spawn 2→5, doors 0.75→1.5) and added fallback snap retry at `Max(3x, 10m)` with warning log when initial snap fails
+
 ## [1.14.1] - 2026-03-08
 
 ### Fixed

@@ -163,27 +163,27 @@ public class ConfigConsistencyTests
     // ── QuestGenerationConfig ────────────────────────────────────
 
     [Test]
-    public void QuestGeneration_NavMeshSearchDistanceItem_Default2_Json1_5()
+    public void QuestGeneration_NavMeshSearchDistanceItem_Default2_5_Json2_5()
     {
         var jsonValue = JsonValue<float>("questing.quest_generation.navmesh_search_distance_item");
-        Assert.That(jsonValue, Is.EqualTo(1.5f), "config.json value");
-        // C# default is 2
+        Assert.That(jsonValue, Is.EqualTo(2.5f), "config.json value");
+        Assert.That(new QuestGenerationConfig().NavMeshSearchDistanceItem, Is.EqualTo(2.5f), "C# default");
     }
 
     [Test]
-    public void QuestGeneration_NavMeshSearchDistanceZone_Default2_Json1_5()
+    public void QuestGeneration_NavMeshSearchDistanceZone_Default5_Json5()
     {
         var jsonValue = JsonValue<float>("questing.quest_generation.navmesh_search_distance_zone");
-        Assert.That(jsonValue, Is.EqualTo(1.5f), "config.json value");
-        // C# default is 2
+        Assert.That(jsonValue, Is.EqualTo(5f), "config.json value");
+        Assert.That(new QuestGenerationConfig().NavMeshSearchDistanceZone, Is.EqualTo(5f), "C# default");
     }
 
     [Test]
-    public void QuestGeneration_NavMeshSearchDistanceDoors_Default1_5_Json0_75()
+    public void QuestGeneration_NavMeshSearchDistanceDoors_Default1_5_Json1_5()
     {
         var jsonValue = JsonValue<float>("questing.quest_generation.navmesh_search_distance_doors");
-        Assert.That(jsonValue, Is.EqualTo(0.75f), "config.json value");
-        // C# default is 1.5 — 2x too high
+        Assert.That(jsonValue, Is.EqualTo(1.5f), "config.json value");
+        Assert.That(new QuestGenerationConfig().NavMeshSearchDistanceDoors, Is.EqualTo(1.5f), "C# default");
     }
 
     // ── BotSearchDistanceConfig ──────────────────────────────────
