@@ -56,7 +56,11 @@ public class QuestingBotsServerStartupE2ETests
         var config = JsonConvert.DeserializeObject<QuestingBotsConfig>(File.ReadAllText(configPath));
         Assert.That(config, Is.Not.Null, "Real config should deserialize before startup runs.");
 
-        var blacklistedBrain = config!.BotSpawns.BlacklistedPmcBotBrains.FirstOrDefault();
+        // Disable spawning for this test — it only validates PScav chance and brain blacklisting,
+        // not the full spawning system which requires DatabaseService.
+        config!.BotSpawns.Enabled = false;
+
+        var blacklistedBrain = config.BotSpawns.BlacklistedPmcBotBrains.FirstOrDefault();
         Assert.That(blacklistedBrain, Is.Not.Null.And.Not.Empty, "Real config should include at least one blacklisted brain type.");
 
         var botConfig = (BotConfig)RuntimeHelpers.GetUninitializedObject(typeof(BotConfig));

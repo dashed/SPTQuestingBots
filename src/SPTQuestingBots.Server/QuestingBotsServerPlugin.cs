@@ -15,7 +15,7 @@ namespace SPTQuestingBots.Server;
 ///
 /// <para>
 /// Implements <see cref="IOnLoad"/> and runs after the database has loaded
-/// (priority 100). This class performs the one-time setup that the original
+/// (PostDBModLoader + 1). This class performs the one-time setup that the original
 /// <c>mod.ts</c> handled across its <c>postDBLoad</c> and <c>postSptLoad</c>
 /// lifecycle hooks:
 /// </para>
@@ -37,7 +37,7 @@ namespace SPTQuestingBots.Server;
 /// <see cref="Routers.QuestingBotGenerateRouter"/>.
 /// </para>
 /// </summary>
-[Injectable(InjectionType.Singleton, typePriority: 100)]
+[Injectable(InjectionType.Singleton, TypePriority = OnLoadOrder.PostDBModLoader + 1)]
 public class QuestingBotsServerPlugin(
     QuestingBotsConfigLoader configLoader,
     CommonUtils commonUtils,

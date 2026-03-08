@@ -283,7 +283,7 @@ public class ConfigDeserializationTests
         {
             Assert.That(config!.Enabled, Is.True);
             Assert.That(config.Questing.Enabled, Is.True);
-            Assert.That(config.BotSpawns.Enabled, Is.False, "Bot spawning should be disabled by default");
+            Assert.That(config.BotSpawns.Enabled, Is.True, "Bot spawning should be enabled by default for vanilla-like PMC counts");
             Assert.That(config.BotSpawns.BlacklistedPmcBotBrains, Is.Not.Empty);
             Assert.That(config.BotSpawns.Pmcs.FractionOfMaxPlayersVsRaidET, Is.Not.Empty);
             Assert.That(config.BotSpawns.Pmcs.BotsPerGroupDistribution, Is.Not.Empty);
