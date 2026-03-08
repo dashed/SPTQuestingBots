@@ -180,7 +180,7 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - All thresholds configurable via `questing.investigate` in config.json
 
 ### Vulture System (Combat Scavenging)
-- Bots hear gunfire and explosions, then investigate combat zones to ambush weakened survivors — ported from the [Vulture](https://hub.sp-tarkov.com/files/file/2283-vulture/) mod
+- Bots hear gunfire and explosions, then investigate combat zones to ambush weakened survivors — ported from the [Vulture](https://github.com/Ehxcalibur/Vulture) mod
 - `CombatEventRegistry`: global ring buffer (128 slots) tracking gunshots, explosions, and airdrops with zero-allocation spatial queries
 - Multi-phase behavior state machine:
   - **Approach**: Sprint toward combat event position
