@@ -20,6 +20,13 @@ namespace SPTQuestingBots.Patches.Spawning.Advanced
         [PatchPrefix]
         protected static bool PatchPrefix(BotOwner bot, BotsClass ___Bots, Action<BotOwner> ___OnBotRemoved)
         {
+            // Guard: game's BotDied checks !bot.IsDead before processing.
+            // Without this, a double-fire could invoke OnBotRemoved twice.
+            if (bot.IsDead)
+            {
+                return false;
+            }
+
             if (!bot.ShouldPlayerBeTreatedAsHuman())
             {
                 return true;

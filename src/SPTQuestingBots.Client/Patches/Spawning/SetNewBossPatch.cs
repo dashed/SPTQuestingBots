@@ -25,31 +25,40 @@ namespace SPTQuestingBots.Patches.Spawning
         }
 
         [PatchPrefix]
-        protected static void PatchPrefix(BossGroup __instance, BotOwner boss, List<BotOwner> followers, BotOwner ___Boss_1)
+        protected static bool PatchPrefix(BossGroup __instance, BotOwner boss, List<BotOwner> followers, ref BotOwner ___Boss_1)
         {
             foreach (BotOwner follower in followers)
             {
                 follower.BotFollower.BossToFollow = null;
             }
-        }
 
-        [PatchPostfix]
-        protected static void PatchPostfix(BossGroup __instance, BotOwner boss, List<BotOwner> followers, ref BotOwner ___Boss_1)
-        {
-            ___Boss_1 = null;
-
+            // Check if any follower was already designated as the new boss
+            // (e.g. by BotHiveMindMonitor). If so, set Boss_1 directly and
+            // skip the game's method_0 to avoid a second SetBoss() call on
+            // a different random follower, which would leave stale state.
+            BotOwner designatedBoss = null;
             foreach (BotOwner follower in followers)
             {
                 if (follower.Boss.IamBoss && (follower.Profile.Id != boss.Profile.Id))
                 {
-                    ___Boss_1 = follower;
+                    designatedBoss = follower;
+                    break;
                 }
             }
 
-            if ((___Boss_1 == null) && (followers.Count > 1))
+            if (designatedBoss != null)
+            {
+                ___Boss_1 = designatedBoss;
+                return false; // Skip original — our mod already called SetBoss
+            }
+
+            if (followers.Count > 1)
             {
                 LoggingController.LogWarning("Could not find a new boss to replace " + boss.GetText());
             }
+
+            // No mod-designated boss — let the game pick one normally
+            return true;
         }
     }
 }

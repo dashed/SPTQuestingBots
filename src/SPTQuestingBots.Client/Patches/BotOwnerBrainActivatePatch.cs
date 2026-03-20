@@ -26,6 +26,13 @@ namespace SPTQuestingBots.Patches
         [PatchPostfix]
         protected static void PatchPostfix(BotOwner __instance)
         {
+            // Guard: game wraps brain activation in try/catch and sets BotState = ActiveFail
+            // on exception. Don't register a bot whose brain failed to activate.
+            if (__instance.BotState == EBotState.ActiveFail)
+            {
+                return;
+            }
+
             registerBot(__instance);
 
             if (BotGenerator.GetAllGeneratedBotProfileIDs().Contains(__instance.Profile.Id))
