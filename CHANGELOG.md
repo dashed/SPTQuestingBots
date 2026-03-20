@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.0] - 2026-03-20
+
+### Added
+- **AssemblyInspector: `decompile` command** — ICSharpCode.Decompiler integration for readable C# output from any type or method in Assembly-CSharp.dll. Supports partial name matching and single-method decompilation
+- **AssemblyInspector: `xref` command** — cross-reference analysis via IL instruction scanning. Finds all methods that read/write a field or call a method, with usage classification (READ/WRITE/CALL) and IL offset tracking
+- **AssemblyInspector: `diff` command** — cross-version field comparison with auto-rename detection (High/Medium/Low confidence). Supports `--known-fields-only`, `--format json`, and exit codes for CI
+- **AssemblyInspector: full API surface diffing** — `--include-methods`, `--include-properties`, `--include-all` flags and `--namespace` filtering for comprehensive version comparison
+- **AssemblyInspector: fuzzy type matching** — non-contiguous subsequence search (ILSpy-style). `inspect BSp` matches `BotSpawner`
+- **AssemblyInspector: `--include-inherited` flag** — walk base class chains via Cecil's `BaseType.Resolve()`
+- **AssemblyInspector: auto-migration suggestions** — confidence-ranked rename suggestions on validation failure with concrete fix instructions
+- **Native patrol fallback** — `NativePatrolDataProvider` extracts BSG's `PatrollingData.Way.Points` as fallback patrol routes when no custom JSON routes match (scored at 80% of custom routes)
+- **Per-bot cover queries** — `BsgCoverPointCollector` now queries `BotOwner.Covers.GetClosePoints()` for per-bot cover data, falling back to global voxel grid
+- **Game ambush data integration** — AmbushTask gets +0.10 score bonus when BSG's `BotAmbushData.HaveCover()` confirms a valid ambush position
+- **Game search data integration** — InvestigateTask prefers BSG's `SearchData.SearchPoint` over combat event centroid; +0.05 bonus when game's AI also wants to investigate
+- **BotMover.Pause awareness** — stuck detection suspended during game-initiated pauses (grenade throws, animations) to prevent false teleports
+- **Game-aware room clearing** — `AssaultBuildingData.IsActive` extends room clear behavior with slow-walk instruction when game's building assault is active
+- Game assembly inspection report (`docs/game-assembly-inspection.md`) documenting validate, inspect, decompile, and xref findings across 22 KnownFields and 15 game types
+- Makefile targets: `make decompile TYPE=X`, `make xref TARGET=X`, `make diff-fields`
+- 219 new tests across inspector (143 total) and client (4795 total)
+
+### Changed
+- **KnownFields reduced from 22 to 10** — replaced 12 reflection-based field lookups with direct property access in CombatStateHelper, HearingSensorHelper, ExtractionHelper, PlantZoneHelper, RaidTimeHelper, and ItemHelpers
+- **Room clearing uses `Player.Environment`** — indoor/outdoor detection now uses BSG's native `EnvironmentType` enum instead of `EnvironmentId` integer
+- **RoomClearController API** — `int environmentId` parameter changed to `bool isIndoor` for unambiguous semantics
+- **GitHub Actions upgraded to v5** — actions/checkout, actions/setup-dotnet, actions/cache all upgraded for native Node.js 24 support (no more deprecation warnings)
+- SPT 4.1 migration notes updated — pragma warnings changed from "SPT 4.2" to "SPT 4.1", Injectable defaults explicitly set to `InjectionType.Scoped` on routers
+
+### Fixed
+- **Indoor/outdoor detection inverted** — `EnvironmentId==0` was treated as indoor but the game defines it as outdoor (`IsInside => EnvironmentId > 0`). Room clearing and indoor pose were firing outdoors. Fixed by switching to `Player.Environment` enum
+- **BotDiedPatch double-fire** — added `IsDead` guard to prevent `OnBotRemoved` firing twice on same bot death (race condition)
+- **SetNewBossPatch state mismatch** — consolidated to prefix-only approach. Previously, game's random follower promotion ran between prefix and postfix, potentially setting `Boss_1` to wrong follower
+- **GetAllBossPlayersPatch over-filtering** — was filtering ALL AI bosses (Killa, Reshala, etc.), not just mod-generated ones. Now filters only bots from `BotGenerator.GetAllGeneratedBotProfileIDs()`
+- **BotOwnerBrainActivatePatch ActiveFail** — postfix now skips bot registration when `BotState == ActiveFail`, preventing broken-state bots from entering the ECS
+- **Build-output tests failing in CI** — `BuildOutput_ContainsMainPluginDll` and `BuildOutput_DoesNotContainObsoleteNuGetDlls` now use `Assume.That` to skip gracefully when `build/` directory is absent (CI runs without game DLLs)
+
 ## [1.15.0] - 2026-03-07
 
 ### Fixed

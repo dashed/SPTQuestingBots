@@ -109,13 +109,14 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - **Extraction-aware questing**: bots stop questing when the game's internal leave system triggers, supplementing the existing `BotExtractMonitor` extraction decision
 - **PlantItem zone verification**: bots verify they've entered the game's plant trigger zone before completing plant-item quest objectives — reduces failed plant attempts
 - 3 sprint-limiting checks integrated into `IsAllowedToSprint()` in the base action class — each with a config toggle (`enable_post_combat_sprint_block`, `enable_late_raid_sprint_block`, `enable_suspicion_sprint_block`)
-- 5 helper classes (`CombatStateHelper`, `RaidTimeHelper`, `ExtractionHelper`, `PlantZoneHelper`, `HearingSensorHelper`) provide null-safe access to game state fields, all wired into behavioral code
+- 5 helper classes (`CombatStateHelper`, `RaidTimeHelper`, `ExtractionHelper`, `PlantZoneHelper`, `HearingSensorHelper`) provide null-safe access to game state fields via direct property access (no reflection), all wired into behavioral code
 - Configurable via `sprinting_limitations` in config.json: `post_combat_cooldown_seconds` (default: 20), `late_raid_no_sprint_threshold` (default: 0.15)
 
 ### Enhanced Stuck Detection
 - `SoftStuckDetector` and `HardStuckDetector` now leverage `BotMover.IsMoving` and `BotMover.SDistDestination` for faster stuck signal detection
 - When BotMover reports not moving but the bot should be, soft stuck timer accumulates at 2× rate (faster escalation through vault → jump → fail)
 - When bot is far from its movement destination, hard stuck timer accumulates at 1.5× rate
+- `BotMover.Pause` awareness: stuck detection is suspended during game-initiated pauses (grenade throws, special animations) to prevent false teleports
 - Existing position-based detection preserved as fallback — new signals are additive improvements
 
 ### Spawn Entry Behavior
@@ -135,7 +136,8 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 
 ### Room Clearing
 - Bots slow down, lower posture, and pause at corners when entering buildings (outdoor→indoor transition)
-- Environment transition detection via BSG `EnvironmentId` (0=indoor)
+- Environment transition detection via `Player.Environment` enum (`Indoor`/`Outdoor`) — uses the game's native indoor/outdoor classification
+- Game-aware building assault: when BSG's `BotOwner.AssaultBuildingData` is active, room clear extends with slow-walk instruction
 - Room clear duration: random 15–30s of slow walk + reduced pose after entering
 - Corner pauses: brief pauses at sharp path angles for door/corner-checking behavior
 - Configurable via `questing.room_clear` in config.json (duration, pose, corner angle threshold, per-bot-type toggles)
@@ -164,6 +166,7 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 ### Patrol Route System
 - Named patrol routes per map with waypoint sequences — bots follow structured paths between quest objectives
 - 3 route types: Perimeter (loop), Interior (loop), Overwatch (no loop) — route type affects default loop behavior
+- **Native patrol fallback**: when no custom JSON routes match, bots use BSG's `PatrollingData.Way.Points` as fallback patrol routes (scored at 80% of custom routes)
 - Per-map hardcoded defaults: Customs (Dorms Perimeter, Customs Road, Construction Overwatch), Interchange (Mall Interior, Parking Perimeter), Shoreline (Resort Sweep, Shoreline Path), Reserve (Bunker Patrol, Base Perimeter), Woods (Sawmill Circuit)
 - `PatrolRouteSelector`: picks best route by proximity (0.6 weight) + personality fit (0.4 weight) with deterministic tiebreak
 - `PatrolTask`: utility task #14 that fills idle time when bot has no active quest objective (MaxBaseScore=0.50)
@@ -176,6 +179,7 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - When bots detect nearby combat events that don't warrant full vulture behavior, they cautiously investigate
 - Lower intensity threshold (5 vs Vulture's 15) and lower max score (0.40 vs 0.60) — triggers more often but yields to stronger behaviors
 - 2-state behavior: cautious approach (speed 0.5, pose 0.6) then look around with head scanning (5–10s)
+- **Game search data integration**: prefers BSG's `SearchData.SearchPoint` (actual enemy last-known position) over combat event centroid when available; +0.05 score bonus when game's AI also wants to investigate
 - Gated: not in combat, not already vulturing, nearby event exists with sufficient intensity
 - Personality-influenced: aggressive bots investigate more readily (1.2× modifier), cautious bots less (0.8×)
 - All thresholds configurable via `questing.investigate` in config.json
@@ -211,6 +215,18 @@ Ported from the original [SPT 3.x TypeScript mod](https://hub.sp-tarkov.com/file
 - Job assignment wiring (Phase 8): `botJobAssignments` dictionary migrated to `BotEntityBridge` keyed by entity ID; `ConsecutiveFailedAssignments` cached as O(1) entity field; `NumberOfActiveBots()` iterates dense entity list
 - `TimePacing` / `FramePacing`: reusable rate-limiter utilities with `[AggressiveInlining]`, inspired by Phobos
 - Pure C# with zero Unity dependencies for full testability
+
+### AssemblyInspector (Development Tool)
+- Standalone CLI tool for inspecting obfuscated game assemblies — helps maintain mod compatibility after game updates
+- 5 commands: `inspect` (enumerate type fields), `validate` (check KnownFields), `diff` (compare DLL versions), `decompile` (readable C# from IL), `xref` (cross-reference analysis)
+- **`diff`**: Compares two Assembly-CSharp.dll versions with auto-rename detection (High/Medium/Low confidence) for obfuscated field shifts
+- **`decompile`**: Full C# decompilation via ICSharpCode.Decompiler — read actual game method bodies
+- **`xref`**: IL instruction scanning to find all methods that read/write a specific field or call a specific method
+- **`inspect --include-inherited`**: Walk base class chains to find inherited fields
+- Fuzzy type matching: subsequence search (`BSp` → `BotSpawner`)
+- Auto-migration suggestions on validation failure with confidence levels and concrete fix instructions
+- Full API surface diffing: `--include-methods`, `--include-properties`, `--include-all`, `--namespace` filtering
+- 143 tests, Makefile targets: `make inspect`, `make validate-fields`, `make diff-fields`, `make decompile`, `make xref`
 
 ### Dedicated Log File
 - Per-session log file at `BepInEx/plugins/DanW-SPTQuestingBots/log/QuestingBots.log` for easier debugging
