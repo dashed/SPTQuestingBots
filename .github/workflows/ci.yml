@@ -6,23 +6,20 @@ on:
   pull_request:
     branches: [master]
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   ci:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "9.0.x"
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
@@ -42,22 +39,22 @@ jobs:
       QB_SAIN_EXPECTED_BIGBRAIN_VERSION: 1.4.0
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Checkout SAIN contract repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ArchangelWTF/SAIN
           ref: v4.4.0
           path: external/SAIN
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "9.0.x"
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
