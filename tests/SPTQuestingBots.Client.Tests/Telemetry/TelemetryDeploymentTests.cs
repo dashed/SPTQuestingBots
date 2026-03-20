@@ -18,6 +18,8 @@ public class TelemetryDeploymentTests
     [Test]
     public void BuildOutput_ContainsMainPluginDll()
     {
+        Assume.That(Directory.Exists(BuildDir), "build/ directory not present — skipping (requires make build)");
+
         string dll = Path.Combine(BuildDir, "SPTQuestingBots.dll");
         Assert.That(File.Exists(dll), Is.True, "SPTQuestingBots.dll missing from build/");
     }
@@ -25,6 +27,8 @@ public class TelemetryDeploymentTests
     [Test]
     public void BuildOutput_DoesNotContainObsoleteNuGetDlls()
     {
+        Assume.That(Directory.Exists(BuildDir), "build/ directory not present — skipping (requires make build)");
+
         // These DLLs were needed when using Microsoft.Data.Sqlite + SQLitePCLRaw.
         // With Mono.Data.Sqlite they should no longer be in build output.
         string[] obsoleteDlls = new[]
