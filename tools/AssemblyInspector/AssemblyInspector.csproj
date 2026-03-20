@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="AssemblyInspector.Tests" />
+    <PackageReference Include="ICSharpCode.Decompiler" Version="9.1.0.7988" />
     <PackageReference Include="Mono.Cecil" Version="0.11.6" />
   </ItemGroup>
 </Project>

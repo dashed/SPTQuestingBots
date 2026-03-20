@@ -85,8 +85,8 @@ CLIENT_PLUGIN_DIR    := $(DEPLOY_DIR)/BepInEx/plugins/DanW-SPTQuestingBots
 .DEFAULT_GOAL := help
 .PHONY: help all ci ci-contract-sain ci-full restore build build-server build-client \
 	build-tests test test-server test-client test-contract-sain deploy install clean format \
-	format-check lint lint-fix copy-libs check-libs inspect validate-fields diff-fields \
-	test-inspector
+	format-check lint lint-fix copy-libs check-libs inspect decompile validate-fields \
+	diff-fields test-inspector
 
 # ─── Meta ─────────────────────────────────────────────────────────────
 
@@ -257,6 +257,9 @@ lint-fix: ## Auto-fix code style issues
 
 inspect: ## Inspect a type's fields in Assembly-CSharp.dll (TYPE=BotSpawner)
 	$(DOTNET) run --project $(INSPECTOR) -- inspect $(TYPE)
+
+decompile: ## Decompile a type to C# source (TYPE=BotSpawner [METHOD=Update])
+	$(DOTNET) run --project $(INSPECTOR) -- decompile $(TYPE) $(if $(METHOD),--method $(METHOD))
 
 validate-fields: ## Validate KnownFields against Assembly-CSharp.dll
 	$(DOTNET) run --project $(INSPECTOR) -- validate

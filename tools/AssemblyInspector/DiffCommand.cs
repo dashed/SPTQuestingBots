@@ -30,7 +30,16 @@ internal static class DiffCommand
         High,
     }
 
+    internal enum MemberCategory
+    {
+        Field,
+        Method,
+        Property,
+    }
+
     internal record FieldInfo(string Name, string TypeName, int Index);
+
+    internal record MemberInfo(string Signature, MemberCategory Category);
 
     internal record FieldChange(
         ChangeKind Kind,
@@ -40,9 +49,17 @@ internal static class DiffCommand
         RenameConfidence Confidence = RenameConfidence.None
     );
 
-    internal record TypeDiff(string TypeName, List<FieldChange> Changes)
+    internal record MemberChange(ChangeKind Kind, MemberCategory Category, string Signature);
+
+    internal record TypeDiff(
+        string TypeName,
+        List<FieldChange> Changes,
+        List<MemberChange>? MemberChanges = null
+    )
     {
-        public bool HasChanges => Changes.Any(c => c.Kind != ChangeKind.Unchanged);
+        public bool HasChanges =>
+            Changes.Any(c => c.Kind != ChangeKind.Unchanged)
+            || (MemberChanges != null && MemberChanges.Any(mc => mc.Kind != ChangeKind.Unchanged));
     }
 
     internal record DiffResult(List<TypeDiff> TypeDiffs, List<string> OldOnlyTypes, List<string> NewOnlyTypes)
@@ -50,7 +67,16 @@ internal static class DiffCommand
         public bool HasChanges => TypeDiffs.Any(td => td.HasChanges) || OldOnlyTypes.Count > 0 || NewOnlyTypes.Count > 0;
     }
 
-    internal record DiffOptions(string OldDllPath, string NewDllPath, HashSet<string>? TypeFilter, bool KnownFieldsOnly, string Format);
+    internal record DiffOptions(
+        string OldDllPath,
+        string NewDllPath,
+        HashSet<string>? TypeFilter,
+        bool KnownFieldsOnly,
+        string Format,
+        bool IncludeMethods = false,
+        bool IncludeProperties = false,
+        HashSet<string>? NamespaceFilter = null
+    );
 
     /// <summary>
     /// Entry point called from Program.cs.
@@ -96,7 +122,14 @@ internal static class DiffCommand
         DiffResult result;
         try
         {
-            result = ComputeDiff(options.OldDllPath, options.NewDllPath, typeFilter);
+            result = ComputeDiff(
+                options.OldDllPath,
+                options.NewDllPath,
+                typeFilter,
+                options.IncludeMethods,
+                options.IncludeProperties,
+                options.NamespaceFilter
+            );
         }
         catch (Exception ex)
         {
@@ -119,13 +152,20 @@ internal static class DiffCommand
     /// <summary>
     /// Core diff algorithm: compare fields on matching types between two assemblies.
     /// </summary>
-    internal static DiffResult ComputeDiff(string oldDllPath, string newDllPath, HashSet<string>? typeFilter)
+    internal static DiffResult ComputeDiff(
+        string oldDllPath,
+        string newDllPath,
+        HashSet<string>? typeFilter,
+        bool includeMethods = false,
+        bool includeProperties = false,
+        HashSet<string>? namespaceFilter = null
+    )
     {
         using var oldAssembly = AssemblyDefinition.ReadAssembly(oldDllPath, new ReaderParameters { ReadSymbols = false });
         using var newAssembly = AssemblyDefinition.ReadAssembly(newDllPath, new ReaderParameters { ReadSymbols = false });
 
-        var oldTypes = BuildTypeMap(oldAssembly);
-        var newTypes = BuildTypeMap(newAssembly);
+        var oldTypes = BuildTypeMap(oldAssembly, namespaceFilter);
+        var newTypes = BuildTypeMap(newAssembly, namespaceFilter);
 
         // Determine which type names to process
         var allTypeNames = new HashSet<string>(oldTypes.Keys, StringComparer.OrdinalIgnoreCase);
@@ -155,7 +195,13 @@ internal static class DiffCommand
             }
             else
             {
-                var diff = DiffTypeFields(typeName, oldTypes[typeName], newTypes[typeName]);
+                var diff = DiffTypeMembers(
+                    typeName,
+                    oldTypes[typeName],
+                    newTypes[typeName],
+                    includeMethods,
+                    includeProperties
+                );
                 typeDiffs.Add(diff);
             }
         }
@@ -166,10 +212,27 @@ internal static class DiffCommand
     /// <summary>
     /// Build a dictionary of short type name -> TypeDefinition for all types in the assembly.
     /// Uses short name as key. If there are duplicates, uses FullName.
+    /// Optionally filters by namespace prefix.
     /// </summary>
-    private static Dictionary<string, TypeDefinition> BuildTypeMap(AssemblyDefinition assembly)
+    internal static Dictionary<string, TypeDefinition> BuildTypeMap(
+        AssemblyDefinition assembly,
+        HashSet<string>? namespaceFilter = null
+    )
     {
         var allTypes = assembly.MainModule.Types.SelectMany(AssemblyHelper.FlattenNestedTypes);
+
+        if (namespaceFilter != null && namespaceFilter.Count > 0)
+        {
+            allTypes = allTypes.Where(t =>
+                namespaceFilter.Any(ns =>
+                    t.Namespace != null
+                    && (
+                        t.Namespace.Equals(ns, StringComparison.OrdinalIgnoreCase)
+                        || t.Namespace.StartsWith(ns + ".", StringComparison.OrdinalIgnoreCase)
+                    )
+                )
+            );
+        }
 
         var map = new Dictionary<string, TypeDefinition>(StringComparer.OrdinalIgnoreCase);
         foreach (var type in allTypes)
@@ -185,6 +248,43 @@ internal static class DiffCommand
         }
 
         return map;
+    }
+
+    /// <summary>
+    /// Compare all requested member kinds between old and new versions of the same type.
+    /// </summary>
+    internal static TypeDiff DiffTypeMembers(
+        string typeName,
+        TypeDefinition oldType,
+        TypeDefinition newType,
+        bool includeMethods = false,
+        bool includeProperties = false
+    )
+    {
+        var fieldDiff = DiffTypeFields(typeName, oldType, newType);
+
+        List<MemberChange>? memberChanges = null;
+
+        if (includeMethods || includeProperties)
+        {
+            memberChanges = new List<MemberChange>();
+
+            if (includeMethods)
+            {
+                var oldMethods = ExtractMethodSignatures(oldType);
+                var newMethods = ExtractMethodSignatures(newType);
+                memberChanges.AddRange(DiffMemberLists(oldMethods, newMethods, MemberCategory.Method));
+            }
+
+            if (includeProperties)
+            {
+                var oldProps = ExtractPropertySignatures(oldType);
+                var newProps = ExtractPropertySignatures(newType);
+                memberChanges.AddRange(DiffMemberLists(oldProps, newProps, MemberCategory.Property));
+            }
+        }
+
+        return new TypeDiff(typeName, fieldDiff.Changes, memberChanges);
     }
 
     /// <summary>
@@ -274,6 +374,96 @@ internal static class DiffCommand
         }
 
         return new TypeDiff(typeName, changes);
+    }
+
+    /// <summary>
+    /// Extract method signatures from a type (excludes constructors and property accessors).
+    /// </summary>
+    internal static List<string> ExtractMethodSignatures(TypeDefinition type)
+    {
+        return type
+            .Methods.Where(m => !m.IsConstructor && !m.IsGetter && !m.IsSetter && !m.IsAddOn && !m.IsRemoveOn)
+            .Select(GetMethodSignature)
+            .OrderBy(s => s, StringComparer.Ordinal)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Extract property signatures from a type.
+    /// </summary>
+    internal static List<string> ExtractPropertySignatures(TypeDefinition type)
+    {
+        return type
+            .Properties.Select(GetPropertySignature)
+            .OrderBy(s => s, StringComparer.Ordinal)
+            .ToList();
+    }
+
+    internal static string GetMethodSignature(MethodDefinition m)
+    {
+        string returnType = InspectCommand.FormatTypeName(m.ReturnType);
+        string parameters = string.Join(
+            ", ",
+            m.Parameters.Select(p => InspectCommand.FormatTypeName(p.ParameterType))
+        );
+        return $"{returnType} {m.Name}({parameters})";
+    }
+
+    internal static string GetPropertySignature(PropertyDefinition p)
+    {
+        string propType = InspectCommand.FormatTypeName(p.PropertyType);
+        string accessors = "";
+        if (p.GetMethod != null && p.SetMethod != null)
+        {
+            accessors = " { get; set; }";
+        }
+        else if (p.GetMethod != null)
+        {
+            accessors = " { get; }";
+        }
+        else if (p.SetMethod != null)
+        {
+            accessors = " { set; }";
+        }
+
+        return $"{propType} {p.Name}{accessors}";
+    }
+
+    /// <summary>
+    /// Diff two lists of member signatures, producing Added/Removed/Unchanged changes.
+    /// </summary>
+    internal static List<MemberChange> DiffMemberLists(
+        List<string> oldMembers,
+        List<string> newMembers,
+        MemberCategory category
+    )
+    {
+        var oldSet = new HashSet<string>(oldMembers);
+        var newSet = new HashSet<string>(newMembers);
+
+        var changes = new List<MemberChange>();
+
+        foreach (string sig in oldMembers)
+        {
+            if (newSet.Contains(sig))
+            {
+                changes.Add(new MemberChange(ChangeKind.Unchanged, category, sig));
+            }
+            else
+            {
+                changes.Add(new MemberChange(ChangeKind.Removed, category, sig));
+            }
+        }
+
+        foreach (string sig in newMembers)
+        {
+            if (!oldSet.Contains(sig))
+            {
+                changes.Add(new MemberChange(ChangeKind.Added, category, sig));
+            }
+        }
+
+        return changes;
     }
 
     private static void MatchRenames(
@@ -393,6 +583,37 @@ internal static class DiffCommand
                 Console.WriteLine($"  {status, -10} {change.FieldType, -30} {change.FieldName, -20} {details}");
             }
 
+            if (typeDiff.MemberChanges != null)
+            {
+                var membersByCategory = typeDiff
+                    .MemberChanges.GroupBy(mc => mc.Category)
+                    .OrderBy(g => g.Key);
+
+                foreach (var group in membersByCategory)
+                {
+                    var changedMembers = group.Where(mc => mc.Kind != ChangeKind.Unchanged).ToList();
+                    if (changedMembers.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    Console.WriteLine();
+                    Console.WriteLine($"  {group.Key}s:");
+
+                    foreach (var mc in group)
+                    {
+                        string mcStatus = mc.Kind switch
+                        {
+                            ChangeKind.Unchanged => " ",
+                            ChangeKind.Added => "+",
+                            ChangeKind.Removed => "-",
+                            _ => "?",
+                        };
+                        Console.WriteLine($"    {mcStatus} {mc.Signature}");
+                    }
+                }
+            }
+
             Console.WriteLine();
             anyOutput = true;
         }
@@ -409,6 +630,19 @@ internal static class DiffCommand
             int totalRemoved = result.TypeDiffs.SelectMany(td => td.Changes).Count(c => c.Kind == ChangeKind.Removed);
             int totalRenamed = result.TypeDiffs.SelectMany(td => td.Changes).Count(c => c.Kind == ChangeKind.Renamed);
 
+            int methodsAdded = result.TypeDiffs
+                .SelectMany(td => td.MemberChanges ?? Enumerable.Empty<MemberChange>())
+                .Count(mc => mc.Kind == ChangeKind.Added && mc.Category == MemberCategory.Method);
+            int methodsRemoved = result.TypeDiffs
+                .SelectMany(td => td.MemberChanges ?? Enumerable.Empty<MemberChange>())
+                .Count(mc => mc.Kind == ChangeKind.Removed && mc.Category == MemberCategory.Method);
+            int propsAdded = result.TypeDiffs
+                .SelectMany(td => td.MemberChanges ?? Enumerable.Empty<MemberChange>())
+                .Count(mc => mc.Kind == ChangeKind.Added && mc.Category == MemberCategory.Property);
+            int propsRemoved = result.TypeDiffs
+                .SelectMany(td => td.MemberChanges ?? Enumerable.Empty<MemberChange>())
+                .Count(mc => mc.Kind == ChangeKind.Removed && mc.Category == MemberCategory.Property);
+
             Console.WriteLine("Summary:");
             Console.WriteLine($"  Types changed: {totalChanged}");
             Console.WriteLine($"  Types only in old: {result.OldOnlyTypes.Count}");
@@ -416,11 +650,25 @@ internal static class DiffCommand
             Console.WriteLine($"  Fields added: {totalAdded}");
             Console.WriteLine($"  Fields removed: {totalRemoved}");
             Console.WriteLine($"  Fields renamed: {totalRenamed}");
+
+            if (methodsAdded > 0 || methodsRemoved > 0)
+            {
+                Console.WriteLine($"  Methods added: {methodsAdded}");
+                Console.WriteLine($"  Methods removed: {methodsRemoved}");
+            }
+
+            if (propsAdded > 0 || propsRemoved > 0)
+            {
+                Console.WriteLine($"  Properties added: {propsAdded}");
+                Console.WriteLine($"  Properties removed: {propsRemoved}");
+            }
         }
     }
 
     private static void PrintJson(DiffResult result)
     {
+        var allMemberChanges = result.TypeDiffs.SelectMany(td => td.MemberChanges ?? Enumerable.Empty<MemberChange>());
+
         var output = new
         {
             typesOnlyInOld = result.OldOnlyTypes,
@@ -440,6 +688,14 @@ internal static class DiffCommand
                             newFieldName = c.NewFieldName,
                             confidence = c.Kind == ChangeKind.Renamed ? c.Confidence.ToString().ToLowerInvariant() : null,
                         }),
+                    memberChanges = (td.MemberChanges ?? Enumerable.Empty<MemberChange>())
+                        .Where(mc => mc.Kind != ChangeKind.Unchanged)
+                        .Select(mc => new
+                        {
+                            kind = mc.Kind.ToString().ToLowerInvariant(),
+                            category = mc.Category.ToString().ToLowerInvariant(),
+                            signature = mc.Signature,
+                        }),
                 }),
             summary = new
             {
@@ -449,6 +705,10 @@ internal static class DiffCommand
                 fieldsAdded = result.TypeDiffs.SelectMany(td => td.Changes).Count(c => c.Kind == ChangeKind.Added),
                 fieldsRemoved = result.TypeDiffs.SelectMany(td => td.Changes).Count(c => c.Kind == ChangeKind.Removed),
                 fieldsRenamed = result.TypeDiffs.SelectMany(td => td.Changes).Count(c => c.Kind == ChangeKind.Renamed),
+                methodsAdded = allMemberChanges.Count(mc => mc.Kind == ChangeKind.Added && mc.Category == MemberCategory.Method),
+                methodsRemoved = allMemberChanges.Count(mc => mc.Kind == ChangeKind.Removed && mc.Category == MemberCategory.Method),
+                propertiesAdded = allMemberChanges.Count(mc => mc.Kind == ChangeKind.Added && mc.Category == MemberCategory.Property),
+                propertiesRemoved = allMemberChanges.Count(mc => mc.Kind == ChangeKind.Removed && mc.Category == MemberCategory.Property),
             },
         };
 

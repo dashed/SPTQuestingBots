@@ -23,8 +23,10 @@ internal static class Program
         return command switch
         {
             "inspect" => RunInspect(commandArgs),
+            "decompile" => RunDecompile(commandArgs),
             "validate" => RunValidate(commandArgs),
             "diff" => RunDiff(commandArgs),
+            "xref" => RunXref(commandArgs),
             "help" or "--help" or "-h" => PrintHelpAndSucceed(),
             _ => UnknownCommand(command),
         };
@@ -75,6 +77,51 @@ internal static class Program
         return InspectCommand.Run(typeName, dllPath, includeInherited);
     }
 
+    private static int RunDecompile(string[] args)
+    {
+        string? typeName = null;
+        string dllPath = DefaultDllPath;
+        string? methodName = null;
+
+        for (int i = 0; i < args.Length; i++)
+        {
+            if (args[i] == "--dll" && i + 1 < args.Length)
+            {
+                dllPath = args[++i];
+            }
+            else if (args[i] == "--method" && i + 1 < args.Length)
+            {
+                methodName = args[++i];
+            }
+            else if (!args[i].StartsWith("-"))
+            {
+                typeName = args[i];
+            }
+            else
+            {
+                Console.Error.WriteLine($"Unknown option: {args[i]}");
+                return 1;
+            }
+        }
+
+        if (typeName == null)
+        {
+            Console.Error.WriteLine("Usage: AssemblyInspector decompile <TypeName> [--method MethodName] [--dll path]");
+            Console.Error.WriteLine();
+            Console.Error.WriteLine("Decompiles a type (or a specific method) to readable C# source.");
+            return 1;
+        }
+
+        if (!File.Exists(dllPath))
+        {
+            Console.Error.WriteLine($"DLL not found: {dllPath}");
+            Console.Error.WriteLine("Run 'make copy-libs' to copy game DLLs, or specify --dll path.");
+            return 1;
+        }
+
+        return DecompileCommand.Run(typeName, dllPath, methodName);
+    }
+
     private static int RunValidate(string[] args)
     {
         string dllPath = DefaultDllPath;
@@ -120,6 +167,9 @@ internal static class Program
         HashSet<string>? typeFilter = null;
         bool knownFieldsOnly = false;
         string format = "table";
+        bool includeMethods = false;
+        bool includeProperties = false;
+        HashSet<string>? namespaceFilter = null;
 
         for (int i = 0; i < args.Length; i++)
         {
@@ -151,6 +201,26 @@ internal static class Program
                     return 1;
                 }
             }
+            else if (args[i] == "--include-methods")
+            {
+                includeMethods = true;
+            }
+            else if (args[i] == "--include-properties")
+            {
+                includeProperties = true;
+            }
+            else if (args[i] == "--include-all")
+            {
+                includeMethods = true;
+                includeProperties = true;
+            }
+            else if (args[i] == "--namespace" && i + 1 < args.Length)
+            {
+                namespaceFilter = new HashSet<string>(
+                    args[++i].Split(',', StringSplitOptions.RemoveEmptyEntries),
+                    StringComparer.OrdinalIgnoreCase
+                );
+            }
             else
             {
                 Console.Error.WriteLine($"Unknown option: {args[i]}");
@@ -161,18 +231,93 @@ internal static class Program
         if (oldDll == null || newDll == null)
         {
             Console.Error.WriteLine(
-                "Usage: AssemblyInspector diff --old <path> --new <path> [--types T1,T2] [--known-fields-only] [--format table|json]"
+                "Usage: AssemblyInspector diff --old <path> --new <path> [options]"
             );
             Console.Error.WriteLine();
-            Console.Error.WriteLine("Compares field changes between two versions of a .NET assembly.");
+            Console.Error.WriteLine("Options:");
+            Console.Error.WriteLine("  --types T1,T2          Only diff specified types");
+            Console.Error.WriteLine("  --known-fields-only    Only diff types used in KnownFields");
+            Console.Error.WriteLine("  --include-methods      Compare method signatures");
+            Console.Error.WriteLine("  --include-properties   Compare properties");
+            Console.Error.WriteLine("  --include-all          Compare fields + methods + properties");
+            Console.Error.WriteLine("  --namespace NS1,NS2    Only diff types in specified namespace(s)");
+            Console.Error.WriteLine("  --format table|json    Output format (default: table)");
             Console.Error.WriteLine();
             Console.Error.WriteLine("Exit codes: 0 = no changes, 1 = error, 2 = changes detected");
             return 1;
         }
 
-        var options = new DiffCommand.DiffOptions(oldDll, newDll, typeFilter, knownFieldsOnly, format);
+        var options = new DiffCommand.DiffOptions(
+            oldDll,
+            newDll,
+            typeFilter,
+            knownFieldsOnly,
+            format,
+            includeMethods,
+            includeProperties,
+            namespaceFilter
+        );
 
         return DiffCommand.Run(options);
+    }
+
+    private static int RunXref(string[] args)
+    {
+        string? target = null;
+        string dllPath = DefaultDllPath;
+        var kind = XrefCommand.MemberKind.All;
+
+        for (int i = 0; i < args.Length; i++)
+        {
+            if (args[i] == "--dll" && i + 1 < args.Length)
+            {
+                dllPath = args[++i];
+            }
+            else if (args[i] == "--kind" && i + 1 < args.Length)
+            {
+                string kindStr = args[++i].ToLowerInvariant();
+                kind = kindStr switch
+                {
+                    "field" => XrefCommand.MemberKind.Field,
+                    "method" => XrefCommand.MemberKind.Method,
+                    "all" => XrefCommand.MemberKind.All,
+                    _ => XrefCommand.MemberKind.All,
+                };
+
+                if (kindStr != "field" && kindStr != "method" && kindStr != "all")
+                {
+                    Console.Error.WriteLine($"Unknown kind: {kindStr}. Use 'field', 'method', or 'all'.");
+                    return 1;
+                }
+            }
+            else if (!args[i].StartsWith("-"))
+            {
+                target = args[i];
+            }
+            else
+            {
+                Console.Error.WriteLine($"Unknown option: {args[i]}");
+                return 1;
+            }
+        }
+
+        if (target == null)
+        {
+            Console.Error.WriteLine("Usage: AssemblyInspector xref <TypeName.MemberName> [--dll path] [--kind field|method|all]");
+            Console.Error.WriteLine();
+            Console.Error.WriteLine("Finds all methods referencing a specific field or method.");
+            return 1;
+        }
+
+        if (!File.Exists(dllPath))
+        {
+            Console.Error.WriteLine($"DLL not found: {dllPath}");
+            Console.Error.WriteLine("Run 'make copy-libs' to copy game DLLs, or specify --dll path.");
+            return 1;
+        }
+
+        var options = new XrefCommand.XrefOptions(target, dllPath, kind);
+        return XrefCommand.Run(options);
     }
 
     private static int PrintHelpAndSucceed()
@@ -190,10 +335,15 @@ internal static class Program
         Console.WriteLine("Commands:");
         Console.WriteLine("  inspect <TypeName> [--dll path] [--include-inherited]");
         Console.WriteLine("                                      List all fields on a type");
+        Console.WriteLine("  decompile <TypeName> [--method MethodName] [--dll path]");
+        Console.WriteLine("                                      Decompile a type or method to C# source");
         Console.WriteLine("  validate [--dll path] [--source path]");
         Console.WriteLine("                                      Validate KnownFields against DLL");
         Console.WriteLine("  diff --old <path> --new <path> [--types T1,T2] [--known-fields-only] [--format table|json]");
-        Console.WriteLine("                                      Compare field changes between assembly versions");
+        Console.WriteLine("       [--include-methods] [--include-properties] [--include-all] [--namespace NS]");
+        Console.WriteLine("                                      Compare changes between assembly versions");
+        Console.WriteLine("  xref <TypeName.MemberName> [--dll path] [--kind field|method|all]");
+        Console.WriteLine("                                      Find all methods referencing a field or method");
         Console.WriteLine("  help                                Show this help message");
         Console.WriteLine();
         Console.WriteLine("Defaults:");

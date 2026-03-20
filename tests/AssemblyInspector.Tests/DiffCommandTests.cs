@@ -872,4 +872,626 @@ public class DiffCommandTests
     }
 
     #endregion
+
+    #region Helper: AddMethod / AddProperty
+
+    private static MethodDefinition AddMethod(
+        ModuleDefinition module,
+        TypeDefinition type,
+        string name,
+        Type returnType,
+        Type[]? paramTypes = null,
+        MethodAttributes attrs = MethodAttributes.Public | MethodAttributes.HideBySig
+    )
+    {
+        var retTypeRef = module.ImportReference(returnType);
+        var method = new MethodDefinition(name, attrs, retTypeRef);
+
+        if (paramTypes != null)
+        {
+            foreach (var pt in paramTypes)
+            {
+                method.Parameters.Add(new ParameterDefinition(module.ImportReference(pt)));
+            }
+        }
+
+        method.Body = new Mono.Cecil.Cil.MethodBody(method);
+        method.Body.Instructions.Add(Mono.Cecil.Cil.Instruction.Create(Mono.Cecil.Cil.OpCodes.Ret));
+        type.Methods.Add(method);
+        return method;
+    }
+
+    private static PropertyDefinition AddProperty(
+        ModuleDefinition module,
+        TypeDefinition type,
+        string name,
+        Type propertyType,
+        bool hasGetter = true,
+        bool hasSetter = false
+    )
+    {
+        var propTypeRef = module.ImportReference(propertyType);
+        var prop = new PropertyDefinition(name, PropertyAttributes.None, propTypeRef);
+
+        if (hasGetter)
+        {
+            var getter = new MethodDefinition(
+                "get_" + name,
+                MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName,
+                propTypeRef
+            );
+            getter.Body = new Mono.Cecil.Cil.MethodBody(getter);
+            getter.Body.Instructions.Add(Mono.Cecil.Cil.Instruction.Create(Mono.Cecil.Cil.OpCodes.Ldnull));
+            getter.Body.Instructions.Add(Mono.Cecil.Cil.Instruction.Create(Mono.Cecil.Cil.OpCodes.Ret));
+            type.Methods.Add(getter);
+            prop.GetMethod = getter;
+        }
+
+        if (hasSetter)
+        {
+            var setter = new MethodDefinition(
+                "set_" + name,
+                MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName,
+                module.ImportReference(typeof(void))
+            );
+            setter.Parameters.Add(new ParameterDefinition("value", ParameterAttributes.None, propTypeRef));
+            setter.Body = new Mono.Cecil.Cil.MethodBody(setter);
+            setter.Body.Instructions.Add(Mono.Cecil.Cil.Instruction.Create(Mono.Cecil.Cil.OpCodes.Ret));
+            type.Methods.Add(setter);
+            prop.SetMethod = setter;
+        }
+
+        type.Properties.Add(prop);
+        return prop;
+    }
+
+    #endregion
+
+    #region Method Signature Diffing
+
+    [Test]
+    public void IncludeMethods_DetectsAddedMethod()
+    {
+        string oldDll = CreateAssembly(
+            "old.dll",
+            m =>
+            {
+                var t = CreateType(m, "EFT", "Player");
+                AddMethod(m, t, "Move", typeof(void));
+            }
+        );
+
+        string newDll = CreateAssembly(
+            "new.dll",
+            m =>
+            {
+                var t = CreateType(m, "EFT", "Player");
+                AddMethod(m, t, "Move", typeof(void));
+                AddMethod(m, t, "Jump", typeof(void));
+            }
+        );
+
+        var result = DiffCommand.ComputeDiff(oldDll, newDll, null, includeMethods: true);
+
+        Assert.That(result.HasChanges, Is.True);
+        var typeDiff = result.TypeDiffs.First(td => td.TypeName == "Player");
+        Assert.That(typeDiff.MemberChanges, Is.Not.Null);
+
+        var addedMethods = typeDiff
+            .MemberChanges!.Where(mc => mc.Kind == DiffCommand.ChangeKind.Added && mc.Category == DiffCommand.MemberCategory.Method)
+            .ToList();
+        Assert.That(addedMethods, Has.Count.EqualTo(1));
+        Assert.That(addedMethods[0].Signature, Does.Contain("Jump"));
+    }
+
+    [Test]
+    public void IncludeMethods_DetectsRemovedMethod()
+    {
+        string oldDll = CreateAssembly(
+            "old.dll",
+            m =>
+            {
+                var t = CreateType(m, "EFT", "Player");
+                AddMethod(m, t, "Move", typeof(void));
+                AddMethod(m, t, "Jump", typeof(void));
+            }
+        );
+
+        string newDll = CreateAssembly(
+            "new.dll",
+            m =>
+            {
+                var t = CreateType(m, "EFT", "Player");
+                AddMethod(m, t, "Move", typeof(void));
+            }
+        );
+
+        var result = DiffCommand.ComputeDiff(oldDll, newDll, null, includeMethods: true);
+
+        Assert.That(result.HasChanges, Is.True);
+        var typeDiff = result.TypeDiffs.First(td => td.TypeName == "Player");
+
+        var removedMethods = typeDiff
+            .MemberChanges!.Where(mc => mc.Kind == DiffCommand.ChangeKind.Removed && mc.Category == DiffCommand.MemberCategory.Method)
+            .ToList();
+        Assert.That(removedMethods, Has.Count.EqualTo(1));
+        Assert.That(removedMethods[0].Signature, Does.Contain("Jump"));
+    }
+
+    [Test]
+    public void IncludeMethods_MethodSignatureIncludesReturnAndParams()
+    {
+        string oldDll = CreateAssembly(
+            "old.dll",
+            m =>
+            {
+                var t = CreateType(m, "EFT", "Player");
+            }
+        );
+
+        string newDll = CreateAssembly(
+            "new.dll",
+            m =>
+            {
+                var t = CreateType(m, "EFT", "Player");
+                AddMethod(m, t, "Calculate", typeof(int), new[] { typeof(float), typeof(string) });
+            }
+        );
+
+        var result = DiffCommand.ComputeDiff(oldDll, newDll, null, includeMethods: true);
+
+        var typeDiff = result.TypeDiffs.First(td => td.TypeName == "Player");
+        var added = typeDiff.MemberChanges!.Where(mc => mc.Kind == DiffCommand.ChangeKind.Added).ToList();
+        Assert.That(added, Has.Count.EqualTo(1));
+        Assert.That(added[0].Signature, Is.EqualTo("int Calculate(float, string)"));
+    }
+
+    [Test]
+    public void IncludeMethods_ExcludesPropertyAccessors()
+    {
+        string oldDll = CreateAssembly(
+            "old.dll",
+            m =>
+            {
+                var t = CreateType(m, "EFT", "Player");
+            }
+        );
+
+        string newDll = CreateAssembly(
+            "new.dll",
+            m =>
+            {
+                var t = CreateType(m, "EFT", "Player");
+                AddProperty(m, t, "Health", typeof(int), hasGetter: true, hasSetter: true);
+            }
+        );
+
+        var result = DiffCommand.ComputeDiff(oldDll, newDll, null, includeMethods: true);
+
+        var typeDiff = result.TypeDiffs.First(td => td.TypeName == "Player");
+        // Property accessors (get_Health, set_Health) should NOT appear in method diff
+        var methodChanges = typeDiff.MemberChanges!.Where(mc => mc.Category == DiffCommand.MemberCategory.Method).ToList();
+        Assert.That(methodChanges.Any(mc => mc.Signature.Contains("get_Health") || mc.Signature.Contains("set_Health")), Is.False);
+    }
+
+    #endregion
+
+    #region Property Diffing
+
+    [Test]
+    public void IncludeProperties_DetectsAddedProperty()
+    {
+        string oldDll = CreateAssembly(
+            "old.dll",
+            m =>
+            {
+                var t = CreateType(m, "EFT", "Player");
+            }
+        );
+
+        string newDll = CreateAssembly(
+            "new.dll",
+            m =>
+            {
+                var t = CreateType(m, "EFT", "Player");
+                AddProperty(m, t, "Health", typeof(float), hasGetter: true, hasSetter: true);
+            }
+        );
+
+        var result = DiffCommand.ComputeDiff(oldDll, newDll, null, includeProperties: true);
+
+        Assert.That(result.HasChanges, Is.True);
+        var typeDiff = result.TypeDiffs.First(td => td.TypeName == "Player");
+
+        var addedProps = typeDiff
+            .MemberChanges!.Where(mc => mc.Kind == DiffCommand.ChangeKind.Added && mc.Category == DiffCommand.MemberCategory.Property)
+            .ToList();
+        Assert.That(addedProps, Has.Count.EqualTo(1));
+        Assert.That(addedProps[0].Signature, Does.Contain("Health"));
+        Assert.That(addedProps[0].Signature, Does.Contain("get;"));
+        Assert.That(addedProps[0].Signature, Does.Contain("set;"));
+    }
+
+    [Test]
+    public void IncludeProperties_GetterOnly()
+    {
+        string oldDll = CreateAssembly(
+            "old.dll",
+            m =>
+            {
+                var t = CreateType(m, "EFT", "Player");
+            }
+        );
+
+        string newDll = CreateAssembly(
+            "new.dll",
+            m =>
+            {
+                var t = CreateType(m, "EFT", "Player");
+                AddProperty(m, t, "Name", typeof(string), hasGetter: true, hasSetter: false);
+            }
+        );
+
+        var result = DiffCommand.ComputeDiff(oldDll, newDll, null, includeProperties: true);
+
+        var typeDiff = result.TypeDiffs.First(td => td.TypeName == "Player");
+        var addedProps = typeDiff.MemberChanges!.Where(mc => mc.Kind == DiffCommand.ChangeKind.Added).ToList();
+        Assert.That(addedProps[0].Signature, Does.Contain("{ get; }"));
+        Assert.That(addedProps[0].Signature, Does.Not.Contain("set;"));
+    }
+
+    [Test]
+    public void IncludeProperties_DetectsRemovedProperty()
+    {
+        string oldDll = CreateAssembly(
+            "old.dll",
+            m =>
+            {
+                var t = CreateType(m, "EFT", "Player");
+                AddProperty(m, t, "Stamina", typeof(float), hasGetter: true);
+            }
+        );
+
+        string newDll = CreateAssembly(
+            "new.dll",
+            m =>
+            {
+                var t = CreateType(m, "EFT", "Player");
+            }
+        );
+
+        var result = DiffCommand.ComputeDiff(oldDll, newDll, null, includeProperties: true);
+
+        Assert.That(result.HasChanges, Is.True);
+        var typeDiff = result.TypeDiffs.First(td => td.TypeName == "Player");
+
+        var removedProps = typeDiff
+            .MemberChanges!.Where(mc => mc.Kind == DiffCommand.ChangeKind.Removed && mc.Category == DiffCommand.MemberCategory.Property)
+            .ToList();
+        Assert.That(removedProps, Has.Count.EqualTo(1));
+        Assert.That(removedProps[0].Signature, Does.Contain("Stamina"));
+    }
+
+    #endregion
+
+    #region Include All
+
+    [Test]
+    public void IncludeAll_DetectsBothMethodAndPropertyChanges()
+    {
+        string oldDll = CreateAssembly(
+            "old.dll",
+            m =>
+            {
+                var t = CreateType(m, "EFT", "Player");
+                AddField(m, t, "x", typeof(int));
+                AddMethod(m, t, "OldMethod", typeof(void));
+                AddProperty(m, t, "OldProp", typeof(int), hasGetter: true);
+            }
+        );
+
+        string newDll = CreateAssembly(
+            "new.dll",
+            m =>
+            {
+                var t = CreateType(m, "EFT", "Player");
+                AddField(m, t, "x", typeof(int));
+                AddMethod(m, t, "NewMethod", typeof(void));
+                AddProperty(m, t, "NewProp", typeof(float), hasGetter: true);
+            }
+        );
+
+        var result = DiffCommand.ComputeDiff(oldDll, newDll, null, includeMethods: true, includeProperties: true);
+
+        Assert.That(result.HasChanges, Is.True);
+        var typeDiff = result.TypeDiffs.First(td => td.TypeName == "Player");
+
+        // Methods
+        var methodChanges = typeDiff.MemberChanges!.Where(mc => mc.Category == DiffCommand.MemberCategory.Method).ToList();
+        Assert.That(methodChanges.Any(mc => mc.Kind == DiffCommand.ChangeKind.Removed && mc.Signature.Contains("OldMethod")), Is.True);
+        Assert.That(methodChanges.Any(mc => mc.Kind == DiffCommand.ChangeKind.Added && mc.Signature.Contains("NewMethod")), Is.True);
+
+        // Properties
+        var propChanges = typeDiff.MemberChanges!.Where(mc => mc.Category == DiffCommand.MemberCategory.Property).ToList();
+        Assert.That(propChanges.Any(mc => mc.Kind == DiffCommand.ChangeKind.Removed && mc.Signature.Contains("OldProp")), Is.True);
+        Assert.That(propChanges.Any(mc => mc.Kind == DiffCommand.ChangeKind.Added && mc.Signature.Contains("NewProp")), Is.True);
+    }
+
+    #endregion
+
+    #region Namespace Filter
+
+    [Test]
+    public void NamespaceFilter_OnlyIncludesMatchingNamespace()
+    {
+        string oldDll = CreateAssembly(
+            "old.dll",
+            m =>
+            {
+                var t1 = CreateType(m, "EFT.AI", "BotBrain");
+                AddField(m, t1, "x", typeof(int));
+                var t2 = CreateType(m, "EFT.UI", "HudPanel");
+                AddField(m, t2, "y", typeof(int));
+            }
+        );
+
+        string newDll = CreateAssembly(
+            "new.dll",
+            m =>
+            {
+                var t1 = CreateType(m, "EFT.AI", "BotBrain");
+                AddField(m, t1, "x", typeof(int));
+                AddField(m, t1, "z", typeof(float));
+                var t2 = CreateType(m, "EFT.UI", "HudPanel");
+                AddField(m, t2, "y", typeof(int));
+                AddField(m, t2, "w", typeof(double));
+            }
+        );
+
+        var nsFilter = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "EFT.AI" };
+        var result = DiffCommand.ComputeDiff(oldDll, newDll, null, namespaceFilter: nsFilter);
+
+        // Should only include BotBrain (EFT.AI), not HudPanel (EFT.UI)
+        Assert.That(result.TypeDiffs, Has.Count.EqualTo(1));
+        Assert.That(result.TypeDiffs[0].TypeName, Is.EqualTo("BotBrain"));
+    }
+
+    [Test]
+    public void NamespaceFilter_IncludesChildNamespaces()
+    {
+        string oldDll = CreateAssembly(
+            "old.dll",
+            m =>
+            {
+                var t1 = CreateType(m, "EFT.AI", "BotBrain");
+                AddField(m, t1, "x", typeof(int));
+                var t2 = CreateType(m, "EFT.AI.Decisions", "DecisionMaker");
+                AddField(m, t2, "y", typeof(int));
+                var t3 = CreateType(m, "EFT.UI", "HudPanel");
+                AddField(m, t3, "z", typeof(int));
+            }
+        );
+
+        string newDll = CreateAssembly(
+            "new.dll",
+            m =>
+            {
+                var t1 = CreateType(m, "EFT.AI", "BotBrain");
+                AddField(m, t1, "x", typeof(int));
+                var t2 = CreateType(m, "EFT.AI.Decisions", "DecisionMaker");
+                AddField(m, t2, "y", typeof(int));
+                var t3 = CreateType(m, "EFT.UI", "HudPanel");
+                AddField(m, t3, "z", typeof(int));
+            }
+        );
+
+        var nsFilter = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "EFT.AI" };
+        var result = DiffCommand.ComputeDiff(oldDll, newDll, null, namespaceFilter: nsFilter);
+
+        // Should include both EFT.AI and EFT.AI.Decisions types
+        var typeNames = result.TypeDiffs.Select(td => td.TypeName).ToList();
+        Assert.That(typeNames, Does.Contain("BotBrain"));
+        Assert.That(typeNames, Does.Contain("DecisionMaker"));
+        Assert.That(typeNames, Has.Count.EqualTo(2));
+    }
+
+    #endregion
+
+    #region Combined Output
+
+    [Test]
+    public void JsonOutput_IncludesMemberChanges()
+    {
+        string oldDll = CreateAssembly(
+            "old.dll",
+            m =>
+            {
+                var t = CreateType(m, "EFT", "Player");
+                AddField(m, t, "x", typeof(int));
+            }
+        );
+
+        string newDll = CreateAssembly(
+            "new.dll",
+            m =>
+            {
+                var t = CreateType(m, "EFT", "Player");
+                AddField(m, t, "x", typeof(int));
+                AddMethod(m, t, "NewMethod", typeof(void));
+                AddProperty(m, t, "NewProp", typeof(int), hasGetter: true);
+            }
+        );
+
+        var options = new DiffCommand.DiffOptions(oldDll, newDll, null, false, "json", IncludeMethods: true, IncludeProperties: true);
+
+        var originalOut = Console.Out;
+        using var outWriter = new StringWriter();
+        Console.SetOut(outWriter);
+
+        try
+        {
+            int exitCode = DiffCommand.Run(options);
+            string output = outWriter.ToString();
+
+            Assert.That(exitCode, Is.EqualTo(2));
+
+            var doc = JsonDocument.Parse(output);
+            var summary = doc.RootElement.GetProperty("summary");
+            Assert.That(summary.GetProperty("methodsAdded").GetInt32(), Is.EqualTo(1));
+            Assert.That(summary.GetProperty("propertiesAdded").GetInt32(), Is.EqualTo(1));
+
+            // Member changes should appear in typeDiffs
+            var typeDiff = doc.RootElement.GetProperty("typeDiffs").EnumerateArray().First();
+            var memberChanges = typeDiff.GetProperty("memberChanges").EnumerateArray().ToList();
+            Assert.That(memberChanges.Count, Is.EqualTo(2));
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    [Test]
+    public void NoMethodsFlag_MemberChangesIsNull()
+    {
+        string dll = CreateAssembly(
+            "same.dll",
+            m =>
+            {
+                var t = CreateType(m, "EFT", "Player");
+                AddField(m, t, "x", typeof(int));
+                AddMethod(m, t, "Foo", typeof(void));
+            }
+        );
+
+        var result = DiffCommand.ComputeDiff(dll, dll, null);
+
+        // Without includeMethods/includeProperties, MemberChanges should be null
+        Assert.That(result.TypeDiffs.All(td => td.MemberChanges == null), Is.True);
+    }
+
+    [Test]
+    public void IdenticalMethods_NoMethodChanges()
+    {
+        string oldDll = CreateAssembly(
+            "old.dll",
+            m =>
+            {
+                var t = CreateType(m, "EFT", "Player");
+                AddMethod(m, t, "Move", typeof(void));
+                AddMethod(m, t, "Jump", typeof(bool));
+            }
+        );
+
+        string newDll = CreateAssembly(
+            "new.dll",
+            m =>
+            {
+                var t = CreateType(m, "EFT", "Player");
+                AddMethod(m, t, "Move", typeof(void));
+                AddMethod(m, t, "Jump", typeof(bool));
+            }
+        );
+
+        var result = DiffCommand.ComputeDiff(oldDll, newDll, null, includeMethods: true);
+
+        var typeDiff = result.TypeDiffs.First(td => td.TypeName == "Player");
+        // All method changes should be Unchanged
+        Assert.That(
+            typeDiff
+                .MemberChanges!.Where(mc => mc.Category == DiffCommand.MemberCategory.Method)
+                .All(mc => mc.Kind == DiffCommand.ChangeKind.Unchanged),
+            Is.True
+        );
+    }
+
+    #endregion
+
+    #region GetMethodSignature / GetPropertySignature Unit Tests
+
+    [Test]
+    public void GetMethodSignature_FormatsCorrectly()
+    {
+        using var module = ModuleDefinition.CreateModule(
+            "test.dll",
+            new ModuleParameters { Kind = ModuleKind.Dll, Runtime = TargetRuntime.Net_4_0 }
+        );
+        var type = CreateType(module, "Test", "Foo");
+        var method = AddMethod(module, type, "Bar", typeof(int), new[] { typeof(string), typeof(float) });
+
+        string sig = DiffCommand.GetMethodSignature(method);
+
+        Assert.That(sig, Is.EqualTo("int Bar(string, float)"));
+    }
+
+    [Test]
+    public void GetPropertySignature_GetterAndSetter()
+    {
+        using var module = ModuleDefinition.CreateModule(
+            "test.dll",
+            new ModuleParameters { Kind = ModuleKind.Dll, Runtime = TargetRuntime.Net_4_0 }
+        );
+        var type = CreateType(module, "Test", "Foo");
+        var prop = AddProperty(module, type, "Health", typeof(int), hasGetter: true, hasSetter: true);
+
+        string sig = DiffCommand.GetPropertySignature(prop);
+
+        Assert.That(sig, Is.EqualTo("int Health { get; set; }"));
+    }
+
+    [Test]
+    public void GetPropertySignature_GetterOnly()
+    {
+        using var module = ModuleDefinition.CreateModule(
+            "test.dll",
+            new ModuleParameters { Kind = ModuleKind.Dll, Runtime = TargetRuntime.Net_4_0 }
+        );
+        var type = CreateType(module, "Test", "Foo");
+        var prop = AddProperty(module, type, "Name", typeof(string), hasGetter: true, hasSetter: false);
+
+        string sig = DiffCommand.GetPropertySignature(prop);
+
+        Assert.That(sig, Is.EqualTo("string Name { get; }"));
+    }
+
+    #endregion
+
+    #region DiffMemberLists Unit Tests
+
+    [Test]
+    public void DiffMemberLists_IdenticalLists_AllUnchanged()
+    {
+        var members = new List<string> { "void Foo()", "int Bar(string)" };
+
+        var changes = DiffCommand.DiffMemberLists(members, members, DiffCommand.MemberCategory.Method);
+
+        Assert.That(changes.All(c => c.Kind == DiffCommand.ChangeKind.Unchanged), Is.True);
+        Assert.That(changes, Has.Count.EqualTo(2));
+    }
+
+    [Test]
+    public void DiffMemberLists_AllNew_AllAdded()
+    {
+        var oldMembers = new List<string>();
+        var newMembers = new List<string> { "void Foo()", "int Bar(string)" };
+
+        var changes = DiffCommand.DiffMemberLists(oldMembers, newMembers, DiffCommand.MemberCategory.Method);
+
+        Assert.That(changes.All(c => c.Kind == DiffCommand.ChangeKind.Added), Is.True);
+        Assert.That(changes, Has.Count.EqualTo(2));
+    }
+
+    [Test]
+    public void DiffMemberLists_AllRemoved_AllRemoved()
+    {
+        var oldMembers = new List<string> { "void Foo()", "int Bar(string)" };
+        var newMembers = new List<string>();
+
+        var changes = DiffCommand.DiffMemberLists(oldMembers, newMembers, DiffCommand.MemberCategory.Method);
+
+        Assert.That(changes.All(c => c.Kind == DiffCommand.ChangeKind.Removed), Is.True);
+        Assert.That(changes, Has.Count.EqualTo(2));
+    }
+
+    #endregion
 }
