@@ -45,6 +45,12 @@ namespace SPTQuestingBots.Components.Spawning
             return botSpawnSchedule.Count;
         }
 
+        protected override void PreWarmProfiles()
+        {
+            int count = Math.Max(1, MaxGeneratedBots);
+            SpawnSystemHelper.PreWarmBotProfiles(WildSpawnType.assault, BotDifficulty.normal, count);
+        }
+
         protected override bool CanSpawnBots()
         {
             Singleton<GameWorld>.Instance.TryGetComponent(out Components.Spawning.PMCGenerator pmcGenerator);

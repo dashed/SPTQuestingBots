@@ -5,6 +5,8 @@ using SPTQuestingBots.Controllers;
 using SPTQuestingBots.Helpers;
 using UnityEngine;
 using UnityEngine.AI;
+// Avoid UnityEngine.Random vs System.Random ambiguity
+using Random = System.Random;
 
 namespace SPTQuestingBots.Models.Pathing
 {
@@ -119,6 +121,10 @@ namespace SPTQuestingBots.Models.Pathing
                 ExecuteMovement(position);
             }
 
+            // Keep BSG's shadow position in sync so local avoidance and door
+            // detection continue to work while our custom mover is active.
+            SyncPositionOnWay(position);
+
             SyncMovementState();
             return status;
         }
@@ -176,8 +182,8 @@ namespace SPTQuestingBots.Models.Pathing
                 return;
             }
 
-            // Compute world-space move direction (blended with path-deviation spring)
-            Vector3 moveVector = _follower.ComputeMoveDirection(position);
+            // Compute world-space move direction (blended with path-deviation spring + inertia)
+            Vector3 moveVector = _follower.ComputeMoveDirection(position, Time.deltaTime);
             if (moveVector.sqrMagnitude < 0.001f)
                 return;
 
@@ -214,6 +220,23 @@ namespace SPTQuestingBots.Models.Pathing
             // Rotate by player's yaw to get local-space input
             Vector3 rotated = Quaternion.Euler(0f, 0f, rotation.x) * dir2d;
             return new Vector2(rotated.x, rotated.y);
+        }
+
+        /// <summary>
+        /// Sync BSG's PositionOnWay fields to the bot's current position.
+        /// When our custom mover is active, BSG's ManualFixedUpdate is skipped,
+        /// so PositionOnWay_1 / PositionOnWayCasted go stale. This breaks
+        /// local avoidance (bot-to-bot collision) and door detection, which
+        /// both read PositionOnWay to compute proximity.
+        /// </summary>
+        private void SyncPositionOnWay(Vector3 position)
+        {
+            var mover = _bot.Mover;
+            if (mover == null)
+                return;
+
+            mover.PositionOnWayInner = position;
+            mover.PositionOnWayCasted = position;
         }
 
         /// <summary>

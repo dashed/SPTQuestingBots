@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using EFT;
+using EFT.Interactive;
 using HarmonyLib;
 using SPTQuestingBots.Controllers;
 
@@ -32,6 +33,7 @@ namespace SPTQuestingBots.Helpers
             // AccessTools.Field lookups
             (typeof(BotCurrentPathAbstractClass), "Vector3_0", "BotPathingHelpers — path corner points"),
             (typeof(NonWavesSpawnScenario), "float_2", "TrySpawnFreeAndDelayPatch — retry time delay"),
+            (typeof(NonWavesSpawnScenario), "bool_2", "SpawnSystemHelper — spawn on/off phase toggle"),
             (typeof(LocalGame), "wavesSpawnScenario_0", "GameStartPatch — waves spawn scenario"),
             (
                 typeof(BotsGroup),

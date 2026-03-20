@@ -82,6 +82,24 @@ public struct CustomMoverConfig
     public int MaxRetries;
 
     /// <summary>
+    /// Maximum angular inertia drift magnitude (meters).
+    /// Matches BSG's GClass497.MAX_INERTION constant.
+    /// </summary>
+    public float MaxInertia;
+
+    /// <summary>
+    /// Maximum accumulated turn angle (degrees) before clamping.
+    /// Matches BSG's GClass497.CLAMP_ANG constant.
+    /// </summary>
+    public float InertiaClampAngle;
+
+    /// <summary>
+    /// Speed at which accumulated drift decays per second (meters/sec).
+    /// Higher values = less drift. BSG uses BotOwner.InertiaonDownSpeedTEMP (~5).
+    /// </summary>
+    public float InertiaDecaySpeed;
+
+    /// <summary>
     /// Default configuration matching Phobos values.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -103,6 +121,9 @@ public struct CustomMoverConfig
             DoorSlowdownSpeed = 0.25f,
             VoxelUpdateInterval = 0.25f,
             MaxRetries = 10,
+            MaxInertia = 0.3f,
+            InertiaClampAngle = 85f,
+            InertiaDecaySpeed = 5f,
         };
     }
 }

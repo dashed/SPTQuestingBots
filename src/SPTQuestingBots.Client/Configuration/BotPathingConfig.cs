@@ -21,5 +21,11 @@ public class BotPathingConfig
     [JsonProperty("bypass_door_colliders")]
     public bool BypassDoorColliders { get; set; } = true;
 
+    [JsonProperty("threat_avoidance_enabled")]
+    public bool ThreatAvoidanceEnabled { get; set; } = true;
+
+    [JsonProperty("threat_avoidance_cooldown")]
+    public float ThreatAvoidanceCooldown { get; set; } = 30f;
+
     public BotPathingConfig() { }
 }

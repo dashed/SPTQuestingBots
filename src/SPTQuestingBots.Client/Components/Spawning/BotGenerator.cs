@@ -71,6 +71,12 @@ namespace SPTQuestingBots.Components.Spawning
         /// </summary>
         protected abstract void Init();
 
+        /// <summary>
+        /// Called before bot generation starts to pre-warm the game's profile cache.
+        /// Override in subclasses to specify which roles and difficulties to pre-warm.
+        /// </summary>
+        protected virtual void PreWarmProfiles() { }
+
         private void Awake()
         {
             awake_Internal();
@@ -325,6 +331,12 @@ namespace SPTQuestingBots.Components.Spawning
                 return false;
             }
 
+            // Defer spawns while NonWaves is in its burst (on) phase to avoid overcrowding
+            if (SpawnSystemHelper.IsNonWavesInBurstPhase())
+            {
+                return false;
+            }
+
             // Ensure the raid is progressing before running anything
             float timeSinceSpawning = RaidHelpers.GetSecondsSinceSpawning();
             if (timeSinceSpawning < 0.01)
@@ -371,7 +383,9 @@ namespace SPTQuestingBots.Components.Spawning
 
         public int BotsAllowedToSpawnForGeneratorType()
         {
-            return MaxAliveBots - AliveBots().Count();
+            int alive = AliveBots().Count();
+            int delayedAndLoading = SpawnSystemHelper.GetDelayedAndLoadingBotCount();
+            return MaxAliveBots - alive - delayedAndLoading;
         }
 
         public int RemainingBotsToSpawn()
@@ -493,6 +507,8 @@ namespace SPTQuestingBots.Components.Spawning
                 {
                     CurrentBotGeneratorType = BotTypeName;
                     CurrentBotGeneratorProgress = 0;
+
+                    PreWarmProfiles();
 
                     LoggingController.LogInfo("Generating " + MaxGeneratedBots + " " + BotTypeName + "s...");
 
@@ -776,7 +792,11 @@ namespace SPTQuestingBots.Components.Spawning
 
             try
             {
-                SpawnBots(botGroup, spawnPositions);
+                if (!SpawnBots(botGroup, spawnPositions))
+                {
+                    LoggingController.LogWarning(spawningLogMessage + "aborted (zone/validation check failed).");
+                    yield break;
+                }
                 botGroup.StartSpawn();
             }
             catch (Exception e)
@@ -789,12 +809,29 @@ namespace SPTQuestingBots.Components.Spawning
             yield return null;
         }
 
-        private void SpawnBots(Models.BotSpawnInfo botSpawnInfo, Vector3[] positions)
+        private bool SpawnBots(Models.BotSpawnInfo botSpawnInfo, Vector3[] positions)
         {
             BotSpawner botSpawner = Singleton<IBotGame>.Instance.BotsController.BotSpawner;
             IBotCreator ibotCreator = botSpawner.BotCreator;
 
             BotZone closestBotZone = botSpawner.GetClosestZone(positions[0], out float dist);
+
+            // Item 7: Check zone capacity before spawning
+            if (!SpawnSystemHelper.HasZoneFreeSpace(closestBotZone, positions.Length))
+            {
+                LoggingController.LogWarning(
+                    "Cannot spawn " + BotTypeName + " group — zone has no free space for " + positions.Length + " bot(s)"
+                );
+                return false;
+            }
+
+            // Item 9: Validate spawn positions via the game's ISpawnSystem
+            if (!SpawnSystemHelper.ValidateSpawnPositions(positions, closestBotZone, botSpawnInfo.Data))
+            {
+                LoggingController.LogWarning("Cannot spawn " + BotTypeName + " group — ISpawnSystem rejected one or more positions");
+                return false;
+            }
+
             foreach (Vector3 position in positions)
             {
                 botSpawnInfo.Data.AddPosition(position, GetClosestCorePoint(position).Id);
@@ -811,6 +848,8 @@ namespace SPTQuestingBots.Components.Spawning
             Action<BotOwner> callback = groupActionsWrapper.CreateBotCallback;
 
             ibotCreator.ActivateBot(botSpawnInfo.Data, closestBotZone, false, getGroupFunction, callback, botSpawner.GetCancelToken());
+
+            return true;
         }
 
         private static AICorePoint GetClosestCorePoint(Vector3 position)
@@ -885,6 +924,9 @@ namespace SPTQuestingBots.Components.Spawning
                     LoggingController.LogError(e.Message);
                     LoggingController.LogError(e.StackTrace);
                 }
+
+                // Item 12: Notify BotSpawnLimiter so NonWaves is aware of our spawns
+                SpawnSystemHelper.NotifyBotSpawnLimiter(bot, botSpawnInfo.Data);
 
                 LoggingController.LogInfo("Spawned bot " + bot.GetText());
                 botSpawnInfo.AddBotOwner(bot);

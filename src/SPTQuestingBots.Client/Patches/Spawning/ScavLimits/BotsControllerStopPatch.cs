@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using EFT;
 using SPT.Reflection.Patching;
+using SPTQuestingBots.Helpers;
 
 namespace SPTQuestingBots.Patches.Spawning.ScavLimits
 {
@@ -20,6 +21,7 @@ namespace SPTQuestingBots.Patches.Spawning.ScavLimits
         protected static void PatchPrefix()
         {
             NonWavesSpawnScenarioCreatePatch.Clear();
+            SpawnSystemHelper.Clear();
             GameStartPatch.ClearMissedWaves();
             TryLoadBotsProfilesOnStartPatch.Clear();
             TimeHasComeScreenClassChangeStatusPatch.Clear();

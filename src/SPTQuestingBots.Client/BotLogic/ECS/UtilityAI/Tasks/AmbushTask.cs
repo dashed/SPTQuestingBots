@@ -18,6 +18,12 @@ public sealed class AmbushTask : QuestUtilityTask
     /// </summary>
     public const float GameAmbushBonus = 0.10f;
 
+    /// <summary>
+    /// Score bonus when BSG's Mind profile has AMBUSH_WHEN_UNDER_FIRE enabled.
+    /// Indicates the bot's difficulty settings favor ambush behavior.
+    /// </summary>
+    public const float MindAmbushBonus = 0.08f;
+
     public override int BotActionTypeId
     {
         get { return UtilityAI.BotActionTypeId.Ambush; }
@@ -62,6 +68,12 @@ public sealed class AmbushTask : QuestUtilityTask
         if (entity.HasGameAmbushPoint)
         {
             score += GameAmbushBonus;
+        }
+
+        // Bonus when BSG Mind profile favors ambush behavior
+        if (entity.MindAmbushWhenUnderFire)
+        {
+            score += MindAmbushBonus;
         }
 
         return score;

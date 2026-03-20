@@ -129,6 +129,20 @@ public sealed class BotEntity : IEquatable<BotEntity>
     public float DistanceToObjective;
 
     /// <summary>
+    /// NavMesh-accurate path distance to the current objective.
+    /// Computed via <c>BotMover.ComputePathLengthToPoint()</c> on a throttled interval.
+    /// Falls back to <see cref="DistanceToObjective"/> (straight-line) when unavailable.
+    /// Default: <see cref="float.MaxValue"/>.
+    /// </summary>
+    public float NavMeshDistanceToObjective;
+
+    /// <summary>
+    /// Last time NavMeshDistanceToObjective was computed (Time.time).
+    /// Used to throttle the expensive NavMesh path calculation.
+    /// </summary>
+    public float LastNavMeshDistanceTime;
+
+    /// <summary>
     /// Whether the bot is within the "close to objective" threshold.
     /// Synced from <c>BotObjectiveManager.IsCloseToObjective()</c> before scoring.
     /// Default: false.
@@ -476,6 +490,60 @@ public sealed class BotEntity : IEquatable<BotEntity>
     /// </summary>
     public int GameSearchTargetType;
 
+    // ── PlacesForCheck State ──────────────────────────────────────────────
+
+    /// <summary>Whether a PlaceForCheck was found for this bot (from hearing sensor).</summary>
+    public bool HasPlaceForCheck;
+
+    /// <summary>Nearest PlaceForCheck X coordinate (BasePoint).</summary>
+    public float PlaceForCheckX;
+
+    /// <summary>Nearest PlaceForCheck Y coordinate (BasePoint).</summary>
+    public float PlaceForCheckY;
+
+    /// <summary>Nearest PlaceForCheck Z coordinate (BasePoint).</summary>
+    public float PlaceForCheckZ;
+
+    /// <summary>PlaceForCheckType: 0=simple, 1=danger, 2=suspicious.</summary>
+    public byte PlaceForCheckTypeId;
+
+    // ── BSG Mind Settings (read once on registration) ────────────────────
+
+    /// <summary>Whether the bot's BSG Mind profile says to ambush when under fire.</summary>
+    public bool MindAmbushWhenUnderFire;
+
+    /// <summary>How the bot interacts with dead bodies (0=ignore, higher=more interested).</summary>
+    public int MindHowWorkOverDeadBody;
+
+    /// <summary>Whether the bot's BSG Mind profile allows standing by (idling).</summary>
+    public bool MindCanStandBy;
+
+    /// <summary>BSG's configured time (seconds) after which the bot forgets about an enemy.</summary>
+    public float MindTimeToForgetEnemySec;
+
+    // ── Enemy Info State ──────────────────────────────────────────────
+
+    /// <summary>Whether the bot currently has a goal enemy tracked in memory.</summary>
+    public bool HasEnemyInfo;
+
+    /// <summary>Time in seconds since the enemy was last personally seen. Float.MaxValue if no enemy.</summary>
+    public float TimeSinceEnemySeen;
+
+    /// <summary>Enemy last known position X (from PersonalLastPos).</summary>
+    public float EnemyLastKnownX;
+
+    /// <summary>Enemy last known position Y (from PersonalLastPos).</summary>
+    public float EnemyLastKnownY;
+
+    /// <summary>Enemy last known position Z (from PersonalLastPos).</summary>
+    public float EnemyLastKnownZ;
+
+    /// <summary>Current distance to the goal enemy. 0 if no enemy.</summary>
+    public float EnemyDistance;
+
+    /// <summary>Whether the goal enemy is currently visible to the bot.</summary>
+    public bool IsEnemyVisible;
+
     // ── Look Variance State ──────────────────────────────────────────────
 
     /// <summary>Game time when next flank check should occur.</summary>
@@ -504,6 +572,14 @@ public sealed class BotEntity : IEquatable<BotEntity>
 
         // Quest state defaults
         DistanceToObjective = float.MaxValue;
+        NavMeshDistanceToObjective = float.MaxValue;
+
+        // Enemy info defaults
+        TimeSinceEnemySeen = float.MaxValue;
+
+        // Mind settings defaults (conservative — assume interested in dead bodies by default)
+        MindCanStandBy = true;
+        MindHowWorkOverDeadBody = 1;
     }
 
     // ── Hierarchy Queries ───────────────────────────────────

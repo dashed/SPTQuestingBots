@@ -30,6 +30,13 @@ namespace SPTQuestingBots.Components.Spawning
 
         protected override bool CanSpawnBots() => true;
 
+        protected override void PreWarmProfiles()
+        {
+            int count = Math.Max(1, MaxGeneratedBots);
+            SpawnSystemHelper.PreWarmBotProfiles(WildSpawnType.pmcBEAR, BotDifficulty.normal, count);
+            SpawnSystemHelper.PreWarmBotProfiles(WildSpawnType.pmcUSEC, BotDifficulty.normal, count);
+        }
+
         protected override int GetNumberOfBotsAllowedToSpawn() => BotsAllowedToSpawnForGeneratorType();
 
         protected override int GetMaxGeneratedBots()

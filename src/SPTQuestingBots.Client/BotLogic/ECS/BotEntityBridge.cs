@@ -113,6 +113,9 @@ namespace SPTQuestingBots.BotLogic.ECS
             // Personality: derive from bot difficulty
             AssignPersonality(entity, bot);
 
+            // BSG Mind settings: read once per bot for personality calibration
+            SyncMindSettings(entity, bot);
+
             // Native patrol: extract BSG patrol waypoints as fallback route
             try
             {
@@ -754,6 +757,9 @@ namespace SPTQuestingBots.BotLogic.ECS
             // Sync game time for linger scoring
             entity.CurrentGameTime = UnityEngine.Time.time;
 
+            // Compute NavMesh-accurate distance (throttled: every 5 seconds or on objective change)
+            SyncNavMeshDistance(botOwner, entity, objectiveManager, previousHasActiveObjective);
+
             // Decay spawn facing bias linearly: 1.0 → 0 over configured duration
             if (entity.SpawnFacingBias > 0f && entity.IsSpawnEntryComplete)
             {
@@ -869,6 +875,145 @@ namespace SPTQuestingBots.BotLogic.ECS
             catch
             {
                 entity.HasGameSearchTarget = false;
+            }
+
+            // Sync PlacesForCheck — hearing-derived investigation positions
+            try
+            {
+                var places = botOwner.BotsGroup?.PlacesForCheck;
+                if (places != null && places.Count > 0)
+                {
+                    float bestDistSqr = float.MaxValue;
+                    int bestIndex = -1;
+                    var botPos = botOwner.Position;
+                    for (int i = 0; i < places.Count; i++)
+                    {
+                        var place = places[i];
+                        if (place == null)
+                            continue;
+                        float dx = place.BasePoint.x - botPos.x;
+                        float dy = place.BasePoint.y - botPos.y;
+                        float dz = place.BasePoint.z - botPos.z;
+                        float distSqr = dx * dx + dy * dy + dz * dz;
+                        if (distSqr < bestDistSqr)
+                        {
+                            bestDistSqr = distSqr;
+                            bestIndex = i;
+                        }
+                    }
+
+                    if (bestIndex >= 0)
+                    {
+                        var best = places[bestIndex];
+                        entity.HasPlaceForCheck = true;
+                        entity.PlaceForCheckX = best.BasePoint.x;
+                        entity.PlaceForCheckY = best.BasePoint.y;
+                        entity.PlaceForCheckZ = best.BasePoint.z;
+                        entity.PlaceForCheckTypeId = (byte)best.Type;
+                    }
+                    else
+                    {
+                        entity.HasPlaceForCheck = false;
+                    }
+                }
+                else
+                {
+                    entity.HasPlaceForCheck = false;
+                }
+            }
+            catch
+            {
+                entity.HasPlaceForCheck = false;
+            }
+
+            // Sync enemy info — gradient post-combat state from GoalEnemy
+            try
+            {
+                var goalEnemy = botOwner.Memory?.GoalEnemy;
+                if (goalEnemy != null && goalEnemy.Person != null && goalEnemy.Person.HealthController.IsAlive)
+                {
+                    entity.HasEnemyInfo = true;
+                    entity.EnemyDistance = goalEnemy.Distance_1;
+                    entity.IsEnemyVisible = goalEnemy.IsVisible;
+
+                    var lastPos = goalEnemy.PersonalLastPos;
+                    entity.EnemyLastKnownX = lastPos.x;
+                    entity.EnemyLastKnownY = lastPos.y;
+                    entity.EnemyLastKnownZ = lastPos.z;
+
+                    // PersonalLastSeenTime is a game-time timestamp. Convert to elapsed seconds.
+                    float lastSeenTime = goalEnemy.PersonalLastSeenTime;
+                    if (lastSeenTime > 0f)
+                    {
+                        entity.TimeSinceEnemySeen = entity.CurrentGameTime - lastSeenTime;
+                        if (entity.TimeSinceEnemySeen < 0f)
+                            entity.TimeSinceEnemySeen = 0f;
+                    }
+                    else
+                    {
+                        entity.TimeSinceEnemySeen = float.MaxValue;
+                    }
+                }
+                else
+                {
+                    entity.HasEnemyInfo = false;
+                    entity.TimeSinceEnemySeen = float.MaxValue;
+                    entity.EnemyDistance = 0f;
+                    entity.IsEnemyVisible = false;
+                }
+            }
+            catch
+            {
+                entity.HasEnemyInfo = false;
+                entity.TimeSinceEnemySeen = float.MaxValue;
+                entity.EnemyDistance = 0f;
+                entity.IsEnemyVisible = false;
+            }
+        }
+
+        /// <summary>
+        /// Throttle interval for NavMesh distance computation (seconds).
+        /// </summary>
+        private const float NavMeshDistanceInterval = 5f;
+
+        /// <summary>
+        /// Compute NavMesh-accurate distance to the objective on a throttled interval.
+        /// Uses <c>BotMover.ComputePathLengthToPoint()</c> which is expensive (full NavMesh path calc).
+        /// Triggers on objective change or every <see cref="NavMeshDistanceInterval"/> seconds.
+        /// </summary>
+        private static void SyncNavMeshDistance(
+            BotOwner botOwner,
+            BotEntity entity,
+            Components.BotObjectiveManager objectiveManager,
+            bool previousHasActiveObjective
+        )
+        {
+            if (!entity.HasActiveObjective || !objectiveManager.Position.HasValue)
+            {
+                entity.NavMeshDistanceToObjective = float.MaxValue;
+                return;
+            }
+
+            float now = entity.CurrentGameTime;
+            bool objectiveChanged = !previousHasActiveObjective;
+            bool intervalElapsed = now - entity.LastNavMeshDistanceTime >= NavMeshDistanceInterval;
+
+            if (!objectiveChanged && !intervalElapsed)
+                return;
+
+            try
+            {
+                var mover = botOwner.Mover;
+                if (mover == null)
+                    return;
+
+                float navDist = mover.ComputePathLengthToPoint(objectiveManager.Position.Value);
+                entity.NavMeshDistanceToObjective = navDist;
+                entity.LastNavMeshDistanceTime = now;
+            }
+            catch
+            {
+                // ComputePathLengthToPoint may fail during early init or bot death
             }
         }
 
@@ -1105,6 +1250,48 @@ namespace SPTQuestingBots.BotLogic.ECS
             }
 
             entity.Aggression = PersonalityHelper.GetAggression(entity.Personality);
+        }
+
+        // ── BSG Mind Settings ────────────────────────────────────────
+
+        /// <summary>
+        /// Read BSG Mind settings from the bot's difficulty profile and store
+        /// on the entity. Called once during RegisterBot() — these are static
+        /// per-bot configuration, not dynamic state.
+        /// </summary>
+        private static void SyncMindSettings(BotEntity entity, BotOwner bot)
+        {
+            try
+            {
+                var mind = bot.Settings?.FileSettings?.Mind;
+                if (mind == null)
+                    return;
+
+                entity.MindAmbushWhenUnderFire = mind.AMBUSH_WHEN_UNDER_FIRE;
+                entity.MindHowWorkOverDeadBody = mind.HOW_WORK_OVER_DEAD_BODY;
+                entity.MindCanStandBy = mind.CAN_STAND_BY;
+                entity.MindTimeToForgetEnemySec = mind.TIME_TO_FORGOR_ABOUT_ENEMY_SEC > 0f ? mind.TIME_TO_FORGOR_ABOUT_ENEMY_SEC : 60f;
+
+                LoggingController.LogDebug(
+                    "[BotEntityBridge] Entity "
+                        + entity.Id
+                        + " mind settings: ambushUnderFire="
+                        + entity.MindAmbushWhenUnderFire
+                        + " deadBody="
+                        + entity.MindHowWorkOverDeadBody
+                        + " canStandBy="
+                        + entity.MindCanStandBy
+                        + " forgetEnemy="
+                        + entity.MindTimeToForgetEnemySec.ToString("F1")
+                        + "s"
+                );
+            }
+            catch
+            {
+                // Settings may not be available for all bot types
+                entity.MindCanStandBy = true;
+                entity.MindTimeToForgetEnemySec = 60f;
+            }
         }
 
         // ── Spawn Entry Initialization ────────────────────────────

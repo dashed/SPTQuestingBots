@@ -40,9 +40,43 @@ namespace SPTQuestingBots.BotLogic.Objective
             {
                 _targetPosition = new Vector3(entity.NearbyEventX, entity.NearbyEventY, entity.NearbyEventZ);
 
-                // Prefer game's search point when it's based on actual enemy position —
-                // it's more accurate than our combat event centroid
-                if (TryGetGameSearchTarget(entity, out var searchTarget))
+                // Priority chain for investigation target (most precise → least precise):
+                // 1. Enemy last-known position (from GoalEnemy, recently seen & not visible)
+                // 2. PlaceForCheck position (from hearing sensor, precise sound location)
+                // 3. Game's SearchData target (BSG's search point based on enemy sighting)
+                // 4. Combat event centroid (default fallback)
+
+                if (TryGetEnemyLastKnown(entity, out var enemyPos))
+                {
+                    _targetPosition = enemyPos;
+                    LoggingController.LogInfo(
+                        "[InvestigateAction] Bot "
+                            + BotOwner.GetText()
+                            + ": using enemy last-known position at ("
+                            + _targetPosition.x.ToString("F0")
+                            + ","
+                            + _targetPosition.y.ToString("F0")
+                            + ","
+                            + _targetPosition.z.ToString("F0")
+                            + ")"
+                    );
+                }
+                else if (TryGetPlaceForCheck(entity, out var placePos))
+                {
+                    _targetPosition = placePos;
+                    LoggingController.LogInfo(
+                        "[InvestigateAction] Bot "
+                            + BotOwner.GetText()
+                            + ": using PlaceForCheck position at ("
+                            + _targetPosition.x.ToString("F0")
+                            + ","
+                            + _targetPosition.y.ToString("F0")
+                            + ","
+                            + _targetPosition.z.ToString("F0")
+                            + ")"
+                    );
+                }
+                else if (TryGetGameSearchTarget(entity, out var searchTarget))
                 {
                     _targetPosition = searchTarget;
                     LoggingController.LogInfo(
@@ -248,6 +282,45 @@ namespace SPTQuestingBots.BotLogic.Objective
             if (entity.HasGameSearchTarget && entity.GameSearchTargetType == 0) // 0 = playerPosition
             {
                 target = new Vector3(entity.GameSearchTargetX, entity.GameSearchTargetY, entity.GameSearchTargetZ);
+                return true;
+            }
+
+            target = default;
+            return false;
+        }
+
+        /// <summary>
+        /// Try to get the enemy's last-known position for investigation.
+        /// Only valid when: enemy exists, was recently seen (within forget time),
+        /// and is NOT currently visible (no point investigating if you can see them).
+        /// </summary>
+        private bool TryGetEnemyLastKnown(BotEntity entity, out Vector3 target)
+        {
+            if (
+                entity.HasEnemyInfo
+                && !entity.IsEnemyVisible
+                && entity.TimeSinceEnemySeen < entity.MindTimeToForgetEnemySec
+                && entity.TimeSinceEnemySeen >= 0f
+            )
+            {
+                target = new Vector3(entity.EnemyLastKnownX, entity.EnemyLastKnownY, entity.EnemyLastKnownZ);
+                return true;
+            }
+
+            target = default;
+            return false;
+        }
+
+        /// <summary>
+        /// Try to get a PlaceForCheck position for investigation.
+        /// PlacesForCheck come from the hearing sensor and represent precise
+        /// locations where sounds were detected.
+        /// </summary>
+        private bool TryGetPlaceForCheck(BotEntity entity, out Vector3 target)
+        {
+            if (entity.HasPlaceForCheck)
+            {
+                target = new Vector3(entity.PlaceForCheckX, entity.PlaceForCheckY, entity.PlaceForCheckZ);
                 return true;
             }
 

@@ -77,7 +77,9 @@ public sealed class GoToObjectiveTask : QuestUtilityTask
         // Distance-based continuous scoring: close → low, far → high
         // score = BaseScore * (1 - exp(-distance / falloff))
         // At 0m → 0, at 50m → ~0.31, at 75m → ~0.41, at 200m → ~0.61
-        float distance = entity.DistanceToObjective;
+        // Prefer NavMesh-accurate distance when available (more realistic than straight-line)
+        float distance =
+            entity.NavMeshDistanceToObjective < float.MaxValue ? entity.NavMeshDistanceToObjective : entity.DistanceToObjective;
         float falloff = 75f;
         float score = BaseScore * (1f - (float)Math.Exp(-distance / falloff));
 

@@ -50,6 +50,11 @@ public class CustomPathFollower
     private readonly float _sprintEpsSqr;
     private readonly float _destinationEpsSqr;
 
+    // Inertia state (mirrors BSG's GClass497 algorithm)
+    private Vector3 _prevDirection;
+    private float _accumulatedAngle;
+    private Vector3 _driftOffset;
+
     public CustomPathFollower(CustomMoverConfig config)
     {
         _config = config;
@@ -136,6 +141,7 @@ public class CustomPathFollower
         _currentCorner = 0;
         _status = PathFollowerStatus.Following;
         _partialPathDetected = false;
+        ResetInertia();
         LoggingController.LogInfo("[CustomPathFollower] Path started: " + corners.Length + " corners");
     }
 
@@ -149,6 +155,7 @@ public class CustomPathFollower
         _status = PathFollowerStatus.Idle;
         _retryCount = 0;
         _partialPathDetected = false;
+        ResetInertia();
     }
 
     /// <summary>
@@ -303,13 +310,14 @@ public class CustomPathFollower
     /// <summary>
     /// Compute the move direction vector for the current frame.
     /// Blends the raw direction toward the current corner with a path-deviation
-    /// spring force that pulls the bot back toward the ideal path line.
+    /// spring force and angular inertia (matching BSG's GClass497 algorithm).
     ///
     /// Returns a normalized Vector3 in the XZ plane (Y=0).
     /// </summary>
     /// <param name="position">Current bot position.</param>
+    /// <param name="deltaTime">Frame delta time (seconds). Pass 0 to skip inertia.</param>
     /// <returns>Normalized movement direction (XZ plane).</returns>
-    public Vector3 ComputeMoveDirection(Vector3 position)
+    public Vector3 ComputeMoveDirection(Vector3 position, float deltaTime = 0f)
     {
         if (_corners == null || _currentCorner >= _corners.Length)
         {
@@ -325,7 +333,15 @@ public class CustomPathFollower
         Vector3 deviation = PathDeviationForce.ComputeDeviation(position, prevCorner, _corners[_currentCorner]);
 
         // Blend: normalize cornerDir, add spring, re-normalize
-        return PathDeviationForce.BlendWithDeviation(cornerDir, deviation);
+        Vector3 blended = PathDeviationForce.BlendWithDeviation(cornerDir, deviation);
+
+        // Apply angular inertia (mirrors BSG GClass497.AddToInertion)
+        if (deltaTime > 0f && _config.MaxInertia > 0f)
+        {
+            blended = ApplyInertia(blended, deltaTime);
+        }
+
+        return blended;
     }
 
     /// <summary>
@@ -428,6 +444,130 @@ public class CustomPathFollower
         return _status;
     }
 
+    // ── Inertia ───────────────────────────────────────────────
+
+    /// <summary>Current accumulated drift offset (for testing/debugging).</summary>
+    public Vector3 DriftOffset
+    {
+        get { return _driftOffset; }
+    }
+
+    /// <summary>Current accumulated turn angle in degrees (for testing/debugging).</summary>
+    public float AccumulatedAngle
+    {
+        get { return _accumulatedAngle; }
+    }
+
+    /// <summary>
+    /// Apply angular momentum / inertia to a movement direction.
+    /// Mirrors BSG's GClass497.AddToInertion algorithm:
+    /// 1. Compute angle delta between previous and current direction
+    /// 2. Accumulate turn angle (clamped to ±ClampAngle)
+    /// 3. Scale forward movement by cos(turnAngle)
+    /// 4. Add perpendicular drift (side-slip from momentum)
+    /// 5. Decay drift over time, cap at MaxInertia
+    /// </summary>
+    internal Vector3 ApplyInertia(Vector3 direction, float deltaTime)
+    {
+        // Flatten to XZ plane
+        Vector3 dirXZ = new Vector3(direction.x, 0f, direction.z);
+        if (dirXZ.sqrMagnitude < 0.0001f)
+            return direction;
+
+        Vector3 dirNorm = Normalize(dirXZ);
+
+        // First frame: initialize previous direction
+        if (_prevDirection.sqrMagnitude < 0.0001f)
+        {
+            _prevDirection = dirNorm;
+            return direction;
+        }
+
+        // Compute angle between previous and current direction
+        float dot = _prevDirection.x * dirNorm.x + _prevDirection.z * dirNorm.z;
+        dot = Clamp(dot, -1f, 1f);
+        float angleDeg = (float)(Math.Acos(dot) * (180.0 / Math.PI));
+
+        // Determine turn sign via cross product (Y component of prev × current)
+        float cross = _prevDirection.x * dirNorm.z - _prevDirection.z * dirNorm.x;
+        bool isLeft = cross > 0f;
+
+        // Accumulate turn angle
+        if (angleDeg > 0f)
+        {
+            _accumulatedAngle += isLeft ? angleDeg : -angleDeg;
+            _accumulatedAngle = Clamp(_accumulatedAngle, -_config.InertiaClampAngle, _config.InertiaClampAngle);
+        }
+
+        // Decay accumulated angle toward zero
+        float absAngle = Math.Abs(_accumulatedAngle);
+        if (absAngle > 0f)
+        {
+            float decay = _config.InertiaDecaySpeed * deltaTime;
+            if (decay >= absAngle)
+                _accumulatedAngle = 0f;
+            else
+                _accumulatedAngle -= Math.Sign(_accumulatedAngle) * decay;
+        }
+
+        // Apply forward scaling and perpendicular drift
+        absAngle = Math.Abs(_accumulatedAngle);
+        Vector3 result = dirNorm;
+        if (absAngle > 0f)
+        {
+            float rad = absAngle * (float)(Math.PI / 180.0);
+            float cosA = (float)Math.Cos(rad);
+            result = new Vector3(dirNorm.x * cosA, 0f, dirNorm.z * cosA);
+
+            // Perpendicular vector (rotate 90 degrees based on turn direction)
+            Vector3 perp =
+                _accumulatedAngle > 0f
+                    ? new Vector3(-dirNorm.z, 0f, dirNorm.x) // left turn → drift right
+                    : new Vector3(dirNorm.z, 0f, -dirNorm.x); // right turn → drift left
+
+            _driftOffset += perp * (1f - cosA) * deltaTime;
+        }
+
+        // Decay drift offset
+        float driftMag = (float)Math.Sqrt(_driftOffset.x * _driftOffset.x + _driftOffset.z * _driftOffset.z);
+        if (driftMag > 0f)
+        {
+            float driftDecay = _config.InertiaDecaySpeed * deltaTime;
+            driftDecay = driftDecay > driftMag ? driftMag : driftDecay;
+            float invMag = 1f / driftMag;
+            _driftOffset -= new Vector3(_driftOffset.x * invMag, 0f, _driftOffset.z * invMag) * driftDecay;
+        }
+
+        // Cap drift magnitude
+        driftMag = (float)Math.Sqrt(_driftOffset.x * _driftOffset.x + _driftOffset.z * _driftOffset.z);
+        if (driftMag > _config.MaxInertia)
+        {
+            float scale = _config.MaxInertia / driftMag;
+            _driftOffset = new Vector3(_driftOffset.x * scale, 0f, _driftOffset.z * scale);
+        }
+
+        _prevDirection = dirNorm;
+
+        // Re-normalize the result
+        Vector3 final = new Vector3(result.x + _driftOffset.x, 0f, result.z + _driftOffset.z);
+        float finalMag = (float)Math.Sqrt(final.x * final.x + final.z * final.z);
+        if (finalMag > 0.0001f)
+        {
+            float inv = 1f / finalMag;
+            return new Vector3(final.x * inv, 0f, final.z * inv);
+        }
+
+        return direction;
+    }
+
+    /// <summary>Reset inertia state (on path change or reset).</summary>
+    internal void ResetInertia()
+    {
+        _prevDirection = Vector3.zero;
+        _accumulatedAngle = 0f;
+        _driftOffset = Vector3.zero;
+    }
+
     // ── Helpers ───────────────────────────────────────────────
 
     /// <summary>
@@ -439,5 +579,25 @@ public class CustomPathFollower
         float dx = a.x - b.x;
         float dz = a.z - b.z;
         return dx * dx + dz * dz;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static float Clamp(float value, float min, float max)
+    {
+        if (value < min)
+            return min;
+        if (value > max)
+            return max;
+        return value;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static Vector3 Normalize(Vector3 v)
+    {
+        float mag = (float)Math.Sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+        if (mag < 0.0001f)
+            return Vector3.zero;
+        float inv = 1f / mag;
+        return new Vector3(v.x * inv, v.y * inv, v.z * inv);
     }
 }

@@ -30,6 +30,22 @@ public sealed class InvestigateTask : QuestUtilityTask
     /// </summary>
     public const float GameSearchBonus = 0.05f;
 
+    /// <summary>
+    /// Score bonus when a PlaceForCheck exists from the hearing sensor.
+    /// Danger/suspicious types get a higher bonus than simple.
+    /// </summary>
+    public const float PlaceForCheckBonus = 0.06f;
+
+    /// <summary>Extra bonus for danger/suspicious PlaceForCheck types.</summary>
+    public const float PlaceForCheckDangerExtra = 0.04f;
+
+    /// <summary>
+    /// Score bonus when enemy info exists and the enemy was recently seen.
+    /// Provides gradient boost: full bonus at TimeSinceEnemySeen=0, fades to 0
+    /// at MindTimeToForgetEnemySec.
+    /// </summary>
+    public const float EnemyInfoBonus = 0.06f;
+
     /// <summary>Default intensity threshold if not configured.</summary>
     public const int DefaultIntensityThreshold = 5;
 
@@ -140,6 +156,28 @@ public sealed class InvestigateTask : QuestUtilityTask
         if (entity.HasGameSearchTarget && entity.GameSearchTargetType == 0) // 0 = playerPosition
         {
             score += GameSearchBonus;
+        }
+
+        // Bonus when PlaceForCheck exists (hearing sensor detected sound)
+        if (entity.HasPlaceForCheck)
+        {
+            score += PlaceForCheckBonus;
+            // Danger and suspicious types are more actionable
+            if (entity.PlaceForCheckTypeId >= 1) // danger=1, suspicious=2
+            {
+                score += PlaceForCheckDangerExtra;
+            }
+        }
+
+        // Gradient bonus from enemy info — recently seen enemies boost investigation
+        if (entity.HasEnemyInfo && !entity.IsEnemyVisible && entity.TimeSinceEnemySeen < entity.MindTimeToForgetEnemySec)
+        {
+            float forgetTime = entity.MindTimeToForgetEnemySec > 0f ? entity.MindTimeToForgetEnemySec : 60f;
+            float freshness = 1f - entity.TimeSinceEnemySeen / forgetTime;
+            if (freshness > 0f)
+            {
+                score += EnemyInfoBonus * freshness;
+            }
         }
 
         // Clamp

@@ -55,6 +55,13 @@ public sealed class LingerTask : QuestUtilityTask
             return 0f;
         }
 
+        // BSG Mind profile says bot can't stand by — no lingering
+        if (!entity.MindCanStandBy)
+        {
+            LoggingController.LogDebug("[LingerTask] Entity " + entity.Id + ": MindCanStandBy=false, score=0");
+            return 0f;
+        }
+
         // Linger duration not set
         if (entity.LingerDuration <= 0f)
         {

@@ -136,21 +136,27 @@ namespace SPTQuestingBots.BehaviorExtensions
             {
                 if (updateReason != Models.Pathing.BotPathUpdateNeededReason.None)
                 {
-                    if (UseCustomMover)
+                    // Attempt threat avoidance: reroute around known enemy positions
+                    bool usedAvoidance = TryThreatAvoidancePath();
+
+                    if (!usedAvoidance)
                     {
-                        // Feed NavMesh corners to our custom path follower instead of BSG's mover
-                        _customMover.SetPath(ObjectiveManager.BotPath.Corners, position);
-                    }
-                    else
-                    {
-                        BotOwner.FollowPath(ObjectiveManager.BotPath, true, false);
+                        if (UseCustomMover)
+                        {
+                            // Feed NavMesh corners to our custom path follower instead of BSG's mover
+                            _customMover.SetPath(ObjectiveManager.BotPath.Corners, position);
+                        }
+                        else
+                        {
+                            BotOwner.FollowPath(ObjectiveManager.BotPath, true, false);
+                        }
                     }
 
                     var botPos = BotOwner.Position;
                     TelemetryRecorder.RecordMovement(
                         Time.time,
                         BotOwner.Id,
-                        "waypoint",
+                        usedAvoidance ? "waypoint_avoid" : "waypoint",
                         botPos.x,
                         botPos.y,
                         botPos.z,
@@ -175,6 +181,62 @@ namespace SPTQuestingBots.BehaviorExtensions
             }
 
             return ObjectiveManager.BotPath.Status;
+        }
+
+        /// <summary>
+        /// Attempt to reroute the current path around known enemy positions using BSG's
+        /// TryRelacePathAround API. Returns true if the path was successfully rerouted.
+        /// Falls back to the normal path if avoidance fails.
+        /// </summary>
+        private bool TryThreatAvoidancePath()
+        {
+            // Only attempt if threat avoidance is enabled in config
+            var pathConfig = ConfigController.Config?.Questing?.BotPathing;
+            if (pathConfig == null || !pathConfig.ThreatAvoidanceEnabled)
+                return false;
+
+            // Get last known enemy position from the bot's group
+            Vector3? enemyPos = CombatStateHelper.GetLastEnemyPosition(BotOwner);
+            if (!enemyPos.HasValue)
+                return false;
+
+            // Only try avoidance if combat was recent (within cooldown)
+            float? timeSince = CombatStateHelper.GetTimeSinceLastCombat(BotOwner);
+            if (timeSince == null || timeSince.Value > (pathConfig.ThreatAvoidanceCooldown > 0f ? pathConfig.ThreatAvoidanceCooldown : 30f))
+                return false;
+
+            try
+            {
+                bool success = BotOwner.Mover.TryRelacePathAround(enemyPos.Value, null, out var avoidancePath);
+
+                if (!success || avoidancePath == null)
+                    return false;
+
+                LoggingController.LogDebug(
+                    "[GoToPositionAbstractAction] Threat avoidance path found for "
+                        + BotOwner.GetText()
+                        + " around enemy at "
+                        + enemyPos.Value
+                );
+
+                // The avoidance path is already applied to BSG's mover by TryRelacePathAround.
+                // For custom mover, we need to extract corners and feed them to our follower.
+                if (UseCustomMover)
+                {
+                    var corners = avoidancePath.Vector3_0;
+                    if (corners != null && corners.Length > 0)
+                    {
+                        _customMover.SetPath(corners, ObjectiveManager.Position ?? BotOwner.Position);
+                    }
+                }
+
+                return true;
+            }
+            catch (System.Exception ex)
+            {
+                LoggingController.LogError("[GoToPositionAbstractAction] TryThreatAvoidancePath error: " + ex.Message);
+                return false;
+            }
         }
 
         private bool isAQuestingBotsBrainLayerActive()
@@ -266,8 +328,20 @@ namespace SPTQuestingBots.BehaviorExtensions
             bool? isMoving = BotOwner.Mover?.IsMoving;
             float? sDistDest = BotOwner.Mover?.SDistDestination;
 
+            // Check for recent character controller collisions (additional stuck signal)
+            bool hasRecentCollision = false;
+            try
+            {
+                float lastCCCollision = BotOwner.GetPlayer.MovementContext.TimeSinceLastCCCollision;
+                hasRecentCollision = lastCCCollision > 0f && (Time.realtimeSinceStartup - lastCCCollision) < 0.5f;
+            }
+            catch
+            {
+                // MovementContext may not be available
+            }
+
             // Update soft stuck detector
-            if (_softStuck.Update(currentPos, moveSpeed, currentTime, isMoving))
+            if (_softStuck.Update(currentPos, moveSpeed, currentTime, isMoving, hasRecentCollision))
             {
                 handleSoftStuckTransition();
             }

@@ -36,4 +36,19 @@ public struct Vector3
     {
         return new Vector3(a.x - b.x, a.y - b.y, a.z - b.z);
     }
+
+    public static Vector3 operator +(Vector3 a, Vector3 b)
+    {
+        return new Vector3(a.x + b.x, a.y + b.y, a.z + b.z);
+    }
+
+    public static Vector3 operator *(Vector3 a, float d)
+    {
+        return new Vector3(a.x * d, a.y * d, a.z * d);
+    }
+
+    public static Vector3 operator *(float d, Vector3 a)
+    {
+        return new Vector3(a.x * d, a.y * d, a.z * d);
+    }
 }

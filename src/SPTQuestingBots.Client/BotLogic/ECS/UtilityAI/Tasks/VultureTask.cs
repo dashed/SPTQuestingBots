@@ -31,6 +31,12 @@ public sealed class VultureTask : QuestUtilityTask
     /// <summary>Default cooldown on reject (seconds).</summary>
     public const float DefaultCooldownOnReject = 180f;
 
+    /// <summary>
+    /// Score multiplier when BSG Mind says HOW_WORK_OVER_DEAD_BODY == 0 (ignore dead bodies).
+    /// Heavily penalizes vulture scoring for bots that don't interact with corpses.
+    /// </summary>
+    public const float DeadBodyIgnorePenalty = 0.3f;
+
     public override int BotActionTypeId
     {
         get { return UtilityAI.BotActionTypeId.Vulture; }
@@ -147,6 +153,12 @@ public sealed class VultureTask : QuestUtilityTask
         }
 
         float score = intensityScore + proximityScore;
+
+        // Penalty when BSG Mind says bot ignores dead bodies
+        if (entity.MindHowWorkOverDeadBody == 0)
+        {
+            score *= DeadBodyIgnorePenalty;
+        }
 
         // Clamp
         if (score < 0f)

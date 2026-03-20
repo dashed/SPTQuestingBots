@@ -22,6 +22,18 @@ public class SoftStuckDetector
     /// </summary>
     private const float NotMovingMultiplier = 2.0f;
 
+    /// <summary>
+    /// Timer multiplier when the character controller is actively colliding with geometry.
+    /// Stacks with NotMovingMultiplier for maximum escalation speed.
+    /// </summary>
+    private const float CollisionMultiplier = 1.5f;
+
+    /// <summary>
+    /// Max age (seconds) of a CC collision to consider it "recent".
+    /// MovementContext.TimeSinceLastCCCollision stores realtimeSinceStartup, not elapsed.
+    /// </summary>
+    private const float RecentCollisionThreshold = 0.5f;
+
     private readonly float _vaultDelay;
     private readonly float _jumpDelay;
     private readonly float _failDelay;
@@ -52,7 +64,14 @@ public class SoftStuckDetector
     /// <param name="currentMoveSpeed">Bot's current movement speed.</param>
     /// <param name="currentTime">Current game time (Time.time).</param>
     /// <param name="isMoving">Optional BotMover.IsMoving value. When false and speed > 0, stuck escalation is faster.</param>
-    public bool Update(Vector3 currentPosition, float currentMoveSpeed, float currentTime, bool? isMoving = null)
+    /// <param name="hasRecentCollision">Whether the character controller has a recent collision (from MovementContext.TimeSinceLastCCCollision).</param>
+    public bool Update(
+        Vector3 currentPosition,
+        float currentMoveSpeed,
+        float currentTime,
+        bool? isMoving = null,
+        bool hasRecentCollision = false
+    )
     {
         if (!_initialized)
         {
@@ -105,7 +124,12 @@ public class SoftStuckDetector
 
         // Bot appears stuck -- increment timer.
         // If BotMover reports not moving while we expect movement, escalate faster.
-        var timerMultiplier = isMoving == false && moveSpeed > 0.01f ? NotMovingMultiplier : 1.0f;
+        // If the character controller is actively colliding with geometry, also escalate faster.
+        var timerMultiplier = 1.0f;
+        if (isMoving == false && moveSpeed > 0.01f)
+            timerMultiplier *= NotMovingMultiplier;
+        if (hasRecentCollision)
+            timerMultiplier *= CollisionMultiplier;
         _timer += deltaTime * timerMultiplier;
         var previousStatus = Status;
 
