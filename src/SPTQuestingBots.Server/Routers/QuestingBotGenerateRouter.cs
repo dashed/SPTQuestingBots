@@ -1,4 +1,4 @@
-#pragma warning disable CS0618 // ConfigServer is obsolete (SPT 4.2 migration pending)
+#pragma warning disable CS0618 // ConfigServer is obsolete (SPT 4.1 migration pending)
 
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Controllers;
@@ -39,7 +39,7 @@ namespace SPTQuestingBots.Server.Routers;
 /// methods (TypeScript / SPT 3.x).
 /// </para>
 /// </summary>
-[Injectable(typeOverride: typeof(BotStaticRouter))]
+[Injectable(InjectionType.Scoped, typeOverride: typeof(BotStaticRouter))]
 public class QuestingBotGenerateRouter(
     JsonUtil jsonUtil,
     BotController botController,

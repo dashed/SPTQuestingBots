@@ -1,4 +1,4 @@
-#pragma warning disable CS0618 // ConfigServer is obsolete (SPT 4.2 migration pending)
+#pragma warning disable CS0618 // ConfigServer is obsolete (SPT 4.1 migration pending)
 
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;

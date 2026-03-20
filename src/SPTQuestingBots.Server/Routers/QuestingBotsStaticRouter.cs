@@ -1,4 +1,4 @@
-#pragma warning disable CS0618 // ConfigServer is obsolete (SPT 4.2 migration pending)
+#pragma warning disable CS0618 // ConfigServer is obsolete (SPT 4.1 migration pending)
 
 using Newtonsoft.Json;
 using SPTarkov.DI.Annotations;
@@ -65,7 +65,7 @@ namespace SPTQuestingBots.Server.Routers;
 /// routes automatically.
 /// </para>
 /// </summary>
-[Injectable]
+[Injectable(InjectionType.Scoped)]
 public class QuestingBotsStaticRouter(
     JsonUtil jsonUtil,
     QuestingBotsConfigLoader configLoader,
