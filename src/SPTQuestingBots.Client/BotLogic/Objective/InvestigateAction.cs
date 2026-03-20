@@ -39,6 +39,25 @@ namespace SPTQuestingBots.BotLogic.Objective
             if (BotEntityBridge.TryGetEntity(BotOwner, out var entity) && entity.HasNearbyEvent)
             {
                 _targetPosition = new Vector3(entity.NearbyEventX, entity.NearbyEventY, entity.NearbyEventZ);
+
+                // Prefer game's search point when it's based on actual enemy position —
+                // it's more accurate than our combat event centroid
+                if (TryGetGameSearchTarget(entity, out var searchTarget))
+                {
+                    _targetPosition = searchTarget;
+                    LoggingController.LogInfo(
+                        "[InvestigateAction] Bot "
+                            + BotOwner.GetText()
+                            + ": using game SearchData target at ("
+                            + _targetPosition.x.ToString("F0")
+                            + ","
+                            + _targetPosition.y.ToString("F0")
+                            + ","
+                            + _targetPosition.z.ToString("F0")
+                            + ")"
+                    );
+                }
+
                 _hasTarget = true;
                 entity.IsInvestigating = true;
                 entity.InvestigateTimeoutAt = entity.CurrentGameTime + 60f;
@@ -215,6 +234,25 @@ namespace SPTQuestingBots.BotLogic.Objective
                 entity.IsInvestigating = false;
                 entity.HasNearbyEvent = false;
             }
+        }
+
+        /// <summary>
+        /// Try to get a better investigation target from the game's BotSearchData.
+        /// The game's SearchPoint with TypeSearch == playerPosition is based on actual
+        /// enemy last-known position, which is more accurate than our combat event centroid.
+        /// </summary>
+        private bool TryGetGameSearchTarget(BotEntity entity, out Vector3 target)
+        {
+            // Only prefer game's target when it's a player-position type search
+            // (based on actual enemy sighting, not generic map point)
+            if (entity.HasGameSearchTarget && entity.GameSearchTargetType == 0) // 0 = playerPosition
+            {
+                target = new Vector3(entity.GameSearchTargetX, entity.GameSearchTargetY, entity.GameSearchTargetZ);
+                return true;
+            }
+
+            target = default;
+            return false;
         }
     }
 }

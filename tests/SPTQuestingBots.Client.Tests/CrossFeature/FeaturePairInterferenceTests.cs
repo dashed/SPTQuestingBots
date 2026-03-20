@@ -34,9 +34,9 @@ public class FeaturePairInterferenceTests
     public void RoomClear_IndoorTransition_SetsRoomClearState()
     {
         var entity = CreateEntity(1);
-        entity.LastEnvironmentId = 1; // outdoor
+        entity.LastEnvironmentId = 0; // outdoor
 
-        var instruction = RoomClearController.Update(entity, 0, 10f, 3f, 5f, 0.5f);
+        var instruction = RoomClearController.Update(entity, true, 10f, 3f, 5f, 0.5f);
 
         Assert.That(entity.IsInRoomClear, Is.True);
         Assert.That(instruction, Is.EqualTo(RoomClearInstruction.SlowWalk));
@@ -48,8 +48,8 @@ public class FeaturePairInterferenceTests
         // Corner pause requires explicit TriggerCornerPause call
         // which is never invoked from GoToObjectiveAction (dead code path)
         var entity = CreateEntity(1);
-        entity.LastEnvironmentId = 1; // outdoor
-        RoomClearController.Update(entity, 0, 10f, 3f, 5f, 0.5f);
+        entity.LastEnvironmentId = 0; // outdoor
+        RoomClearController.Update(entity, true, 10f, 3f, 5f, 0.5f);
 
         // CornerPauseUntil should still be 0 (not set)
         Assert.That(entity.CornerPauseUntil, Is.EqualTo(0f), "Corner pause should not trigger without explicit TriggerCornerPause call");
@@ -61,10 +61,10 @@ public class FeaturePairInterferenceTests
         // Even if TriggerCornerPause is called, the custom mover has no mechanism
         // to stop moving — the PauseAtCorner instruction only affects pose, not movement
         var entity = CreateEntity(1);
-        entity.LastEnvironmentId = 1; // outdoor
+        entity.LastEnvironmentId = 0; // outdoor
 
         // Start room clear
-        RoomClearController.Update(entity, 0, 10f, 3f, 5f, 0.5f);
+        RoomClearController.Update(entity, true, 10f, 3f, 5f, 0.5f);
         Assert.That(entity.IsInRoomClear, Is.True);
 
         // Trigger corner pause
@@ -72,7 +72,7 @@ public class FeaturePairInterferenceTests
         Assert.That(entity.CornerPauseUntil, Is.EqualTo(11.5f));
 
         // Update during corner pause
-        var instruction = RoomClearController.Update(entity, 0, 10.8f, 3f, 5f, 0.5f);
+        var instruction = RoomClearController.Update(entity, true, 10.8f, 3f, 5f, 0.5f);
         Assert.That(instruction, Is.EqualTo(RoomClearInstruction.PauseAtCorner));
 
         // The instruction is PauseAtCorner, but this only affects pose
@@ -83,17 +83,17 @@ public class FeaturePairInterferenceTests
     [Test]
     public void RoomClear_IndoorCheckAlreadyBlocksSprintBeforeCustomMover()
     {
-        // In GoToObjectiveAction.Update, EnvironmentId==0 check at line 54 sets CanSprint=false
-        // BEFORE TickCustomMover at line 79. Room clear at line 82 is redundant for sprint.
+        // In GoToObjectiveAction.Update, Player.Environment check sets CanSprint=false
+        // BEFORE TickCustomMover. Room clear is redundant for sprint.
         // This test verifies the indoor detection correctly catches indoor environments.
         var entity = CreateEntity(1);
         entity.LastEnvironmentId = -1; // uninitialized
 
         // Indoor environment
-        var instruction = RoomClearController.Update(entity, 0, 10f, 3f, 5f, 0.5f);
+        var instruction = RoomClearController.Update(entity, true, 10f, 3f, 5f, 0.5f);
 
-        // Since LastEnvironmentId was -1 (not outdoor), and now 0 (indoor),
-        // wasOutdoor = true (id != 0), isIndoor = true (id == 0)
+        // Since LastEnvironmentId was -1 (not 1=indoor), and now indoor,
+        // wasOutdoor = true, isIndoor = true
         Assert.That(entity.IsInRoomClear, Is.True);
         Assert.That(instruction, Is.EqualTo(RoomClearInstruction.SlowWalk));
     }
@@ -102,12 +102,12 @@ public class FeaturePairInterferenceTests
     public void RoomClear_ExpiresAfterDuration()
     {
         var entity = CreateEntity(1);
-        entity.LastEnvironmentId = 1; // outdoor
-        RoomClearController.Update(entity, 0, 10f, 3f, 5f, 0.5f);
+        entity.LastEnvironmentId = 0; // outdoor
+        RoomClearController.Update(entity, true, 10f, 3f, 5f, 0.5f);
         Assert.That(entity.IsInRoomClear, Is.True);
 
         // After max duration (5s), room clear should expire
-        var instruction = RoomClearController.Update(entity, 0, 20f, 3f, 5f, 0.5f);
+        var instruction = RoomClearController.Update(entity, true, 20f, 3f, 5f, 0.5f);
         Assert.That(entity.IsInRoomClear, Is.False);
         Assert.That(instruction, Is.EqualTo(RoomClearInstruction.None));
     }
@@ -116,12 +116,12 @@ public class FeaturePairInterferenceTests
     public void RoomClear_CancelledOnReturnToOutdoor()
     {
         var entity = CreateEntity(1);
-        entity.LastEnvironmentId = 1; // outdoor
-        RoomClearController.Update(entity, 0, 10f, 3f, 5f, 0.5f);
+        entity.LastEnvironmentId = 0; // outdoor
+        RoomClearController.Update(entity, true, 10f, 3f, 5f, 0.5f);
         Assert.That(entity.IsInRoomClear, Is.True);
 
         // Bot goes back outdoor
-        var instruction = RoomClearController.Update(entity, 1, 10.5f, 3f, 5f, 0.5f);
+        var instruction = RoomClearController.Update(entity, false, 10.5f, 3f, 5f, 0.5f);
         Assert.That(entity.IsInRoomClear, Is.False);
         Assert.That(instruction, Is.EqualTo(RoomClearInstruction.None));
     }

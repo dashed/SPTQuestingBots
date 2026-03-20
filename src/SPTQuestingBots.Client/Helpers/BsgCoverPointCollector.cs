@@ -137,5 +137,86 @@ namespace SPTQuestingBots.Helpers
             );
             return count;
         }
+
+        /// <summary>
+        /// Collects cover positions using the bot's per-bot <see cref="BotCoversData"/>,
+        /// which respects bot ID ownership and spotted status.
+        /// Falls back to the global voxel grid if per-bot data yields insufficient results.
+        /// </summary>
+        /// <param name="botOwner">Bot whose cover data to query.</param>
+        /// <param name="objX">Objective X position.</param>
+        /// <param name="objY">Objective Y position.</param>
+        /// <param name="objZ">Objective Z position.</param>
+        /// <param name="radius">Search radius around the objective.</param>
+        /// <param name="outPositions">Output buffer for x,y,z position triples.</param>
+        /// <param name="maxCount">Maximum number of positions to collect.</param>
+        /// <returns>Number of positions written to outPositions.</returns>
+        public static int CollectBotCoverPositions(
+            BotOwner botOwner,
+            float objX,
+            float objY,
+            float objZ,
+            float radius,
+            float[] outPositions,
+            int maxCount
+        )
+        {
+            if (maxCount <= 0)
+                return 0;
+
+            if (botOwner?.Covers == null)
+                return CollectCoverPositions(objX, objY, objZ, radius, outPositions, maxCount);
+
+            // Use per-bot BotCoversData.GetClosePoints for ownership-aware cover queries
+            System.Collections.Generic.List<CustomNavigationPoint> closePoints;
+            try
+            {
+                var objective = new Vector3(objX, objY, objZ);
+                closePoints = botOwner.Covers.GetClosePoints(objective, radius);
+            }
+            catch
+            {
+                return CollectCoverPositions(objX, objY, objZ, radius, outPositions, maxCount);
+            }
+
+            if (closePoints == null || closePoints.Count == 0)
+                return CollectCoverPositions(objX, objY, objZ, radius, outPositions, maxCount);
+
+            int count = 0;
+            float radiusSqr = radius * radius;
+
+            for (int i = 0; i < closePoints.Count && count < maxCount; i++)
+            {
+                var point = closePoints[i];
+                if (point == null)
+                    continue;
+
+                var pos = point.Position;
+                float dx = pos.x - objX;
+                float dy = pos.y - objY;
+                float dz = pos.z - objZ;
+                if (dx * dx + dy * dy + dz * dz > radiusSqr)
+                    continue;
+
+                outPositions[count * 3] = pos.x;
+                outPositions[count * 3 + 1] = pos.y;
+                outPositions[count * 3 + 2] = pos.z;
+                count++;
+            }
+
+            // If per-bot data didn't yield enough, fall back to global voxel grid
+            if (count < maxCount)
+            {
+                LoggingController.LogDebug(
+                    "[BsgCoverPointCollector] Per-bot cover found " + count + "/" + maxCount + ", falling back to global grid"
+                );
+                return CollectCoverPositions(objX, objY, objZ, radius, outPositions, maxCount);
+            }
+
+            LoggingController.LogDebug(
+                "[BsgCoverPointCollector] Per-bot cover collected " + count + " positions near (" + objX + ", " + objZ + ")"
+            );
+            return count;
+        }
     }
 }

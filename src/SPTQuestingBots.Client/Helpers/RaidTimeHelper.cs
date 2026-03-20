@@ -1,35 +1,27 @@
-using System.Reflection;
 using Comfort.Common;
 using EFT;
-using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.Helpers
 {
     /// <summary>
-    /// Provides direct access to the raid timer via the AbstractGame.gameTimerClass field.
+    /// Provides direct access to the raid timer via the AbstractGame.GameTimer public property.
     /// Complements <see cref="RaidHelpers"/> (which delegates to SPT's RaidTimeUtil) by
     /// exposing the raw <see cref="GameTimerClass"/> for advanced timer queries.
     /// </summary>
     public static class RaidTimeHelper
     {
-        private static readonly FieldInfo _gameTimerField = ReflectionHelper.RequireField(
-            typeof(AbstractGame),
-            "gameTimerClass",
-            "RaidTimeHelper — raid timer access"
-        );
-
         /// <summary>
         /// Returns the <see cref="GameTimerClass"/> from the current game instance, or <c>null</c>
-        /// if the game is not running or the field is unavailable.
+        /// if the game is not running.
         /// </summary>
         public static GameTimerClass GetGameTimer()
         {
-            if (_gameTimerField == null || !Singleton<AbstractGame>.Instantiated)
+            if (!Singleton<AbstractGame>.Instantiated)
             {
                 return null;
             }
 
-            return _gameTimerField.GetValue(Singleton<AbstractGame>.Instance) as GameTimerClass;
+            return Singleton<AbstractGame>.Instance.GameTimer;
         }
 
         /// <summary>

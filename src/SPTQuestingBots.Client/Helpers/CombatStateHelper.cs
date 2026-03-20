@@ -1,64 +1,26 @@
-using System.Reflection;
 using EFT;
-using SPTQuestingBots.Controllers;
 using UnityEngine;
 
 namespace SPTQuestingBots.Helpers
 {
     /// <summary>
-    /// Reads BotsGroup and BotOwner fields via reflection to provide
+    /// Reads BotsGroup and BotOwner public properties to provide
     /// combat state information for questing decisions.
     /// </summary>
     public static class CombatStateHelper
     {
-        private static readonly FieldInfo _enemyLastSeenTimeSenceField = ReflectionHelper.RequireField(
-            typeof(BotsGroup),
-            "<EnemyLastSeenTimeSence>k__BackingField",
-            "CombatStateHelper — perceived time of last enemy sighting"
-        );
-
-        private static readonly FieldInfo _enemyLastSeenTimeRealField = ReflectionHelper.RequireField(
-            typeof(BotsGroup),
-            "<EnemyLastSeenTimeReal>k__BackingField",
-            "CombatStateHelper — real time of last enemy sighting"
-        );
-
-        private static readonly FieldInfo _enemyLastSeenPositionRealField = ReflectionHelper.RequireField(
-            typeof(BotsGroup),
-            "<EnemyLastSeenPositionReal>k__BackingField",
-            "CombatStateHelper — real position of last enemy sighting"
-        );
-
-        private static readonly FieldInfo _enemyLastSeenPositionSenceField = ReflectionHelper.RequireField(
-            typeof(BotsGroup),
-            "<EnemyLastSeenPositionSence>k__BackingField",
-            "CombatStateHelper — perceived enemy position"
-        );
-
-        private static readonly FieldInfo _dangerAreaField = ReflectionHelper.RequireField(
-            typeof(BotOwner),
-            "<DangerArea>k__BackingField",
-            "CombatStateHelper — danger area awareness"
-        );
-
-        private static readonly FieldInfo _botAvoidDangerPlacesField = ReflectionHelper.RequireField(
-            typeof(BotOwner),
-            "<BotAvoidDangerPlaces>k__BackingField",
-            "CombatStateHelper — danger place avoidance"
-        );
-
         /// <summary>
         /// Returns the number of seconds since the bot's group last saw an enemy (real time),
         /// or <c>null</c> if unavailable.
         /// </summary>
         public static float? GetTimeSinceLastCombat(BotOwner bot)
         {
-            if (bot?.BotsGroup == null || _enemyLastSeenTimeRealField == null)
+            if (bot?.BotsGroup == null)
             {
                 return null;
             }
 
-            float lastSeenTime = (float)_enemyLastSeenTimeRealField.GetValue(bot.BotsGroup);
+            float lastSeenTime = bot.BotsGroup.EnemyLastSeenTimeReal;
 
             // A value of 0 means no combat has occurred yet
             if (lastSeenTime <= 0f)
@@ -74,12 +36,12 @@ namespace SPTQuestingBots.Helpers
         /// </summary>
         public static Vector3? GetLastEnemyPosition(BotOwner bot)
         {
-            if (bot?.BotsGroup == null || _enemyLastSeenPositionRealField == null)
+            if (bot?.BotsGroup == null)
             {
                 return null;
             }
 
-            Vector3 position = (Vector3)_enemyLastSeenPositionRealField.GetValue(bot.BotsGroup);
+            Vector3 position = bot.BotsGroup.EnemyLastSeenPositionReal;
 
             // Vector3.zero means no position has been recorded
             if (position == Vector3.zero)
@@ -111,26 +73,18 @@ namespace SPTQuestingBots.Helpers
         /// </summary>
         public static bool IsInDangerZone(BotOwner bot)
         {
-            if (bot == null || _dangerAreaField == null)
+            if (bot == null)
             {
                 return false;
             }
 
-            object dangerArea = _dangerAreaField.GetValue(bot);
-            if (dangerArea == null)
+            BotDangerArea dangerArea = bot.DangerArea;
+            if (dangerArea?.BlockedCovers == null)
             {
                 return false;
             }
 
-            // BotDangerArea.BlockedCovers is a public Dictionary field;
-            // if it has entries, the bot is aware of danger in the area.
-            var botDangerArea = dangerArea as BotDangerArea;
-            if (botDangerArea?.BlockedCovers == null)
-            {
-                return false;
-            }
-
-            return botDangerArea.BlockedCovers.Count > 0;
+            return dangerArea.BlockedCovers.Count > 0;
         }
     }
 }

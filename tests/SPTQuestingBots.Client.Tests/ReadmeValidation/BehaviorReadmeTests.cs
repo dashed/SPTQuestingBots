@@ -661,10 +661,10 @@ public class BehaviorReadmeTests
     }
 
     [Test]
-    public void RoomClear_EnvironmentId0IsIndoor()
+    public void RoomClear_UsesBoolIsIndoor()
     {
         var src = ReadSource("BotLogic/ECS/Systems/RoomClearController.cs");
-        Assert.That(src, Does.Contain("environmentId == 0"));
+        Assert.That(src, Does.Contain("bool isIndoor"));
     }
 
     [Test]

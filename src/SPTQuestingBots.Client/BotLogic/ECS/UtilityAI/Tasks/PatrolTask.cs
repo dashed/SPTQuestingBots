@@ -76,14 +76,16 @@ public sealed class PatrolTask : QuestUtilityTask
             return 0f;
         }
 
-        // No routes available for this map
-        if (routes == null || routes.Length == 0)
+        // On cooldown
+        if (entity.PatrolCooldownUntil > entity.CurrentGameTime)
         {
             return 0f;
         }
 
-        // Lazy route assignment: if no route assigned, try to pick one
-        if (entity.PatrolRouteIndex < 0)
+        bool hasCustomRoutes = routes != null && routes.Length > 0;
+
+        // Lazy route assignment: if no route assigned, try to pick one from custom routes
+        if (entity.PatrolRouteIndex < 0 && hasCustomRoutes)
         {
             int selected = Systems.PatrolRouteSelector.SelectRoute(
                 entity.CurrentPositionX,
@@ -94,34 +96,38 @@ public sealed class PatrolTask : QuestUtilityTask
                 entity.Id
             );
 
-            if (selected < 0)
+            if (selected >= 0)
             {
-                return 0f;
+                entity.PatrolRouteIndex = selected;
+                entity.PatrolWaypointIndex = 0;
+                LoggingController.LogDebug(
+                    "[PatrolTask] Entity " + entity.Id + ": assigned route " + selected + " (" + routes[selected].Name + ")"
+                );
             }
-
-            entity.PatrolRouteIndex = selected;
-            entity.PatrolWaypointIndex = 0;
-            LoggingController.LogDebug(
-                "[PatrolTask] Entity " + entity.Id + ": assigned route " + selected + " (" + routes[selected].Name + ")"
-            );
         }
 
-        // Validate route index
-        if (entity.PatrolRouteIndex >= routes.Length)
+        // Validate route index: reset if out of range
+        if (entity.PatrolRouteIndex >= 0 && hasCustomRoutes && entity.PatrolRouteIndex >= routes.Length)
         {
             entity.PatrolRouteIndex = -1;
-            return 0f;
         }
 
-        // On cooldown
-        if (entity.PatrolCooldownUntil > entity.CurrentGameTime)
+        // Determine which route to score: custom route or native fallback
+        PatrolRoute route = null;
+        bool usingNativeRoute = false;
+
+        if (entity.PatrolRouteIndex >= 0 && hasCustomRoutes && entity.PatrolRouteIndex < routes.Length)
         {
-            return 0f;
+            route = routes[entity.PatrolRouteIndex];
+        }
+        else if (entity.NativePatrolRoute != null)
+        {
+            // Fallback to BSG's native patrol route
+            route = entity.NativePatrolRoute;
+            usingNativeRoute = true;
         }
 
-        // Proximity factor: closer to current waypoint = higher urgency
-        var route = routes[entity.PatrolRouteIndex];
-        if (route.Waypoints == null || route.Waypoints.Length == 0)
+        if (route == null || route.Waypoints == null || route.Waypoints.Length == 0)
         {
             return 0f;
         }
@@ -139,11 +145,13 @@ public sealed class PatrolTask : QuestUtilityTask
         // 1 - e^(-dist/falloff): far away = higher urgency to start moving
         float proximityFactor = 1f - (float)System.Math.Exp(-dist / ProximityFalloff);
 
-        float score = MaxBaseScore * (0.4f + 0.6f * proximityFactor);
+        // Native routes score slightly lower than custom routes to prefer custom when available
+        float baseScore = usingNativeRoute ? MaxBaseScore * 0.8f : MaxBaseScore;
+        float score = baseScore * (0.4f + 0.6f * proximityFactor);
 
-        if (score > MaxBaseScore)
+        if (score > baseScore)
         {
-            score = MaxBaseScore;
+            score = baseScore;
         }
 
         if (score < 0f)
@@ -155,7 +163,8 @@ public sealed class PatrolTask : QuestUtilityTask
             "[PatrolTask] Entity "
                 + entity.Id
                 + ": route="
-                + routes[entity.PatrolRouteIndex].Name
+                + route.Name
+                + (usingNativeRoute ? " (native)" : "")
                 + " dist="
                 + dist.ToString("F0")
                 + " score="

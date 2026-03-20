@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Comfort.Common;
 using EFT;
+using EFT.EnvironmentEffect;
 using EFT.Interactive;
 using SPTQuestingBots.BotLogic.ECS.Systems;
 using SPTQuestingBots.Controllers;
@@ -45,13 +46,16 @@ namespace SPTQuestingBots.BotLogic.Objective
                 // Personality baseline: aggressive bots stand taller (1.0), cautious crouch more (0.8)
                 float pose = 1.0f;
 
+                // Use Player.Environment for reliable indoor/outdoor detection
+                bool isIndoor = BotOwner.GetPlayer?.Environment == EnvironmentType.Indoor;
+
                 if (ECS.BotEntityBridge.TryGetEntity(BotOwner, out var poseEntity))
                 {
                     // Personality affects base pose: lerp(0.8, 1.0, aggression)
                     pose = 0.8f + 0.2f * poseEntity.Aggression;
 
-                    // Indoor detection: EnvironmentId == 0 means indoor
-                    if (BotOwner.AIData?.EnvironmentId == 0)
+                    // Indoor detection: lower pose and disable sprinting
+                    if (isIndoor)
                     {
                         pose = Math.Min(pose, 0.8f);
                         CanSprint = false;
@@ -82,15 +86,20 @@ namespace SPTQuestingBots.BotLogic.Objective
                 var roomClearConfig = Controllers.ConfigController.Config.Questing?.RoomClear;
                 if (roomClearConfig?.Enabled == true && ECS.BotEntityBridge.TryGetEntity(BotOwner, out var rcEntity))
                 {
-                    int envId = BotOwner.AIData?.EnvironmentId ?? 1; // default outdoor
                     var instruction = RoomClearController.Update(
                         rcEntity,
-                        envId,
+                        isIndoor,
                         UnityEngine.Time.time,
                         roomClearConfig.DurationMin,
                         roomClearConfig.DurationMax,
                         roomClearConfig.CornerPauseDuration
                     );
+
+                    // Building assault: if the game's assault system is active, extend room clear behavior
+                    if (instruction == RoomClearInstruction.None && BotOwner.AssaultBuildingData?.IsActive == true && isIndoor)
+                    {
+                        instruction = RoomClearInstruction.SlowWalk;
+                    }
 
                     if (instruction == RoomClearInstruction.SlowWalk)
                     {

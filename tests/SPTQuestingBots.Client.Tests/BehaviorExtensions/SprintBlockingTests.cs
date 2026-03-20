@@ -489,7 +489,7 @@ public class SprintBlockingTests
     {
         var source = ReadSource(HearingSensorHelperPath);
 
-        Assert.That(source, Does.Contain("if (bot == null"), "GetHearingSensor should null-check the bot parameter");
+        Assert.That(source, Does.Contain("bot?.HearingSensor"), "GetHearingSensor should null-propagate on the bot parameter");
     }
 
     #endregion

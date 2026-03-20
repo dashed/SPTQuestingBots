@@ -481,11 +481,11 @@ public class MonitorSensorHiveMindBugTests
     public void RoomClearController_Update_CornerPauseExpiresCorrectly()
     {
         var entity = new BotEntity(0);
-        entity.LastEnvironmentId = 1; // outdoor
+        entity.LastEnvironmentId = 0; // outdoor
         entity.IsInRoomClear = false;
 
         // Trigger outdoor->indoor transition
-        RoomClearController.Update(entity, 0, 10f, 5f, 10f, 1.5f);
+        RoomClearController.Update(entity, true, 10f, 5f, 10f, 1.5f);
         Assert.That(entity.IsInRoomClear, Is.True);
 
         // Trigger corner pause
@@ -493,11 +493,11 @@ public class MonitorSensorHiveMindBugTests
         Assert.That(entity.CornerPauseUntil, Is.EqualTo(12.5f).Within(0.001f));
 
         // During pause, instruction should be PauseAtCorner
-        var instruction = RoomClearController.Update(entity, 0, 11.5f, 5f, 10f, 1.5f);
+        var instruction = RoomClearController.Update(entity, true, 11.5f, 5f, 10f, 1.5f);
         Assert.That(instruction, Is.EqualTo(RoomClearInstruction.PauseAtCorner));
 
         // After pause expires, instruction should be SlowWalk
-        instruction = RoomClearController.Update(entity, 0, 13f, 5f, 10f, 1.5f);
+        instruction = RoomClearController.Update(entity, true, 13f, 5f, 10f, 1.5f);
         Assert.That(instruction, Is.EqualTo(RoomClearInstruction.SlowWalk));
     }
 

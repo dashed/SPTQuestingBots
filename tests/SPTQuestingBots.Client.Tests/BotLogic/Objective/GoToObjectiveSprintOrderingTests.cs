@@ -24,11 +24,11 @@ public class GoToObjectiveSprintOrderingTests
         // Initial CanSprint from previous throttled update
         bool canSprint = true;
 
-        // Entity state: bot is indoors (EnvironmentId == 0)
-        int environmentId = 0;
+        // Entity state: bot is indoors (Player.Environment == Indoor)
+        bool isIndoor = true;
 
         // Override logic (as in fixed code: BEFORE TickCustomMover)
-        if (environmentId == 0)
+        if (isIndoor)
         {
             canSprint = false;
         }
@@ -114,10 +114,10 @@ public class GoToObjectiveSprintOrderingTests
         entity.DistanceToObjective = 100f;
         entity.HasActiveObjective = true;
 
-        int environmentId = 1; // outdoor
+        bool isIndoor = false; // outdoor
 
         // Apply all override checks
-        if (environmentId == 0)
+        if (isIndoor)
         {
             canSprint = false;
         }
@@ -173,10 +173,10 @@ public class GoToObjectiveSprintOrderingTests
         entity.IsInCombat = true;
         entity.DistanceToObjective = 5f;
         entity.HasActiveObjective = true;
-        int environmentId = 0;
+        bool isIndoor = true;
 
         // Step 1: Apply overrides (fixed order)
-        if (environmentId == 0)
+        if (isIndoor)
             canSprint = false;
         if (entity.IsInCombat || entity.IsSuspicious)
             canSprint = false;

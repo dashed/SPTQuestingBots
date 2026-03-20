@@ -6,6 +6,8 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks;
 /// Scores high when the bot detects nearby combat events worth checking out.
 /// Lighter-weight than Vulture: lower intensity threshold, lower score,
 /// simple approach-then-look-around behavior.
+/// Gets a small bonus when the game's BotSearchData has an active player-position
+/// search target, indicating the game also thinks the bot should investigate.
 /// <para>
 /// Gating: not in combat, has nearby event, intensity exceeds threshold,
 /// not already vulturing.
@@ -21,6 +23,12 @@ public sealed class InvestigateTask : QuestUtilityTask
 
     /// <summary>Score contribution from event proximity (closer = higher).</summary>
     private const float ProximityWeight = 0.20f;
+
+    /// <summary>
+    /// Score bonus when the game's SearchData has a player-position search target.
+    /// This reinforces investigation when the game's AI also wants the bot to search.
+    /// </summary>
+    public const float GameSearchBonus = 0.05f;
 
     /// <summary>Default intensity threshold if not configured.</summary>
     public const int DefaultIntensityThreshold = 5;
@@ -127,6 +135,12 @@ public sealed class InvestigateTask : QuestUtilityTask
         }
 
         float score = intensityScore + proximityScore;
+
+        // Bonus when game's SearchData has an active player-position search target
+        if (entity.HasGameSearchTarget && entity.GameSearchTargetType == 0) // 0 = playerPosition
+        {
+            score += GameSearchBonus;
+        }
 
         // Clamp
         if (score < 0f)

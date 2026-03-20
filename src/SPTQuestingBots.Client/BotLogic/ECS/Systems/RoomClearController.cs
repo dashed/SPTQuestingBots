@@ -30,7 +30,7 @@ public static class RoomClearController
     /// Called each tick from <see cref="Objective.GoToObjectiveAction.Update"/>.
     /// </summary>
     /// <param name="entity">The bot entity to update.</param>
-    /// <param name="environmentId">BSG environment ID (0 = indoor).</param>
+    /// <param name="isIndoor">Whether the bot is currently indoors (from Player.Environment or AIData.IsInside).</param>
     /// <param name="currentTime">Current game time (Time.time).</param>
     /// <param name="durationMin">Minimum room clear duration in seconds.</param>
     /// <param name="durationMax">Maximum room clear duration in seconds.</param>
@@ -38,17 +38,16 @@ public static class RoomClearController
     /// <returns>The movement instruction to apply.</returns>
     public static RoomClearInstruction Update(
         BotEntity entity,
-        int environmentId,
+        bool isIndoor,
         float currentTime,
         float durationMin,
         float durationMax,
         float cornerPauseDuration
     )
     {
-        // Track environment transition
-        bool wasOutdoor = entity.LastEnvironmentId != 0; // 0 = indoor in BSG
-        bool isIndoor = environmentId == 0;
-        entity.LastEnvironmentId = environmentId;
+        // Track environment transition: LastEnvironmentId encodes 0=outdoor, 1=indoor
+        bool wasOutdoor = entity.LastEnvironmentId != 1;
+        entity.LastEnvironmentId = isIndoor ? 1 : 0;
 
         // Outdoor->Indoor transition: start room clear
         if (wasOutdoor && isIndoor && !entity.IsInRoomClear)

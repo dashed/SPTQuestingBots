@@ -22,9 +22,9 @@ public class RoomClearControllerTests
     {
         // LastEnvironmentId defaults to -1 (uninitialized), which counts as outdoor
         // Set to explicit outdoor first
-        _entity.LastEnvironmentId = 1;
+        _entity.LastEnvironmentId = 0;
 
-        var result = RoomClearController.Update(_entity, 0, 10f, 15f, 30f, 1.5f);
+        var result = RoomClearController.Update(_entity, true, 10f, 15f, 30f, 1.5f);
 
         Assert.Multiple(() =>
         {
@@ -39,9 +39,9 @@ public class RoomClearControllerTests
     public void Update_IndoorToIndoor_DoesNotRestartRoomClear()
     {
         // Already indoor
-        _entity.LastEnvironmentId = 0;
+        _entity.LastEnvironmentId = 1;
 
-        var result = RoomClearController.Update(_entity, 0, 10f, 15f, 30f, 1.5f);
+        var result = RoomClearController.Update(_entity, true, 10f, 15f, 30f, 1.5f);
 
         Assert.Multiple(() =>
         {
@@ -53,9 +53,9 @@ public class RoomClearControllerTests
     [Test]
     public void Update_IndoorToOutdoor_DoesNotStartRoomClear()
     {
-        _entity.LastEnvironmentId = 0;
+        _entity.LastEnvironmentId = 1;
 
-        var result = RoomClearController.Update(_entity, 1, 10f, 15f, 30f, 1.5f);
+        var result = RoomClearController.Update(_entity, false, 10f, 15f, 30f, 1.5f);
 
         Assert.Multiple(() =>
         {
@@ -68,11 +68,11 @@ public class RoomClearControllerTests
     public void Update_TimerExpiry_ReturnsNone()
     {
         // Start room clear
-        _entity.LastEnvironmentId = 1;
-        RoomClearController.Update(_entity, 0, 10f, 15f, 30f, 1.5f);
+        _entity.LastEnvironmentId = 0;
+        RoomClearController.Update(_entity, true, 10f, 15f, 30f, 1.5f);
 
         // Advance time past max duration
-        var result = RoomClearController.Update(_entity, 0, 50f, 15f, 30f, 1.5f);
+        var result = RoomClearController.Update(_entity, true, 50f, 15f, 30f, 1.5f);
 
         Assert.Multiple(() =>
         {
@@ -85,14 +85,14 @@ public class RoomClearControllerTests
     public void Update_CornerPauseActive_ReturnsPauseAtCorner()
     {
         // Start room clear
-        _entity.LastEnvironmentId = 1;
-        RoomClearController.Update(_entity, 0, 10f, 15f, 30f, 1.5f);
+        _entity.LastEnvironmentId = 0;
+        RoomClearController.Update(_entity, true, 10f, 15f, 30f, 1.5f);
 
         // Set corner pause
         _entity.CornerPauseUntil = 15f;
 
         // Still within room clear and corner pause
-        var result = RoomClearController.Update(_entity, 0, 12f, 15f, 30f, 1.5f);
+        var result = RoomClearController.Update(_entity, true, 12f, 15f, 30f, 1.5f);
 
         Assert.That(result, Is.EqualTo(RoomClearInstruction.PauseAtCorner));
     }
@@ -101,16 +101,16 @@ public class RoomClearControllerTests
     public void Update_AlreadyInRoomClear_OutdoorToIndoor_DoesNotRestart()
     {
         // Start room clear
-        _entity.LastEnvironmentId = 1;
-        RoomClearController.Update(_entity, 0, 10f, 15f, 30f, 1.5f);
+        _entity.LastEnvironmentId = 0;
+        RoomClearController.Update(_entity, true, 10f, 15f, 30f, 1.5f);
         float originalExpiry = _entity.RoomClearUntil;
 
         // Go back outdoor
-        _entity.LastEnvironmentId = 1;
+        _entity.LastEnvironmentId = 0;
         _entity.IsInRoomClear = true; // still active
 
         // Try another outdoor->indoor transition while already in room clear
-        var result = RoomClearController.Update(_entity, 0, 12f, 15f, 30f, 1.5f);
+        var result = RoomClearController.Update(_entity, true, 12f, 15f, 30f, 1.5f);
 
         Assert.Multiple(() =>
         {
@@ -125,10 +125,10 @@ public class RoomClearControllerTests
     [Test]
     public void Update_UninitializedEnvironment_IndoorTransition_StartsRoomClear()
     {
-        // LastEnvironmentId defaults to -1 (uninitialized), which != 0, so counts as "outdoor"
+        // LastEnvironmentId defaults to -1 (uninitialized), which != 1, so counts as "outdoor"
         Assert.That(_entity.LastEnvironmentId, Is.EqualTo(-1));
 
-        var result = RoomClearController.Update(_entity, 0, 10f, 15f, 30f, 1.5f);
+        var result = RoomClearController.Update(_entity, true, 10f, 15f, 30f, 1.5f);
 
         Assert.Multiple(() =>
         {
@@ -141,14 +141,14 @@ public class RoomClearControllerTests
     public void Update_CornerPauseExpired_ReturnsSlowWalk()
     {
         // Start room clear
-        _entity.LastEnvironmentId = 1;
-        RoomClearController.Update(_entity, 0, 10f, 15f, 30f, 1.5f);
+        _entity.LastEnvironmentId = 0;
+        RoomClearController.Update(_entity, true, 10f, 15f, 30f, 1.5f);
 
         // Set corner pause that has already expired
         _entity.CornerPauseUntil = 11f;
 
         // Time is past pause but still in room clear
-        var result = RoomClearController.Update(_entity, 0, 12f, 15f, 30f, 1.5f);
+        var result = RoomClearController.Update(_entity, true, 12f, 15f, 30f, 1.5f);
 
         Assert.That(result, Is.EqualTo(RoomClearInstruction.SlowWalk));
     }
@@ -267,5 +267,54 @@ public class RoomClearControllerTests
 
         // Should override — expired pause
         Assert.That(_entity.CornerPauseUntil, Is.EqualTo(11.5f).Within(0.01f));
+    }
+
+    // ── Bool isIndoor parameter: environment semantics ─────────────────
+
+    [Test]
+    public void Update_BoolIsIndoorTrue_TreatedAsIndoor()
+    {
+        _entity.LastEnvironmentId = 0; // outdoor
+        var result = RoomClearController.Update(_entity, true, 10f, 15f, 30f, 1.5f);
+
+        Assert.That(result, Is.EqualTo(RoomClearInstruction.SlowWalk));
+        Assert.That(_entity.IsInRoomClear, Is.True);
+    }
+
+    [Test]
+    public void Update_BoolIsIndoorFalse_TreatedAsOutdoor()
+    {
+        _entity.LastEnvironmentId = 0; // outdoor
+        var result = RoomClearController.Update(_entity, false, 10f, 15f, 30f, 1.5f);
+
+        Assert.That(result, Is.EqualTo(RoomClearInstruction.None));
+        Assert.That(_entity.IsInRoomClear, Is.False);
+    }
+
+    [Test]
+    public void Update_LastEnvironmentId_StoresCorrectValues()
+    {
+        // Going indoor should set LastEnvironmentId to 1
+        _entity.LastEnvironmentId = 0;
+        RoomClearController.Update(_entity, true, 10f, 15f, 30f, 1.5f);
+        Assert.That(_entity.LastEnvironmentId, Is.EqualTo(1));
+
+        // Going outdoor should set LastEnvironmentId to 0
+        RoomClearController.Update(_entity, false, 12f, 15f, 30f, 1.5f);
+        Assert.That(_entity.LastEnvironmentId, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void Update_RoomClearCancelled_WhenMovingOutdoor()
+    {
+        // Start room clear
+        _entity.LastEnvironmentId = 0;
+        RoomClearController.Update(_entity, true, 10f, 15f, 30f, 1.5f);
+        Assert.That(_entity.IsInRoomClear, Is.True);
+
+        // Move outdoor — should cancel
+        var result = RoomClearController.Update(_entity, false, 11f, 15f, 30f, 1.5f);
+        Assert.That(result, Is.EqualTo(RoomClearInstruction.None));
+        Assert.That(_entity.IsInRoomClear, Is.False);
     }
 }

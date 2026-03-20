@@ -5,10 +5,18 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks;
 /// <summary>
 /// Scores high when the bot is close to an ambush position.
 /// Only active when <c>CurrentQuestAction == Ambush</c> and <c>IsCloseToObjective</c>.
+/// Gets a small bonus when the game's BotAmbushData also has a valid cover point,
+/// indicating the game's tactical AI agrees an ambush is appropriate.
 /// </summary>
 public sealed class AmbushTask : QuestUtilityTask
 {
     public const float BaseScore = 0.65f;
+
+    /// <summary>
+    /// Score bonus applied when the game's BotAmbushData has a valid, unspotted cover point.
+    /// This reinforces our ambush decision when the game's tactical AI agrees.
+    /// </summary>
+    public const float GameAmbushBonus = 0.10f;
 
     public override int BotActionTypeId
     {
@@ -48,6 +56,14 @@ public sealed class AmbushTask : QuestUtilityTask
             return 0f;
         }
 
-        return BaseScore;
+        float score = BaseScore;
+
+        // Bonus when game's BotAmbushData has a valid cover point
+        if (entity.HasGameAmbushPoint)
+        {
+            score += GameAmbushBonus;
+        }
+
+        return score;
     }
 }

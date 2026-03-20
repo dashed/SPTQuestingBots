@@ -1,34 +1,21 @@
-using System.Reflection;
 using EFT;
 using SPTQuestingBots.BotLogic.ECS;
-using SPTQuestingBots.Controllers;
 
 namespace SPTQuestingBots.Helpers
 {
     /// <summary>
-    /// Provides access to the bot's hearing sensor via reflection.
+    /// Provides access to the bot's hearing sensor via direct property access.
     /// Infrastructure only — behavioral integration (sound reaction) is deferred.
     /// </summary>
     public static class HearingSensorHelper
     {
-        private static readonly FieldInfo _hearingSensorField = ReflectionHelper.RequireField(
-            typeof(BotOwner),
-            "<HearingSensor>k__BackingField",
-            "HearingSensorHelper — bot hearing sensor access"
-        );
-
         /// <summary>
         /// Returns the <see cref="BotHearingSensor"/> for the given bot,
-        /// or <c>null</c> if the field is unavailable.
+        /// or <c>null</c> if unavailable.
         /// </summary>
         public static BotHearingSensor GetHearingSensor(BotOwner bot)
         {
-            if (bot == null || _hearingSensorField == null)
-            {
-                return null;
-            }
-
-            return _hearingSensorField.GetValue(bot) as BotHearingSensor;
+            return bot?.HearingSensor;
         }
 
         /// <summary>

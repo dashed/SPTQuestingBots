@@ -1,7 +1,6 @@
 using System;
 using System.Reflection;
 using EFT;
-using EFT.Interactive;
 using HarmonyLib;
 using SPTQuestingBots.Controllers;
 
@@ -34,7 +33,11 @@ namespace SPTQuestingBots.Helpers
             (typeof(BotCurrentPathAbstractClass), "Vector3_0", "BotPathingHelpers — path corner points"),
             (typeof(NonWavesSpawnScenario), "float_2", "TrySpawnFreeAndDelayPatch — retry time delay"),
             (typeof(LocalGame), "wavesSpawnScenario_0", "GameStartPatch — waves spawn scenario"),
-            (typeof(BotsGroup), "<BotZone>k__BackingField", "GoToPositionAbstractAction — bot zone"),
+            (
+                typeof(BotsGroup),
+                "<BotZone>k__BackingField",
+                "GoToPositionAbstractAction — bot zone (get-only property, write requires reflection)"
+            ),
             // Harmony ___param field injections
             (typeof(BossGroup), "Boss_1", "SetNewBossPatch ___Boss_1"),
             (typeof(BotSpawner), "Bots", "BotDiedPatch ___Bots"),
@@ -42,24 +45,6 @@ namespace SPTQuestingBots.Helpers
             (typeof(BotSpawner), "AllPlayers", "GetAllBossPlayersPatch ___AllPlayers"),
             (typeof(AirdropLogicClass), "AirdropSynchronizableObject_0", "AirdropLandPatch ___AirdropSynchronizableObject_0"),
             (typeof(LighthouseTraderZone), "physicsTriggerHandler_0", "LighthouseTraderZone patches ___physicsTriggerHandler_0"),
-            // Additional field lookups (raw reflection or dynamic base type)
-            (typeof(Player), "_inventoryController", "ItemHelpers — bot inventory controller access"),
-            // BotsGroup combat state fields
-            (typeof(BotsGroup), "<EnemyLastSeenTimeSence>k__BackingField", "CombatStateHelper — perceived time of last enemy sighting"),
-            (typeof(BotsGroup), "<EnemyLastSeenTimeReal>k__BackingField", "CombatStateHelper — real time of last enemy sighting"),
-            (typeof(BotsGroup), "<EnemyLastSeenPositionReal>k__BackingField", "CombatStateHelper — real position of last enemy sighting"),
-            (typeof(BotsGroup), "<EnemyLastSeenPositionSence>k__BackingField", "CombatStateHelper — perceived enemy position"),
-            // BotOwner danger and hearing fields
-            (typeof(BotOwner), "<DangerArea>k__BackingField", "GoToPositionAbstractAction — danger area awareness"),
-            (typeof(BotOwner), "<BotAvoidDangerPlaces>k__BackingField", "GoToPositionAbstractAction — danger place avoidance"),
-            (typeof(BotOwner), "<HearingSensor>k__BackingField", "HearingSensorHelper — bot hearing sensor access"),
-            // BotOwner extraction fields
-            (typeof(BotOwner), "<Exfiltration>k__BackingField", "ExtractionHelper — bot exfiltration data"),
-            (typeof(BotOwner), "<LeaveData>k__BackingField", "ExtractionHelper — bot leave/extract decision data"),
-            // Player plant zone field
-            (typeof(Player), "<PlaceItemZone>k__BackingField", "PlantZoneHelper — quest item plant zone trigger"),
-            // AbstractGame timer field
-            (typeof(AbstractGame), "gameTimerClass", "RaidTimeHelper — raid timer access"),
         };
 
         /// <summary>

@@ -402,10 +402,10 @@ public class FullBotLifecycleTests
         var entity = MakeSpawnedBot(spawnTime: 0f, currentTime: 30f);
         entity.IsSpawnEntryComplete = true;
         entity.HasActiveObjective = true;
-        entity.LastEnvironmentId = 1; // outdoor
+        entity.LastEnvironmentId = 0; // outdoor
 
         // Bot enters building
-        var instruction = RoomClearController.Update(entity, 0, 30f, 10f, 20f, 1.5f);
+        var instruction = RoomClearController.Update(entity, true, 30f, 10f, 20f, 1.5f);
 
         Assert.Multiple(() =>
         {
@@ -420,14 +420,14 @@ public class FullBotLifecycleTests
     {
         var entity = MakeSpawnedBot(spawnTime: 0f, currentTime: 30f);
         entity.IsSpawnEntryComplete = true;
-        entity.LastEnvironmentId = 1;
+        entity.LastEnvironmentId = 0; // outdoor
 
         // Enter building
-        RoomClearController.Update(entity, 0, 30f, 10f, 20f, 1.5f);
+        RoomClearController.Update(entity, true, 30f, 10f, 20f, 1.5f);
         Assert.That(entity.IsInRoomClear, Is.True);
 
         // Exit building
-        var instruction = RoomClearController.Update(entity, 1, 31f, 10f, 20f, 1.5f);
+        var instruction = RoomClearController.Update(entity, false, 31f, 10f, 20f, 1.5f);
 
         Assert.Multiple(() =>
         {

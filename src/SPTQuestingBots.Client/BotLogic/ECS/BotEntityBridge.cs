@@ -113,6 +113,16 @@ namespace SPTQuestingBots.BotLogic.ECS
             // Personality: derive from bot difficulty
             AssignPersonality(entity, bot);
 
+            // Native patrol: extract BSG patrol waypoints as fallback route
+            try
+            {
+                entity.NativePatrolRoute = Helpers.NativePatrolDataProvider.TryCreateNativeRoute(bot);
+            }
+            catch
+            {
+                entity.NativePatrolRoute = null;
+            }
+
             // Spawn entry: initialize timing and facing direction
             InitializeSpawnEntry(entity, bot);
 
@@ -826,6 +836,39 @@ namespace SPTQuestingBots.BotLogic.ECS
             catch
             {
                 // Inventory access can fail during bot initialization
+            }
+
+            // Sync game ambush state — game may have a pre-calculated cover point
+            try
+            {
+                entity.HasGameAmbushPoint = botOwner.Ambush?.HaveCover() == true;
+            }
+            catch
+            {
+                entity.HasGameAmbushPoint = false;
+            }
+
+            // Sync game search state — game may have an active search target based on enemy sighting
+            try
+            {
+                var searchPoint = botOwner.SearchData?.SearchPoint;
+                if (searchPoint != null)
+                {
+                    entity.HasGameSearchTarget = true;
+                    var searchPos = searchPoint.Position;
+                    entity.GameSearchTargetX = searchPos.x;
+                    entity.GameSearchTargetY = searchPos.y;
+                    entity.GameSearchTargetZ = searchPos.z;
+                    entity.GameSearchTargetType = (int)searchPoint.TypeSearch;
+                }
+                else
+                {
+                    entity.HasGameSearchTarget = false;
+                }
+            }
+            catch
+            {
+                entity.HasGameSearchTarget = false;
             }
         }
 

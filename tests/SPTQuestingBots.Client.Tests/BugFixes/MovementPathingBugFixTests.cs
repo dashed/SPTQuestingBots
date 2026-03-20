@@ -314,10 +314,10 @@ public class MovementPathingBugFixTests
         // BUG: When durationMax < durationMin, (durationMax - durationMin) was negative,
         // producing a duration < durationMin. With fix, range is clamped to 0.
         var entity = new BotEntity(0);
-        entity.LastEnvironmentId = 1; // outdoor
+        entity.LastEnvironmentId = 0; // outdoor
 
         // durationMax (5) < durationMin (15) — misconfigured
-        var result = RoomClearController.Update(entity, 0, 10f, 15f, 5f, 1.5f);
+        var result = RoomClearController.Update(entity, true, 10f, 15f, 5f, 1.5f);
 
         Assert.That(result, Is.EqualTo(RoomClearInstruction.SlowWalk));
         // Duration should be exactly durationMin (range clamped to 0)
@@ -328,9 +328,9 @@ public class MovementPathingBugFixTests
     public void RoomClear_EqualDurations_ProducesExactDuration()
     {
         var entity = new BotEntity(0);
-        entity.LastEnvironmentId = 1;
+        entity.LastEnvironmentId = 0; // outdoor
 
-        var result = RoomClearController.Update(entity, 0, 10f, 20f, 20f, 1.5f);
+        var result = RoomClearController.Update(entity, true, 10f, 20f, 20f, 1.5f);
 
         Assert.That(result, Is.EqualTo(RoomClearInstruction.SlowWalk));
         Assert.That(entity.RoomClearUntil, Is.EqualTo(30f).Within(0.01f));
@@ -340,9 +340,9 @@ public class MovementPathingBugFixTests
     public void RoomClear_NormalDurationRange_ProducesDurationInRange()
     {
         var entity = new BotEntity(0);
-        entity.LastEnvironmentId = 1;
+        entity.LastEnvironmentId = 0; // outdoor
 
-        RoomClearController.Update(entity, 0, 100f, 10f, 20f, 1.5f);
+        RoomClearController.Update(entity, true, 100f, 10f, 20f, 1.5f);
 
         // Duration should be between 10 and 20, so RoomClearUntil between 110 and 120
         Assert.That(entity.RoomClearUntil, Is.GreaterThanOrEqualTo(110f));

@@ -237,7 +237,11 @@ public class ReflectionValidationTests
     {
         // Sanity check that the registry hasn't been accidentally emptied or truncated.
         var knownFields = ParseKnownFieldsFromSource();
-        Assert.That(knownFields.Count, Is.GreaterThanOrEqualTo(22), "ReflectionHelper.KnownFields should have at least 22 entries");
+        Assert.That(
+            knownFields.Count,
+            Is.GreaterThanOrEqualTo(10),
+            "ReflectionHelper.KnownFields should have at least 10 entries (12 removed via direct access migration)"
+        );
     }
 
     #endregion

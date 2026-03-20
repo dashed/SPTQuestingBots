@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Comfort.Common;
@@ -30,15 +29,9 @@ namespace SPTQuestingBots.Helpers
 
     public static class ItemHelpers
     {
-        private static readonly FieldInfo _inventoryControllerField = ReflectionHelper.RequireField(
-            typeof(Player),
-            "_inventoryController",
-            "ItemHelpers — bot inventory controller"
-        );
-
         public static InventoryController GetInventoryController(this BotOwner bot)
         {
-            return _inventoryControllerField != null ? (InventoryController)_inventoryControllerField.GetValue(bot.GetPlayer) : null;
+            return bot?.GetPlayer?.InventoryController;
         }
 
         public static IEnumerable<WeaponClass> ToWeaponClasses(this IEnumerable<string> weaponClassNames)

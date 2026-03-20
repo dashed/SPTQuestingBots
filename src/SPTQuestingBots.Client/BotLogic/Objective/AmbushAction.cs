@@ -55,7 +55,8 @@ namespace SPTQuestingBots.BotLogic.Objective
             UpdateBaseAction(data);
 
             // While the bot is moving to the ambush position, have it look where it's going. Once at the ambush position, have it look to the
-            // a specific location if defined by the quest. Otherwise, have it look where it just came from.
+            // a specific location if defined by the quest. Otherwise, use the game's ambush cover fire position if available,
+            // or look where it just came from.
             if (!ObjectiveManager.IsCloseToObjective())
             {
                 UpdateBotSteering();
@@ -65,6 +66,10 @@ namespace SPTQuestingBots.BotLogic.Objective
                 if (ObjectiveManager.LookToPosition.HasValue)
                 {
                     UpdateBotSteering(ObjectiveManager.LookToPosition.Value);
+                }
+                else if (TryGetGameAmbushLookPoint(out var lookPoint))
+                {
+                    UpdateBotSteering(lookPoint);
                 }
                 else
                 {
@@ -107,6 +112,30 @@ namespace SPTQuestingBots.BotLogic.Objective
             }
 
             restartStuckTimer();
+        }
+
+        /// <summary>
+        /// Try to get a look direction from the game's BotAmbushData cover point.
+        /// When the game has a valid ambush cover, its FirePosition gives a good
+        /// direction for the bot to face (toward the expected threat).
+        /// </summary>
+        private bool TryGetGameAmbushLookPoint(out UnityEngine.Vector3 lookPoint)
+        {
+            try
+            {
+                if (BotOwner.Ambush != null && BotOwner.Ambush.TryGetAmbushPoint(out var coverPoint))
+                {
+                    lookPoint = coverPoint.FirePosition;
+                    return true;
+                }
+            }
+            catch
+            {
+                // BotAmbushData may not be fully initialized
+            }
+
+            lookPoint = default;
+            return false;
         }
     }
 }

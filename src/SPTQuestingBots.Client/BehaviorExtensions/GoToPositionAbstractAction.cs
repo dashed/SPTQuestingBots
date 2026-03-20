@@ -250,6 +250,14 @@ namespace SPTQuestingBots.BehaviorExtensions
                 return false;
             }
 
+            // If the game has paused the mover (e.g. grenade throw, special animation),
+            // skip stuck detection — the bot is intentionally stationary, not stuck.
+            if (BotOwner.Mover?.Pause == true)
+            {
+                restartStuckTimer();
+                return false;
+            }
+
             float currentTime = Time.time;
             Vector3 currentPos = BotOwner.Position;
             float moveSpeed = BotOwner.GetPlayer.MovementContext.CharacterMovementSpeed;

@@ -28,38 +28,24 @@ public class ReflectionSafetyTests
         return TestContext.CurrentContext.TestDirectory;
     }
 
-    // ── CombatStateHelper: all methods handle null fields ──
+    // ── CombatStateHelper: all methods handle null bot via direct property access ──
 
     [Test]
-    public void CombatStateHelper_GetTimeSinceLastCombat_ChecksFieldNull()
+    public void CombatStateHelper_UsesDirectPropertyAccess()
     {
         var source = File.ReadAllText(Path.Combine(HelpersDir, "CombatStateHelper.cs"));
-        var method = ExtractMethod(source, "public static float? GetTimeSinceLastCombat");
+
+        // Should NOT contain reflection field references (migrated to direct access)
         Assert.That(
-            method,
-            Does.Contain("_enemyLastSeenTimeRealField == null"),
-            "GetTimeSinceLastCombat must check if reflection field is null"
+            source,
+            Does.Not.Contain("_enemyLastSeenTimeRealField"),
+            "CombatStateHelper should use direct property access, not reflection"
         );
-    }
+        Assert.That(source, Does.Not.Contain("_dangerAreaField"), "CombatStateHelper should use direct property access, not reflection");
 
-    [Test]
-    public void CombatStateHelper_GetLastEnemyPosition_ChecksFieldNull()
-    {
-        var source = File.ReadAllText(Path.Combine(HelpersDir, "CombatStateHelper.cs"));
-        var method = ExtractMethod(source, "public static Vector3? GetLastEnemyPosition");
-        Assert.That(
-            method,
-            Does.Contain("_enemyLastSeenPositionRealField == null"),
-            "GetLastEnemyPosition must check if reflection field is null"
-        );
-    }
-
-    [Test]
-    public void CombatStateHelper_IsInDangerZone_ChecksFieldNull()
-    {
-        var source = File.ReadAllText(Path.Combine(HelpersDir, "CombatStateHelper.cs"));
-        var method = ExtractMethod(source, "public static bool IsInDangerZone");
-        Assert.That(method, Does.Contain("_dangerAreaField == null"), "IsInDangerZone must check if reflection field is null");
+        // Should use direct property access
+        Assert.That(source, Does.Contain("bot.BotsGroup.EnemyLastSeenTimeReal"), "Should access EnemyLastSeenTimeReal directly");
+        Assert.That(source, Does.Contain("bot.DangerArea"), "Should access DangerArea directly");
     }
 
     [Test]
@@ -93,13 +79,14 @@ public class ReflectionSafetyTests
     // ── RaidTimeHelper: handles null game instance ──
 
     [Test]
-    public void RaidTimeHelper_GetGameTimer_ChecksSingletonAndField()
+    public void RaidTimeHelper_GetGameTimer_ChecksSingleton()
     {
         var source = File.ReadAllText(Path.Combine(HelpersDir, "RaidTimeHelper.cs"));
         var method = ExtractMethod(source, "public static GameTimerClass GetGameTimer");
 
-        Assert.That(method, Does.Contain("_gameTimerField == null"), "GetGameTimer must check if reflection field is null");
+        Assert.That(source, Does.Not.Contain("_gameTimerField"), "RaidTimeHelper should use direct property access, not reflection");
         Assert.That(method, Does.Contain("Singleton"), "GetGameTimer must check game instance availability");
+        Assert.That(method, Does.Contain("GameTimer"), "GetGameTimer must access GameTimer property directly");
     }
 
     [Test]
@@ -111,47 +98,43 @@ public class ReflectionSafetyTests
         Assert.That(method, Does.Contain("HasRaidStarted"), "GetRemainingRaidFraction must check if raid has started");
     }
 
-    // ── ExtractionHelper: handles null fields ──
+    // ── ExtractionHelper: uses direct property access ──
 
     [Test]
-    public void ExtractionHelper_HasExfiltrationAssigned_ChecksFieldNull()
+    public void ExtractionHelper_UsesDirectPropertyAccess()
     {
         var source = File.ReadAllText(Path.Combine(HelpersDir, "ExtractionHelper.cs"));
-        var method = ExtractMethod(source, "public static bool HasExfiltrationAssigned");
 
-        Assert.That(method, Does.Contain("_exfiltrationField == null"), "HasExfiltrationAssigned must check if reflection field is null");
-        Assert.That(method, Does.Contain("bot == null"), "HasExfiltrationAssigned must handle null bot");
+        Assert.That(source, Does.Not.Contain("_exfiltrationField"), "ExtractionHelper should use direct property access, not reflection");
+        Assert.That(source, Does.Not.Contain("_leaveDataField"), "ExtractionHelper should use direct property access, not reflection");
+        Assert.That(source, Does.Contain("bot?.Exfiltration"), "Should access Exfiltration directly");
+        Assert.That(source, Does.Contain("bot?.LeaveData"), "Should access LeaveData directly");
     }
 
-    [Test]
-    public void ExtractionHelper_IsLeaving_ChecksFieldNull()
-    {
-        var source = File.ReadAllText(Path.Combine(HelpersDir, "ExtractionHelper.cs"));
-        var method = ExtractMethod(source, "public static bool IsLeaving");
-
-        Assert.That(method, Does.Contain("_leaveDataField == null"), "IsLeaving must check if reflection field is null");
-    }
-
-    // ── PlantZoneHelper: handles null fields ──
+    // ── PlantZoneHelper: uses direct property access ──
 
     [Test]
-    public void PlantZoneHelper_GetPlantZone_ChecksFieldNull()
+    public void PlantZoneHelper_UsesDirectPropertyAccess()
     {
         var source = File.ReadAllText(Path.Combine(HelpersDir, "PlantZoneHelper.cs"));
-        var method = ExtractMethod(source, "public static PlaceItemTrigger GetPlantZone");
 
-        Assert.That(method, Does.Contain("_placeItemZoneField == null"), "GetPlantZone must check if reflection field is null");
+        Assert.That(source, Does.Not.Contain("_placeItemZoneField"), "PlantZoneHelper should use direct property access, not reflection");
+        Assert.That(source, Does.Contain("PlaceItemZone"), "Should access PlaceItemZone directly");
     }
 
-    // ── HearingSensorHelper: handles null fields ──
+    // ── HearingSensorHelper: uses direct property access ──
 
     [Test]
-    public void HearingSensorHelper_GetHearingSensor_ChecksFieldNull()
+    public void HearingSensorHelper_GetHearingSensor_HasNullCheckForBot()
     {
         var source = File.ReadAllText(Path.Combine(HelpersDir, "HearingSensorHelper.cs"));
-        var method = ExtractMethod(source, "public static BotHearingSensor GetHearingSensor");
 
-        Assert.That(method, Does.Contain("_hearingSensorField == null"), "GetHearingSensor must check if reflection field is null");
+        Assert.That(
+            source,
+            Does.Not.Contain("_hearingSensorField"),
+            "HearingSensorHelper should use direct property access, not reflection"
+        );
+        Assert.That(source, Does.Contain("bot?.HearingSensor"), "Should access HearingSensor directly");
     }
 
     // ── ReflectionHelper.RequireField: logs error, returns null ──
@@ -181,15 +164,15 @@ public class ReflectionSafetyTests
     }
 
     [Test]
-    public void ReflectionHelper_KnownFields_Has22OrMoreEntries()
+    public void ReflectionHelper_KnownFields_Has10OrMoreEntries()
     {
         var source = File.ReadAllText(Path.Combine(HelpersDir, "ReflectionHelper.cs"));
 
-        // Count entries in the KnownFields array
-        int count = Regex.Matches(source, @"\(typeof\(").Count;
+        // Count entries in the KnownFields array — typeof( may be separated from ( by whitespace due to formatting
+        int count = Regex.Matches(source, @"typeof\(\w+\)\s*,\s*""[^""]+""").Count;
 
-        // KnownFields should have 22 entries (as documented in memory)
-        Assert.That(count, Is.GreaterThanOrEqualTo(22), "KnownFields should have at least 22 entries");
+        // KnownFields was reduced from 22 to 10 after migrating 12 fields to direct property access
+        Assert.That(count, Is.GreaterThanOrEqualTo(10), "KnownFields should have at least 10 entries");
     }
 
     // ── Helpers ──

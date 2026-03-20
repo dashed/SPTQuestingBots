@@ -136,17 +136,9 @@ public class HelperFieldRegistrationTests
     [Test]
     public void AllHelperFiles_ExistAndContainRequireFieldCalls()
     {
-        // Verify that all expected helper files exist and use RequireField.
-        // This catches accidental deletion or refactoring away from the RequireField pattern.
-        string[] expectedHelpers = new[]
-        {
-            "CombatStateHelper.cs",
-            "RaidTimeHelper.cs",
-            "ExtractionHelper.cs",
-            "PlantZoneHelper.cs",
-            "HearingSensorHelper.cs",
-            "ItemHelpers.cs",
-        };
+        // Verify that helper files still using reflection exist and use RequireField.
+        // Helpers that were migrated to direct property access are excluded.
+        string[] expectedHelpers = new[] { "BotPathingHelpers.cs" };
 
         foreach (var helperName in expectedHelpers)
         {
@@ -159,22 +151,27 @@ public class HelperFieldRegistrationTests
     }
 
     [Test]
-    [TestCase("CombatStateHelper.cs", 6)]
-    [TestCase("RaidTimeHelper.cs", 1)]
-    [TestCase("ExtractionHelper.cs", 2)]
-    [TestCase("PlantZoneHelper.cs", 1)]
-    [TestCase("HearingSensorHelper.cs", 1)]
-    public void NewHelper_HasExpectedRequireFieldCount(string fileName, int expectedCount)
+    public void DirectAccessHelpers_NoLongerUseReflection()
     {
-        var filePath = Path.Combine(HelpersDir, fileName);
-        Assert.That(File.Exists(filePath), Is.True, "Helper file not found: " + fileName);
+        // Verify that helpers migrated to direct property access no longer use RequireField.
+        string[] migratedHelpers = new[]
+        {
+            "CombatStateHelper.cs",
+            "RaidTimeHelper.cs",
+            "ExtractionHelper.cs",
+            "PlantZoneHelper.cs",
+            "HearingSensorHelper.cs",
+            "ItemHelpers.cs",
+        };
 
-        var calls = GetRequireFieldCalls(filePath);
-        Assert.That(
-            calls.Count,
-            Is.EqualTo(expectedCount),
-            "Expected " + expectedCount + " RequireField calls in " + fileName + " but found " + calls.Count
-        );
+        foreach (var helperName in migratedHelpers)
+        {
+            var filePath = Path.Combine(HelpersDir, helperName);
+            Assert.That(File.Exists(filePath), Is.True, "Helper file not found: " + helperName);
+
+            var calls = GetRequireFieldCalls(filePath);
+            Assert.That(calls, Is.Empty, helperName + " should NOT contain RequireField calls (migrated to direct property access)");
+        }
     }
 
     [Test]

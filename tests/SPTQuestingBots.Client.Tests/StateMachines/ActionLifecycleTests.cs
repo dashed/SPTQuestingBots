@@ -436,13 +436,13 @@ public class ActionLifecycleTests
         var entity = new BotEntity(0);
 
         // Start room clear: outdoor -> indoor
-        entity.LastEnvironmentId = 1; // was outdoor
-        var result1 = RoomClearController.Update(entity, 0, 10f, 15f, 30f, 1.5f);
+        entity.LastEnvironmentId = 0; // was outdoor
+        var result1 = RoomClearController.Update(entity, true, 10f, 15f, 30f, 1.5f);
         Assert.That(result1, Is.EqualTo(RoomClearInstruction.SlowWalk));
         Assert.That(entity.IsInRoomClear, Is.True);
 
         // Now move back outdoors
-        var result2 = RoomClearController.Update(entity, 1, 12f, 15f, 30f, 1.5f);
+        var result2 = RoomClearController.Update(entity, false, 12f, 15f, 30f, 1.5f);
 
         Assert.Multiple(() =>
         {
@@ -455,18 +455,18 @@ public class ActionLifecycleTests
     public void RoomClear_RapidOscillation_HandlesCorrectly()
     {
         var entity = new BotEntity(0);
-        entity.LastEnvironmentId = 1;
+        entity.LastEnvironmentId = 0; // outdoor
 
         // Enter indoor
-        RoomClearController.Update(entity, 0, 10f, 15f, 30f, 1.5f);
+        RoomClearController.Update(entity, true, 10f, 15f, 30f, 1.5f);
         Assert.That(entity.IsInRoomClear, Is.True);
 
         // Exit to outdoor (should cancel)
-        RoomClearController.Update(entity, 1, 10.5f, 15f, 30f, 1.5f);
+        RoomClearController.Update(entity, false, 10.5f, 15f, 30f, 1.5f);
         Assert.That(entity.IsInRoomClear, Is.False);
 
         // Re-enter indoor (should start new room clear)
-        var result = RoomClearController.Update(entity, 0, 11f, 15f, 30f, 1.5f);
+        var result = RoomClearController.Update(entity, true, 11f, 15f, 30f, 1.5f);
         Assert.Multiple(() =>
         {
             Assert.That(result, Is.EqualTo(RoomClearInstruction.SlowWalk));
@@ -478,18 +478,18 @@ public class ActionLifecycleTests
     public void RoomClear_MultipleRapidOscillations_NoStateCorruption()
     {
         var entity = new BotEntity(0);
-        entity.LastEnvironmentId = 1;
+        entity.LastEnvironmentId = 0; // outdoor
 
         for (int i = 0; i < 10; i++)
         {
             float time = 10f + i * 0.5f;
 
             // Enter indoor
-            var resultIn = RoomClearController.Update(entity, 0, time, 15f, 30f, 1.5f);
+            var resultIn = RoomClearController.Update(entity, true, time, 15f, 30f, 1.5f);
             Assert.That(entity.IsInRoomClear, Is.True, $"Iteration {i}: should be in room clear after entering indoor");
 
             // Exit to outdoor
-            var resultOut = RoomClearController.Update(entity, 1, time + 0.1f, 15f, 30f, 1.5f);
+            var resultOut = RoomClearController.Update(entity, false, time + 0.1f, 15f, 30f, 1.5f);
             Assert.That(entity.IsInRoomClear, Is.False, $"Iteration {i}: should NOT be in room clear after exiting to outdoor");
         }
     }
@@ -498,19 +498,19 @@ public class ActionLifecycleTests
     public void RoomClear_StaysIndoor_ContinuesUntilTimerExpires()
     {
         var entity = new BotEntity(0);
-        entity.LastEnvironmentId = 1;
+        entity.LastEnvironmentId = 0; // outdoor
 
         // Start room clear
-        RoomClearController.Update(entity, 0, 10f, 15f, 30f, 1.5f);
+        RoomClearController.Update(entity, true, 10f, 15f, 30f, 1.5f);
         Assert.That(entity.IsInRoomClear, Is.True);
 
         // Stay indoor for several ticks
-        var result = RoomClearController.Update(entity, 0, 12f, 15f, 30f, 1.5f);
+        var result = RoomClearController.Update(entity, true, 12f, 15f, 30f, 1.5f);
         Assert.That(result, Is.EqualTo(RoomClearInstruction.SlowWalk));
         Assert.That(entity.IsInRoomClear, Is.True);
 
         // Timer expires (min 15s, max 30s, started at t=10, check at t=50)
-        result = RoomClearController.Update(entity, 0, 50f, 15f, 30f, 1.5f);
+        result = RoomClearController.Update(entity, true, 50f, 15f, 30f, 1.5f);
         Assert.That(result, Is.EqualTo(RoomClearInstruction.None));
         Assert.That(entity.IsInRoomClear, Is.False);
     }
@@ -519,9 +519,9 @@ public class ActionLifecycleTests
     public void RoomClear_OutdoorToOutdoor_NeverStartsRoomClear()
     {
         var entity = new BotEntity(0);
-        entity.LastEnvironmentId = 1;
+        entity.LastEnvironmentId = 0; // outdoor
 
-        var result = RoomClearController.Update(entity, 2, 10f, 15f, 30f, 1.5f);
+        var result = RoomClearController.Update(entity, false, 10f, 15f, 30f, 1.5f);
 
         Assert.Multiple(() =>
         {

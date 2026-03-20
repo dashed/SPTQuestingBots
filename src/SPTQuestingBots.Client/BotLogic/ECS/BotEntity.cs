@@ -416,6 +416,12 @@ public sealed class BotEntity : IEquatable<BotEntity>
     /// <summary>Game time when the current waypoint pause ends (Time.time).</summary>
     public float PatrolPauseUntil = 0f;
 
+    /// <summary>
+    /// Patrol route extracted from BSG's native PatrollingData, used as fallback
+    /// when no custom JSON-defined route is available. Set once during bot registration.
+    /// </summary>
+    public Models.Pathing.PatrolRoute NativePatrolRoute;
+
     // ── Linger State ──────────────────────────────────────────────
 
     /// <summary>Game time when the bot's last objective was completed. 0 = no recent completion.</summary>
@@ -429,6 +435,46 @@ public sealed class BotEntity : IEquatable<BotEntity>
 
     /// <summary>Current game time, synced from Time.time for pure-logic scoring.</summary>
     public float CurrentGameTime;
+
+    // ── Game Data Integration State ──────────────────────────────────────
+
+    /// <summary>
+    /// Whether the game's BotAmbushData has a valid, unspotted cover point.
+    /// Synced from BotOwner.Ambush?.HaveCover() in SyncQuestState().
+    /// Used by AmbushTask to boost score when game agrees ambush is appropriate.
+    /// </summary>
+    public bool HasGameAmbushPoint;
+
+    /// <summary>
+    /// Whether the game's BotSearchData has an active search point.
+    /// Synced from BotOwner.SearchData?.SearchPoint in SyncQuestState().
+    /// Used by InvestigateTask to prefer game's search target over combat event position.
+    /// </summary>
+    public bool HasGameSearchTarget;
+
+    /// <summary>
+    /// Game's search target X coordinate (from BotSearchData.SearchPoint.Position).
+    /// Only valid when HasGameSearchTarget is true.
+    /// </summary>
+    public float GameSearchTargetX;
+
+    /// <summary>
+    /// Game's search target Y coordinate (from BotSearchData.SearchPoint.Position).
+    /// Only valid when HasGameSearchTarget is true.
+    /// </summary>
+    public float GameSearchTargetY;
+
+    /// <summary>
+    /// Game's search target Z coordinate (from BotSearchData.SearchPoint.Position).
+    /// Only valid when HasGameSearchTarget is true.
+    /// </summary>
+    public float GameSearchTargetZ;
+
+    /// <summary>
+    /// Type of the game's search target (0=playerPosition, 1=mapPosition).
+    /// Only valid when HasGameSearchTarget is true.
+    /// </summary>
+    public int GameSearchTargetType;
 
     // ── Look Variance State ──────────────────────────────────────────────
 

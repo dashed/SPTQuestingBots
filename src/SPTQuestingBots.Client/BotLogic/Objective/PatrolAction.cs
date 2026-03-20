@@ -55,6 +55,15 @@ namespace SPTQuestingBots.BotLogic.Objective
                 if (entity.PatrolRouteIndex >= 0 && routes != null && entity.PatrolRouteIndex < routes.Length)
                 {
                     _route = routes[entity.PatrolRouteIndex];
+                }
+                else if (entity.NativePatrolRoute != null)
+                {
+                    // Fallback to BSG's native patrol route
+                    _route = entity.NativePatrolRoute;
+                }
+
+                if (_route != null && _route.Waypoints != null && _route.Waypoints.Length > 0)
+                {
                     _waypointIndex = entity.PatrolWaypointIndex;
 
                     if (_waypointIndex < 0 || _waypointIndex >= _route.Waypoints.Length)
