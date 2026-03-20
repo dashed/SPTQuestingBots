@@ -8,12 +8,9 @@ namespace AssemblyInspector;
 
 internal static class InspectCommand
 {
-    public static int Run(string typeName, string dllPath)
+    public static int Run(string typeName, string dllPath, bool includeInherited = false)
     {
-        using var assembly = AssemblyDefinition.ReadAssembly(
-            dllPath,
-            new ReaderParameters { ReadSymbols = false }
-        );
+        using var assembly = AssemblyDefinition.ReadAssembly(dllPath, new ReaderParameters { ReadSymbols = false });
 
         var matches = FindTypes(assembly, typeName);
 
@@ -26,7 +23,7 @@ internal static class InspectCommand
 
         foreach (var type in matches)
         {
-            PrintTypeFields(type);
+            PrintTypeFields(type, includeInherited);
             Console.WriteLine();
         }
 
@@ -35,14 +32,10 @@ internal static class InspectCommand
 
     private static List<TypeDefinition> FindTypes(AssemblyDefinition assembly, string name)
     {
-        var allTypes = assembly.MainModule.Types
-            .SelectMany(FlattenNestedTypes)
-            .ToList();
+        var allTypes = assembly.MainModule.Types.SelectMany(FlattenNestedTypes).ToList();
 
         // Try exact short-name match (case-insensitive)
-        var matches = allTypes
-            .Where(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        var matches = allTypes.Where(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase)).ToList();
 
         if (matches.Count > 0)
         {
@@ -50,25 +43,34 @@ internal static class InspectCommand
         }
 
         // Try full-name contains match (case-insensitive)
-        matches = allTypes
-            .Where(t => t.FullName.Contains(name, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        matches = allTypes.Where(t => t.FullName.Contains(name, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        if (matches.Count > 0)
+        {
+            return matches;
+        }
+
+        // Try subsequence match (e.g., "BSp" matches "BotSpawner")
+        matches = allTypes.Where(t => IsSubsequenceMatch(t.Name, name)).ToList();
 
         return matches;
     }
 
     private static void SuggestTypes(AssemblyDefinition assembly, string name)
     {
-        var allTypes = assembly.MainModule.Types
-            .SelectMany(FlattenNestedTypes)
-            .ToList();
+        var allTypes = assembly.MainModule.Types.SelectMany(FlattenNestedTypes).ToList();
 
         string nameLower = name.ToLowerInvariant();
 
-        // Find types with similar names (contains any word from the search term)
+        // Find types with similar names: contains, reverse-contains, or subsequence match
+        // Rank by shorter names first (ILSpy-style scoring)
         var suggestions = allTypes
-            .Where(t => t.Name.Contains(nameLower, StringComparison.OrdinalIgnoreCase)
-                || nameLower.Contains(t.Name.ToLowerInvariant()))
+            .Where(t =>
+                t.Name.Contains(nameLower, StringComparison.OrdinalIgnoreCase)
+                || nameLower.Contains(t.Name.ToLowerInvariant())
+                || IsSubsequenceMatch(t.Name, name)
+            )
+            .OrderBy(t => t.Name.Length)
             .Select(t => t.FullName)
             .Take(10)
             .ToList();
@@ -83,25 +85,77 @@ internal static class InspectCommand
         }
     }
 
-    private static void PrintTypeFields(TypeDefinition type)
+    /// <summary>
+    /// Non-contiguous subsequence matching (ILSpy-style).
+    /// "BSp" matches "BotSpawner" because B, S, p appear in order.
+    /// </summary>
+    internal static bool IsSubsequenceMatch(string text, string searchTerm)
     {
+        if (searchTerm.Length == 0)
+        {
+            return true;
+        }
+
+        if (searchTerm.Length > text.Length)
+        {
+            return false;
+        }
+
+        int si = 0;
+        for (int ti = 0; ti < text.Length && si < searchTerm.Length; ti++)
+        {
+            if (char.ToLowerInvariant(text[ti]) == char.ToLowerInvariant(searchTerm[si]))
+            {
+                si++;
+            }
+        }
+
+        return si == searchTerm.Length;
+    }
+
+    private static void PrintTypeFields(TypeDefinition type, bool includeInherited)
+    {
+        var fields = GetAllFields(type, includeInherited).ToList();
+
         Console.WriteLine($"Type: {type.FullName}");
         Console.WriteLine($"Base: {type.BaseType?.FullName ?? "(none)"}");
-        Console.WriteLine(
-            $"Fields: {type.Fields.Count}"
-        );
+        Console.WriteLine($"Fields: {fields.Count}");
         Console.WriteLine(new string('-', 80));
-        Console.WriteLine(
-            $"  {"#",-4} {"Visibility",-12} {"FieldType",-40} {"Name"}"
-        );
+        Console.WriteLine($"  {"#", -4} {"Visibility", -12} {"FieldType", -40} {"Name"}");
         Console.WriteLine(new string('-', 80));
 
-        for (int i = 0; i < type.Fields.Count; i++)
+        for (int i = 0; i < fields.Count; i++)
         {
-            var field = type.Fields[i];
+            var (field, declaringType) = fields[i];
             string visibility = GetVisibility(field);
             string fieldType = FormatTypeName(field.FieldType);
-            Console.WriteLine($"  {i,-4} {visibility,-12} {fieldType,-40} {field.Name}");
+            string suffix = declaringType != type ? $" (inherited from {declaringType.Name})" : "";
+            Console.WriteLine($"  {i, -4} {visibility, -12} {fieldType, -40} {field.Name}{suffix}");
+        }
+    }
+
+    internal static IEnumerable<(FieldDefinition Field, TypeDefinition DeclaringType)> GetAllFields(
+        TypeDefinition type,
+        bool includeInherited
+    )
+    {
+        foreach (var field in type.Fields)
+        {
+            yield return (field, type);
+        }
+
+        if (includeInherited)
+        {
+            var baseType = type.BaseType?.Resolve();
+            while (baseType != null)
+            {
+                foreach (var field in baseType.Fields)
+                {
+                    yield return (field, baseType);
+                }
+
+                baseType = baseType.BaseType?.Resolve();
+            }
         }
     }
 
@@ -210,15 +264,5 @@ internal static class InspectCommand
         };
     }
 
-    private static IEnumerable<TypeDefinition> FlattenNestedTypes(TypeDefinition type)
-    {
-        yield return type;
-        foreach (var nested in type.NestedTypes)
-        {
-            foreach (var t in FlattenNestedTypes(nested))
-            {
-                yield return t;
-            }
-        }
-    }
+    private static IEnumerable<TypeDefinition> FlattenNestedTypes(TypeDefinition type) => AssemblyHelper.FlattenNestedTypes(type);
 }
