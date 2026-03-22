@@ -139,6 +139,12 @@ namespace SPTQuestingBots.BehaviorExtensions
                     // Attempt threat avoidance: reroute around known enemy positions
                     bool usedAvoidance = TryThreatAvoidancePath();
 
+                    // Attempt danger place avoidance if threat avoidance didn't reroute
+                    if (!usedAvoidance)
+                    {
+                        usedAvoidance = TryDangerPlaceAvoidance();
+                    }
+
                     if (!usedAvoidance)
                     {
                         if (UseCustomMover)
@@ -239,6 +245,35 @@ namespace SPTQuestingBots.BehaviorExtensions
             }
         }
 
+        /// <summary>
+        /// Attempt to reroute the current path around known danger places
+        /// (grenade explosions, fire, etc.) using BSG's VoxelesPersonalData API.
+        /// Returns true if the path was successfully rerouted.
+        /// </summary>
+        private bool TryDangerPlaceAvoidance()
+        {
+            var pathConfig = ConfigController.Config?.Questing?.BotPathing;
+            if (pathConfig == null || !pathConfig.DangerPlaceAvoidanceEnabled)
+                return false;
+
+            Vector3[] dangerPlaces = DangerAvoidanceHelper.GetNearbyDangerPlaces(BotOwner);
+            if (dangerPlaces.Length == 0)
+                return false;
+
+            bool rerouted = DangerAvoidanceHelper.TryRerouteAroundDanger(BotOwner, dangerPlaces);
+            if (rerouted && UseCustomMover)
+            {
+                // TryRelacePathAround already applied to BSG mover; sync to custom mover
+                var corners = BotOwner.Mover?.GetCurrentPath();
+                if (corners != null && corners.Length > 0)
+                {
+                    _customMover.SetPath(corners, ObjectiveManager.Position ?? BotOwner.Position);
+                }
+            }
+
+            return rerouted;
+        }
+
         private bool isAQuestingBotsBrainLayerActive()
         {
             string activeLayerName = BotOwner.Brain.ActiveLayerName();
@@ -315,6 +350,21 @@ namespace SPTQuestingBots.BehaviorExtensions
             // If the game has paused the mover (e.g. grenade throw, special animation),
             // skip stuck detection — the bot is intentionally stationary, not stuck.
             if (BotOwner.Mover?.Pause == true)
+            {
+                restartStuckTimer();
+                return false;
+            }
+
+            // If the bot should flee a grenade, skip stuck detection — the grenade flee
+            // brain layer (~priority 80) will take over and move the bot.
+            if (GrenadeAwarenessHelper.ShouldFleeGrenade(BotOwner))
+            {
+                restartStuckTimer();
+                return false;
+            }
+
+            // If the bot is throwing a grenade, skip stuck detection — it is intentionally stationary.
+            if (GrenadeAwarenessHelper.IsThrowingGrenade(BotOwner))
             {
                 restartStuckTimer();
                 return false;

@@ -27,5 +27,14 @@ public class BotPathingConfig
     [JsonProperty("threat_avoidance_cooldown")]
     public float ThreatAvoidanceCooldown { get; set; } = 30f;
 
+    [JsonProperty("danger_place_avoidance_enabled")]
+    public bool DangerPlaceAvoidanceEnabled { get; set; } = true;
+
+    [JsonProperty("mine_avoidance_enabled")]
+    public bool MineAvoidanceEnabled { get; set; } = true;
+
+    [JsonProperty("mine_avoidance_radius")]
+    public float MineAvoidanceRadius { get; set; } = 50f;
+
     public BotPathingConfig() { }
 }

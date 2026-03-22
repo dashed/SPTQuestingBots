@@ -44,6 +44,7 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             CombatEventRegistry.Clear();
             GrenadeExplosionSubscriber.Clear();
             DoorInteractionSubscriber.Clear();
+            BotEventSubscriber.Clear();
             ECS.UtilityAI.Tasks.PatrolTask.Reset();
             _lastScanTime.Clear();
             _preStrategyObjectiveVersions.Clear();
@@ -259,6 +260,10 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                 ECS.BotEntityBridge.SyncPosition(botOwner);
                 ECS.BotEntityBridge.SyncEarPiece(botOwner);
 
+                // Sync grenade state for squad coordination
+                entity.IsThrowingGrenade = Helpers.GrenadeAwarenessHelper.IsThrowingGrenade(botOwner);
+                entity.ShouldFleeGrenade = Helpers.GrenadeAwarenessHelper.ShouldFleeGrenade(botOwner);
+
                 // If this is a boss with followers, ensure squad exists
                 if (entity.HasFollowers)
                 {
@@ -329,7 +334,10 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                     _preStrategyObjectiveVersions[psSquad.Id] = psSquad.Leader.LastSeenObjectiveVersion;
             }
 
+            // Filter boss/follower-reserved cover points for regular questing bots
+            BsgCoverPointCollector.SetSkipBossCovers(true);
             _squadStrategyManager.Update(ECS.BotEntityBridge.SquadRegistry.ActiveSquads);
+            BsgCoverPointCollector.SetSkipBossCovers(false);
 
             // 6. Override tactical positions with zone-derived spread for zone movement squads
             if (config.EnableZoneFollowerSpread)
@@ -594,6 +602,13 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                 if (bossBot.IsDead)
                 {
                     Controllers.LoggingController.LogDebug("Boss " + bossBot.GetText() + " is now dead.");
+
+                    // Handle boss death succession in SquadRegistry before deactivation
+                    if (bossEntity != null && bossEntity.IsBossBot)
+                    {
+                        ECS.Systems.HiveMindSystem.HandleBossDeathSuccession(bossEntity, ECS.BotEntityBridge.SquadRegistry);
+                    }
+
                     ECS.BotEntityBridge.DeactivateBot(bossBot);
                     continue;
                 }
@@ -718,19 +733,36 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                         _formationPositionBuffer
                     );
 
-                    // Override follower tactical positions with formation positions
+                    // Override follower tactical positions with formation positions.
+                    // Use BSG FollowerIndex for deterministic slot assignment when available,
+                    // falling back to iteration order when index is unavailable (-1).
                     int posIdx = 0;
                     for (int i = 0; i < squad.Members.Count; i++)
                     {
                         var member = squad.Members[i];
                         if (member == leader || !member.IsActive || !member.HasTacticalPosition)
                             continue;
-                        if (posIdx >= clampedCount)
-                            break;
 
-                        member.TacticalPositionX = _formationPositionBuffer[posIdx * 3];
-                        member.TacticalPositionY = _formationPositionBuffer[posIdx * 3 + 1];
-                        member.TacticalPositionZ = _formationPositionBuffer[posIdx * 3 + 2];
+                        // Use BSG's follower index for deterministic formation slot
+                        int slot;
+                        if (member.FollowerIndex >= 0 && member.FollowerIndex < clampedCount)
+                        {
+                            slot = member.FollowerIndex;
+                        }
+                        else
+                        {
+                            slot = posIdx;
+                        }
+
+                        if (slot >= clampedCount)
+                        {
+                            posIdx++;
+                            continue;
+                        }
+
+                        member.TacticalPositionX = _formationPositionBuffer[slot * 3];
+                        member.TacticalPositionY = _formationPositionBuffer[slot * 3 + 1];
+                        member.TacticalPositionZ = _formationPositionBuffer[slot * 3 + 2];
                         member.IsEnRouteFormation = true;
                         posIdx++;
                     }
@@ -1023,8 +1055,9 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             CombatEventRegistry.CleanupExpired(currentTime, maxEventAge);
 
             // Update per-entity combat event fields
+            var entities = ECS.BotEntityBridge.Registry.Entities;
             CombatEventScanner.UpdateEntities(
-                ECS.BotEntityBridge.Registry.Entities,
+                entities,
                 currentTime,
                 maxEventAge,
                 detectionRange,
@@ -1033,6 +1066,34 @@ namespace SPTQuestingBots.BotLogic.HiveMind
                 bossAvoidanceRadius,
                 bossZoneDecay
             );
+
+            // Feed nearby combat events into BSG's PlacesForCheck system for group coordination.
+            // This notifies all group members and triggers CalcGoalForBot() so BSG's native
+            // investigation AI can also react to the events our scanner detected.
+            var squadConfig = ConfigController.Config?.Questing?.SquadStrategy;
+            if (squadConfig?.EnableGroupCoordination == true)
+            {
+                for (int i = 0; i < entities.Count; i++)
+                {
+                    var entity = entities[i];
+                    if (!entity.IsActive || !entity.HasNearbyEvent)
+                        continue;
+
+                    // Only feed events once per entity per event (check if event is recent)
+                    if (currentTime - entity.NearbyEventTime > 2f)
+                        continue;
+
+                    var botOwner = ECS.BotEntityBridge.GetBotOwner(entity);
+                    if (botOwner != null)
+                    {
+                        GroupCoordinationHelper.TryAddPointToSearch(
+                            botOwner,
+                            new Vector3(entity.NearbyEventX, entity.NearbyEventY, entity.NearbyEventZ),
+                            entity.CombatIntensity > 0 ? entity.CombatIntensity * 20f : 50f
+                        );
+                    }
+                }
+            }
         }
 
         /// <summary>Per-entity last scan time for rate limiting (using Time.time).</summary>

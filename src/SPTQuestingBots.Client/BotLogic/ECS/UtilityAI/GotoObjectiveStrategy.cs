@@ -131,6 +131,17 @@ public class GotoObjectiveStrategy : SquadStrategy
             return;
         }
 
+        // Skip movement updates if any squad member is throwing a grenade —
+        // issuing movement commands during throw animation would interrupt the throw.
+        for (int m = 0; m < squad.Members.Count; m++)
+        {
+            if (squad.Members[m].IsThrowingGrenade)
+            {
+                LoggingController.LogDebug("[GotoObjectiveStrategy] Squad " + squad.Id + " skipping update — member throwing grenade");
+                return;
+            }
+        }
+
         var obj = squad.Objective;
 
         // If no objective or leader's objective changed, assign new objective
