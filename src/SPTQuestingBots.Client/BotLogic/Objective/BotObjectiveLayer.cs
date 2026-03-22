@@ -73,6 +73,18 @@ namespace SPTQuestingBots.BotLogic.Objective
                 }
             }
 
+            // Weapon malfunction: skip questing so the malfunction brain layer (priority 78) can handle repair.
+            // Check entity state first (synced from WeaponManager.Malfunctions.HaveMalfunction).
+            var weaponCfg = Controllers.ConfigController.Config?.Questing?.WeaponReadiness;
+            if (
+                weaponCfg?.SkipQuestingOnMalfunction != false
+                && BotLogic.ECS.BotEntityBridge.TryGetEntity(BotOwner, out var malfunctionEntity)
+                && malfunctionEntity.HasWeaponMalfunction
+            )
+            {
+                return updatePreviousState(false);
+            }
+
             BotQuestingDecisionMonitor decisionMonitor = objectiveManager.BotMonitor.GetMonitor<BotQuestingDecisionMonitor>();
 
             if (!decisionMonitor.IsAllowedToQuest())

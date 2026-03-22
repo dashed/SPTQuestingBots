@@ -101,7 +101,10 @@
 			"max_start_position_discrepancy": 0.5,
 			"incomplete_path_retry_interval": 5,
 			"use_custom_mover": true,
-			"bypass_door_colliders": true
+			"bypass_door_colliders": true,
+			"danger_place_avoidance_enabled": true,
+			"mine_avoidance_enabled": true,
+			"mine_avoidance_radius": 50
 		},
 		"bot_questing_requirements": {
 			"exclude_bots_by_level": true,
@@ -213,7 +216,10 @@
 			"enable_post_combat_sprint_block": true,
 			"enable_late_raid_sprint_block": true,
 			"enable_suspicion_sprint_block": true,
-			"enable_door_sprint_pause": true
+			"enable_door_sprint_pause": true,
+			"enable_stamina_exhaustion_sprint_block": true,
+			"enable_physical_condition_sprint_block": true,
+			"enable_overweight_sprint_block": true
 		},
 		"bot_quests": {
 			"distance_randomness": 30,
@@ -356,7 +362,8 @@
 			"sharing_noise_base": 5,
 			"enable_voice_commands": true,
 			"voice_command_cooldown": 5.0,
-			"follower_response_delay": 0.8
+			"follower_response_delay": 0.8,
+			"enable_group_coordination": true
 		},
 		"bot_lod": {
 			"enabled": true,
@@ -517,6 +524,11 @@
 		"personality": {
 			"enabled": true,
 			"raid_time_enabled": true
+		},
+		"weapon_readiness": {
+			"enabled": true,
+			"skip_questing_on_malfunction": true,
+			"switch_to_single_fire_for_ambush": true
 		}
 	},
 	"bot_spawns": {

@@ -116,6 +116,9 @@ namespace SPTQuestingBots.BotLogic.ECS
             // BSG Mind settings: read once per bot for personality calibration
             SyncMindSettings(entity, bot);
 
+            // Boss awareness: read once per bot for patrol/cover/succession logic
+            SyncBossAwareness(entity, bot);
+
             // Native patrol: extract BSG patrol waypoints as fallback route
             try
             {
@@ -1016,6 +1019,75 @@ namespace SPTQuestingBots.BotLogic.ECS
                 // AIData may not be available during early initialization
             }
 
+            // Sync weapon state for combat task scoring
+            try
+            {
+                entity.AmmoRatio = Helpers.WeaponStateHelper.GetAmmoRatio(botOwner);
+                entity.IsCloseWeapon = Helpers.WeaponStateHelper.IsCloseWeapon(botOwner);
+                entity.HasWeaponMalfunction = Helpers.WeaponStateHelper.HasMalfunction(botOwner);
+                entity.IsWeaponReady = Helpers.WeaponStateHelper.IsWeaponReady(botOwner);
+            }
+            catch
+            {
+                // WeaponManager may not be initialized during early bot setup
+                entity.AmmoRatio = 1f;
+                entity.IsCloseWeapon = false;
+                entity.HasWeaponMalfunction = false;
+                entity.IsWeaponReady = true;
+            }
+
+            // Sync health and stamina state
+            try
+            {
+                entity.IsHealing = Helpers.HealthStateHelper.IsMedicineInUse(botOwner);
+                entity.IsOverweight = Helpers.HealthStateHelper.IsOverweight(botOwner);
+                entity.HasLegDamage = Helpers.HealthStateHelper.HasLegDamage(botOwner);
+            }
+            catch
+            {
+                entity.IsHealing = false;
+                entity.IsOverweight = false;
+                entity.HasLegDamage = false;
+            }
+
+            // Sync squad member healing state for overwatch coordination
+            if (entity.Squad != null)
+            {
+                bool anyHealing = false;
+                var members = entity.Squad.Members;
+                for (int i = 0; i < members.Count; i++)
+                {
+                    var member = members[i];
+                    if (member != entity && member.IsActive && member.IsHealing)
+                    {
+                        anyHealing = true;
+                        break;
+                    }
+                }
+
+                entity.AnySquadMemberHealing = anyHealing;
+            }
+            else
+            {
+                entity.AnySquadMemberHealing = false;
+            }
+
+            // Sync group coordination state — BSG tactic type and follower index
+            entity.GroupTactic = Helpers.GroupCoordinationHelper.GetGroupTacticType(botOwner);
+            entity.FollowerIndex = Helpers.GroupCoordinationHelper.GetFollowerIndex(botOwner);
+
+            // Sync combat AI state — cover, dogfight, and grenade awareness
+            try
+            {
+                entity.IsInCover = Helpers.CombatAIHelper.IsInCover(botOwner);
+                entity.IsInDogFight = Helpers.CombatAIHelper.IsInDogFight(botOwner);
+            }
+            catch
+            {
+                entity.IsInCover = false;
+                entity.IsInDogFight = false;
+            }
+
             // Sync zone modifier data (throttled — only when not yet loaded)
             if (!entity.HasZoneModifier)
             {
@@ -1339,6 +1411,13 @@ namespace SPTQuestingBots.BotLogic.ECS
                 entity.MindCanStandBy = mind.CAN_STAND_BY;
                 entity.MindTimeToForgetEnemySec = mind.TIME_TO_FORGOR_ABOUT_ENEMY_SEC > 0f ? mind.TIME_TO_FORGOR_ABOUT_ENEMY_SEC : 60f;
 
+                // Combat AI: DogFight thresholds (read once)
+                entity.DogFightIn = mind.DOG_FIGHT_IN;
+                entity.DogFightOut = mind.DOG_FIGHT_OUT;
+
+                // Combat AI: Push/suppress capability (difficulty-gated)
+                entity.HasPushCapability = Helpers.CombatAIHelper.HasPushCapability(bot);
+
                 LoggingController.LogDebug(
                     "[BotEntityBridge] Entity "
                         + entity.Id
@@ -1351,6 +1430,12 @@ namespace SPTQuestingBots.BotLogic.ECS
                         + " forgetEnemy="
                         + entity.MindTimeToForgetEnemySec.ToString("F1")
                         + "s"
+                        + " dogFightIn="
+                        + entity.DogFightIn.ToString("F1")
+                        + " dogFightOut="
+                        + entity.DogFightOut.ToString("F1")
+                        + " pushCapable="
+                        + entity.HasPushCapability
                 );
             }
             catch
@@ -1358,6 +1443,33 @@ namespace SPTQuestingBots.BotLogic.ECS
                 // Settings may not be available for all bot types
                 entity.MindCanStandBy = true;
                 entity.MindTimeToForgetEnemySec = 60f;
+            }
+        }
+
+        // ── Boss Awareness ────────────────────────────────────────
+
+        /// <summary>
+        /// Read boss-related flags once during bot registration.
+        /// Sets IsBossBot and BossNeedProtection on the entity.
+        /// </summary>
+        private static void SyncBossAwareness(BotEntity entity, BotOwner bot)
+        {
+            try
+            {
+                entity.IsBossBot = Helpers.BossAwarenessHelper.IsBoss(bot);
+                entity.BossNeedProtection = Helpers.BossAwarenessHelper.GetNeedProtection(bot);
+
+                if (entity.IsBossBot)
+                {
+                    LoggingController.LogDebug(
+                        "[BotEntityBridge] Entity " + entity.Id + " is a boss (needProtection=" + entity.BossNeedProtection + ")"
+                    );
+                }
+            }
+            catch
+            {
+                entity.IsBossBot = false;
+                entity.BossNeedProtection = false;
             }
         }
 

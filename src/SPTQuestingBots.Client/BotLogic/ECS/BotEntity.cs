@@ -616,6 +616,120 @@ public sealed class BotEntity : IEquatable<BotEntity>
     /// </summary>
     public bool HasZoneModifier;
 
+    // ── Weapon State ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Ammo ratio of the bot's current magazine (0.0 = empty, 1.0 = full).
+    /// Synced from BotOwner.WeaponManager.Reload.BulletCount / MaxBulletCount.
+    /// Used by combat task scorers to penalize low-ammo bots.
+    /// Default: 1.0 (assume full ammo when unknown).
+    /// </summary>
+    public float AmmoRatio = 1f;
+
+    /// <summary>
+    /// Whether the bot's weapon is a close-range type (pistol, shotgun, revolver).
+    /// Synced from BotOwner.WeaponManager.IsCloseWeapon.
+    /// Used by SnipeTask to penalize close weapons at long range.
+    /// Default: false.
+    /// </summary>
+    public bool IsCloseWeapon;
+
+    /// <summary>
+    /// Whether the bot's weapon has an active malfunction.
+    /// Synced from BotOwner.WeaponManager.Malfunctions.HaveMalfunction().
+    /// When true, questing objectives are skipped (malfunction brain layer handles repair).
+    /// Default: false.
+    /// </summary>
+    public bool HasWeaponMalfunction;
+
+    /// <summary>
+    /// Whether the bot's weapon is ready to fire (not reloading, not malfunctioning, etc.).
+    /// Synced from BotOwner.WeaponManager.IsWeaponReady.
+    /// Default: true.
+    /// </summary>
+    public bool IsWeaponReady = true;
+
+    /// <summary>
+    /// Whether the bot is currently in a grenade throw animation.
+    /// Synced from BotOwner.WeaponManager.Grenades.ThrowindNow.
+    /// Squad strategies skip movement commands when any member is throwing.
+    /// Default: false.
+    /// </summary>
+    public bool IsThrowingGrenade;
+
+    /// <summary>
+    /// Whether the bot's grenade awareness system says it should flee from a grenade.
+    /// Synced from BotOwner.BewareGrenade.ShallRunAway().
+    /// Used to gracefully pause questing objectives during grenade flee.
+    /// Default: false.
+    /// </summary>
+    public bool ShouldFleeGrenade;
+
+    // ── Health / Stamina State ──────────────────────────────────────────────
+
+    /// <summary>Whether the bot is currently using medicine (healing animation active).</summary>
+    public bool IsHealing;
+
+    /// <summary>Whether the bot is overweight (weight ratio >= 1.0).</summary>
+    public bool IsOverweight;
+
+    /// <summary>Whether the bot has leg damage (affects stealth noise during room clearing).</summary>
+    public bool HasLegDamage;
+
+    /// <summary>Whether any squad member is currently healing (triggers overwatch for others).</summary>
+    public bool AnySquadMemberHealing;
+
+    // ── Group Coordination State ──────────────────────────────────────────────
+
+    /// <summary>
+    /// BSG group tactic type from BotOwner.Tactic.SubTactic.Tactic.
+    /// 0=None, 1=Attack, 2=Ambush, 3=Protect.
+    /// See <see cref="SPTQuestingBots.Helpers.GroupTacticType"/>.
+    /// </summary>
+    public int GroupTactic;
+
+    /// <summary>
+    /// BSG follower index from BotOwner.BotFollower.Index.
+    /// -1 = not a follower or unavailable. Used for deterministic formation positioning.
+    /// </summary>
+    public int FollowerIndex = -1;
+
+    // ── Combat AI State ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Whether the bot considers itself to be in cover (from BotOwner.Memory.IsInCover).
+    /// Used by ScoringModifiers.CoverModifier to boost hold/ambush tasks.
+    /// Default: false.
+    /// </summary>
+    public bool IsInCover;
+
+    /// <summary>
+    /// Whether the bot is in an active dogfight (close-quarters combat).
+    /// Synced from BotOwner.DogFight.DogFightOn.
+    /// Aggressive personalities score combat tasks higher when in dogfight.
+    /// Default: false.
+    /// </summary>
+    public bool IsInDogFight;
+
+    /// <summary>
+    /// Whether the bot has push/suppress capability (hard+ difficulty only).
+    /// Read once during registration. Used by personality system for scoring.
+    /// Default: false.
+    /// </summary>
+    public bool HasPushCapability;
+
+    /// <summary>
+    /// BSG DogFight entry distance threshold. Read once from bot mind settings.
+    /// Default: 0 (unset).
+    /// </summary>
+    public float DogFightIn;
+
+    /// <summary>
+    /// BSG DogFight exit distance threshold. Read once from bot mind settings.
+    /// Default: 0 (unset).
+    /// </summary>
+    public float DogFightOut;
+
     // ── Look Variance State ──────────────────────────────────────────────
 
     /// <summary>Game time when next flank check should occur.</summary>
@@ -629,6 +743,20 @@ public sealed class BotEntity : IEquatable<BotEntity>
 
     /// <summary>Bot's current facing direction Z (normalized). Synced from movement.</summary>
     public float CurrentFacingZ;
+
+    // ── Boss Awareness State ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Whether this bot is a boss (from BotOwner.Boss.IamBoss). Set once on registration.
+    /// Used for patrol route filtering, cover point assignment, and succession logic.
+    /// </summary>
+    public bool IsBossBot;
+
+    /// <summary>
+    /// Whether this boss requires follower protection (from BotOwner.Boss.NeedProtection).
+    /// Only true for Reshala, Killa, Tagilla, Sanitar, Gluhar. Set once on registration.
+    /// </summary>
+    public bool BossNeedProtection;
 
     // ── Constructor ─────────────────────────────────────────
 

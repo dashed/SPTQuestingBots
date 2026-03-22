@@ -5,10 +5,23 @@ namespace SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks;
 /// <summary>
 /// Scores high when the bot is close to a snipe position.
 /// Only active when <c>CurrentQuestAction == Snipe</c> and <c>IsCloseToObjective</c>.
+/// Close weapons (pistol/shotgun/revolver) are penalized — they can't snipe effectively.
+/// Low ammo also reduces the score.
 /// </summary>
 public sealed class SnipeTask : QuestUtilityTask
 {
     public const float BaseScore = 0.65f;
+
+    /// <summary>
+    /// Multiplier applied when the bot has a close weapon (pistol/shotgun/revolver).
+    /// Sniping with a shotgun is not effective.
+    /// </summary>
+    public const float CloseWeaponPenalty = 0.3f;
+
+    /// <summary>
+    /// Minimum ammo ratio multiplier (same as AmbushTask for consistency).
+    /// </summary>
+    public const float MinAmmoMultiplier = 0.3f;
 
     public override int BotActionTypeId
     {
@@ -26,9 +39,17 @@ public sealed class SnipeTask : QuestUtilityTask
     public override void ScoreEntity(int ordinal, BotEntity entity)
     {
         float score = Score(entity);
+        float coverInfluence = ScoringModifiers.ComputeCoverInfluence(entity.IsInCover, entity.HasEnemyInfo);
         entity.TaskScores[ordinal] =
             score
-            * ScoringModifiers.CombinedModifier(entity.Aggression, entity.RaidTimeNormalized, entity.HumanPlayerProximity, BotActionTypeId);
+            * ScoringModifiers.CombinedModifier(
+                entity.Aggression,
+                entity.RaidTimeNormalized,
+                entity.HumanPlayerProximity,
+                coverInfluence,
+                entity.IsInDogFight,
+                BotActionTypeId
+            );
     }
 
     internal static float Score(BotEntity entity)
@@ -48,6 +69,18 @@ public sealed class SnipeTask : QuestUtilityTask
             return 0f;
         }
 
-        return BaseScore;
+        float score = BaseScore;
+
+        // Close weapon penalty: pistols/shotguns/revolvers can't snipe effectively
+        if (entity.IsCloseWeapon)
+        {
+            score *= CloseWeaponPenalty;
+        }
+
+        // Ammo penalty: low magazine reduces combat task viability
+        float ammoMultiplier = MinAmmoMultiplier + (1f - MinAmmoMultiplier) * entity.AmmoRatio;
+        score *= ammoMultiplier;
+
+        return score;
     }
 }

@@ -105,6 +105,9 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("personality")]
         public PersonalityConfig Personality { get; set; } = new PersonalityConfig();
 
+        [JsonProperty("weapon_readiness")]
+        public WeaponReadinessConfig WeaponReadiness { get; set; } = new WeaponReadinessConfig();
+
         [JsonProperty("wait_time_min")]
         public float WaitTimeMin { get; set; } = 5f;
 

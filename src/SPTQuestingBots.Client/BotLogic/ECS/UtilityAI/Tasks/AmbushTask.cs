@@ -24,6 +24,12 @@ public sealed class AmbushTask : QuestUtilityTask
     /// </summary>
     public const float MindAmbushBonus = 0.08f;
 
+    /// <summary>
+    /// Minimum ammo ratio multiplier. Even at 0 ammo, score is scaled by this floor
+    /// rather than going to zero (bot may still want to hold position while reloading).
+    /// </summary>
+    public const float MinAmmoMultiplier = 0.3f;
+
     public override int BotActionTypeId
     {
         get { return UtilityAI.BotActionTypeId.Ambush; }
@@ -40,9 +46,17 @@ public sealed class AmbushTask : QuestUtilityTask
     public override void ScoreEntity(int ordinal, BotEntity entity)
     {
         float score = Score(entity);
+        float coverInfluence = ScoringModifiers.ComputeCoverInfluence(entity.IsInCover, entity.HasEnemyInfo);
         entity.TaskScores[ordinal] =
             score
-            * ScoringModifiers.CombinedModifier(entity.Aggression, entity.RaidTimeNormalized, entity.HumanPlayerProximity, BotActionTypeId);
+            * ScoringModifiers.CombinedModifier(
+                entity.Aggression,
+                entity.RaidTimeNormalized,
+                entity.HumanPlayerProximity,
+                coverInfluence,
+                entity.IsInDogFight,
+                BotActionTypeId
+            );
     }
 
     internal static float Score(BotEntity entity)
@@ -75,6 +89,11 @@ public sealed class AmbushTask : QuestUtilityTask
         {
             score += MindAmbushBonus;
         }
+
+        // Ammo penalty: low magazine reduces combat task viability.
+        // Lerp from MinAmmoMultiplier (empty) to 1.0 (full).
+        float ammoMultiplier = MinAmmoMultiplier + (1f - MinAmmoMultiplier) * entity.AmmoRatio;
+        score *= ammoMultiplier;
 
         return score;
     }

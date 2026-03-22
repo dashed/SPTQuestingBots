@@ -40,6 +40,11 @@ public sealed class InvestigateTask : QuestUtilityTask
     public const float PlaceForCheckDangerExtra = 0.04f;
 
     /// <summary>
+    /// Minimum ammo ratio multiplier. Running into a firefight with no ammo is unwise.
+    /// </summary>
+    public const float MinAmmoMultiplier = 0.2f;
+
+    /// <summary>
     /// Score bonus when enemy info exists and the enemy was recently seen.
     /// Provides gradient boost: full bonus at TimeSinceEnemySeen=0, fades to 0
     /// at MindTimeToForgetEnemySec.
@@ -74,9 +79,17 @@ public sealed class InvestigateTask : QuestUtilityTask
     public override void ScoreEntity(int ordinal, BotEntity entity)
     {
         float score = Score(entity, IntensityThreshold, DetectionRange);
+        float coverInfluence = ScoringModifiers.ComputeCoverInfluence(entity.IsInCover, entity.HasEnemyInfo);
         entity.TaskScores[ordinal] =
             score
-            * ScoringModifiers.CombinedModifier(entity.Aggression, entity.RaidTimeNormalized, entity.HumanPlayerProximity, BotActionTypeId);
+            * ScoringModifiers.CombinedModifier(
+                entity.Aggression,
+                entity.RaidTimeNormalized,
+                entity.HumanPlayerProximity,
+                coverInfluence,
+                entity.IsInDogFight,
+                BotActionTypeId
+            );
     }
 
     internal static float Score(BotEntity entity, int intensityThreshold, float detectionRange)
@@ -190,6 +203,10 @@ public sealed class InvestigateTask : QuestUtilityTask
                 score += EnemyInfoBonus * freshness;
             }
         }
+
+        // Ammo penalty: investigating combat with low ammo is risky
+        float ammoMultiplier = MinAmmoMultiplier + (1f - MinAmmoMultiplier) * entity.AmmoRatio;
+        score *= ammoMultiplier;
 
         // Clamp
         if (score < 0f)

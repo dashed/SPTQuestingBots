@@ -472,6 +472,10 @@
     />
     <Compile Include="../../src/SPTQuestingBots.Client/Configuration/MinMaxConfig.cs" Link="LinkedSources/Configuration/MinMaxConfig.cs" />
     <Compile
+      Include="../../src/SPTQuestingBots.Client/Configuration/WeaponReadinessConfig.cs"
+      Link="LinkedSources/Configuration/WeaponReadinessConfig.cs"
+    />
+    <Compile
       Include="../../src/SPTQuestingBots.Client/Configuration/DistanceAngleConfig.cs"
       Link="LinkedSources/Configuration/DistanceAngleConfig.cs"
     />

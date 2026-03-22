@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using EFT;
 using SPTQuestingBots.BotLogic.BotMonitor.Monitors;
+using SPTQuestingBots.Helpers;
 
 namespace SPTQuestingBots.BotLogic.Objective
 {
@@ -114,6 +115,9 @@ namespace SPTQuestingBots.BotLogic.Objective
 
             CheckMinElapsedActionTime();
 
+            // Switch to single fire for ranged ambush — automatic wastes ammo at distance
+            TrySwitchToSingleFire();
+
             // Lower pose for concealment — exploits BSG's PoseVisibilityCoef
             BotOwner.SetPose(AmbushPose);
 
@@ -125,6 +129,34 @@ namespace SPTQuestingBots.BotLogic.Objective
             }
 
             restartStuckTimer();
+        }
+
+        /// <summary>
+        /// If the weapon is on automatic fire mode, switch to single fire.
+        /// Ambush/snipe positions benefit from accurate single shots over spray.
+        /// Virtual so subclasses can override if needed.
+        /// </summary>
+        protected virtual void TrySwitchToSingleFire()
+        {
+            var weaponCfg = Controllers.ConfigController.Config?.Questing?.WeaponReadiness;
+            if (weaponCfg?.SwitchToSingleFireForAmbush == false)
+            {
+                return;
+            }
+
+            if (!WeaponStateHelper.IsAutomatic(BotOwner))
+            {
+                return;
+            }
+
+            try
+            {
+                BotOwner.WeaponManager?.CurrentWeaponInfo?.ChangeFireMode(EFT.InventoryLogic.Weapon.EFireMode.single);
+            }
+            catch
+            {
+                // Weapon may not support single fire mode
+            }
         }
 
         /// <summary>
