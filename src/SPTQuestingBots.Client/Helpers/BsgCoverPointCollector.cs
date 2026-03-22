@@ -1,3 +1,4 @@
+using System.Reflection;
 using Comfort.Common;
 using EFT;
 using SPTQuestingBots.Controllers;
@@ -23,6 +24,73 @@ namespace SPTQuestingBots.Helpers
         /// BSG voxel grid cell size (XZ=10, Y=5). We use XZ for search range calculation.
         /// </summary>
         private const float VoxelSize = 10f;
+
+        /// <summary>
+        /// Whether ECoverPointSpecial filtering is available on this game version.
+        /// Set to false on first failure to avoid repeated reflection/exception cost.
+        /// </summary>
+        private static bool _specialFilterAvailable = true;
+
+        /// <summary>
+        /// Whether to skip boss/follower-reserved cover points for regular questing bots.
+        /// Set via <see cref="SetSkipBossCovers"/> before collecting positions.
+        /// Thread-local: only valid during the current collection call.
+        /// </summary>
+        private static bool _skipBossCovers;
+
+        /// <summary>
+        /// Configure whether to skip boss/follower-reserved cover points.
+        /// Call before CollectCoverPositions() when collecting for non-boss bots.
+        /// </summary>
+        public static void SetSkipBossCovers(bool skip)
+        {
+            _skipBossCovers = skip;
+        }
+
+        /// <summary>Cached reflection info for ECoverPointSpecial on cover point types.</summary>
+        private static PropertyInfo _specialPointProp;
+
+        /// <summary>
+        /// Check if a cover point has boss or follower reservation flags (ECoverPointSpecial).
+        /// Returns true if the point should be skipped for regular bots.
+        /// Uses reflection with caching; disables filter if property is unavailable.
+        /// </summary>
+        private static bool HasBossReservation(object point)
+        {
+            if (!_skipBossCovers || !_specialFilterAvailable || point == null)
+                return false;
+
+            try
+            {
+                if (_specialPointProp == null)
+                {
+                    var type = point.GetType();
+                    _specialPointProp = type.GetProperty("SpecialPoint", BindingFlags.Public | BindingFlags.Instance);
+
+                    if (_specialPointProp == null)
+                    {
+                        _specialFilterAvailable = false;
+                        LoggingController.LogDebug(
+                            "[BsgCoverPointCollector] ECoverPointSpecial property not found, disabling boss cover filter"
+                        );
+                        return false;
+                    }
+                }
+
+                // ECoverPointSpecial is a bitmask enum: forFollowers=2, forBoss=4
+                if (_specialPointProp == null)
+                    return false;
+
+                int specialFlags = (int)_specialPointProp.GetValue(point);
+                return BossAwarenessHelper.IsBossOrFollowerReservedCover(specialFlags);
+            }
+            catch
+            {
+                _specialFilterAvailable = false;
+                LoggingController.LogDebug("[BsgCoverPointCollector] ECoverPointSpecial not available, disabling boss cover filter");
+                return false;
+            }
+        }
 
         /// <summary>
         /// Collects cover positions from BSG's voxel grid near the given objective.
@@ -83,6 +151,10 @@ namespace SPTQuestingBots.Helpers
                     if (gp.CoverType != CoverType.Wall)
                         continue;
 
+                    // Skip boss/follower-reserved cover points for regular questing bots
+                    if (HasBossReservation(gp))
+                        continue;
+
                     float dx = gp.Position.x - objX;
                     float dy = gp.Position.y - objY;
                     float dz = gp.Position.z - objZ;
@@ -107,6 +179,10 @@ namespace SPTQuestingBots.Helpers
                         var gp = points[j];
                         if (gp.CoverType == CoverType.Wall)
                             continue; // already collected in first pass
+
+                        // Skip boss/follower-reserved cover points for regular questing bots
+                        if (HasBossReservation(gp))
+                            continue;
 
                         float dx = gp.Position.x - objX;
                         float dy = gp.Position.y - objY;

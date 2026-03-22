@@ -58,6 +58,15 @@ namespace SPTQuestingBots.Helpers
             if (way == null || way.Points == null || way.Points.Count == 0)
                 return null;
 
+            // Filter boss-type patrol routes for non-boss bots.
+            // Boss patrol routes use dedicated waypoints (bossRoundProtect, etc.)
+            // and should not be assigned to regular questing bots.
+            if (BossAwarenessHelper.ShouldSkipBossRoute(botOwner, way.PatrolType))
+            {
+                LoggingController.LogDebug("[NativePatrolDataProvider] Skipping boss patrol route for non-boss bot " + botOwner.GetText());
+                return null;
+            }
+
             var points = way.Points;
             var waypoints = new PatrolWaypoint[points.Count];
             int validCount = 0;

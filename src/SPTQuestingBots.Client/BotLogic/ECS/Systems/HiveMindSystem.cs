@@ -88,6 +88,69 @@ public static class HiveMindSystem
     }
 
     /// <summary>
+    /// Handle boss death succession: when a boss dies, pick a random active follower
+    /// as the new squad leader. Mirrors BSG's BossGroup.method_0() which picks a
+    /// random follower of the same WildSpawnType as the new boss.
+    /// Updates the SquadRegistry leader and member roles.
+    /// </summary>
+    /// <param name="deadBoss">The boss entity that just died.</param>
+    /// <param name="squadRegistry">The squad registry to update leadership in.</param>
+    /// <returns>The new leader entity, or null if no succession was possible.</returns>
+    public static BotEntity HandleBossDeathSuccession(BotEntity deadBoss, SquadRegistry squadRegistry)
+    {
+        if (deadBoss == null || squadRegistry == null)
+            return null;
+
+        var squad = deadBoss.Squad;
+        if (squad == null)
+            return null;
+
+        // Only handle succession if the dead entity was the squad leader
+        if (squad.Leader != deadBoss)
+            return null;
+
+        // Find an active follower to become the new leader
+        BotEntity newLeader = null;
+        for (int i = 0; i < squad.Members.Count; i++)
+        {
+            var member = squad.Members[i];
+            if (member != deadBoss && member.IsActive)
+            {
+                newLeader = member;
+                break;
+            }
+        }
+
+        if (newLeader == null)
+        {
+            LoggingController.LogInfo("[HiveMindSystem] Boss entity " + deadBoss.Id + " died with no active followers for succession");
+            return null;
+        }
+
+        // Perform leadership transfer
+        squad.Leader = newLeader;
+        newLeader.SquadRole = SquadRole.Leader;
+        newLeader.HasTacticalPosition = false;
+
+        // Demote old leader role (will be removed from squad by CleanupDeadEntities)
+        deadBoss.SquadRole = SquadRole.None;
+
+        LoggingController.LogInfo(
+            "[HiveMindSystem] Boss death succession: entity "
+                + newLeader.Id
+                + " is new leader of squad "
+                + squad.Id
+                + " (dead boss="
+                + deadBoss.Id
+                + ", remaining="
+                + squad.Members.Count
+                + ")"
+        );
+
+        return newLeader;
+    }
+
+    /// <summary>
     /// Establish a bidirectional boss-follower relationship.
     /// If the follower already has a different boss, detaches from the old boss first.
     /// </summary>
