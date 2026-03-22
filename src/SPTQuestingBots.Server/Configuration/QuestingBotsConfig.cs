@@ -594,6 +594,42 @@ public class SprintingLimitationsConfig
     /// <summary>Stop sprinting when approaching a closed door.</summary>
     [JsonProperty("approaching_closed_doors")]
     public DistanceAngleConfig ApproachingClosedDoors { get; set; } = new();
+
+    /// <summary>Post-combat cooldown sprint block toggle.</summary>
+    [JsonProperty("post_combat_cooldown_seconds")]
+    public float PostCombatCooldownSeconds { get; set; }
+
+    /// <summary>Threshold for late-raid sprint blocking.</summary>
+    [JsonProperty("late_raid_no_sprint_threshold")]
+    public float LateRaidNoSprintThreshold { get; set; }
+
+    /// <summary>Toggle for post-combat sprint blocking.</summary>
+    [JsonProperty("enable_post_combat_sprint_block")]
+    public bool EnablePostCombatSprintBlock { get; set; }
+
+    /// <summary>Toggle for late-raid sprint blocking.</summary>
+    [JsonProperty("enable_late_raid_sprint_block")]
+    public bool EnableLateRaidSprintBlock { get; set; }
+
+    /// <summary>Toggle for hearing-suspicion sprint blocking.</summary>
+    [JsonProperty("enable_suspicion_sprint_block")]
+    public bool EnableSuspicionSprintBlock { get; set; }
+
+    /// <summary>Toggle for door proximity sprint pause.</summary>
+    [JsonProperty("enable_door_sprint_pause")]
+    public bool EnableDoorSprintPause { get; set; }
+
+    /// <summary>Toggle for stamina exhaustion sprint blocking.</summary>
+    [JsonProperty("enable_stamina_exhaustion_sprint_block")]
+    public bool EnableStaminaExhaustionSprintBlock { get; set; }
+
+    /// <summary>Toggle for physical condition sprint blocking (broken legs).</summary>
+    [JsonProperty("enable_physical_condition_sprint_block")]
+    public bool EnablePhysicalConditionSprintBlock { get; set; }
+
+    /// <summary>Toggle for overweight sprint blocking.</summary>
+    [JsonProperty("enable_overweight_sprint_block")]
+    public bool EnableOverweightSprintBlock { get; set; }
 }
 
 // ────────────────────────────────────────────────────────────────────────

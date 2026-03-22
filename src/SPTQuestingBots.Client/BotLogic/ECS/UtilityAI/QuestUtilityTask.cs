@@ -54,6 +54,16 @@ public abstract class QuestUtilityTask : UtilityTask
         }
 
         base.UpdateScores(ordinal, entities);
+
+        // Zero scores for healing entities — bots using medicine should not quest.
+        // This handles the batch Update() path; PickTask() handles the per-entity ScoreAndPick() path.
+        for (int i = 0; i < entities.Count; i++)
+        {
+            if (entities[i].IsHealing)
+            {
+                entities[i].TaskScores[ordinal] = 0f;
+            }
+        }
     }
 }
 

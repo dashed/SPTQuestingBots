@@ -39,6 +39,15 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("enable_door_sprint_pause")]
         public bool EnableDoorSprintPause { get; set; } = true;
 
+        [JsonProperty("enable_stamina_exhaustion_sprint_block")]
+        public bool EnableStaminaExhaustionSprintBlock { get; set; } = true;
+
+        [JsonProperty("enable_physical_condition_sprint_block")]
+        public bool EnablePhysicalConditionSprintBlock { get; set; } = true;
+
+        [JsonProperty("enable_overweight_sprint_block")]
+        public bool EnableOverweightSprintBlock { get; set; } = true;
+
         public SprintingLimitationsConfig() { }
     }
 }

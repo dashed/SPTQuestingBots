@@ -198,6 +198,33 @@ namespace SPTQuestingBots.BehaviorExtensions
                 blockReason = "approaching closed door";
             }
 
+            // Disable sprinting when stamina is exhausted
+            if (blockReason == null && sprintConfig.EnableStaminaExhaustionSprintBlock)
+            {
+                if (Helpers.HealthStateHelper.IsStaminaExhausted(BotOwner))
+                {
+                    blockReason = "stamina exhausted";
+                }
+            }
+
+            // Disable sprinting when physical condition prevents it (broken legs without painkillers)
+            if (blockReason == null && sprintConfig.EnablePhysicalConditionSprintBlock)
+            {
+                if (Helpers.HealthStateHelper.HasSprintDisablingCondition(BotOwner))
+                {
+                    blockReason = "physical condition";
+                }
+            }
+
+            // Disable sprinting when overweight
+            if (blockReason == null && sprintConfig.EnableOverweightSprintBlock)
+            {
+                if (Helpers.HealthStateHelper.IsOverweight(BotOwner))
+                {
+                    blockReason = "overweight";
+                }
+            }
+
             bool allowed = blockReason == null;
 
             // Log only on transition from allowed to blocked

@@ -178,8 +178,8 @@ public class SprintBlockingTests
 
         Assert.That(
             toggleCount,
-            Is.EqualTo(4),
-            "IsAllowedToSprint should have exactly 4 config toggle checks (post-combat, late-raid, suspicion, door-sprint-pause)"
+            Is.EqualTo(7),
+            "IsAllowedToSprint should have exactly 7 config toggle checks (post-combat, late-raid, suspicion, door-sprint-pause, stamina-exhaustion, physical-condition, overweight)"
         );
     }
 
@@ -326,8 +326,8 @@ public class SprintBlockingTests
 
         Assert.That(
             assignmentCount,
-            Is.EqualTo(5),
-            "Should have exactly 5 block reason assignments: post-combat cooldown, late raid, hearing suspicion, sharp path corner, approaching closed door"
+            Is.EqualTo(8),
+            "Should have exactly 8 block reason assignments: post-combat cooldown, late raid, hearing suspicion, sharp path corner, approaching closed door, stamina exhausted, physical condition, overweight"
         );
     }
 
@@ -392,9 +392,9 @@ public class SprintBlockingTests
         int nullCheckCount = CountOccurrences(methodBody, "blockReason == null");
 
         // The first check (post-combat) doesn't need a null guard,
-        // but the remaining 4 checks (late-raid, suspicion, path corner, closed door) do,
-        // plus 1 for the final "bool allowed = blockReason == null" assignment = 5 total.
-        Assert.That(nullCheckCount, Is.EqualTo(5), "4 guard checks + 1 final assignment should reference 'blockReason == null'");
+        // but the remaining 7 checks (late-raid, suspicion, path corner, closed door, stamina, physical condition, overweight) do,
+        // plus 1 for the final "bool allowed = blockReason == null" assignment = 8 total.
+        Assert.That(nullCheckCount, Is.EqualTo(8), "7 guard checks + 1 final assignment should reference 'blockReason == null'");
     }
 
     #endregion

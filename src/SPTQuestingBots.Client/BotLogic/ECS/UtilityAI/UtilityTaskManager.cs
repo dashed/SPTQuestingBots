@@ -105,6 +105,23 @@ public class UtilityTaskManager
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void PickTask(BotEntity entity)
     {
+        // Healing entities should not pick any task — zero all scores
+        if (entity.IsHealing)
+        {
+            for (int i = 0; i < Tasks.Length; i++)
+            {
+                entity.TaskScores[i] = 0f;
+            }
+
+            if (entity.TaskAssignment.Task != null)
+            {
+                entity.TaskAssignment.Task.Deactivate(entity);
+                entity.TaskAssignment = default;
+            }
+
+            return;
+        }
+
         var assignment = entity.TaskAssignment;
 
         float highestScore = 0f;

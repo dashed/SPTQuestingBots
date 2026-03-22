@@ -83,8 +83,11 @@ namespace SPTQuestingBots.BotLogic.Objective
                 PathFollowerStatus status = TickCustomMover(CanSprint);
 
                 // Room clear: detect indoor transition and apply movement instructions
+                // Skip stealth room clearing when legs are damaged — broken legs make noise
+                // regardless of movement speed, so stealth approach is pointless.
                 var roomClearConfig = Controllers.ConfigController.Config.Questing?.RoomClear;
-                if (roomClearConfig?.Enabled == true && ECS.BotEntityBridge.TryGetEntity(BotOwner, out var rcEntity))
+                bool hasLegDamage = ECS.BotEntityBridge.TryGetEntity(BotOwner, out var legEntity) && legEntity.HasLegDamage;
+                if (roomClearConfig?.Enabled == true && !hasLegDamage && ECS.BotEntityBridge.TryGetEntity(BotOwner, out var rcEntity))
                 {
                     var instruction = RoomClearController.Update(
                         rcEntity,

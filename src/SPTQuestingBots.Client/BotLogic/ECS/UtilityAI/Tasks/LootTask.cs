@@ -35,9 +35,17 @@ public sealed class LootTask : QuestUtilityTask
     public override void ScoreEntity(int ordinal, BotEntity entity)
     {
         float score = Score(entity);
+        float coverInfluence = ScoringModifiers.ComputeCoverInfluence(entity.IsInCover, entity.HasEnemyInfo);
         entity.TaskScores[ordinal] =
             score
-            * ScoringModifiers.CombinedModifier(entity.Aggression, entity.RaidTimeNormalized, entity.HumanPlayerProximity, BotActionTypeId);
+            * ScoringModifiers.CombinedModifier(
+                entity.Aggression,
+                entity.RaidTimeNormalized,
+                entity.HumanPlayerProximity,
+                coverInfluence,
+                entity.IsInDogFight,
+                BotActionTypeId
+            );
     }
 
     internal static float Score(BotEntity entity)
@@ -50,6 +58,12 @@ public sealed class LootTask : QuestUtilityTask
 
         // Combat suppresses looting
         if (entity.IsInCombat)
+        {
+            return 0f;
+        }
+
+        // Overweight bots should not pursue more loot
+        if (entity.IsOverweight)
         {
             return 0f;
         }

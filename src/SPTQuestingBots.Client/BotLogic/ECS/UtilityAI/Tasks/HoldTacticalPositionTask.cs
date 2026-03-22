@@ -11,6 +11,11 @@ public sealed class HoldTacticalPositionTask : QuestUtilityTask
     public const float BaseScore = 0.65f;
     public const float MinDistanceSqr = 9f; // 3m squared
 
+    /// <summary>
+    /// Score bonus when a squad member is healing — encourages overwatch behavior.
+    /// </summary>
+    public const float SquadHealingBonus = 0.15f;
+
     public override int BotActionTypeId
     {
         get { return UtilityAI.BotActionTypeId.HoldPosition; }
@@ -49,9 +54,15 @@ public sealed class HoldTacticalPositionTask : QuestUtilityTask
             return 0f;
         }
 
-        LoggingController.LogDebug(
-            "[HoldTacticalPositionTask] Entity " + entity.Id + " scored " + BaseScore + " (sqrDist=" + sqrDist + ")"
-        );
-        return BaseScore;
+        float score = BaseScore;
+
+        // Bonus when a squad member is healing — provide overwatch
+        if (entity.AnySquadMemberHealing)
+        {
+            score += SquadHealingBonus;
+        }
+
+        LoggingController.LogDebug("[HoldTacticalPositionTask] Entity " + entity.Id + " scored " + score + " (sqrDist=" + sqrDist + ")");
+        return score;
     }
 }
