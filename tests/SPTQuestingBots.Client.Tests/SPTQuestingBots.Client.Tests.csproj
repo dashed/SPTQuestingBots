@@ -512,6 +512,11 @@
     />
     <Compile Include="../../src/SPTQuestingBots.Client/Helpers/ZoneModifierData.cs" Link="LinkedSources/Helpers/ZoneModifierData.cs" />
     <Compile Include="../../src/SPTQuestingBots.Client/Helpers/PlaceInfoData.cs" Link="LinkedSources/Helpers/PlaceInfoData.cs" />
+    <!-- Combat AI: pure C# scoring context struct -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Helpers/EnemyScoringContext.cs"
+      Link="LinkedSources/Helpers/EnemyScoringContext.cs"
+    />
   </ItemGroup>
 
   <!--

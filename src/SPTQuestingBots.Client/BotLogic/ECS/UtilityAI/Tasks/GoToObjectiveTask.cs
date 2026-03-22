@@ -1,5 +1,6 @@
 using System;
 using SPTQuestingBots.Controllers;
+using SPTQuestingBots.Helpers;
 
 namespace SPTQuestingBots.BotLogic.ECS.UtilityAI.Tasks;
 
@@ -32,9 +33,17 @@ public sealed class GoToObjectiveTask : QuestUtilityTask
     public override void ScoreEntity(int ordinal, BotEntity entity)
     {
         float score = Score(entity);
+        float coverInfluence = ScoringModifiers.ComputeCoverInfluence(entity.IsInCover, entity.HasEnemyInfo);
         entity.TaskScores[ordinal] =
             score
-            * ScoringModifiers.CombinedModifier(entity.Aggression, entity.RaidTimeNormalized, entity.HumanPlayerProximity, BotActionTypeId);
+            * ScoringModifiers.CombinedModifier(
+                entity.Aggression,
+                entity.RaidTimeNormalized,
+                entity.HumanPlayerProximity,
+                coverInfluence,
+                entity.IsInDogFight,
+                BotActionTypeId
+            );
     }
 
     internal static float Score(BotEntity entity)
@@ -86,7 +95,45 @@ public sealed class GoToObjectiveTask : QuestUtilityTask
         // Spawn direction bias: small bonus for objectives in the spawn facing direction
         score += DirectionBias(entity);
 
+        // Group tactic penalty: followers on Protect should score far-away objectives lower
+        score *= TacticModifier(entity, distance);
+
         return score;
+    }
+
+    /// <summary>
+    /// Compute a tactic-based score modifier.
+    /// Followers on Protect tactic have far-away objectives penalized.
+    /// Ambush tactic slightly penalizes movement. Attack slightly boosts it.
+    /// Returns 1.0 when no modifier applies.
+    /// </summary>
+    internal static float TacticModifier(BotEntity entity, float distance)
+    {
+        int tactic = entity.GroupTactic;
+        if (tactic == GroupTacticType.None)
+            return 1f;
+
+        if (tactic == GroupTacticType.Protect)
+        {
+            // Protect: penalize far objectives heavily — followers should stay close to leader
+            // At 0m → 1.0, at 50m → 0.55, at 100m → 0.3, at 200m → 0.2
+            float penalty = 1f / (1f + distance * 0.015f);
+            return penalty < 0.2f ? 0.2f : penalty;
+        }
+
+        if (tactic == GroupTacticType.Ambush)
+        {
+            // Ambush: slight penalty to movement — prefer staying put
+            return 0.8f;
+        }
+
+        if (tactic == GroupTacticType.Attack)
+        {
+            // Attack: slight boost to movement — push forward
+            return 1.1f;
+        }
+
+        return 1f;
     }
 
     /// <summary>

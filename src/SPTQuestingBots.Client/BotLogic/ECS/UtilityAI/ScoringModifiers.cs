@@ -110,6 +110,89 @@ public static class ScoringModifiers
         }
     }
 
+    /// <summary>
+    /// Cover-aware scoring multiplier.
+    /// Bots in cover prefer hold/ambush tasks. Bots exposed with an enemy prefer movement.
+    /// <paramref name="coverInfluence"/> is 0.0 (exposed + has enemy), 0.5 (neutral), 1.0 (in cover).
+    /// </summary>
+    public static float CoverModifier(float coverInfluence, int actionTypeId)
+    {
+        // Neutral cover state (0.5) returns 1.0 for all tasks
+        if (coverInfluence >= 0.45f && coverInfluence <= 0.55f)
+            return 1f;
+
+        float clamped =
+            coverInfluence < 0f ? 0f
+            : coverInfluence > 1f ? 1f
+            : coverInfluence;
+        switch (actionTypeId)
+        {
+            case BotActionTypeId.Ambush:
+                // In cover: boost ambush. Exposed: reduce ambush.
+                return Lerp(0.85f, 1.15f, clamped);
+            case BotActionTypeId.Snipe:
+                return Lerp(0.85f, 1.15f, clamped);
+            case BotActionTypeId.HoldPosition:
+                return Lerp(0.85f, 1.15f, clamped);
+            case BotActionTypeId.GoToObjective:
+                // In cover: reduce urgency to move. Exposed: boost movement to find cover.
+                return Lerp(1.15f, 0.9f, clamped);
+            case BotActionTypeId.Investigate:
+                // Exposed bots are more motivated to investigate threats.
+                return Lerp(1.1f, 0.95f, clamped);
+            case BotActionTypeId.Loot:
+                // Don't loot when exposed with enemy.
+                return Lerp(0.8f, 1.05f, clamped);
+            default:
+                return 1f;
+        }
+    }
+
+    /// <summary>
+    /// DogFight scoring multiplier.
+    /// Bots in a dogfight get boosted combat action scores; aggressive bots benefit more.
+    /// <paramref name="isInDogFight"/> gates the modifier; <paramref name="aggression"/> scales it.
+    /// </summary>
+    public static float DogFightModifier(bool isInDogFight, float aggression, int actionTypeId)
+    {
+        if (!isInDogFight)
+            return 1f;
+
+        float aggressiveBoost = 1f + aggression * 0.1f; // 1.0 at 0 aggression, 1.1 at max
+        switch (actionTypeId)
+        {
+            case BotActionTypeId.Investigate:
+                return aggressiveBoost;
+            case BotActionTypeId.Vulture:
+                return aggressiveBoost;
+            case BotActionTypeId.GoToObjective:
+                // In dogfight, reduce non-combat movement
+                return 0.9f;
+            case BotActionTypeId.Loot:
+                // Don't loot during dogfight
+                return 0.7f;
+            case BotActionTypeId.Linger:
+                return 0.7f;
+            case BotActionTypeId.Patrol:
+                return 0.8f;
+            default:
+                return 1f;
+        }
+    }
+
+    /// <summary>
+    /// Compute cover influence from entity state.
+    /// Returns 0.0 (exposed + has enemy), 0.5 (neutral), or 1.0 (in cover).
+    /// </summary>
+    public static float ComputeCoverInfluence(bool isInCover, bool hasEnemyInfo)
+    {
+        if (isInCover)
+            return 1f;
+        if (hasEnemyInfo)
+            return 0f;
+        return 0.5f;
+    }
+
     /// <summary>Upper bound for CombinedModifier to prevent score overflow.</summary>
     public const float MaxCombinedModifier = 1.5f;
 
@@ -126,10 +209,28 @@ public static class ScoringModifiers
     /// </summary>
     public static float CombinedModifier(float aggression, float raidTimeNormalized, float playerProximity, int actionTypeId)
     {
+        return CombinedModifier(aggression, raidTimeNormalized, playerProximity, 0.5f, false, actionTypeId);
+    }
+
+    /// <summary>
+    /// Full combined modifier with all factors: personality, raid time, player proximity,
+    /// cover influence, and dogfight state.
+    /// </summary>
+    public static float CombinedModifier(
+        float aggression,
+        float raidTimeNormalized,
+        float playerProximity,
+        float coverInfluence,
+        bool isInDogFight,
+        int actionTypeId
+    )
+    {
         float result =
             PersonalityModifier(aggression, actionTypeId)
             * RaidTimeModifier(raidTimeNormalized, actionTypeId)
-            * PlayerProximityModifier(playerProximity, actionTypeId);
+            * PlayerProximityModifier(playerProximity, actionTypeId)
+            * CoverModifier(coverInfluence, actionTypeId)
+            * DogFightModifier(isInDogFight, aggression, actionTypeId);
         if (float.IsNaN(result) || result < 0f)
         {
             return 1.0f;

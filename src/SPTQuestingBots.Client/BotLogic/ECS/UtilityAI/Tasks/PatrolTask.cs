@@ -63,9 +63,17 @@ public sealed class PatrolTask : QuestUtilityTask
     public override void ScoreEntity(int ordinal, BotEntity entity)
     {
         float score = Score(entity, CurrentMapRoutes);
+        float coverInfluence = ScoringModifiers.ComputeCoverInfluence(entity.IsInCover, entity.HasEnemyInfo);
         entity.TaskScores[ordinal] =
             score
-            * ScoringModifiers.CombinedModifier(entity.Aggression, entity.RaidTimeNormalized, entity.HumanPlayerProximity, BotActionTypeId);
+            * ScoringModifiers.CombinedModifier(
+                entity.Aggression,
+                entity.RaidTimeNormalized,
+                entity.HumanPlayerProximity,
+                coverInfluence,
+                entity.IsInDogFight,
+                BotActionTypeId
+            );
     }
 
     internal static float Score(BotEntity entity, PatrolRoute[] routes)
