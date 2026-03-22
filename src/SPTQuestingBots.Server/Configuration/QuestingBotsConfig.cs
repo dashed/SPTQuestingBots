@@ -141,10 +141,10 @@ public class MinMaxConfig
 public class DistanceAngleConfig
 {
     [JsonProperty("distance")]
-    public int Distance { get; set; }
+    public double Distance { get; set; }
 
     [JsonProperty("angle")]
-    public int Angle { get; set; }
+    public double Angle { get; set; }
 }
 
 // ────────────────────────────────────────────────────────────────────────
