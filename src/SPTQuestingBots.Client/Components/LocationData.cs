@@ -80,6 +80,9 @@ namespace SPTQuestingBots.Components
             // Subscribe to door interactions for forced-open timer + door sound events
             DoorInteractionSubscriber.Subscribe();
 
+            // Subscribe to sound and kill events for combat event detection
+            BotEventSubscriber.Subscribe();
+
             if (
                 ConfigController.Config.Questing.ZoneMovement?.Enabled == true
                 && QuestingBotsPluginConfig.ZoneMovementEnabled?.Value != false

@@ -31,6 +31,14 @@ namespace SPTQuestingBots.Helpers
                 return false;
 
             var phrase = MapCalloutToPhrase(calloutId);
+
+            // Respect BSG's group voice throttling — CanSay checks cooldowns, priorities, etc.
+            if (!GroupCoordinationHelper.CanSay(bot, phrase))
+            {
+                LoggingController.LogDebug("[SquadVoiceHelper] GroupTalk.CanSay blocked phrase " + phrase + " for bot");
+                return false;
+            }
+
             var mask = BuildMask(bot);
             player.Say(phrase, true, 0f, mask, aggressive ? 1 : 0);
             LoggingController.LogDebug(

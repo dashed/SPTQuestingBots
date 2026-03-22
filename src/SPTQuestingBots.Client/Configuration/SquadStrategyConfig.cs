@@ -171,5 +171,14 @@ public class SquadStrategyConfig
     [JsonProperty("follower_response_delay")]
     public float FollowerResponseDelay { get; set; } = 0.8f;
 
+    // ── Group Coordination ─────────────────────────────────────
+
+    /// <summary>
+    /// Whether to use BSG's native group coordination systems (PlacesForCheck feed,
+    /// tactic-aware scoring, follower index formation, group voice throttling).
+    /// </summary>
+    [JsonProperty("enable_group_coordination")]
+    public bool EnableGroupCoordination { get; set; } = true;
+
     public SquadStrategyConfig() { }
 }
