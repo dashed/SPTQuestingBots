@@ -17,9 +17,12 @@ public class RoomClearConfigTests
             Assert.That(config.Enabled, Is.True);
             Assert.That(config.DurationMin, Is.EqualTo(15.0f));
             Assert.That(config.DurationMax, Is.EqualTo(30.0f));
-            Assert.That(config.CornerPauseDuration, Is.EqualTo(1.5f));
+            Assert.That(config.CornerPauseDuration, Is.EqualTo(1.2f));
             Assert.That(config.CornerAngleThreshold, Is.EqualTo(60.0f));
             Assert.That(config.Pose, Is.EqualTo(0.7f));
+            Assert.That(config.WalkThroughDistance, Is.EqualTo(0.75f));
+            Assert.That(config.LookRaycastDistance, Is.EqualTo(30.0f));
+            Assert.That(config.LookDuration, Is.EqualTo(1.2f));
             Assert.That(config.EnableForPmcs, Is.True);
             Assert.That(config.EnableForScavs, Is.True);
             Assert.That(config.EnableForPscavs, Is.True);
@@ -36,9 +39,12 @@ public class RoomClearConfigTests
             Assert.That(config.Enabled, Is.True);
             Assert.That(config.DurationMin, Is.EqualTo(15.0f));
             Assert.That(config.DurationMax, Is.EqualTo(30.0f));
-            Assert.That(config.CornerPauseDuration, Is.EqualTo(1.5f));
+            Assert.That(config.CornerPauseDuration, Is.EqualTo(1.2f));
             Assert.That(config.CornerAngleThreshold, Is.EqualTo(60.0f));
             Assert.That(config.Pose, Is.EqualTo(0.7f));
+            Assert.That(config.WalkThroughDistance, Is.EqualTo(0.75f));
+            Assert.That(config.LookRaycastDistance, Is.EqualTo(30.0f));
+            Assert.That(config.LookDuration, Is.EqualTo(1.2f));
             Assert.That(config.EnableForPmcs, Is.True);
             Assert.That(config.EnableForScavs, Is.True);
             Assert.That(config.EnableForPscavs, Is.True);
@@ -87,9 +93,12 @@ public class RoomClearConfigTests
             Assert.That(config.Enabled, Is.False);
             Assert.That(config.DurationMin, Is.EqualTo(5f));
             Assert.That(config.DurationMax, Is.EqualTo(30.0f));
-            Assert.That(config.CornerPauseDuration, Is.EqualTo(1.5f));
+            Assert.That(config.CornerPauseDuration, Is.EqualTo(1.2f));
             Assert.That(config.CornerAngleThreshold, Is.EqualTo(60.0f));
             Assert.That(config.Pose, Is.EqualTo(0.7f));
+            Assert.That(config.WalkThroughDistance, Is.EqualTo(0.75f));
+            Assert.That(config.LookRaycastDistance, Is.EqualTo(30.0f));
+            Assert.That(config.LookDuration, Is.EqualTo(1.2f));
             Assert.That(config.EnableForPmcs, Is.True);
             Assert.That(config.EnableForScavs, Is.True);
             Assert.That(config.EnableForPscavs, Is.True);
@@ -107,6 +116,9 @@ public class RoomClearConfigTests
             CornerPauseDuration = 2.5f,
             CornerAngleThreshold = 45f,
             Pose = 0.5f,
+            WalkThroughDistance = 1.0f,
+            LookRaycastDistance = 25f,
+            LookDuration = 1.5f,
             EnableForPmcs = false,
             EnableForScavs = false,
             EnableForPscavs = false,
@@ -123,6 +135,9 @@ public class RoomClearConfigTests
             Assert.That(deserialized.CornerPauseDuration, Is.EqualTo(original.CornerPauseDuration));
             Assert.That(deserialized.CornerAngleThreshold, Is.EqualTo(original.CornerAngleThreshold));
             Assert.That(deserialized.Pose, Is.EqualTo(original.Pose));
+            Assert.That(deserialized.WalkThroughDistance, Is.EqualTo(original.WalkThroughDistance));
+            Assert.That(deserialized.LookRaycastDistance, Is.EqualTo(original.LookRaycastDistance));
+            Assert.That(deserialized.LookDuration, Is.EqualTo(original.LookDuration));
             Assert.That(deserialized.EnableForPmcs, Is.EqualTo(original.EnableForPmcs));
             Assert.That(deserialized.EnableForScavs, Is.EqualTo(original.EnableForScavs));
             Assert.That(deserialized.EnableForPscavs, Is.EqualTo(original.EnableForPscavs));
@@ -143,6 +158,9 @@ public class RoomClearConfigTests
             Assert.That(json, Does.Contain("corner_pause_duration"));
             Assert.That(json, Does.Contain("corner_angle_threshold"));
             Assert.That(json, Does.Contain("pose"));
+            Assert.That(json, Does.Contain("walk_through_distance"));
+            Assert.That(json, Does.Contain("look_raycast_distance"));
+            Assert.That(json, Does.Contain("look_duration"));
             Assert.That(json, Does.Contain("enable_for_pmcs"));
             Assert.That(json, Does.Contain("enable_for_scavs"));
             Assert.That(json, Does.Contain("enable_for_pscavs"));

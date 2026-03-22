@@ -128,8 +128,9 @@ public class VultureTaskTests
         _entity.NearbyEventX = 200f;
         _entity.NearbyEventZ = 200f;
         _entity.CombatIntensity = 30;
+        _entity.VisibleDist = 500f; // Extend vision range so event is within sight
         float score = VultureTask.Score(_entity, 15, 150f);
-        // Beyond range — proximity=0, but intensity still contributes
+        // Beyond detection range — proximity=0, but intensity still contributes
         Assert.That(score, Is.GreaterThan(0f));
     }
 

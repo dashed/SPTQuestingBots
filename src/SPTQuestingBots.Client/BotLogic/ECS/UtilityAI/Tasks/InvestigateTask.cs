@@ -139,6 +139,17 @@ public sealed class InvestigateTask : QuestUtilityTask
         float dx = entity.CurrentPositionX - entity.NearbyEventX;
         float dz = entity.CurrentPositionZ - entity.NearbyEventZ;
         float distSqr = dx * dx + dz * dz;
+
+        // Don't investigate events beyond the bot's effective vision range
+        float visibleDistSqr = entity.VisibleDist * entity.VisibleDist;
+        if (visibleDistSqr > 0f && distSqr > visibleDistSqr)
+        {
+            LoggingController.LogDebug(
+                "[InvestigateTask] Entity " + entity.Id + ": event beyond VisibleDist (" + entity.VisibleDist.ToString("F0") + "m), score=0"
+            );
+            return 0f;
+        }
+
         float rangeSqr = detectionRange * detectionRange;
         float proximityScore;
         if (distSqr >= rangeSqr)

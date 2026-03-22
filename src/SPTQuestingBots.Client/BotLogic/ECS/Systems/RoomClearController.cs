@@ -35,6 +35,10 @@ public static class RoomClearController
     /// <param name="durationMin">Minimum room clear duration in seconds.</param>
     /// <param name="durationMax">Maximum room clear duration in seconds.</param>
     /// <param name="cornerPauseDuration">Duration of corner pauses (unused here, see TriggerCornerPause).</param>
+    /// <param name="placeInfoIsInside">
+    /// Optional override from <see cref="Helpers.PlaceInfoHelper.IsInsideBuilding"/>.
+    /// When non-null, ORed with <paramref name="isIndoor"/> for more reliable detection.
+    /// </param>
     /// <returns>The movement instruction to apply.</returns>
     public static RoomClearInstruction Update(
         BotEntity entity,
@@ -42,9 +46,15 @@ public static class RoomClearController
         float currentTime,
         float durationMin,
         float durationMax,
-        float cornerPauseDuration
+        float cornerPauseDuration,
+        bool? placeInfoIsInside = null
     )
     {
+        // Merge indoor signals: Player.Environment OR AIPlaceInfo
+        if (placeInfoIsInside.HasValue)
+        {
+            isIndoor = isIndoor || placeInfoIsInside.Value;
+        }
         // Track environment transition: LastEnvironmentId encodes 0=outdoor, 1=indoor
         bool wasOutdoor = entity.LastEnvironmentId != 1;
         entity.LastEnvironmentId = isIndoor ? 1 : 0;

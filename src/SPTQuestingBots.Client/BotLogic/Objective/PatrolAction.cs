@@ -185,12 +185,20 @@ namespace SPTQuestingBots.BotLogic.Objective
             _pauseUntil = Time.time + pauseDuration;
             _nextScanTime = 0f;
             _timer.Restart();
+
+            // Apply sit/crouch pose at stayPoints or when ShallSit is set
+            if (wp.ShallSit)
+            {
+                BotOwner.SetPose(0.3f);
+            }
         }
 
         private void UpdatePause()
         {
-            // Maintain patrol pose
-            BotOwner.SetPose(_pose);
+            var currentWp = _route.Waypoints[_waypointIndex];
+
+            // Apply appropriate pose: lower for sit waypoints, normal patrol pose otherwise
+            BotOwner.SetPose(currentWp.ShallSit ? 0.3f : _pose);
 
             // Pause expired — advance to next waypoint
             if (Time.time >= _pauseUntil)
@@ -199,12 +207,26 @@ namespace SPTQuestingBots.BotLogic.Objective
                 return;
             }
 
-            // Random head scan during pause
+            // Head scan during pause: use designated look direction if available
             if (Time.time >= _nextScanTime)
             {
-                float angle = (float)(SharedRandom.NextDouble() * 2 - 1) * 90f;
-                Vector3 lookDir = Quaternion.Euler(0, angle, 0) * BotOwner.LookDirection;
-                Vector3 lookPoint = BotOwner.Position + lookDir * 15f;
+                Vector3 lookPoint;
+                if (currentWp.HasLookDirection)
+                {
+                    // Use the waypoint's designated look direction, with slight random variance
+                    float variance = (float)(SharedRandom.NextDouble() * 2 - 1) * 15f;
+                    Vector3 designatedDir = new Vector3(currentWp.LookDirX, currentWp.LookDirY, currentWp.LookDirZ);
+                    Vector3 variedDir = Quaternion.Euler(0, variance, 0) * designatedDir;
+                    lookPoint = BotOwner.Position + variedDir * 15f;
+                }
+                else
+                {
+                    // Random head scan (original behavior)
+                    float angle = (float)(SharedRandom.NextDouble() * 2 - 1) * 90f;
+                    Vector3 lookDir = Quaternion.Euler(0, angle, 0) * BotOwner.LookDirection;
+                    lookPoint = BotOwner.Position + lookDir * 15f;
+                }
+
                 UpdateBotSteering(lookPoint);
 
                 _nextScanTime =

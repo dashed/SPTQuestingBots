@@ -544,6 +544,78 @@ public sealed class BotEntity : IEquatable<BotEntity>
     /// <summary>Whether the goal enemy is currently visible to the bot.</summary>
     public bool IsEnemyVisible;
 
+    // ── Vision / Perception State ──────────────────────────────────────────────
+
+    /// <summary>
+    /// BSG's pose-based visibility coefficient (0.0-1.0). Lower values = harder to detect.
+    /// Prone is lowest, standing is highest. Synced from IAIData.PoseVisibilityCoef.
+    /// Default: 1.0 (standing, fully visible).
+    /// </summary>
+    public float GamePoseVisibilityCoef = 1.0f;
+
+    /// <summary>
+    /// Effective vision range in meters, accounting for weather, time of day, and NVG.
+    /// Synced from BotOwner.LookSensor.VisibleDist.
+    /// Used to gate investigation/vulture scoring — bots won't pursue events beyond sight range.
+    /// Default: 150 meters.
+    /// </summary>
+    public float VisibleDist = 150f;
+
+    /// <summary>
+    /// Muzzle flash visibility from IAIData.FlarePower. Values > 1.0 mean the bot recently fired
+    /// and is highly visible. Used to boost post-combat caution scoring.
+    /// Default: 0 (not recently fired).
+    /// </summary>
+    public float FlarePower;
+
+    /// <summary>
+    /// Whether the goal enemy has night vision equipment active.
+    /// Synced from enemy's BotNightVisionData.UsingNow via IAIData.BotOwner.NightVision.
+    /// When true at night, bots should be extra cautious (enemy can see in dark).
+    /// Default: false.
+    /// </summary>
+    public bool EnemyHasNightVision;
+
+    /// <summary>
+    /// Detection progress toward the goal enemy (0.0-1.0 float).
+    /// Synced from EnemyInfo.VisibilityLevel (field VisibilityLevel_1).
+    /// More informative than binary IsVisible — near-detected state (0.5-0.9)
+    /// can trigger evasion or investigation depending on personality.
+    /// Default: 0 (not detected).
+    /// </summary>
+    public float EnemyVisibilityLevel;
+
+    // ── Zone Modifier State ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Zone-specific visible distance from BotLocationModifier.VisibleDistance.
+    /// 0 = not set (use defaults). Synced from ZoneModifierHelper when bot changes zone.
+    /// </summary>
+    public float ZoneVisibleDistance;
+
+    /// <summary>
+    /// Zone-specific sleep distance from BotLocationModifier.DistToSleep.
+    /// 0 = not set (use defaults). Synced from ZoneModifierHelper when bot changes zone.
+    /// </summary>
+    public float ZoneDistToSleep;
+
+    /// <summary>
+    /// Zone-specific accuracy speed multiplier from BotLocationModifier.AccuracySpeed.
+    /// 0 = not set. Provides per-zone difficulty scaling.
+    /// </summary>
+    public float ZoneAccuracySpeed;
+
+    /// <summary>
+    /// Zone-specific sight gain multiplier from BotLocationModifier.GainSight.
+    /// 0 = not set.
+    /// </summary>
+    public float ZoneGainSight;
+
+    /// <summary>
+    /// Whether zone modifier data has been synced for the current zone.
+    /// </summary>
+    public bool HasZoneModifier;
+
     // ── Look Variance State ──────────────────────────────────────────────
 
     /// <summary>Game time when next flank check should occur.</summary>

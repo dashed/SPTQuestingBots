@@ -218,6 +218,7 @@ public class ConfigPipelineAuditTests
         // Place event far away
         entity.NearbyEventX = entity.CurrentPositionX + 200;
         entity.NearbyEventZ = entity.CurrentPositionZ + 200;
+        entity.VisibleDist = 500f; // Extend vision range so event is within sight
 
         // With range=300, the event is in range
         float scoreWide = VultureTask.Score(entity, 15, 300f);
@@ -378,9 +379,12 @@ public class ConfigPipelineAuditTests
         Assert.That(r.Enabled, Is.True);
         Assert.That(r.DurationMin, Is.EqualTo(15.0f));
         Assert.That(r.DurationMax, Is.EqualTo(30.0f));
-        Assert.That(r.CornerPauseDuration, Is.EqualTo(1.5f));
+        Assert.That(r.CornerPauseDuration, Is.EqualTo(1.2f));
         Assert.That(r.CornerAngleThreshold, Is.EqualTo(60.0f));
         Assert.That(r.Pose, Is.EqualTo(0.7f));
+        Assert.That(r.WalkThroughDistance, Is.EqualTo(0.75f));
+        Assert.That(r.LookRaycastDistance, Is.EqualTo(30.0f));
+        Assert.That(r.LookDuration, Is.EqualTo(1.2f));
     }
 
     [Test]

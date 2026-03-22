@@ -475,6 +475,15 @@
       Include="../../src/SPTQuestingBots.Client/Configuration/DistanceAngleConfig.cs"
       Link="LinkedSources/Configuration/DistanceAngleConfig.cs"
     />
+    <!-- Unlocking doors + BotType config POCOs: needed for door interaction improvement tests -->
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Configuration/BotTypeConfig.cs"
+      Link="LinkedSources/Configuration/BotTypeConfig.cs"
+    />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Configuration/UnlockingDoorsConfig.cs"
+      Link="LinkedSources/Configuration/UnlockingDoorsConfig.cs"
+    />
     <!-- Zone movement config POCO: needed for FieldComposer and convergence tests -->
     <Compile
       Include="../../src/SPTQuestingBots.Client/Configuration/ZoneMovementConfig.cs"
@@ -489,6 +498,16 @@
       Include="../../src/SPTQuestingBots.Client/Telemetry/TelemetryRecorder.cs"
       Link="LinkedSources/Telemetry/TelemetryRecorder.cs"
     />
+    <!-- Navigation graph integration: pure data structs and scorers -->
+    <Compile Include="../../src/SPTQuestingBots.Client/Helpers/LootClusterData.cs" Link="LinkedSources/Helpers/LootClusterData.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/Helpers/LootClusterScorer.cs" Link="LinkedSources/Helpers/LootClusterScorer.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/Helpers/EntrancePointData.cs" Link="LinkedSources/Helpers/EntrancePointData.cs" />
+    <Compile
+      Include="../../src/SPTQuestingBots.Client/Helpers/EntrancePointScorer.cs"
+      Link="LinkedSources/Helpers/EntrancePointScorer.cs"
+    />
+    <Compile Include="../../src/SPTQuestingBots.Client/Helpers/ZoneModifierData.cs" Link="LinkedSources/Helpers/ZoneModifierData.cs" />
+    <Compile Include="../../src/SPTQuestingBots.Client/Helpers/PlaceInfoData.cs" Link="LinkedSources/Helpers/PlaceInfoData.cs" />
   </ItemGroup>
 
   <!--

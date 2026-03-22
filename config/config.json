@@ -75,7 +75,10 @@
 			"door_approach_position_search_offset": -0.75,
 			"pause_time_after_unlocking": 5,
 			"debounce_time": 1,
-			"default_chance_of_bots_having_keys": 25
+			"default_chance_of_bots_having_keys": 25,
+			"forced_open_period": 15,
+			"door_sound_power": 50,
+			"enable_door_sound_events": true
 		},
 		"min_time_between_switching_objectives": 5,
 		"default_wait_time_after_objective_completion": 3,
@@ -202,14 +205,15 @@
 				"angle": 45
 			},
 			"approaching_closed_doors" : {
-				"distance": 3,
-				"angle": 60
+				"distance": 5.2,
+				"angle": 20
 			},
 			"post_combat_cooldown_seconds": 20,
 			"late_raid_no_sprint_threshold": 0.15,
 			"enable_post_combat_sprint_block": true,
 			"enable_late_raid_sprint_block": true,
-			"enable_suspicion_sprint_block": true
+			"enable_suspicion_sprint_block": true,
+			"enable_door_sprint_pause": true
 		},
 		"bot_quests": {
 			"distance_randomness": 30,
@@ -462,9 +466,12 @@
 			"enabled": true,
 			"duration_min": 15.0,
 			"duration_max": 30.0,
-			"corner_pause_duration": 1.5,
+			"corner_pause_duration": 1.2,
 			"corner_angle_threshold": 60.0,
 			"pose": 0.7,
+			"walk_through_distance": 0.75,
+			"look_raycast_distance": 30.0,
+			"look_duration": 1.2,
 			"enable_for_pmcs": true,
 			"enable_for_scavs": true,
 			"enable_for_pscavs": true

@@ -42,4 +42,5 @@ public static class CombatEventType
     public const byte Explosion = 2;
     public const byte Airdrop = 3;
     public const byte Death = 4;
+    public const byte DoorOpen = 5;
 }

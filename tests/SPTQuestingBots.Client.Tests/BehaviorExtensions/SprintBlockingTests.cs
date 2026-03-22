@@ -170,7 +170,7 @@ public class SprintBlockingTests
     }
 
     [Test]
-    public void IsAllowedToSprint_HasExactlyThreeConfigToggleChecks()
+    public void IsAllowedToSprint_HasExactlyFourConfigToggleChecks()
     {
         var methodBody = ExtractIsAllowedToSprint();
 
@@ -178,8 +178,8 @@ public class SprintBlockingTests
 
         Assert.That(
             toggleCount,
-            Is.EqualTo(3),
-            "IsAllowedToSprint should have exactly 3 config toggle checks (post-combat, late-raid, suspicion)"
+            Is.EqualTo(4),
+            "IsAllowedToSprint should have exactly 4 config toggle checks (post-combat, late-raid, suspicion, door-sprint-pause)"
         );
     }
 
@@ -383,19 +383,18 @@ public class SprintBlockingTests
     [Test]
     public void IsAllowedToSprint_ShortCircuitsBlockReasonChecks()
     {
-        // Each configurable check should be guarded by "blockReason == null &&"
-        // to skip subsequent checks once a reason is found
+        // Each configurable check should be guarded by "blockReason == null"
+        // to skip subsequent checks once a reason is found.
+        // We count all "blockReason == null" occurrences, including the final
+        // "bool allowed = blockReason == null" assignment.
         var methodBody = ExtractIsAllowedToSprint();
 
-        int nullGuardCount = CountOccurrences(methodBody, "blockReason == null &&");
+        int nullCheckCount = CountOccurrences(methodBody, "blockReason == null");
 
-        // The first check (post-combat) doesn't need "blockReason == null" guard,
-        // but the remaining 4 checks (late-raid, suspicion, path corner, closed door) do
-        Assert.That(
-            nullGuardCount,
-            Is.EqualTo(4),
-            "4 of 5 block checks should be guarded by 'blockReason == null &&' for short-circuit evaluation"
-        );
+        // The first check (post-combat) doesn't need a null guard,
+        // but the remaining 4 checks (late-raid, suspicion, path corner, closed door) do,
+        // plus 1 for the final "bool allowed = blockReason == null" assignment = 5 total.
+        Assert.That(nullCheckCount, Is.EqualTo(5), "4 guard checks + 1 final assignment should reference 'blockReason == null'");
     }
 
     #endregion

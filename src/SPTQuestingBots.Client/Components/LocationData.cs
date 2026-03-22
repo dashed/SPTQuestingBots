@@ -77,6 +77,9 @@ namespace SPTQuestingBots.Components
             // Subscribe to grenade explosions for combat event tracking
             GrenadeExplosionSubscriber.Subscribe();
 
+            // Subscribe to door interactions for forced-open timer + door sound events
+            DoorInteractionSubscriber.Subscribe();
+
             if (
                 ConfigController.Config.Questing.ZoneMovement?.Enabled == true
                 && QuestingBotsPluginConfig.ZoneMovementEnabled?.Value != false

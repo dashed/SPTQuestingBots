@@ -13,6 +13,13 @@ namespace SPTQuestingBots.BotLogic.Objective
         private bool allowedToIgnoreHearing = true;
         private bool isIgnoringHearing = false;
 
+        /// <summary>
+        /// Pose level when at the ambush position (0=prone, 0.5=crouch, 1=standing).
+        /// Lower pose exploits BSG's PoseVisibilityCoef — harder to detect.
+        /// Virtual so SnipeAction can use a different pose.
+        /// </summary>
+        protected virtual float AmbushPose => 0.4f;
+
         public AmbushAction(BotOwner _BotOwner)
             : base(_BotOwner, 100)
         {
@@ -39,6 +46,9 @@ namespace SPTQuestingBots.BotLogic.Objective
             base.Stop();
 
             BotOwner.PatrollingData.Unpause();
+
+            // Restore standing pose when leaving ambush
+            BotOwner.SetPose(1f);
 
             PauseActionElapsedTime();
 
@@ -103,6 +113,9 @@ namespace SPTQuestingBots.BotLogic.Objective
             }
 
             CheckMinElapsedActionTime();
+
+            // Lower pose for concealment — exploits BSG's PoseVisibilityCoef
+            BotOwner.SetPose(AmbushPose);
 
             // Needed in case somebody drops the layer priorities of this mod. Without doing this, SAIN will prevent bots from staying in their ambush spots.
             if (allowedToIgnoreHearing && !isIgnoringHearing)

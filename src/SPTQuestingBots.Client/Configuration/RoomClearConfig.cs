@@ -21,9 +21,9 @@ public class RoomClearConfig
     [JsonProperty("duration_max")]
     public float DurationMax { get; set; } = 30.0f;
 
-    /// <summary>Duration in seconds for the brief pause at sharp corners.</summary>
+    /// <summary>Duration in seconds for the brief pause at sharp corners. BSG default: 1.2s.</summary>
     [JsonProperty("corner_pause_duration")]
-    public float CornerPauseDuration { get; set; } = 1.5f;
+    public float CornerPauseDuration { get; set; } = 1.2f;
 
     /// <summary>Angle threshold in degrees for detecting sharp corners in the path.</summary>
     [JsonProperty("corner_angle_threshold")]
@@ -32,6 +32,27 @@ public class RoomClearConfig
     /// <summary>Bot pose during room clearing (0=crouch, 1=standing). 0.7 = slight crouch.</summary>
     [JsonProperty("pose")]
     public float Pose { get; set; } = 0.7f;
+
+    /// <summary>
+    /// Distance in meters the bot walks through a doorway before resuming normal speed.
+    /// BSG default: 0.75m. Controls how far into a room the bot moves at walking pace.
+    /// </summary>
+    [JsonProperty("walk_through_distance")]
+    public float WalkThroughDistance { get; set; } = 0.75f;
+
+    /// <summary>
+    /// Raycast distance in meters for left/right checks when entering a room.
+    /// BSG default: 30m. Used to detect room boundaries and threats during entry.
+    /// </summary>
+    [JsonProperty("look_raycast_distance")]
+    public float LookRaycastDistance { get; set; } = 30.0f;
+
+    /// <summary>
+    /// Duration in seconds the bot looks in each direction (left/right) when clearing a room.
+    /// BSG default: 1.2s per direction.
+    /// </summary>
+    [JsonProperty("look_duration")]
+    public float LookDuration { get; set; } = 1.2f;
 
     /// <summary>Whether PMC bots use room clearing behavior.</summary>
     [JsonProperty("enable_for_pmcs")]

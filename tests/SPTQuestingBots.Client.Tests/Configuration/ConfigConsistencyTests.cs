@@ -817,6 +817,9 @@ public class ConfigConsistencyTests
             Assert.That(cfg.CornerPauseDuration, Is.EqualTo(JsonValue<float>("questing.room_clear.corner_pause_duration")).Within(0.001f));
             Assert.That(cfg.CornerAngleThreshold, Is.EqualTo(JsonValue<float>("questing.room_clear.corner_angle_threshold")));
             Assert.That(cfg.Pose, Is.EqualTo(JsonValue<float>("questing.room_clear.pose")).Within(0.001f));
+            Assert.That(cfg.WalkThroughDistance, Is.EqualTo(JsonValue<float>("questing.room_clear.walk_through_distance")).Within(0.001f));
+            Assert.That(cfg.LookRaycastDistance, Is.EqualTo(JsonValue<float>("questing.room_clear.look_raycast_distance")).Within(0.001f));
+            Assert.That(cfg.LookDuration, Is.EqualTo(JsonValue<float>("questing.room_clear.look_duration")).Within(0.001f));
             Assert.That(cfg.EnableForPmcs, Is.EqualTo(JsonValue<bool>("questing.room_clear.enable_for_pmcs")));
             Assert.That(cfg.EnableForScavs, Is.EqualTo(JsonValue<bool>("questing.room_clear.enable_for_scavs")));
             Assert.That(cfg.EnableForPscavs, Is.EqualTo(JsonValue<bool>("questing.room_clear.enable_for_pscavs")));

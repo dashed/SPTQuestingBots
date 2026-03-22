@@ -139,6 +139,108 @@ namespace SPTQuestingBots.Helpers
         }
 
         /// <summary>
+        /// Collects cover positions from BSG's native cover graph, filtered by ConnectionGroup.
+        /// Only returns points that share the same ConnectionGroup as the given target,
+        /// ensuring the bot can actually navigate to them.
+        /// </summary>
+        /// <param name="connectionGroupId">The ConnectionGroup to filter by.</param>
+        /// <param name="objX">Objective X position.</param>
+        /// <param name="objY">Objective Y position.</param>
+        /// <param name="objZ">Objective Z position.</param>
+        /// <param name="radius">Search radius around the objective.</param>
+        /// <param name="outPositions">Output buffer for x,y,z position triples.</param>
+        /// <param name="maxCount">Maximum number of positions to collect.</param>
+        /// <returns>Number of positions written to outPositions.</returns>
+        public static int CollectCoverByConnectionGroup(
+            int connectionGroupId,
+            float objX,
+            float objY,
+            float objZ,
+            float radius,
+            float[] outPositions,
+            int maxCount
+        )
+        {
+            if (maxCount <= 0 || connectionGroupId < 0)
+                return 0;
+
+            var botGame = Singleton<IBotGame>.Instance;
+            if (botGame == null)
+                return 0;
+
+            var coversData = botGame.BotsController?.CoversData;
+            if (coversData == null)
+                return 0;
+
+            var points = coversData.Points;
+            if (points == null || points.Count == 0)
+                return 0;
+
+            float radiusSqr = radius * radius;
+            int count = 0;
+
+            // First pass: Wall covers in the matching connection group
+            for (int i = 0; i < points.Count && count < maxCount; i++)
+            {
+                var gp = points[i];
+                if (gp == null || gp.ConnectionGroup != connectionGroupId)
+                    continue;
+
+                if (gp.CoverType != CoverType.Wall)
+                    continue;
+
+                float dx = gp._position.x - objX;
+                float dy = gp._position.y - objY;
+                float dz = gp._position.z - objZ;
+                if (dx * dx + dy * dy + dz * dz > radiusSqr)
+                    continue;
+
+                outPositions[count * 3] = gp._position.x;
+                outPositions[count * 3 + 1] = gp._position.y;
+                outPositions[count * 3 + 2] = gp._position.z;
+                count++;
+            }
+
+            // Second pass: any cover type in the matching connection group
+            if (count < maxCount)
+            {
+                for (int i = 0; i < points.Count && count < maxCount; i++)
+                {
+                    var gp = points[i];
+                    if (gp == null || gp.ConnectionGroup != connectionGroupId)
+                        continue;
+
+                    if (gp.CoverType == CoverType.Wall)
+                        continue; // already collected
+
+                    float dx = gp._position.x - objX;
+                    float dy = gp._position.y - objY;
+                    float dz = gp._position.z - objZ;
+                    if (dx * dx + dy * dy + dz * dz > radiusSqr)
+                        continue;
+
+                    outPositions[count * 3] = gp._position.x;
+                    outPositions[count * 3 + 1] = gp._position.y;
+                    outPositions[count * 3 + 2] = gp._position.z;
+                    count++;
+                }
+            }
+
+            LoggingController.LogDebug(
+                "[BsgCoverPointCollector] ConnectionGroup "
+                    + connectionGroupId
+                    + ": collected "
+                    + count
+                    + " cover positions near ("
+                    + objX.ToString("F0")
+                    + ", "
+                    + objZ.ToString("F0")
+                    + ")"
+            );
+            return count;
+        }
+
+        /// <summary>
         /// Collects cover positions using the bot's per-bot <see cref="BotCoversData"/>,
         /// which respects bot ID ownership and spotted status.
         /// Falls back to the global voxel grid if per-bot data yields insufficient results.

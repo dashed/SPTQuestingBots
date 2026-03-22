@@ -16,6 +16,39 @@ namespace SPTQuestingBots.ZoneMovement.Integration;
 public static class MapBoundsDetector
 {
     /// <summary>
+    /// Creates bounds from pre-computed voxel grid min/max values.
+    /// The voxel bounds are authoritative — they represent the exact navigable area
+    /// as computed by BSG's cover/nav generation tools.
+    /// The Y components are overridden to extreme values since the grid operates on the XZ plane.
+    /// </summary>
+    /// <param name="voxelMin">Minimum corner from <c>AIVoxelesData.MinVoxelesValues</c>.</param>
+    /// <param name="voxelMax">Maximum corner from <c>AIVoxelesData.MaxVoxelesValues</c>.</param>
+    /// <param name="padding">
+    /// Optional extra padding in meters. Typically 0 since voxel bounds are already accurate.
+    /// </param>
+    /// <returns>A tuple of (min, max) <see cref="Vector3"/> values defining the bounding box.</returns>
+    public static (Vector3 min, Vector3 max) DetectBoundsFromVoxels(Vector3 voxelMin, Vector3 voxelMax, float padding = 0f)
+    {
+        var result = (
+            new Vector3(voxelMin.x - padding, -10000f, voxelMin.z - padding),
+            new Vector3(voxelMax.x + padding, 10000f, voxelMax.z + padding)
+        );
+        LoggingController.LogInfo(
+            "[MapBoundsDetector] Using voxel bounds: min=("
+                + result.Item1.x.ToString("F0")
+                + ","
+                + result.Item1.z.ToString("F0")
+                + ") max=("
+                + result.Item2.x.ToString("F0")
+                + ","
+                + result.Item2.z.ToString("F0")
+                + ") padding="
+                + padding.ToString("F0")
+        );
+        return result;
+    }
+
+    /// <summary>
     /// Computes the axis-aligned bounding box on the XZ plane that encloses
     /// all given positions, expanded by <paramref name="padding"/> on each edge.
     /// </summary>

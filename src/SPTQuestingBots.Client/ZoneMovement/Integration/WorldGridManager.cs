@@ -9,6 +9,7 @@ using SPTQuestingBots.BotLogic.ECS.Systems;
 using SPTQuestingBots.Components;
 using SPTQuestingBots.Configuration;
 using SPTQuestingBots.Controllers;
+using SPTQuestingBots.Helpers;
 using SPTQuestingBots.ZoneMovement.Core;
 using SPTQuestingBots.ZoneMovement.Fields;
 using SPTQuestingBots.ZoneMovement.Selection;
@@ -99,9 +100,20 @@ public class WorldGridManager : MonoBehaviour
                 return;
             }
 
-            // 2. Detect map bounds from spawn points
-            Vector3[] positions = spawnPoints.Select(sp => sp.Position.ToUnityVector3()).ToArray();
-            var (min, max) = MapBoundsDetector.DetectBounds(positions, config.BoundsPadding);
+            // 2. Detect map bounds — prefer authoritative voxel bounds, fall back to spawn points
+            Vector3 min,
+                max;
+            if (VoxelBoundsHelper.TryGetVoxelBounds(out var voxelMin, out var voxelMax))
+            {
+                (min, max) = MapBoundsDetector.DetectBoundsFromVoxels(voxelMin, voxelMax);
+                LoggingController.LogInfo("[ZoneMovement] Using voxel-based map bounds (authoritative)");
+            }
+            else
+            {
+                Vector3[] positions = spawnPoints.Select(sp => sp.Position.ToUnityVector3()).ToArray();
+                (min, max) = MapBoundsDetector.DetectBounds(positions, config.BoundsPadding);
+                LoggingController.LogInfo("[ZoneMovement] Using spawn-point-based map bounds (fallback)");
+            }
 
             // 3. Create world grid with auto-sized cells
             Grid = new WorldGrid(min, max, config.TargetCellCount);

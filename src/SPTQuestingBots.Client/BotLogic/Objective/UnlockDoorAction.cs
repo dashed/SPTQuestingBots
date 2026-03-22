@@ -289,10 +289,24 @@ namespace SPTQuestingBots.BotLogic.Objective
             Door door = ObjectiveManager.GetCurrentQuestInteractiveObject() as Door;
 
             // Create the interaction result for the door
+            // BSG uses BotOwner.Settings.FileSettings.Move.BREACH_CHANCE_100 to decide breach
             EInteractionType interactionType = EInteractionType.Unlock;
             if ((door != null) && door.CanBeBreached && (door.KeyId == ""))
             {
-                interactionType = EInteractionType.Breach;
+                float breachChance = 100f;
+                try
+                {
+                    breachChance = BotOwner.Settings.FileSettings.Move.BREACH_CHANCE_100;
+                }
+                catch
+                {
+                    // Settings may not be available; default to always breach
+                }
+
+                if (breachChance >= 100f || SharedRandom.Next(0, 100) < breachChance)
+                {
+                    interactionType = EInteractionType.Breach;
+                }
             }
             InteractionResult interactionResult = worldInteractiveObject.GetInteractionResult(interactionType, BotOwner, keyComponent);
 

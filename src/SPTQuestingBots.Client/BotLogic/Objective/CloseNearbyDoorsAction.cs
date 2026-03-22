@@ -172,7 +172,12 @@ namespace SPTQuestingBots.BotLogic.Objective
                 //debugOpenNearbyDoors();
             }
 
-            IEnumerable<Door> openNearbyDoors = nearbyDoors.Where(d => d.DoorState == EDoorState.Open);
+            // BSG keeps doors open 15s after a bot opens them (PERIOD_FOR_DOOR_FORCED_STAY_OPENED).
+            // Skip doors that were recently opened to avoid re-closing doors opened by squadmates.
+            float forcedOpenPeriod = ConfigController.Config.Questing.UnlockingDoors.ForcedOpenPeriod;
+            IEnumerable<Door> openNearbyDoors = nearbyDoors
+                .Where(d => d.DoorState == EDoorState.Open)
+                .Where(d => !Helpers.DoorInteractionSubscriber.WasRecentlyOpened(d.Id, forcedOpenPeriod));
             if (!openNearbyDoors.Any())
             {
                 ObjectiveManager.CompleteObjective();

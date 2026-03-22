@@ -28,6 +28,30 @@ public struct PatrolWaypoint
     /// <summary>Maximum seconds to pause at this waypoint (default 5).</summary>
     public float PauseDurationMax;
 
+    /// <summary>Whether the bot should sit/crouch at this waypoint (from BSG PatrolPoint.ShallSit).</summary>
+    public bool ShallSit;
+
+    /// <summary>
+    /// Patrol point type: 0 = checkPoint (brief stop), 1 = stayPoint (longer hold).
+    /// From BSG <see cref="PatrolPointType"/>.
+    /// </summary>
+    public byte PointType;
+
+    /// <summary>Whether this waypoint has a designated look direction.</summary>
+    public bool HasLookDirection;
+
+    /// <summary>Look direction X component (normalized, from PointWithLookSides).</summary>
+    public float LookDirX;
+
+    /// <summary>Look direction Y component (normalized, from PointWithLookSides).</summary>
+    public float LookDirY;
+
+    /// <summary>Look direction Z component (normalized, from PointWithLookSides).</summary>
+    public float LookDirZ;
+
+    /// <summary>Number of sub-points under this patrol point (0 if none).</summary>
+    public byte SubPointCount;
+
     public PatrolWaypoint(float x, float y, float z, float pauseMin = 2f, float pauseMax = 5f)
     {
         X = x;
@@ -35,7 +59,24 @@ public struct PatrolWaypoint
         Z = z;
         PauseDurationMin = pauseMin;
         PauseDurationMax = pauseMax;
+        ShallSit = false;
+        PointType = 0;
+        HasLookDirection = false;
+        LookDirX = 0f;
+        LookDirY = 0f;
+        LookDirZ = 0f;
+        SubPointCount = 0;
     }
+}
+
+/// <summary>
+/// Constants for <see cref="PatrolWaypoint.PointType"/>.
+/// Mirrors BSG's <c>PatrolPointType</c> enum.
+/// </summary>
+public static class PatrolPointTypeId
+{
+    public const byte CheckPoint = 0;
+    public const byte StayPoint = 1;
 }
 
 /// <summary>

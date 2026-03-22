@@ -953,6 +953,20 @@ namespace SPTQuestingBots.BotLogic.ECS
                     {
                         entity.TimeSinceEnemySeen = float.MaxValue;
                     }
+
+                    // VisibilityLevel: 0-1 gradient detection progress (more informative than binary IsVisible)
+                    entity.EnemyVisibilityLevel = goalEnemy.VisibilityLevel_1;
+
+                    // NVG awareness: check if the enemy has night vision active
+                    try
+                    {
+                        var enemyBotOwner = goalEnemy.Person?.AIData?.BotOwner;
+                        entity.EnemyHasNightVision = enemyBotOwner?.NightVision?.UsingNow ?? false;
+                    }
+                    catch
+                    {
+                        entity.EnemyHasNightVision = false;
+                    }
                 }
                 else
                 {
@@ -960,6 +974,8 @@ namespace SPTQuestingBots.BotLogic.ECS
                     entity.TimeSinceEnemySeen = float.MaxValue;
                     entity.EnemyDistance = 0f;
                     entity.IsEnemyVisible = false;
+                    entity.EnemyVisibilityLevel = 0f;
+                    entity.EnemyHasNightVision = false;
                 }
             }
             catch
@@ -968,6 +984,57 @@ namespace SPTQuestingBots.BotLogic.ECS
                 entity.TimeSinceEnemySeen = float.MaxValue;
                 entity.EnemyDistance = 0f;
                 entity.IsEnemyVisible = false;
+                entity.EnemyVisibilityLevel = 0f;
+                entity.EnemyHasNightVision = false;
+            }
+
+            // Sync self-perception data — vision range, pose visibility, flare power
+            try
+            {
+                var lookSensor = botOwner.LookSensor;
+                if (lookSensor != null)
+                {
+                    entity.VisibleDist = lookSensor.VisibleDist;
+                }
+            }
+            catch
+            {
+                // LookSensor may not be initialized
+            }
+
+            try
+            {
+                var aiData = botOwner.GetPlayer?.AIData;
+                if (aiData != null)
+                {
+                    entity.GamePoseVisibilityCoef = aiData.PoseVisibilityCoef;
+                    entity.FlarePower = aiData.FlarePower;
+                }
+            }
+            catch
+            {
+                // AIData may not be available during early initialization
+            }
+
+            // Sync zone modifier data (throttled — only when not yet loaded)
+            if (!entity.HasZoneModifier)
+            {
+                try
+                {
+                    var zoneModifier = ZoneModifierHelper.GetModifierForBot(botOwner);
+                    if (zoneModifier.IsValid)
+                    {
+                        entity.ZoneVisibleDistance = zoneModifier.VisibleDistance;
+                        entity.ZoneDistToSleep = zoneModifier.DistToSleep;
+                        entity.ZoneAccuracySpeed = zoneModifier.AccuracySpeed;
+                        entity.ZoneGainSight = zoneModifier.GainSight;
+                        entity.HasZoneModifier = true;
+                    }
+                }
+                catch
+                {
+                    // Zone modifier may not be available during early initialization
+                }
             }
         }
 

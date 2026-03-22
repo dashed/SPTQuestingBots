@@ -36,6 +36,9 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("enable_suspicion_sprint_block")]
         public bool EnableSuspicionSprintBlock { get; set; } = true;
 
+        [JsonProperty("enable_door_sprint_pause")]
+        public bool EnableDoorSprintPause { get; set; } = true;
+
         public SprintingLimitationsConfig() { }
     }
 }

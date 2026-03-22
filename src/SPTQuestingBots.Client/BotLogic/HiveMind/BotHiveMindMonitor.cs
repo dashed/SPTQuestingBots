@@ -43,6 +43,7 @@ namespace SPTQuestingBots.BotLogic.HiveMind
             HumanPlayerCache.Clear();
             CombatEventRegistry.Clear();
             GrenadeExplosionSubscriber.Clear();
+            DoorInteractionSubscriber.Clear();
             ECS.UtilityAI.Tasks.PatrolTask.Reset();
             _lastScanTime.Clear();
             _preStrategyObjectiveVersions.Clear();

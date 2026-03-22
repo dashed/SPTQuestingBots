@@ -8,12 +8,20 @@ namespace SPTQuestingBots.Helpers
     /// Extracts patrol waypoints from BSG's native <see cref="PatrollingData"/> system
     /// and converts them to our <see cref="PatrolRoute"/> format for use as a fallback
     /// when no custom JSON-defined patrol routes are available.
+    /// <para>
+    /// Extracts rich data from each <see cref="PatrolPoint"/>: ShallSit, PatrolPointType,
+    /// look directions (from <see cref="PointWithLookSides"/>), and sub-point counts.
+    /// </para>
     /// </summary>
     public static class NativePatrolDataProvider
     {
-        /// <summary>Default pause range for native patrol waypoints.</summary>
-        private const float DefaultPauseMin = 2f;
-        private const float DefaultPauseMax = 5f;
+        /// <summary>Default pause range for checkpoint waypoints (brief stop).</summary>
+        private const float CheckPointPauseMin = 2f;
+        private const float CheckPointPauseMax = 5f;
+
+        /// <summary>Default pause range for stayPoint waypoints (longer hold).</summary>
+        private const float StayPointPauseMin = 8f;
+        private const float StayPointPauseMax = 20f;
 
         /// <summary>
         /// Try to extract a <see cref="PatrolRoute"/> from a bot's native PatrollingData.
@@ -63,7 +71,23 @@ namespace SPTQuestingBots.Helpers
                 try
                 {
                     var pos = point.transform.position;
-                    waypoints[validCount] = new PatrolWaypoint(pos.x, pos.y, pos.z, DefaultPauseMin, DefaultPauseMax);
+
+                    // Determine pause duration based on point type
+                    bool isStayPoint = point.PatrolPointType == PatrolPointType.stayPoint;
+                    float pauseMin = isStayPoint ? StayPointPauseMin : CheckPointPauseMin;
+                    float pauseMax = isStayPoint ? StayPointPauseMax : CheckPointPauseMax;
+
+                    var wp = new PatrolWaypoint(pos.x, pos.y, pos.z, pauseMin, pauseMax);
+                    wp.ShallSit = point.ShallSit;
+                    wp.PointType = isStayPoint ? PatrolPointTypeId.StayPoint : PatrolPointTypeId.CheckPoint;
+
+                    // Extract look direction from PointWithLookSides
+                    ExtractLookDirection(point, ref wp);
+
+                    // Count sub-points
+                    ExtractSubPointCount(point, ref wp);
+
+                    waypoints[validCount] = wp;
                     validCount++;
                 }
                 catch
@@ -97,16 +121,82 @@ namespace SPTQuestingBots.Helpers
 
             var route = new PatrolRoute(name: "Native_" + way.name, type: routeType, waypoints: waypoints, isLoop: true);
 
+            int sitCount = 0;
+            int lookCount = 0;
+            for (int i = 0; i < waypoints.Length; i++)
+            {
+                if (waypoints[i].ShallSit)
+                    sitCount++;
+                if (waypoints[i].HasLookDirection)
+                    lookCount++;
+            }
+
             LoggingController.LogDebug(
                 "[NativePatrolDataProvider] Created native route '"
                     + route.Name
                     + "' with "
                     + validCount
-                    + " waypoints for bot "
+                    + " waypoints ("
+                    + sitCount
+                    + " sit, "
+                    + lookCount
+                    + " look) for bot "
                     + botOwner.GetText()
             );
 
             return route;
+        }
+
+        /// <summary>
+        /// Extract the first look direction from a PatrolPoint's PointWithLookSides component.
+        /// </summary>
+        private static void ExtractLookDirection(PatrolPoint point, ref PatrolWaypoint wp)
+        {
+            try
+            {
+                var lookSides = point.PointWithLookSides;
+                if (lookSides == null)
+                    return;
+
+                var directions = lookSides.Directions;
+                if (directions == null || directions.Count == 0)
+                    return;
+
+                var dir = directions[0];
+                float mag = (float)System.Math.Sqrt(dir.x * dir.x + dir.y * dir.y + dir.z * dir.z);
+                if (mag < 0.001f)
+                    return;
+
+                wp.HasLookDirection = true;
+                wp.LookDirX = dir.x / mag;
+                wp.LookDirY = dir.y / mag;
+                wp.LookDirZ = dir.z / mag;
+            }
+            catch
+            {
+                // PointWithLookSides may not be accessible
+            }
+        }
+
+        /// <summary>
+        /// Count sub-points under a PatrolPoint.
+        /// </summary>
+        private static void ExtractSubPointCount(PatrolPoint point, ref PatrolWaypoint wp)
+        {
+            try
+            {
+                // subPoints is a private field, accessed via reflection-like pattern
+                // PatrolPoint has a public SubManual flag and private subPoints list
+                // We use the SubManual flag as an indicator and set count to 1 if it has sub-points
+                if (point.SubManual)
+                {
+                    wp.SubPointCount = 1; // At least one sub-point exists
+                }
+            }
+            catch
+            {
+                // Ignore if not accessible
+            }
         }
 
         private static PatrolRouteType MapPatrolType(PatrolType bsgType)

@@ -33,6 +33,15 @@ namespace SPTQuestingBots.Configuration
         [JsonProperty("default_chance_of_bots_having_keys")]
         public float DefaultChanceOfBotsHavingKeys { get; set; } = 25;
 
+        [JsonProperty("forced_open_period")]
+        public float ForcedOpenPeriod { get; set; } = 15f;
+
+        [JsonProperty("door_sound_power")]
+        public float DoorSoundPower { get; set; } = 50f;
+
+        [JsonProperty("enable_door_sound_events")]
+        public bool EnableDoorSoundEvents { get; set; } = true;
+
         public UnlockingDoorsConfig() { }
     }
 }

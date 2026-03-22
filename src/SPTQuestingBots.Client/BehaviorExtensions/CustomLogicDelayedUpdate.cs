@@ -188,8 +188,12 @@ namespace SPTQuestingBots.BehaviorExtensions
                 blockReason = "sharp path corner";
             }
 
-            // Prevent bots from sliding into doors
-            if (blockReason == null && IsNearAndMovingTowardClosedDoor(sprintConfig.ApproachingClosedDoors))
+            // Prevent bots from sliding into doors (BSG pauses sprint 4s within 5.2m of doors)
+            if (
+                blockReason == null
+                && sprintConfig.EnableDoorSprintPause
+                && IsNearAndMovingTowardClosedDoor(sprintConfig.ApproachingClosedDoors)
+            )
             {
                 blockReason = "approaching closed door";
             }
